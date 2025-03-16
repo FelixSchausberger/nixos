@@ -26,6 +26,7 @@
   fileSystems."/per" =
     { device = "rpool/eyd/per";
       fsType = "zfs";
+      neededForBoot = true;
     };
 
   fileSystems."/home" =

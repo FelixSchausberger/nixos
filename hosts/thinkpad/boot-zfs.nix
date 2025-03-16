@@ -39,6 +39,13 @@ in {
     initrd = {
       systemd.enable = true;
 
+      luks.devices = {
+        "luks-rpool" = {
+          device = "/dev/disk/by-id/nvme-SAMSUNG_MZVL4512HBLU-00BL7_S67VNF0TA81898-part2";
+          preLVM = true;
+        };
+      };
+
       # systemd in initrd requires a service instead of a command
       systemd.services.reset = {
         description = "reset root filesystem";
@@ -65,6 +72,21 @@ in {
 
     kernelPackages = latestKernelPackage;
     kernelParams = ["nohibernate" "quiet" "udev.log_level=3"];
+  };
+
+  swapDevices = [
+    {
+      device = "/dev/disk/by-id/nvme-SAMSUNG_MZVL4512HBLU-00BL7_S67VNF0TA81898-part3";
+      randomEncryption = {
+        enable = true;
+        allowDiscards = true;
+      };
+    }
+  ];
+
+  systemd.services.system-systemd-swap = {
+    after = [ "zfs.target" "zfs-mount.service" ];
+    requires = [ "zfs.target" "zfs-mount.service" ];
   };
 
   services.zfs = {

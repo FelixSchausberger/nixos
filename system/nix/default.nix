@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   pkgs,
   ...
 }: {
@@ -11,9 +11,9 @@
   nix = {
     settings = {
       auto-optimise-store = true;
-      access-tokens = [
-        "github.com=${config.sops.secrets."github/token".path}"
-      ];
+      # access-tokens = [
+      #   "github.com=${config.sops.secrets."github/token".path}"
+      # ];
       experimental-features = [
         "nix-command"
         "flakes"

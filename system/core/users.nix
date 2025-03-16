@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   inputs,
   ...
 }: {
@@ -8,10 +8,10 @@
       isNormalUser = true;
       description = "Felix Schausberger";
       extraGroups = ["networkmanager" "video" "wheel"];
-      password = config.sops.secrets."fesch/password".path;
-      openssh.authorizedKeys.keyFiles = [
-        "${config.sops.secrets."fesch/id_ed25519".path}"
-      ];
+      # password = config.sops.secrets."fesch/password".path;
+      # openssh.authorizedKeys.keyFiles = [
+      #   "${config.sops.secrets."fesch/id_ed25519".path}"
+      # ];
     };
   };
 

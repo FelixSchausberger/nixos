@@ -22,8 +22,12 @@
     # WiFi configuration
     wireless = {
       networks = {
-        Pretty-Fly-For-A-WiFi = {
-          psk = config.sops.secrets."wifi/pretty-fly-for-a-wifi".path;
+        # Pretty-Fly-For-A-WiFi = {
+        #   psk = config.sops.secrets."wifi/pretty-fly-for-a-wifi".path;
+        # };
+
+        Magenta-766410 = {
+          psk = config.sops.secrets."wifi/magenta-766410".path;
         };
 
         Hochbau-Talstation = {

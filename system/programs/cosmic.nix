@@ -11,6 +11,11 @@
   services = {
     desktopManager.cosmic.enable = true;
     # displayManager.cosmic-greeter.enable = true;
+    # xserver = {
+    #   enable = true;
+    #   desktopManager.gnome.enable = true;
+    #   displayManager.gdm.enable = true;
+    # };
   };
 
   environment = {
