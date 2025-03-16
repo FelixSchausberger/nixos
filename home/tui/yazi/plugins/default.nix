@@ -8,6 +8,6 @@
     ./fg.nix # A Yazi plugin that supports file searching with an fzf preview.
     ./git.nix # Show the status of Git file changes as linemode in the file list.
     ./mount.nix # User interface for convinient mounting volumes using udisks2.
-    ./starship.nix # Starship prompt plugin for Yazi.
+    # ./starship.nix # Starship prompt plugin for Yazi.
   ];
 }

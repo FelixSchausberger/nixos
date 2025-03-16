@@ -75,11 +75,6 @@
         src = pkgs.fishPlugins.puffer.src;
       }
       {
-        # Keeps your fish shell history clean from typos, incorrectly used commands and everything you don't want to store due to privacy reasons
-        name = "sponge";
-        src = pkgs.fishPlugins.sponge.src;
-      }
-      {
         # Pure-fish z directory jumping
         name = "z";
         src = pkgs.fishPlugins.z.src;
