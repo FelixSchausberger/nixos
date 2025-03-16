@@ -1,11 +1,11 @@
 {pkgs, ...}: {
   imports = [
-    ../../gui
-    ../../gui/freecad.nix # General purpose Open Source 3D CAD/MCAD/CAx/CAE/PLM modeler
-    ../../gui/steam.nix # A digital distribution platform
-    ../../gui/prusaslicer.nix # G-code generator for 3D printer
-    ../../shells
-    ../../tui
+    ../../shared
+    ../../shared/gui/cosmic
+    ../../private
+    ../../private/gui/freecad.nix # General purpose Open Source 3D CAD/MCAD/CAx/CAE/PLM modeler
+    ../../private/gui/steam.nix # A digital distribution platform
+    ../../private/gui/prusaslicer.nix # G-code generator for 3D printer
   ];
 
   home.packages = with pkgs; [

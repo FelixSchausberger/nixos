@@ -9,6 +9,8 @@
       "home/default.nix"
       "home/profiles/default.nix"
       "hosts/default.nix"
+
+      "/per/repos/magazino"
     ];
 
     settings.hooks = {
