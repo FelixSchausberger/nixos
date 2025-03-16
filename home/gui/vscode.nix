@@ -7,7 +7,7 @@
     enable = true;
 
     # https://search.nixos.org/packages?type=packages&query=vscode-extensions
-    extensions = with pkgs.vscode-extensions; [
+    profiles.default.extensions = with pkgs.vscode-extensions; [
       kamadorueda.alejandra
       ms-python.black-formatter
       llvm-vs-code-extensions.vscode-clangd

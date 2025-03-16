@@ -175,7 +175,7 @@ in {
       };
 
       # https://nur.nix-community.org/repos/rycee/
-      extensions = with pkgs.nur.repos.rycee.firefox-addons; [
+      extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
         bitwarden # At home, at work, or on the go, Bitwarden easily secures all your passwords, passkeys, and sensitive information.
         darkreader # Dark mode for every website. Take care of your eyes, use dark theme for night and daily browsing.
         ff2mpv # Tries to play links in mpv.

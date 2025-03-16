@@ -22,7 +22,6 @@
     gimp # The GNU Image Manipulation Program
     krita # A free and open source painting application
     libwacom # Libraries, configuration, and diagnostic tools for Wacom tablets running under Linux
-    # morgen # All-in-one Calendars, Tasks and Scheduler
     qbittorrent # Featureful free software BitTorrent client
     rnote # Simple drawing application to create handwritten notes
     # spacedrive # An open source file manager
