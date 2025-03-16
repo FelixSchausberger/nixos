@@ -14,6 +14,10 @@
       ../.
       ./surface
     ];
+    "${getUserHost inputs.self.lib.user "thinkpad"}" = [
+      ../.
+      ./thinkpad
+    ];  
   };
 
   inherit (inputs.hm.lib) homeManagerConfiguration;
@@ -32,6 +36,11 @@ in {
 
       "${inputs.self.lib.user}_surface" = homeManagerConfiguration {
         modules = homeImports."${inputs.self.lib.user}@surface";
+        inherit pkgs extraSpecialArgs;
+      };
+      
+      "${inputs.self.lib.user}_thinkpad" = homeManagerConfiguration {
+        modules = homeImports."${inputs.self.lib.user}@thinkpad";
         inherit pkgs extraSpecialArgs;
       };
     };

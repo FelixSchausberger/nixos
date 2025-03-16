@@ -63,5 +63,11 @@ in {
         # }
       ];
     };
+
+    thinkpad = mkHostConfig {
+      hostName = "thinkpad";
+      baseModules = laptop;
+      extraModules = [./thinkpad];
+    };
   };
 }
