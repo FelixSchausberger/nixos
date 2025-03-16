@@ -19,10 +19,11 @@
     defaultSopsFile = "${inputs.self}/secrets/secrets.json";
 
     secrets = {
-      "fesch/password" = {};
-      "fesch/id_ed25519" = {};
-      "github/token" = {};
-      "wifi/pretty-fly-for-a-wifi" = {};
+      # "fesch/password" = {};
+      # "fesch/id_ed25519" = {};
+      # "github/token" = {};
+      # "wifi/pretty-fly-for-a-wifi" = {};
+      "wifi/magenta-766410" = {};
       "wifi/hochbau-talstation" = {};
     };
   };
