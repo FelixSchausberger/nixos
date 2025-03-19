@@ -1,6 +1,7 @@
 {
   imports = [
     ./boot-zfs.nix
+    ../../system/programs/cosmic.nix
     ./hardware-configuration.nix
   ];
 

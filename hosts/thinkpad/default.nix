@@ -1,6 +1,7 @@
 {
   imports = [
     ./boot-zfs.nix
+    ../../system/programs/gnome.nix
     ./hardware-configuration.nix
   ];
 
@@ -11,5 +12,16 @@
   #   };
 
   #   keyboard.qmk.enable = true;
+  # };
+
+  # services.openvpn.servers = {
+  #   magazinoVPN = {
+  #     # config = ''config /etc/openvpn/magazino.conf '';
+  #     config = "config /etc/openvpn/magazino/magazino.ovpn";
+  #     authUserPass = {
+  #       password = config.sops.secrets."vpn/password".path;
+  #       username = config.sops.secrets."vpn/username".path;
+  #     };
+  #   };
   # };
 }

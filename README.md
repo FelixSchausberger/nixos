@@ -121,8 +121,7 @@ Personal configs for Home-Manager and NixOS. Using
         |-- default.nix
         |-- development.nix
         |-- fonts.nix
-        |-- home-manager.nix
-        `-- waydroid.nix
+        `-- home-manager.nix
 ```
 
 ## 📦 Setup

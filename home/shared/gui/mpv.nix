@@ -5,13 +5,11 @@
     scripts = [pkgs.mpvScripts.mpris];
   };
 
-  home = {
-    packages = with pkgs; [
-      ffmpeg
-      # yt-dlp
-      # mediainfo
-    ];
-  };
+  home.packages = with pkgs; [
+    ffmpeg
+    # yt-dlp
+    # mediainfo
+  ];
 
   xdg = {
     enable = true;

@@ -3,7 +3,7 @@
     source = inputs.yazi-starship;
     recursive = true;
   };
-  
+
   programs.yazi = {
     initLua = ''
       require("starship"):setup()

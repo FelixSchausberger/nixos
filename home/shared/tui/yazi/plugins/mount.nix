@@ -1,13 +1,13 @@
 {
-  inputs, 
-  pkgs, 
+  inputs,
+  pkgs,
   ...
 }: {
   home.file.".config/yazi/plugins/mount" = {
     source = inputs.yazi-mount;
     recursive = true;
   };
-  
+
   programs.yazi = {
     keymap.manager.prepend_keymap = [
       {

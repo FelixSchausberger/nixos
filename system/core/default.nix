@@ -34,11 +34,11 @@
   environment = {
     etc = {
       nixos.source = "${inputs.self}";
-
-      "ssh/ssh_host_ed25519_key.pub".source =
-        if builtins.pathExists ../../hosts/${hostName}/ssh_host_ed25519_key.pub
-        then ../../hosts/${hostName}/ssh_host_ed25519_key.pub
-        else null;
+  
+      "ssh/ssh_host_ed25519_key.pub" = lib.mkIf 
+        (builtins.pathExists ../../hosts/${hostName}/ssh_host_ed25519_key.pub) {
+        source = ../../hosts/${hostName}/ssh_host_ed25519_key.pub;
+      };
     };
 
     systemPackages = with pkgs; [

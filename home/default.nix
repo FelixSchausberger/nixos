@@ -2,15 +2,15 @@
   config,
   inputs,
   ...
-}: 
+}:
 let
   # Use pipe operator to create derived paths more functionally
   getPath = base: suffix: "${base}/${suffix}";
-  data = config.xdg.dataHome 
+  data = config.xdg.dataHome
     |> getPath "data"
     |> (path: "${path}/wine");
-  
-  conf = config.xdg.configHome 
+
+  conf = config.xdg.configHome
     |> getPath "config"
     |> (path: {
       less = {
@@ -18,8 +18,8 @@ let
         lesskey = "${path}/less/lesskey";
       };
     });
-  
-  cache = config.xdg.cacheHome 
+
+  cache = config.xdg.cacheHome
     |> getPath "cache"
     |> (path: "${path}/less/history");
 in {

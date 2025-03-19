@@ -3,7 +3,7 @@
     source = inputs.yazi-fg;
     recursive = true;
   };
-  
+
   programs.yazi = {
     keymap.manager.prepend_keymap = [
       {

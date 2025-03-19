@@ -1,11 +1,11 @@
 {pkgs, ...}: {
   imports = [
-    ../../gui
-    ../../shells
-    ../../tui
+    ../../shared
+    ../../shared/gui/cosmic
+    ../../private
   ];
 
   home.packages = with pkgs; [
-    tlp
+    tlp # Advanced Power Management for Linux
   ];
 }

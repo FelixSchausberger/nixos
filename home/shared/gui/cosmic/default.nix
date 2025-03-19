@@ -5,9 +5,13 @@
 }: {
   imports = [
     inputs.cosmic-manager.homeManagerModules.cosmic-manager
+    ./cosmic-applets.nix
+    ./cosmic-compositor.nix
     ./cosmic-files.nix
+    ./cosmic-panels.nix
+    ./cosmic-shortcuts.nix
     ./cosmic-term.nix
-    ./stateFile.nix
+    ./cosmic-wallpapers.nix
   ];
 
   programs.bash = {
@@ -30,5 +34,6 @@
 
   wayland.desktopManager.cosmic = {
     enable = true;
+    resetFiles = true;
   };
 }

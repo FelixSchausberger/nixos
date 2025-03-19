@@ -1,4 +1,8 @@
-{config, ...}: {
+{
+  # cosmicLib,
+  config,
+  ...
+}: {
   programs.cosmic-term = {
     enable = true;
     profiles = [
@@ -15,18 +19,18 @@
     ];
 
     settings = {
-      # app_theme = cosmicLib.cosmic.mkRon "enum" "Dark";
+      # app_theme = cosmicLib.cosmic.mkRON "enum" "Dark";
       # bold_font_weight = 700;
       # dim_font_weight = 300;
       # focus_follows_mouse = true;
-      # font_name = "JetBrains Mono";
-      # font_size = 12;
+      font_name = "FiraCode Mono";
+      font_size = 20;
       # font_size_zoom_step_mul_100 = 100;
       # font_stretch = 100;
       # font_weight = 400;
       opacity = 80;
-      # show_headerbar = true;
-      # use_bright_bold = true;
+      show_headerbar = false;
+      use_bright_bold = true;
     };
   };
 }

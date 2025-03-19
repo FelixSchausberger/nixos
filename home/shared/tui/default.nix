@@ -1,11 +1,11 @@
 {pkgs, ...}: {
   imports = [
     ./bat.nix # A cat clone with syntax highlighting and Git integration
-    # ./broot.nix # An interactive tree view, a fuzzy search, a balanced BFS descent
     ./direnv.nix # A shell extension that manages your environment
     ./eza.nix # A modern, maintained replacement for ls
     ./fd.nix # A simple, fast and user-friendly alternative to find
     ./fzf.nix # A command-line fuzzy finder written in Go
+    ./gammastep.nix # Screen color temperature manager
     ./git.nix # Distributed version control system
     ./helix
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
@@ -15,7 +15,6 @@
     ./sops.nix # Simple and flexible tool for managing secrets
     ./tealdeer.nix # A very fast implementation of tldr
     ./thefuck.nix # Magnificent app which corrects your previous console command
-    ./typix.nix # Typst: A markup-based typesetting system
     ./yazi
   ];
 
@@ -27,7 +26,6 @@
   };
 
   home.packages = with pkgs; [
-    bluetui # TUI for managing bluetooth on Linux
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     lazyjournal # TUI for journalctl, file system logs, as well as Docker and Podman containers
     mdcat # Cat for markdown

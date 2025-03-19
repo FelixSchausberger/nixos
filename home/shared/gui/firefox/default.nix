@@ -6,6 +6,17 @@
   ...
 }: let
   inherit (lib) mkForce;
+  # Create a custom wrapper for Zen browser with Wayland enabled
+  # zenWithWayland = pkgs.symlinkJoin {
+  #   name = "zen-browser-wayland";
+  #   paths = [inputs.zen-browser.packages."${pkgs.system}".twilight];
+  #   nativeBuildInputs = [pkgs.makeWrapper];
+  #   postBuild = ''
+  #     wrapProgram $out/bin/zen \
+  #       --prefix PATH : ${lib.makeBinPath [pkgs.gtk3]} \
+  #       --set MOZ_ENABLE_WAYLAND 1
+  #   '';
+  # };
 in {
   imports = [
     (inputs.impermanence + "/home-manager.nix")
@@ -32,6 +43,7 @@ in {
     # package = inputs.firefox-nightly.packages.${pkgs.system}.firefox-nightly-bin;
 
     # Use alsa instead of pulseaudio
+    # package = zenWithWayland;
     package = (pkgs.wrapFirefox.override {libpulseaudio = pkgs.libpressureaudio;}) pkgs.firefox-unwrapped {};
     languagePacks = ["de" "en-US"];
 
