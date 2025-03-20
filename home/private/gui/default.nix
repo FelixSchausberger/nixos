@@ -4,7 +4,6 @@
     ./calibre.nix # Comprehensive e-book software
     ./obsidian.nix # A powerful knowledge base
     ./oculante.nix # # A minimalistic crossplatform image viewer written in Rust
-    ./planify.nix # Task manager with Todoist support
     ./sioyek.nix # A PDF viewer
   ];
 

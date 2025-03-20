@@ -18,7 +18,20 @@
       displayManager.gdm.enable = true;
       desktopManager.gnome.enable = true;
     };
+
+    # Needed to get systray icons
+    udev.packages = [pkgs.gnome-settings-daemon];
   };
+
+  environment.systemPackages = with pkgs.gnomeExtensions; [
+    caffeine # Status bar application to temporarily inhibit screensaver and sleep mode
+    appindicator # Adds AppIndicator, KStatusNotifierItem and legacy Tray icons support to the Shell
+    blur-my-shell # Adds a blur look to different parts of the GNOME Shell
+    clipboard-history # Clipboard manager
+    # gsconnect # KDE Connect implementation for Gnome Shell
+    pop-shell #  Keyboard-driven layer for GNOME Shell
+    vitals # A glimpse into your computer's stats
+  ];
 
   environment.gnome.excludePackages = with pkgs; [
     atomix # puzzle game
@@ -37,20 +50,4 @@
     tali # poker game
     totem # video player
   ];
-
-  home-manager.users."${inputs.self.lib.user}" = {
-    dconf = {
-      enable = true;
-      settings = {
-        "org/gnome/desktop/interface".color-scheme = "prefer-dark";
-        "org/gnome/shell" = {
-          disable-user-extensions = false;
-          enabled-extensions = with pkgs.gnomeExtensions; [
-            blur-my-shell.extensionUuid
-            # gsconnect.extensionUuid
-          ];
-        };
-      };
-    };
-  };
 }

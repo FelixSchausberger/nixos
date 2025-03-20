@@ -122,16 +122,16 @@ in {
 
     profiles."default" = {
       search = {
-        default = "DuckDuckGo";
+        default = "ddg"; # DuckDuckGo
         force = true;
         engines = {
-          "Nix Options" = {
+          "nix options" = {
             urls = [{template = "https://search.nixos.org/options?type=options&query={searchTerms}";}];
-            iconURL = "https://nixos.org/favicon.ico";
+            icon = "https://nixos.org/favicon.ico";
             definedAliases = ["@no"];
           };
 
-          "Nix Packages" = {
+          "nix packages" = {
             urls = [
               {
                 template = "https://search.nixos.org/packages";
@@ -152,37 +152,37 @@ in {
             definedAliases = ["@np"];
           };
 
-          "NixOS Wiki" = {
+          "nixos wiki" = {
             urls = [{template = "https://nixos.wiki/index.php?search={searchTerms}";}];
-            iconUpdateURL = "https://nixos.wiki/favicon.png";
+            icon = "https://nixos.wiki/favicon.png";
             updateInterval = 24 * 60 * 60 * 1000; # every day
             definedAliases = ["@nw"];
           };
 
-          "GitHub" = {
+          "github" = {
             urls = [{template = "https://github.com/search?q={searchTerms}&type=repositories";}];
-            iconURL = "https://github.com/favicon.ico";
+            icon = "https://github.com/favicon.ico";
             definedAliases = ["@gh"];
           };
 
-          "Home Manager" = {
+          "home manager" = {
             urls = [{template = "https://mipmip.github.io/home-manager-option-search/?query={searchTerms}";}];
-            iconURL = "https://nixos.org/favicon.ico";
+            icon = "https://nixos.org/favicon.ico";
             definedAliases = ["@hm"];
           };
 
-          "YouTube" = {
+          "youtube" = {
             urls = [{template = "https://www.youtube.com/results?search_query={searchTerms}";}];
-            iconURL = "https://www.youtube.com/favicon.ico";
+            icon = "https://www.youtube.com/favicon.ico";
             definedAliases = ["@yt"];
           };
 
           # Disable default search engines
-          "Amazon.de".metaData.hidden = true;
-          "Bing".metaData.hidden = true;
+          "amazon".metaData.hidden = true;
+          "bing".metaData.hidden = true;
           # "DuckDuckGo".metaData.hidden = true;
-          "eBay".metaData.hidden = true;
-          "Wikipedia (en)".metaData.hidden = true;
+          "ebay".metaData.hidden = true;
+          "wikipedia".metaData.hidden = true;
         };
       };
 

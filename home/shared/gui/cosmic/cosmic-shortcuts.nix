@@ -36,5 +36,15 @@
       };
       key = "Super";
     }
+    {
+      action = cosmicLib.cosmic.mkRON "enum" {
+        value = [
+          "flatpak run --command=io.github.alainm23.planify.quick-add io.github.alainm23.planify"
+        ];
+        variant = "Spawn";
+      };
+      description = cosmicLib.cosmic.mkRON "optional" "Quick Add Planify";
+      key = "Super+T";
+    }
   ];
 }
