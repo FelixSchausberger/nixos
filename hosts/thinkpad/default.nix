@@ -1,7 +1,8 @@
 {
   imports = [
     ./boot-zfs.nix
-    ../../system/programs/gnome.nix
+    ../../system/programs/shared
+    ../../system/programs/work
     ./hardware-configuration.nix
   ];
 

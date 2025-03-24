@@ -7,11 +7,13 @@
     displayManager = {
       autoLogin = {
         enable = true;
-        user = "${inputs.self.lib.user}";
+        user = inputs.self.lib.user;
         # inherit (conf) user;
       };
       defaultSession = "gnome";
     };
+
+    gnome.gnome-keyring.enable = true;
 
     xserver = {
       enable = true;
@@ -22,6 +24,8 @@
     # Needed to get systray icons
     udev.packages = [pkgs.gnome-settings-daemon];
   };
+
+  security.pam.services.gdm.enableGnomeKeyring = true;
 
   environment.systemPackages = with pkgs.gnomeExtensions; [
     caffeine # Status bar application to temporarily inhibit screensaver and sleep mode

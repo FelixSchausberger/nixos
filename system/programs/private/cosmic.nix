@@ -11,6 +11,7 @@
   services = {
     desktopManager.cosmic.enable = true;
     # displayManager.cosmic-greeter.enable = true;
+    getty.autologinUser = inputs.self.lib.user;
   };
 
   environment = {

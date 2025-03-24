@@ -1,7 +1,8 @@
 {
   imports = [
     ./boot-zfs.nix
-    ../../system/programs/cosmic.nix
+    ../../system/programs/private
+    ../../system/programs/shared
     ./hardware-configuration.nix
   ];
 

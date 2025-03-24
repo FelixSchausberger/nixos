@@ -17,6 +17,4 @@
       };
     };
   };
-
-  services.getty.autologinUser = inputs.self.lib.user;
 }
