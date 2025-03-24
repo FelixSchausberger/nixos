@@ -1,9 +1,11 @@
 {
   imports = [
     ./boot-zfs.nix
+    ./hardware-configuration.nix
     ../../system/programs/shared
     ../../system/programs/work
-    ./hardware-configuration.nix
+    # ../../system/programs/private
+    ../../system/nix/work/substituters.nix
   ];
 
   # Enable 32-bit support for Direct Rendering Infrastructure (DRI)

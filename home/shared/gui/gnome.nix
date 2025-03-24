@@ -1,10 +1,9 @@
 {pkgs, ...}: {
   home.packages = with pkgs; [
-    # caffeine-ng # Status bar application to temporarily inhibit screensaver and sleep mode
-    # gnome-extension-manager # Desktop app for managing GNOME shell extensions
     gnome-tweaks # Tool to customize advanced GNOME 3 options
-    # flameshot # Powerful yet simple to use screenshot software
-    satty # Screenshot annotation tool inspired by Swappy and Flameshot
+    flameshot # Powerful yet simple to use screenshot software
+    # satty # Screenshot annotation tool inspired by Swappy and Flameshot
+    wl-clipboard # Command-line copy/paste utilities for Wayland
   ];
 
   dconf = {

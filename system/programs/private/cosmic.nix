@@ -12,6 +12,11 @@
     desktopManager.cosmic.enable = true;
     # displayManager.cosmic-greeter.enable = true;
     getty.autologinUser = inputs.self.lib.user;
+
+    # xdg-desktop-portal = {
+    #   enable = true;
+    #   extraPortals = [pkgs.xdg-desktop-portal-cosmic];
+    # };
   };
 
   environment = {
@@ -65,6 +70,9 @@
       # cosmic-ext-applet-external-monitor-brightness # Change brightness of external monitors via DDC/CI protocol.
       # cosmic-ext-examine # A system information viewer for the COSMIC desktop.
       # cosmic-ext-tweaks # A tweaking tool for the COSMIC desktop.
+
+      xdg-desktop-portal-cosmic # XDG Desktop Portal for the COSMIC Desktop Environment
+      xdg-desktop-portal-wlr
     ];
   };
 }

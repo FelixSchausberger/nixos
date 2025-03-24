@@ -5,7 +5,7 @@
 }: {
   imports = [
     ./nixpkgs.nix
-    ./substituters.nix
+    ./shared/substituters.nix
   ];
 
   nix = {
