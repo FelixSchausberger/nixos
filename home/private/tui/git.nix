@@ -17,4 +17,8 @@
       init.defaultBranch = "main";
     };
   };
+
+  sops.secrets = {
+    "github/token" = {};
+  };
 }

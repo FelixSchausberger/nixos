@@ -1,4 +1,8 @@
-{inputs, ...}: {
+{
+  inputs,
+  pkgs,
+  ...
+}: {
   imports = [
     ./sops.nix
     ./ssh.nix
@@ -14,6 +18,14 @@
 
     # Don't ask for password for wheel group
     sudo.wheelNeedsPassword = false;
+
+    # Ensure FUSE is configured system-wide
+    wrappers.fusermount3 = {
+      source = "${pkgs.fuse3}/bin/fusermount3";
+      owner = "root";
+      group = "root";
+      setuid = true;
+    };
   };
 
   services = {

@@ -9,4 +9,9 @@
       "aws_secret_access_key" = "${config.sops.secrets."awscli/key".path}";
     };
   };
+
+  sops.secrets = {
+    "awscli/id" = {};
+    "awscli/key" = {};
+  };
 }

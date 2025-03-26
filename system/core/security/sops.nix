@@ -16,15 +16,5 @@
   sops = {
     age.sshKeyPaths = ["/home/${inputs.self.lib.user}/.ssh/id_ed25519"];
     defaultSopsFile = "${inputs.self}/secrets/secrets.json";
-
-    secrets = {
-      "awscli/id" = {};
-      "awscli/key" = {};
-      "fesch/password" = {};
-      "vpn/password" = {};
-      "vpn/username" = {};
-      "wifi/magenta-766410" = {};
-      "wifi/hochbau-talstation" = {};
-    };
   };
 }

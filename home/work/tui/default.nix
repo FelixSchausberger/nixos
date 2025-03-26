@@ -2,7 +2,6 @@
   imports = [
     ./awscli.nix # Unified tool to manage your AWS services
     ./git.nix # Distributed version control system
-    ./sops.nix # Simple and flexible tool for managing secrets
   ];
 
   home.packages = with pkgs; [

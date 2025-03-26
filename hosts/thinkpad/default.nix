@@ -27,4 +27,9 @@
   #     };
   #   };
   # };
+
+  # sops.secrets = {
+  #   "vpn/password" = {};
+  #   "vpn/username" = {};
+  # };
 }

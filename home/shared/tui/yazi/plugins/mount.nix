@@ -19,6 +19,6 @@
   };
 
   home.packages = with pkgs; [
-    inputs.self.packages.${system}.mmtui # TUI disk mount manager for TUI file managers.
+    mmtui # TUI disk mount manager for TUI file managers.
   ];
 }

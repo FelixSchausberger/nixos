@@ -17,4 +17,8 @@
       };
     };
   };
+
+  sops.secrets = {
+    "fesch/password" = {};
+  };
 }

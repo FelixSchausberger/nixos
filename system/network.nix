@@ -37,5 +37,10 @@
     };
   };
 
+  sops.secrets = {
+    "wifi/magenta-766410" = {};
+    "wifi/hochbau-talstation" = {};
+  };
+
   # environment.etc."NetworkManager/system-connections".source = "/per/etc/NetworkManager/system-connections";
 }

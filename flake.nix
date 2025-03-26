@@ -25,7 +25,6 @@
       }: {
         packages = {
           lumen = pkgs.callPackage ./system/nix/pkgs/lumen {};
-          mmtui = pkgs.callPackage ./system/nix/pkgs/mmtui {};
         };
 
         devShells.default = pkgs.mkShell {
