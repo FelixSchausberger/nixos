@@ -4,7 +4,10 @@
   pkgs,
   ...
 }: {
-  imports = [./languages.nix];
+  imports = [
+    ./dprint.nix # Code formatting platform written in Rust
+    ./languages.nix
+  ];
 
   home.shellAliases = {
     hn = "hx /per/etc/nixos";
@@ -18,8 +21,8 @@
 
     extraPackages = with pkgs; [
       # helix-gpt
-      lsp-ai
-      markdown-oxide
+      lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
+      markdown-oxide # Markdown LSP server inspired by Obsidian
     ];
 
     settings = {

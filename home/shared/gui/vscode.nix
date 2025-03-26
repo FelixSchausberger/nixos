@@ -16,7 +16,7 @@
         ms-python.black-formatter # Formatter extension for Visual Studio Code using black
         ms-vsliveshare.vsliveshare # Real-time collaborative development for VS Code
         rust-lang.rust-analyzer # Alternative rust language server to the RLS
-        # nvarner.typst-lsp # VSCode extension for providing a language server for Typst
+        myriad-dreamin.tinymist # VSCode extension for providing an integration solution for Typst
         redhat.vscode-yaml
         tomoki1207.pdf # Show PDF preview in VSCode
       ];
