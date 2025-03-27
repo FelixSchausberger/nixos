@@ -29,4 +29,17 @@ in {
       }
     ];
   };
+
+  xdg = {
+    enable = true;
+    mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "x-scheme-handler/http" = ["zen_twilight.desktop"];
+        "text/html" = ["zen_twilight.desktop"];
+        "application/xhtml+xml" = ["zen_twilight.desktop"];
+        "x-scheme-handler/https" = ["zen_twilight.desktop"];
+      };
+    };
+  };
 }

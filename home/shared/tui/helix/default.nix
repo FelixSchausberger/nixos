@@ -1,6 +1,6 @@
 {
   config,
-  # inputs,
+  inputs,
   pkgs,
   ...
 }: {
@@ -16,14 +16,8 @@
   programs.helix = {
     enable = true;
     defaultEditor = true;
-    # package = inputs.helix.packages.${pkgs.system}.default;
-    package = pkgs.evil-helix;
-
-    extraPackages = with pkgs; [
-      # helix-gpt
-      lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
-      markdown-oxide # Markdown LSP server inspired by Obsidian
-    ];
+    package = inputs.helix.packages.${pkgs.system}.default;
+    # package = pkgs.evil-helix;
 
     settings = {
       editor = {

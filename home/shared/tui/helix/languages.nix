@@ -28,6 +28,14 @@
     };
   };
 in {
+  home.packages = with pkgs; [
+    alejandra # Uncompromising Nix Code Formatter
+    clippy # Bunch of lints to catch common mistakes and improve your Rust code
+    # helix-gpt
+    lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
+    markdown-oxide # Markdown LSP server inspired by Obsidian
+  ];
+
   programs.helix.languages = {
     # the language-server option currently requires helix from the master branch at https://github.com/helix-editor/helix/
     language-server = {
@@ -60,7 +68,7 @@ in {
         name = "nix";
         auto-format = true;
         file-types = ["nix"];
-        formatter.command = "${pkgs.alejandra}/bin/alejandra";
+        formatter.command = "alejandra";
         language-servers = ["lsp-ai"];
       }
       {
@@ -85,7 +93,7 @@ in {
       {
         name = "rust";
         auto-format = true;
-        formatter.command = "${pkgs.clippy}/bin/clippy";
+        formatter.command = "clippy";
         language-servers = [
           "gpt"
         ];
@@ -93,7 +101,10 @@ in {
       {
         name = "toml";
         auto-format = true;
-        formatter.command = "${pkgs.taplo}/bin/taplo fmt";
+        formatter = {
+          command = "dprint";
+          args = ["fmt --stdin toml"];
+        };
       }
       # {
       #   name = "typescript";
