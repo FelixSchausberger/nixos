@@ -22,14 +22,19 @@
   };
 
   home.shellAliases = {
+    amend = "git commit --amend";
     clone = "git clone";
     fetch = "git fetch";
-    ga = "git add -p"; # --interactive
+    gap = "git add -p"; # --interactive
+    gaa = "git add .";
     gcm = "git commit -m";
     gst = "git status";
     log = "git log --graph --abbrev-commit --all";
+    main = "git checkout main";
+    master = "git checkout master";
     # prune = "git filter-branch --index-filter \"git rm -f --cached --ignore-unmatch $1/*\" --prune-empty --tag-name-filter cat -- --all"
     pull = "git pull"; # --rebase origin main
     push = "git push"; # origin main
+    rebase = "git rebase -i HEAD~2";
   };
 }
