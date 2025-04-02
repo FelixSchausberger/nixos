@@ -14,19 +14,20 @@ in {
         type = "drive";
         scope = "drive";
         root_folder_id = "0AGsk4MwDWp9HUk9PVA";
-        config_is_local = true;
-        config_refresh_token = false;
-        server_side_across_configs = true;
-        disable_http2 = true;
-
-        token = config.sops.secrets."rclone/token".path;
-      };
-
-      secrets = {
         client_id = config.sops.secrets."rclone/client-id".path;
         client_secret = config.sops.secrets."rclone/client-secret".path;
         token = config.sops.secrets."rclone/token".path;
+        config_is_local = true;
+        # config_refresh_token = false;
+        # server_side_across_configs = true;
+        disable_http2 = true;
       };
+
+      # secrets = {
+      #   client_id = config.sops.secrets."rclone/client-id".path;
+      #   client_secret = config.sops.secrets."rclone/client-secret".path;
+      #   token = config.sops.secrets."rclone/token".path;
+      # };
     };
   };
 
@@ -40,9 +41,8 @@ in {
   systemd.user.services.gdrive-mount = {
     Unit = {
       Description = "Google Drive Mount";
-      After = [
-        "sops-nix.service"
-      ];
+      After = ["sops-nix.service"];
+      Requires = ["sops-nix.service"];
     };
 
     Service = {
@@ -61,7 +61,7 @@ in {
       '';
       ExecStop = "${pkgs.fuse3}/bin/fusermount -uz ${mountdir}";
       Restart = "on-failure";
-      RestartSec = "5s";
+      # RestartSec = "5s";
     };
 
     Install = {

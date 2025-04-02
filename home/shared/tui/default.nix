@@ -37,6 +37,7 @@
     ripgrep # Utility that combines the usability of The Silver Searcher with the raw speed of grep
     rm-improved # Replacement for rm
     superfile # Pretty fancy and modern terminal file manager
+    xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
   ];
 
   services = {

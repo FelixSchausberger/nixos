@@ -71,7 +71,7 @@ in {
     };
 
     kernelPackages = latestKernelPackage;
-    kernelParams = ["nohibernate" "quiet" "udev.log_level=3"];
+    kernelParams = ["nohibernate"]; # "quiet" "udev.log_level=3"];
   };
 
   swapDevices = [
@@ -87,6 +87,11 @@ in {
   systemd.services.system-systemd-swap = {
     after = ["zfs.target" "zfs-mount.service"];
     requires = ["zfs.target" "zfs-mount.service"];
+  };
+
+  systemd.services.nsncd = {
+    after = ["zfs.target" "systemd-swap.target"];
+    requires = ["zfs.target" "systemd-swap.target"];
   };
 
   services.zfs = {

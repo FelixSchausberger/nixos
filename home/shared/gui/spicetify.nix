@@ -11,6 +11,24 @@ in {
     (inputs.impermanence + "/home-manager.nix")
   ];
 
+  systemd.user.services.spotify = {
+    serviceConfig.Environment = let
+      libs = with pkgs; [
+        xorg.libX11
+        xorg.libXScrnSaver
+        xorg.libXtst
+        libxkbcommon
+        libdbusmenu-gtk3
+        libayatana-indicator
+      ];
+    in ["LD_PRELOAD=${pkgs.lib.makeLibraryPath libs}"];
+  };
+
+  home.packages = with pkgs; [
+    libayatana-indicator
+    libdbusmenu
+  ];
+
   programs.spicetify = {
     enable = true;
 
@@ -24,13 +42,14 @@ in {
       playlistIcons # Give your playlists icons in the left sidebar.
     ];
 
-    theme = spicePkgs.themes.hazy;
+    # theme = spicePkgs.themes.hazy;
   };
 
   home.persistence."/per/home/${config.home.username}" = {
     directories = [
       ".cache/spotify"
       ".config/spotify"
+      ".spicetify"
     ];
   };
 }

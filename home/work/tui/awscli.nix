@@ -4,19 +4,13 @@
     settings = {
       default = {
         region = "eu-central-1";
+        aws_access_key_id_file = config.sops.secrets."awscli/id".path;
+        aws_secret_access_key_file = config.sops.secrets."awscli/key".path;
       };
       gcp = {
         region = "eu-central-1";
-      };
-    };
-    credentials = {
-      default = {
-        aws_access_key_id = config.sops.secrets."awscli/id".path;
-        aws_secret_access_key = config.sops.secrets."awscli/key".path;
-      };
-      gcp = {
-        aws_access_key_id = config.sops.secrets."awscli/id".path;
-        aws_secret_access_key = config.sops.secrets."awscli/key".path;
+        aws_access_key_id_file = config.sops.secrets."awscli/id".path;
+        aws_secret_access_key_file = config.sops.secrets."awscli/key".path;
       };
     };
   };
@@ -25,4 +19,19 @@
     "awscli/id" = {};
     "awscli/key" = {};
   };
+
+  # Add home-manager activation hook
+  home.activation.awsCredentials = let
+    credsFile = "${config.home.homeDirectory}/.aws/credentials";
+  in ''
+    mkdir -p ${config.home.homeDirectory}/.aws
+    echo "[default]
+    aws_access_key_id = $(cat ${config.sops.secrets."awscli/id".path})
+    aws_secret_access_key = $(cat ${config.sops.secrets."awscli/key".path})
+
+    [gcp]
+    aws_access_key_id = $(cat ${config.sops.secrets."awscli/id".path})
+    aws_secret_access_key = $(cat ${config.sops.secrets."awscli/key".path})" > ${credsFile}
+    chmod 600 ${credsFile}
+  '';
 }
