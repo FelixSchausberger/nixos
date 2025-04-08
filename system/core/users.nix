@@ -19,6 +19,7 @@
     "fesch/password-hash" = {
       neededForUsers = true;
       mode = "0600";
+      sopsFile = ../../secrets/secrets.json;
     };
   };
 }
