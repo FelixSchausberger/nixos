@@ -1,0 +1,70 @@
+name: Check
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  checks:
+    name: Check expressions
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sops
+        run: |
+          curl -L https://github.com/mozilla/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 -o sops
+          chmod +x sops
+          sudo mv sops /usr/local/bin/
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Decrypt secrets
+        run: |
+          export SOPS_AGE_KEY=${{ secrets.SOPS_AGE_KEY }}
+          sops -d secrets/secrets.json > .secrets.json
+
+      - uses: cachix/install-nix-action@v26
+        with:
+          install_url: https://nixos.org/nix/install
+          extra_nix_config: |
+            experimental-features = nix-command flakes pipe-operators
+            allow-import-from-derivation = true
+            accept-flake-config = true
+
+      - name: Setup Git config
+        run: |
+          git config --unset-all core.hooksPath || true
+          git config --global init.templateDir ""
+
+      # First format the files
+      - name: Format files
+        run: |
+          nix develop --command bash -c "
+            pre-commit clean
+            pre-commit install
+            pre-commit install-hooks
+            pre-commit run alejandra --all-files || true
+            pre-commit run prettier --all-files || true
+          "
+
+      # Commit formatting changes if any
+      - name: Commit formatting changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Apply automatic formatting"
+
+      # Now run all checks
+      - name: Run pre-commit checks
+        run: |
+          nix develop --command bash -c "
+            pre-commit run --all-files
+          "
+
+      - name: Run flake checks
+        run: nix flake check
