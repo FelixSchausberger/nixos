@@ -467,11 +467,11 @@
         "pre-commit-hooks": "pre-commit-hooks"
       },
       "locked": {
-        "lastModified": 1743964165,
-        "narHash": "sha256-5vXjK5W+RIveud/Qn4OyVqrZi4pUDefKZsny33dDj+s=",
+        "lastModified": 1744100513,
+        "narHash": "sha256-eDym7mHXW0AVuqhp5BZ7uBk5b5NcM4slnSXFuoAUadc=",
         "ref": "refs/heads/main",
-        "rev": "2ef4b69760af183792a740f425eb371a6aeb0009",
-        "revCount": 17767,
+        "rev": "fb0ef6ca6bfea368e594e9ae2714858030f66bc6",
+        "revCount": 17768,
         "type": "git",
         "url": "https://git@git.lix.systems/lix-project/lix"
       },
@@ -781,11 +781,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1744102942,
-        "narHash": "sha256-JZ1EJeHvrose8eD8b7QRfBHjicfxfLc2hga1e53Cs2M=",
+        "lastModified": 1744108015,
+        "narHash": "sha256-v0dibSQd9dZ5mL9WF7uYVfRv2vRpeiVU8Z66m0ptACw=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "8ff5e03a690ca06b145d779fc541f9720e5c1888",
+        "rev": "4554f5ad4e3cb4c37610361e16f597dab6d43ce4",
         "type": "github"
       },
       "original": {
@@ -960,11 +960,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1744070144,
-        "narHash": "sha256-ZB6q4xnSWm1eIKjpH195NJ7rlOzQ84BWSCoc002gdLI=",
+        "lastModified": 1744103455,
+        "narHash": "sha256-SR6+qjkPjGQG+8eM4dCcVtss8r9bre/LAxFMPJpaZeU=",
         "owner": "Mic92",
         "repo": "sops-nix",
-        "rev": "04eb34c6c5be9298e0628ef6532acad4fadbfa21",
+        "rev": "69d5a5a4635c27dae5a742f36108beccc506c1ba",
         "type": "github"
       },
       "original": {
@@ -1145,11 +1145,11 @@
         "rust-overlay": "rust-overlay_3"
       },
       "locked": {
-        "lastModified": 1744103198,
-        "narHash": "sha256-58iz5RuEzpy+yOKpo0mqTiW78SyFGpWvAeYoMysdLPk=",
+        "lastModified": 1744112829,
+        "narHash": "sha256-oxO7nT4AZJilxA2DliYk57NETHu78xQ8nFdV+UwyKHE=",
         "owner": "sxyazi",
         "repo": "yazi",
-        "rev": "86f465902ed7d96fcba6542d042d5bf507f4bf3b",
+        "rev": "99ea3b74c4260a724b43af812df0f68ef59395b7",
         "type": "github"
       },
       "original": {
