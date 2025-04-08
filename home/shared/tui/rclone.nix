@@ -18,6 +18,18 @@
     disable_http2 = true
     EOF
   '';
+  cleanupScript = pkgs.writeShellScript "cleanup-mount" ''
+    # Check if the mount is stale
+    if mountpoint -q ${mountdir} || grep -q "${mountdir}" /proc/mounts; then
+      # Try to unmount it cleanly
+      fusermount -u ${mountdir} 2>/dev/null || umount -f ${mountdir} 2>/dev/null || true
+    fi
+
+    # Recreate the directory structure
+    rm -rf ${mountdir} 2>/dev/null || true
+    mkdir -p /per/mnt
+    mkdir -p ${mountdir}
+  '';
 in {
   programs.rclone = {
     enable = true;
@@ -41,7 +53,7 @@ in {
     Service = {
       Type = "notify";
       ExecStartPre = [
-        "${pkgs.coreutils}/bin/mkdir -p ${mountdir}"
+        "${cleanupScript}"
         "${setupScript}"
       ];
       ExecStart = ''
@@ -55,8 +67,9 @@ in {
           --allow-other \
           gdrive: ${mountdir}
       '';
-      ExecStop = "${pkgs.fuse3}/bin/fusermount -uz ${mountdir}";
+      ExecStop = "${pkgs.util-linux}/bin/umount -f ${mountdir} || true";
       Restart = "on-failure";
+      RestartSec = "30s";
     };
 
     Install = {
