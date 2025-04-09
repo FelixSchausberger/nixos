@@ -54,20 +54,19 @@ in {
     surface = mkHostConfig {
       hostName = "surface";
       baseModules = laptop;
-      extraModules = [
-        ./surface
-        # nixos-hardware.nixosModules.microsoft-surface-pro-intel
-        # {
-        #   microsoft-surface.ipts.enable = true;
-        #   config.microsoft-surface.surface-control.enable = true;
-        # }
-      ];
+      extraModules = [./surface];
     };
 
     thinkpad = mkHostConfig {
       hostName = "thinkpad";
       baseModules = laptop;
       extraModules = [./thinkpad];
+    };
+
+    portable = mkHostConfig {
+      hostName = "portable";
+      baseModules = desktop;
+      extraModules = [./portable];
     };
   };
 }

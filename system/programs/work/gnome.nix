@@ -19,6 +19,13 @@
       enable = true;
       displayManager.gdm.enable = true;
       desktopManager.gnome.enable = true;
+
+      # Better hardware compatibility
+      libinput = {
+        enable = true;
+        touchpad.naturalScrolling = true;
+        touchpad.tapping = true;
+      };
     };
 
     # Needed to get systray icons

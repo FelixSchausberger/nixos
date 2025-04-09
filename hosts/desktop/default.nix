@@ -12,6 +12,13 @@
       enable32Bit = true;
     };
 
+    # Better GPU compatibility
+    opengl = {
+      enable = true;
+      driSupport = true;
+      driSupport32Bit = true;
+    };
+
     keyboard.qmk.enable = true;
   };
 }

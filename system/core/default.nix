@@ -77,6 +77,9 @@
   services = {
     # Simple interprocess messaging system
     dbus.enable = true;
+
+    # Support for mounting other filesystems
+    gvfs.enable = true;
   };
 
   # Compresses half the ram for use as swap

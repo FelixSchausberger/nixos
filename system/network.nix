@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   inputs,
   ...
 }: {
@@ -20,20 +20,29 @@
     hostId = "89b3c408";
 
     # WiFi configuration
-    wireless = {
-      networks = {
-        # Pretty-Fly-For-A-WiFi = {
-        #   psk = config.sops.secrets."wifi/pretty-fly-for-a-wifi".path;
-        # };
+    # wireless = {
+    #   networks = {
+    #     # Pretty-Fly-For-A-WiFi = {
+    #     #   psk = config.sops.secrets."wifi/pretty-fly-for-a-wifi".path;
+    #     # };
 
-        Magenta-766410 = {
-          psk = config.sops.secrets."wifi/magenta-766410".path;
-        };
+    #     Magenta-766410 = {
+    #       psk = config.sops.secrets."wifi/magenta-766410".path;
+    #     };
 
-        Hochbau-Talstation = {
-          psk = config.sops.secrets."wifi/hochbau-talstation".path;
-        };
-      };
+    #     Hochbau-Talstation = {
+    #       psk = config.sops.secrets."wifi/hochbau-talstation".path;
+    #     };
+    #   };
+    # };
+    networkmanager.enable = true;
+    # Enable wireless support
+    wireless.enable = false; # Disabled in favor of NetworkManager
+
+    # Better compatibility with different networks
+    firewall = {
+      enable = true;
+      allowPing = true;
     };
   };
 

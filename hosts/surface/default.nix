@@ -1,9 +1,16 @@
-{pkgs, ...}: {
+{
+  inputs,
+  pkgs,
+  ...
+}: {
   imports = [
     ./boot-zfs.nix
     ../../system/programs/private
     ../../system/programs/shared
     ./hardware-configuration.nix
+
+    # Surface-specific hardware module
+    inputs.nixos-hardware.nixosModules.microsoft-surface-pro-intel
   ];
 
   # Set kernel parameters
@@ -26,6 +33,10 @@
       microcodeIntel
     ];
   };
+
+  # Surface-specific configurations
+  microsoft-surface.ipts.enable = true;
+  microsoft-surface.surface-control.enable = true;
 
   console.keyMap = "de";
 }
