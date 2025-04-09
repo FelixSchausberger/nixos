@@ -36,7 +36,7 @@
       nixos.source = "${inputs.self}";
 
       "ssh/ssh_host_ed25519_key.pub" = {
-        source = config.sops.secrets."ssh/ed25519".path;
+        source = config.sops.secrets."ssh/authorized_keys/regular".path;
       };
     };
 
@@ -71,7 +71,7 @@
   };
 
   sops.secrets = {
-    "ssh/ed25519" = {};
+    "ssh/authorized_keys/regular" = {};
   };
 
   services = {

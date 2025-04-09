@@ -3,8 +3,8 @@
     ./boot-zfs.nix
     ./hardware-configuration.nix
     ../../system/programs/shared
-    ../../system/programs/work
-    # ../../system/programs/private
+    # ../../system/programs/work
+    ../../system/programs/private
     ../../system/nix/work/substituters.nix
   ];
 

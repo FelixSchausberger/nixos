@@ -14,8 +14,14 @@
   ];
 
   sops = {
-    age.sshKeyPaths = ["/home/${inputs.self.lib.user}/.ssh/id_ed25519"];
+    age = {
+      # Make sure your age key is accessible during boot
+      generateKey = true;
+      sshKeyPaths = ["/home/${inputs.self.lib.user}/.ssh/id_ed25519"];
+    };
+
     defaultSopsFile = "${inputs.self}/secrets/secrets.json";
+    gnupg.sshKeyPaths = [];
   };
 
   # Critical: Force sops-nix to decrypt BEFORE user accounts are created
