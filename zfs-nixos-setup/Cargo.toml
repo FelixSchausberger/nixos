@@ -1,0 +1,14 @@
+[package]
+name = "zfs-nixos-setup"
+version = "0.1.0"
+edition = "2024"
+description = "A tool for setting up NixOS with ZFS"
+authors = ["Your Name <your.email@example.com>"]
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+env_logger = "0.11"
+log = "0.4"
+whoami = "1.4"
+uuid = { version = "1.7", features = ["v4", "fast-rng"] }

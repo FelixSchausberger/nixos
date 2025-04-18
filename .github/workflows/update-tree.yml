@@ -1,0 +1,82 @@
+name: Update Repository Tree
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.nix"
+      - "**/*.css"
+      - "**/*.js"
+      - "**/*.json"
+      - "**/*.md"
+      - "**/*.toml"
+      - "**/*.yaml"
+      - "**/*.yml"
+      # Add other file types you want to monitor
+
+jobs:
+  update-readme:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install tree
+        id: install
+        run: |
+          sudo apt-get update && sudo apt-get install -y tree
+          tree --version
+
+      - name: Generate Repository Tree
+        id: generate
+        if: success()
+        run: |
+          echo ".
+          $(tree -L 4 --charset=utf8 -I 'result|target|.git|secrets|wallpapers' | sed '$d')" > repo_tree.txt
+
+      - name: Update README
+        id: update
+        if: success()
+        run: |
+          touch README.md.tmp
+
+          while IFS= read -r line; do
+            if [[ "$line" == '```tree' ]]; then
+              echo '```' >> README.md.tmp
+              echo '```lang-markdown' >> README.md.tmp
+              cat repo_tree.txt >> README.md.tmp
+              skip=1
+            elif [[ "$line" == '```' && "$skip" == 1 ]]; then
+              echo "$line" >> README.md.tmp
+              skip=0
+            elif [[ "$skip" != 1 ]]; then
+              echo "$line" >> README.md.tmp
+            fi
+          done < README.md
+
+          mv README.md.tmp README.md
+          rm -f repo_tree.txt
+
+      - name: Commit Changes
+        id: commit
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add README.md
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update repository tree"
+            git push origin HEAD:main
+          fi

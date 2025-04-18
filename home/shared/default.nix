@@ -1,0 +1,7 @@
+{
+  imports = [
+    ./gui
+    ./shells
+    ./tui
+  ];
+}
