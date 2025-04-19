@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   # Import configurations of graphical applications
   imports = [
-    ./calibre.nix # Comprehensive e-book software
+    # ./calibre.nix # Comprehensive e-book software
     ./obsidian.nix # A powerful knowledge base
     ./oculante.nix # # A minimalistic crossplatform image viewer written in Rust
     ./sioyek.nix # A PDF viewer

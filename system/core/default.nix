@@ -2,7 +2,6 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 {
-  config,
   inputs,
   lib,
   pkgs,
@@ -32,19 +31,13 @@
 
   # Configure system-wide files.
   environment = {
-    etc = {
-      nixos.source = "${inputs.self}";
-
-      "ssh/ssh_host_ed25519_key.pub" = {
-        source = config.sops.secrets."ssh/authorized_keys/regular".path;
-      };
-    };
+    etc.nixos.source = "${inputs.self}";
 
     systemPackages = with pkgs; [
+      fuse # Library that allows filesystems to be implemented in user space
+      fuse3 # Library that allows filesystems to be implemented in user space
+      bindfs # FUSE filesystem for mounting a directory to another location
       xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
-      age # Modern encryption tool with small explicit keys
-      ssh-to-age # Convert ssh private keys in ed25519 format to age keys
-      sops # Simple and flexible tool for managing secrets
     ];
 
     persistence."/per" = {
@@ -71,10 +64,6 @@
         ];
       };
     };
-  };
-
-  sops.secrets = {
-    "ssh/authorized_keys/regular" = {};
   };
 
   services = {

@@ -177,14 +177,14 @@
       extensions = {
         # Use the same Firefox extension system
         packages = with pkgs.nur.repos.rycee.firefox-addons; [
-          bitwarden           # Password manager
-          darkreader          # Dark mode for websites
-          ff2mpv              # Open videos in mpv
+          bitwarden # Password manager
+          darkreader # Dark mode for websites
+          ff2mpv # Open videos in mpv
           i-dont-care-about-cookies # Remove cookie warnings
-          keepa               # Price history charts
-          ublock-origin       # Ad blocker
-          vimium-c            # Vim-like keyboard navigation
-          youtube-nonstop     # Prevent YouTube auto-pause
+          keepa # Price history charts
+          ublock-origin # Ad blocker
+          vimium-c # Vim-like keyboard navigation
+          youtube-nonstop # Prevent YouTube auto-pause
         ];
       };
 
@@ -195,15 +195,15 @@
       # Browser settings
       settings = {
         # Privacy settings
-        "app.normandy.first_run" = false;               # Disable Normandy/Shield telemetry system
-        "app.shield.optoutstudies.enabled" = false;     # Opt out of shield studies
-        "app.update.channel" = "default";               # Use default update channel
+        "app.normandy.first_run" = false; # Disable Normandy/Shield telemetry system
+        "app.shield.optoutstudies.enabled" = false; # Opt out of shield studies
+        "app.update.channel" = "default"; # Use default update channel
 
         # General behavior settings
-        "browser.aboutConfig.showWarning" = false;      # Don't warn when opening about:config
-        "browser.contentblocking.category" = "strict";  # Use strict content blocking
-        "browser.ctrlTab.recentlyUsedOrder" = false;    # Switch tabs in order, not by recency
-        "browser.discovery.enabled" = false;            # Disable discovery pane
+        "browser.aboutConfig.showWarning" = false; # Don't warn when opening about:config
+        "browser.contentblocking.category" = "strict"; # Use strict content blocking
+        "browser.ctrlTab.recentlyUsedOrder" = false; # Switch tabs in order, not by recency
+        "browser.discovery.enabled" = false; # Disable discovery pane
 
         # New tab page settings
         "browser.newtabpage.activity-stream.showSearch" = false;
@@ -212,29 +212,29 @@
         "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
 
         # Browser startup settings
-        "browser.shell.checkDefaultBrowser" = false;    # Don't check if default browser
+        "browser.shell.checkDefaultBrowser" = false; # Don't check if default browser
 
         # Tab settings
         "browser.tabs.allow_transparent_browser" = true; # Allow background transparency
-        "browser.tabs.newtabbutton" = false;            # Don't show new tab button in tab bar
-        "browser.tabs.hoverPreview.enabled" = true;     # Enable tab hover preview
+        "browser.tabs.newtabbutton" = false; # Don't show new tab button in tab bar
+        "browser.tabs.hoverPreview.enabled" = true; # Enable tab hover preview
         "browser.sessionstore.restore_pinned_tabs_on_demand" = true; # Restore pinned tabs to their original URL
 
         # Interface settings
         "browser.toolbars.bookmarks.visibility" = "never"; # Hide bookmarks toolbar
 
         # URL bar settings
-        "browser.urlbar.quickactions.enabled" = false;  # Disable URL bar quick actions
-        "browser.urlbar.suggest.openpage" = false;      # Don't suggest open pages
-        "browser.urlbar.openintab" = true;              # Open search results in new tab
-        "zen.urlbar.onlyfloatingbar" = true;            # Always use floating URL bar
+        "browser.urlbar.quickactions.enabled" = false; # Disable URL bar quick actions
+        "browser.urlbar.suggest.openpage" = false; # Don't suggest open pages
+        "browser.urlbar.openintab" = true; # Open search results in new tab
+        "zen.urlbar.onlyfloatingbar" = true; # Always use floating URL bar
 
         # Privacy and security settings
         "datareporting.policy.dataSubmissionEnable" = false; # Disable data submission
-        "dom.security.https_only_mode" = true;          # Use HTTPS only mode
+        "dom.security.https_only_mode" = true; # Use HTTPS only mode
         "dom.security.https_only_mode_ever_enabled" = true;
-        "privacy.donottrackheader.enabled" = true;      # Enable Do Not Track
-        "privacy.trackingprotection.enabled" = true;    # Enable tracking protection
+        "privacy.donottrackheader.enabled" = true; # Enable Do Not Track
+        "privacy.trackingprotection.enabled" = true; # Enable tracking protection
         "privacy.trackingprotection.socialtracking.enabled" = true;
         "privacy.webrtc.legacyGlobalIndicator" = false; # Disable WebRTC sharing indicator
 
@@ -242,24 +242,24 @@
         "zen.containers.enable_container_essentials" = true; # Enable container-specific essentials
 
         # Password and autofill settings - Modified for Bitwarden
-        "signon.rememberSignons" = false;               # Don't remember passwords in Firefox
-        "browser.formfill.enable" = true;               # Allow form filling (for Bitwarden)
-        "signon.autofillForms" = true;                  # Allow autofilling (for Bitwarden)
-        "signon.autofillForms.http" = true;             # Allow on HTTP sites too
-        "extensions.bitwarden.alwaysShowPanel" = true;  # Always show Bitwarden for filling
-        "browser.payments.enable" = false;              # Disable payment methods
+        "signon.rememberSignons" = false; # Don't remember passwords in Firefox
+        "browser.formfill.enable" = true; # Allow form filling (for Bitwarden)
+        "signon.autofillForms" = true; # Allow autofilling (for Bitwarden)
+        "signon.autofillForms.http" = true; # Allow on HTTP sites too
+        "extensions.bitwarden.alwaysShowPanel" = true; # Always show Bitwarden for filling
+        "browser.payments.enable" = false; # Disable payment methods
 
         # Extensions settings
-        "extensions.pocket.enabled" = false;            # Disable Pocket
+        "extensions.pocket.enabled" = false; # Disable Pocket
 
         # Hardware acceleration
-        "gfx.webrender.all" = true;                     # Force GPU acceleration
-        "media.ffmpeg.vaapi.enabled" = true;            # Enable VA-API acceleration
-        "widget.dmabuf.force-enabled" = true;           # Enable dmabuf (required for Wayland)
-        "zen.widget.windows.acrylic" = false;           # Disable acrylic effect
+        "gfx.webrender.all" = true; # Force GPU acceleration
+        "media.ffmpeg.vaapi.enabled" = true; # Enable VA-API acceleration
+        "widget.dmabuf.force-enabled" = true; # Enable dmabuf (required for Wayland)
+        "zen.widget.windows.acrylic" = false; # Disable acrylic effect
 
         # Reader mode
-        "reader.parse-on-load.force-enabled" = true;    # Force enable reader mode
+        "reader.parse-on-load.force-enabled" = true; # Force enable reader mode
 
         # User customization
         "toolkit.legacyUserProfileCustomizations.stylesheets" = true; # Enable userChrome.css
@@ -279,12 +279,14 @@
   home.persistence."/per/home/${config.home.username}" = {
     directories = [
       {
-        directory = ".mozilla";
-      }
-      {
         directory = ".zen";
       }
+      {
+        directory = ".cache/zen";
+        method = "symlink";
+      }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 
   # Set as default browser for various MIME types

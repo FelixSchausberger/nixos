@@ -16,7 +16,9 @@
     directories = [
       {
         directory = ".local/share/FreeCAD";
+        method = "symlink";
       }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

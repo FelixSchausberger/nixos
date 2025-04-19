@@ -19,7 +19,9 @@
     directories = [
       {
         directory = ".local/share/io.github.alainm23.planify";
+        method = "symlink";
       }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

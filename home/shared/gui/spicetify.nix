@@ -47,9 +47,19 @@ in {
 
   home.persistence."/per/home/${config.home.username}" = {
     directories = [
-      ".cache/spotify"
-      ".config/spotify"
-      ".spicetify"
+      {
+        directory = ".cache/spotify";
+        method = "symlink";
+      }
+      {
+        directory = ".config/spotify";
+        method = "symlink";
+      }
+      {
+        directory = ".spicetify";
+        method = "symlink";
+      }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

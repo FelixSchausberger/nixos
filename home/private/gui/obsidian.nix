@@ -11,7 +11,9 @@
     directories = [
       {
         directory = ".config/obsidian";
+        method = "symlink";
       }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

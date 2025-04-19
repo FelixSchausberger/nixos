@@ -2,8 +2,8 @@
   # Import configurations of graphical applications
   imports = [
     ./cosmic
-    ./chromium.nix # Open source web browser from Google
-    # ./firefox # A web browser built from Firefox source tree
+    # ./chromium.nix # Open source web browser from Google
+    ./firefox # A web browser built from Firefox source tree
     ./mpv.nix # General-purpose media player, fork of MPlayer and mplayer2
     ./planify.nix # Task manager with Todoist support designed for GNU/Linux
     ./spicetify.nix # Play music from the Spotify music service

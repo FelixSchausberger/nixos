@@ -19,7 +19,9 @@
     directories = [
       {
         directory = ".config/PrusaSlicer";
+        method = "symlink";
       }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

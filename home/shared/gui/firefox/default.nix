@@ -398,7 +398,12 @@ in {
       {
         directory = ".mozilla";
       }
+      {
+        directory = ".cache/mozilla";
+        method = "symlink";
+      }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 
   xdg = {

@@ -24,7 +24,9 @@
     directories = [
       {
         directory = ".local/share/direnv";
+        method = "symlink";
       }
     ];
+    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

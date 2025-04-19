@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   imports = [
     ./bat.nix # A cat clone with syntax highlighting and Git integration
-    ./direnv.nix # A shell extension that manages your environment
+    # ./direnv.nix # A shell extension that manages your environment
     ./eza.nix # A modern, maintained replacement for ls
     ./fd.nix # A simple, fast and user-friendly alternative to find
     ./fzf.nix # A command-line fuzzy finder written in Go

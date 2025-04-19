@@ -115,7 +115,9 @@
     directories = [
       {
         directory = ".config/Code/";
+        method = "symlink";
       }
     ];
+    allowOther = true;
   };
 }
