@@ -8,6 +8,7 @@
     ./planify.nix # Task manager with Todoist support designed for GNU/Linux
     ./spicetify.nix # Play music from the Spotify music service
     ./vscode.nix # Open source source code editor developed by Microsoft
+    ./zen.nix # Open-source fork of Mozilla Firefox
   ];
 
   home.packages = with pkgs; [

@@ -4,27 +4,7 @@
   lib,
   pkgs,
   ...
-}: let
-  inherit (lib) mkForce;
-  # Get original Firefox package
-  firefoxPkg = pkgs.firefox;
-
-  # Get Zen browser package
-  zenBrowser = inputs.zen-browser.packages."${pkgs.system}".twilight;
-
-  # Make a wrapper that preserves the Firefox package structure
-  zenFirefox = firefoxPkg.overrideAttrs (oldAttrs: {
-    name = "zen-firefox";
-    buildCommand = ''
-      # First create the original structure
-      ${oldAttrs.buildCommand or ""}
-
-      # Then replace the firefox binary with the zen binary
-      rm $out/bin/firefox
-      ln -s ${zenBrowser}/bin/zen $out/bin/firefox
-    '';
-  });
-in {
+}: {
   imports = [
     (inputs.impermanence + "/home-manager.nix")
   ];
@@ -46,17 +26,15 @@ in {
   # };
 
   home.sessionVariables = {
-    MOZ_ENABLE_WAYLAND = "1";
+    MOZ_ENABLE_WAYLAND = 1;
   };
 
   programs.firefox = {
     enable = true;
-    package = zenFirefox;
     # package = inputs.firefox-nightly.packages.${pkgs.system}.firefox-nightly-bin;
 
     # Use alsa instead of pulseaudio
-    # package = zenWithWayland;
-    # package = (pkgs.wrapFirefox.override {libpulseaudio = pkgs.libpressureaudio;}) pkgs.firefox-unwrapped {};
+    package = (pkgs.wrapFirefox.override {libpulseaudio = pkgs.libpressureaudio;}) pkgs.firefox-unwrapped {};
     languagePacks = ["de" "en-US"];
 
     /*
@@ -417,9 +395,6 @@ in {
     directories = [
       {
         directory = ".mozilla";
-      }
-      {
-        directory = ".zen";
       }
     ];
   };
