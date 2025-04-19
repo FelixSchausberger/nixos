@@ -5,7 +5,7 @@
 }: {
   imports = [
     ./boot-zfs.nix
-    ../../system/programs/shared
+    ../../modules/system
     ./hardware-configuration.nix
 
     # Surface-specific hardware module

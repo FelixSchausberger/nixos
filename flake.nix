@@ -14,7 +14,7 @@
       flake = {
         # Define the username here as a flake-level configuration
         lib = {
-          user = "fesch";
+          user = "schausberger";
         };
       };
 
@@ -24,14 +24,16 @@
         ...
       }: {
         packages = {
-          lumen = pkgs.callPackage ./system/nix/pkgs/lumen {};
+          basalt = pkgs.callPackage ./pkgs/basalt {};
+          lumen = pkgs.callPackage ./pkgs/lumen {};
         };
 
         devShells.default = pkgs.mkShell {
-          packages = [
-            pkgs.alejandra
-            pkgs.git
-            pkgs.nodePackages.prettier
+          packages = with pkgs; [
+            alejandra
+            git
+            nodejs # Need for prettier
+            nodePackages.prettier
           ];
           name = "dots";
           DIRENV_LOG_FORMAT = "";
@@ -62,19 +64,12 @@
       url = "github:NixOS/nixpkgs/nixos-unstable";
     };
 
-    lix = {
-      url = "git+https://git@git.lix.systems/lix-project/lix";
-    };
-
-    lix-module = {
-      url = "git+https://git.lix.systems/lix-project/nixos-module";
-      inputs = {
-        lix.follows = "lix";
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
-
     # Rest of inputs, alphabetical order
+    arc-2-theme = {
+      url = "github:YashjitPal/Arc-2.0";
+      flake = false; # This repo doesn't contain a flake.nix
+    };
+
     cosmic-manager = {
       url = "github:HeitorAugustoLN/cosmic-manager";
       inputs = {
@@ -98,6 +93,8 @@
     impermanence.url = "github:nix-community/impermanence";
 
     nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
 
     nix-index-db = {
       url = "github:Mic92/nix-index-database";
@@ -136,7 +133,7 @@
     yazi.url = "github:sxyazi/yazi";
 
     yazi-clipboard = {
-      url = "git+https://gitee.com/DreamMaoMao/clipboard.yazi";
+      url = "github:DreamMaoMao/clipboard.yazi";
       flake = false; # This repo doesn't contain a flake.nix
     };
 
@@ -146,7 +143,7 @@
     };
 
     yazi-fg = {
-      url = "git+https://gitee.com/DreamMaoMao/fg.yazi";
+      url = "github:DreamMaoMao/fg.yazi";
       flake = false; # This repo doesn't contain a flake.nix
     };
 

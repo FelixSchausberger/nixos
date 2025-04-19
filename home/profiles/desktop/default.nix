@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   imports = [
-    ../../shared
-    ../../shared/gui/cosmic
+    ../../../modules/home
+    ../../../modules/home/gui/cosmic
     ../../private
     ../../private/gui/freecad.nix # General purpose Open Source 3D CAD/MCAD/CAx/CAE/PLM modeler
     ../../private/gui/steam.nix # A digital distribution platform

@@ -1,5 +1,5 @@
 keys:
-  - &user age1njfl602md7qt36zg957elj8y2xjhcvr0s2pwyxegw64ut6cjzulqs9azj8 # ssh-to-age -i ~/.ssh/id_ed25519.pub
+  - &user age1elrgtf20dvls9ewkuax6m48fgc7vy8xahtkzk7avdyxtldry3etsppl959 # ssh-to-age -i ~/.ssh/id_ed25519_magazino_pki.pub
 
 creation_rules:
   - path_regex: secrets/[^/]+\.json$

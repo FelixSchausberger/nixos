@@ -2,7 +2,7 @@
   imports = [
     ./boot-zfs.nix
     ../../system/programs/private
-    ../../system/programs/shared
+    ../../modules/system
     ./hardware-configuration.nix
   ];
 

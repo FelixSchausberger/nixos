@@ -4,91 +4,131 @@
   pkgs,
   ...
 }: let
-  # Select the latest zfs-compatible kernel
-  zfsCompatibleKernelPackages =
-    lib.filterAttrs (
-      name: kernelPackages:
-        (builtins.match "linux_[0-9]+_[0-9]+" name)
-        != null
-        && (builtins.tryEval kernelPackages).success
-        && (!kernelPackages.${config.boot.zfs.package.kernelModuleAttribute}.meta.broken)
-    )
-    pkgs.linuxKernel.packages;
-  latestKernelPackage = lib.last (
-    lib.sort (a: b: (lib.versionOlder a.kernel.version b.kernel.version)) (
-      builtins.attrValues zfsCompatibleKernelPackages
-    )
-  );
-in {
-  boot = {
-    loader = {
-      systemd-boot = {
-        enable = true;
-        editor = true; # Set to true allows gaining root access by passing init=/bin/sh as a kernel parameter
-        consoleMode = "max";
-        configurationLimit = 20;
+  # Get the latest stable ZFS-compatible kernel
+  latestStableKernel = let
+    kernels = lib.filterAttrs (name: _: lib.hasPrefix "linux_" name) pkgs.linuxKernel.packages;
+    stableKernels = lib.filterAttrs (_: pkg: !(pkg.kernel.features ? preemptrt)) kernels;
+  in
+    lib.last (lib.sort (a: b: lib.versionOlder a.kernel.version b.kernel.version)
+      (lib.attrValues stableKernels));
 
-        # Recovery shell
-        extraEntries = {
-          "nixos-recovery.conf" = ''
-            title NixOS Recovery
-            linux /nixos/current/kernel
-            initrd /nixos/current/initrd
-            options init=/bin/sh
-          '';
+  # Use either the latest stable kernel or the default one
+  kernelPackages =
+    if config.boot.zfs.forceLatestStableKernel
+    then latestStableKernel
+    else pkgs.linuxPackages;
+in {
+  options.boot.zfs = {
+    forceLatestStableKernel = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to force the latest stable kernel for ZFS compatibility";
+    };
+  };
+
+  config = {
+    boot = {
+      loader = {
+        systemd-boot = {
+          enable = true;
+          editor = true; # Allow recovery by passing init=/bin/sh
+          consoleMode = "max";
+          configurationLimit = 20;
+
+          extraEntries = {
+            "nixos-recovery.conf" = ''
+              title NixOS Recovery
+              linux /nixos/current/kernel
+              initrd /nixos/current/initrd
+              options init=/bin/sh
+            '';
+          };
+        };
+
+        efi = {
+          canTouchEfiVariables = true;
+          efiSysMountPoint = "/boot"; # Adjust if your ESP is mounted elsewhere
+        };
+
+        timeout = 0;
+      };
+
+      kernelPackages = kernelPackages;
+
+      # Ensure ZFS kernel module matches userspace tools
+      zfs = {
+        package = pkgs.zfs.override {
+          # Use the same kernel sources as our kernelPackages
+          kernel = kernelPackages.kernel;
+        };
+        extraPools = ["rpool"];
+      };
+
+      supportedFilesystems = ["ntfs" "zfs"];
+
+      initrd = {
+        systemd.enable = true;
+
+        systemd.services = {
+          reset-root = {
+            description = "Reset root filesystem to blank snapshot";
+            wantedBy = ["initrd.target"];
+            after = ["zfs-import.target"];
+            before = ["sysroot.mount"];
+            path = [pkgs.zfs];
+            unitConfig.DefaultDependencies = "no";
+            serviceConfig.Type = "oneshot";
+            script = "zfs rollback -r rpool/eyd/root@blank";
+          };
+
+          enable-autotrim = {
+            description = "Enable ZFS autotrim";
+            wantedBy = ["initrd.target"];
+            after = ["zfs-import.target"];
+            before = ["sysroot.mount"];
+            path = [pkgs.zfs];
+            unitConfig.DefaultDependencies = "no";
+            serviceConfig.Type = "oneshot";
+            script = "zpool set autotrim=on rpool";
+          };
         };
       };
 
-      grub.device = "/dev/nvme0n1";
-
-      efi.canTouchEfiVariables = true;
-      timeout = 0;
+      kernelParams = ["nohibernate"];
     };
 
-    supportedFilesystems = ["ntfs" "zfs"];
-    initrd = {
-      systemd.enable = true;
+    services.zfs = {
+      autoScrub.enable = true;
+      autoSnapshot.enable = true;
 
-      # systemd in initrd requires a service instead of a command
-      systemd.services.reset = {
-        description = "reset root filesystem";
-        wantedBy = ["initrd.target"];
-        after = ["zfs-import.target"];
-        before = ["sysroot.mount"];
-        path = with pkgs; [zfs];
-        unitConfig.DefaultDependencies = "no";
-        serviceConfig.Type = "oneshot";
-        script = "zfs rollback -r rpool/eyd/root@blank";
-      };
-
-      systemd.services.zfs-autotrim = {
-        description = "Enable ZFS autotrim";
-        wantedBy = ["initrd.target"];
-        after = ["zfs-import.target"];
-        before = ["sysroot.mount"];
-        path = with pkgs; [zfs];
-        unitConfig.DefaultDependencies = "no";
-        serviceConfig.Type = "oneshot";
-        script = "zpool set autotrim=on rpool";
+      zed = {
+        settings = {
+          ZED_DEBUG_LOG = "/var/log/zed.debug";
+          ZED_IGNORE_EID = "1";
+          ZED_IGNORED_HISTORY = "1";
+        };
       };
     };
 
-    kernelPackages = latestKernelPackage;
-    kernelParams = ["nohibernate"]; # "quiet" "udev.log_level=3"];
-  };
+    systemd.services = {
+      zfs-zed = {
+        serviceConfig = {
+          Restart = "always";
+          RestartSec = "5s";
+          StartLimitIntervalSec = "0";
+        };
+      };
 
-  systemd.services.system-systemd-swap = {
-    after = ["zfs.target" "zfs-mount.service"];
-    requires = ["zfs.target" "zfs-mount.service"];
-  };
+      # Ensure proper ordering with ZFS
+      system-systemd-swap = {
+        after = ["zfs.target" "zfs-mount.service"];
+        requires = ["zfs.target" "zfs-mount.service"];
+      };
 
-  systemd.services.nsncd = {
-    after = ["zfs.target" "systemd-swap.target"];
-    requires = ["zfs.target" "systemd-swap.target"];
-  };
-
-  services.zfs = {
-    autoScrub.enable = true;
-    autoSnapshot.enable = true;
+      nsncd = {
+        after = ["zfs.target" "systemd-swap.target"];
+        requires = ["zfs.target" "systemd-swap.target"];
+      };
+    };
   };
 }

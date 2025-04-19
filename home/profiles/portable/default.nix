@@ -1,8 +1,7 @@
 {
   imports = [
-    ../../shared
-    ../../shared/gui/cosmic
-    # ../../shared/gui/gnome.nix
-    ../../work
+    ../../../modules/home
+    ../../../modules/home/gui/cosmic
+    # ../../modules/gui/gnome.nix
   ];
 }
