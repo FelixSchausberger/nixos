@@ -4,7 +4,9 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  inherit (lib) mkForce;
+in {
   imports = [
     (inputs.impermanence + "/home-manager.nix")
   ];

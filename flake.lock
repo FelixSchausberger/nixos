@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "arc-2-theme": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1743090962,
+        "narHash": "sha256-yD/C0wlHBZXeXngdyZxfDOMy6a0kuM7JfmbZqAlqfAU=",
+        "owner": "YashjitPal",
+        "repo": "Arc-2.0",
+        "rev": "57306dffba80f9a929c200e506b589d913efe16b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "YashjitPal",
+        "repo": "Arc-2.0",
+        "type": "github"
+      }
+    },
     "cosmic-manager": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -843,6 +859,7 @@
     },
     "root": {
       "inputs": {
+        "arc-2-theme": "arc-2-theme",
         "cosmic-manager": "cosmic-manager",
         "firefox-nightly": "firefox-nightly",
         "flake-compat": "flake-compat_2",

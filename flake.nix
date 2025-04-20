@@ -75,6 +75,11 @@
     };
 
     # Rest of inputs, alphabetical order
+    arc-2-theme = {
+      url = "github:YashjitPal/Arc-2.0";
+      flake = false; # This repo doesn't contain a flake.nix
+    };
+
     cosmic-manager = {
       url = "github:HeitorAugustoLN/cosmic-manager";
       inputs = {
