@@ -14,9 +14,9 @@
       ../.
       ./surface
     ];
-    "${getUserHost inputs.self.lib.user "thinkpad"}" = [
+    "${getUserHost inputs.self.lib.user "pdemu1cml000312"}" = [
       ../.
-      ./thinkpad
+      ./pdemu1cml000312
     ];
     "${getUserHost inputs.self.lib.user "portable"}" = [
       ../.
@@ -43,12 +43,12 @@ in {
         inherit pkgs extraSpecialArgs;
       };
 
-      "${inputs.self.lib.user}_thinkpad" = homeManagerConfiguration {
-        modules = homeImports."${inputs.self.lib.user}@thinkpad";
+      "${inputs.self.lib.user}_pdemu1cml00312" = homeManagerConfiguration {
+        modules = homeImports."${inputs.self.lib.user}@pdemu1cml000312";
         inherit pkgs extraSpecialArgs;
       };
 
-      "${inputs.self.lib.user}_thinkpad" = homeManagerConfiguration {
+      "${inputs.self.lib.user}_portable" = homeManagerConfiguration {
         modules = homeImports."${inputs.self.lib.user}@portable";
         inherit pkgs extraSpecialArgs;
       };

@@ -11,7 +11,7 @@
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
     ./nix.nix # Nix tooling
     ./nixvim # Configure Neovim with Nix
-    ./neovim.nix # Vim text editor fork focused on extensibility and agility
+    # ./neovim.nix # Vim text editor fork focused on extensibility and agility
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./rip.nix # Replacement for rm with focus on safety, ergonomics and performance
     ./sops.nix # Simple and flexible tool for managing secrets

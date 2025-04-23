@@ -5,10 +5,11 @@
 }: {
   programs.vscode = {
     enable = true;
-
     package = pkgs.code-cursor; # AI-powered code editor built on vscode
 
     profiles.default = {
+      enableUpdateCheck = false;
+
       # https://search.nixos.org/packages?type=packages&query=vscode-extensions
       extensions = with pkgs.vscode-extensions; [
         bbenoist.nix
@@ -25,41 +26,28 @@
       ];
 
       userSettings = {
-        # Use a custom title bar style instead of the default GNOME style
-        "window.titleBarStyle" = "custom";
-
         # Enable colorization of matching brackets for better readability
         "editor.bracketPairColorization.enabled" = true;
 
-        # Configure pylint for Python linting with Django and numpy/ompl support
-        "python.linting.pylintArgs" = [
-          "--load-plugins"
-          "pylint_django"
-          "--extension-pkg-whitelist=numpy,ompl"
-        ];
+        "editor.fontSize" = 16;
+        "editor.fontFamily" = "'Fira Code Mono', 'monospace', monospace";
 
-        # Use yapf as the Python code formatter
-        "python.formatting.provider" = "yapf";
+        # Automatically format code on paste, type, and save
+        "editor.formatOnSave" = true;
+        "editor.formatOnSaveMode" = "modifications"; # Only format modified lines on save
+        "editor.formatOnPaste" = true;
+        "editor.formatOnType" = true;
 
-        # Specify the style file for yapf formatting
-        "python.formatting.yapfArgs" = [
-          "--style=/usr/share/magformat/default_styles/style.yapf"
-        ];
-
-        # Configure isort for sorting Python imports with a specific style
-        "python.sortImports.args" = [
-          "-sp /usr/share/magformat/default_styles/isort.cfg"
-          "--trailing-comma"
-        ];
+        # Make hover popups non-sticky so they disappear when the mouse moves away
+        "editor.hover.sticky" = false;
 
         # Add vertical rulers at columns 79, 88, and 100 for code formatting guidelines
         "editor.rulers" = [79 88 100];
 
-        # Automatically format code on paste, type, and save
-        "editor.formatOnPaste" = true;
-        "editor.formatOnType" = true;
-        "editor.formatOnSave" = true;
-        "editor.formatOnSaveMode" = "modifications"; # Only format modified lines on save
+        # Associate *.txt files with the "msg" plugin for better editing of CMakeLists.txt
+        "files.associations" = {
+          "*.txt" = "msg";
+        };
 
         # Automatically save files when the editor loses focus
         "files.autoSave" = "onFocusChange";
@@ -74,21 +62,36 @@
           "**/*.pyc" = true; # Exclude compiled Python files
         };
 
-        # Make hover popups non-sticky so they disappear when the mouse moves away
-        "editor.hover.sticky" = false;
-
-        # Associate *.txt files with the "msg" plugin for better editing of CMakeLists.txt
-        "files.associations" = {
-          "*.txt" = "msg";
-        };
-
-        # Disable telemetry data collection
-        "telemetry.telemetryLevel" = "off";
-
         # Ensure files end with a newline, trim extra newlines, and remove trailing whitespace
         "files.insertFinalNewline" = true;
         "files.trimFinalNewlines" = true;
         "files.trimTrailingWhitespace" = true;
+
+        "[nix]"."editor.tabSize" = 2;
+
+        # Use yapf as the Python code formatter
+        "python.formatting.provider" = "yapf";
+
+        # Specify the style file for yapf formatting
+        "python.formatting.yapfArgs" = [
+          "--style=/usr/share/magformat/default_styles/style.yapf"
+        ];
+
+        # Configure pylint for Python linting with Django and numpy/ompl support
+        "python.linting.pylintArgs" = [
+          "--load-plugins"
+          "pylint_django"
+          "--extension-pkg-whitelist=numpy,ompl"
+        ];
+
+        # Configure isort for sorting Python imports with a specific style
+        "python.sortImports.args" = [
+          "-sp /usr/share/magformat/default_styles/isort.cfg"
+          "--trailing-comma"
+        ];
+
+        # Disable telemetry data collection
+        "telemetry.telemetryLevel" = "off";
 
         # Vim-related settings for the VSCode Vim extension
         "vim.useSystemClipboard" = true; # Use the system clipboard for Vim operations
@@ -107,6 +110,11 @@
           "<C-n>" = false; # Disable Vim handling of Ctrl+N
         };
         "vim.visualstar" = true; # Enable visual star search in Vim mode
+
+        # Use a custom title bar style instead of the default GNOME style
+        "window.titleBarStyle" = "custom";
+
+        "workbench.colorTheme" = "Cursor Dark Midnight";
       };
     };
   };

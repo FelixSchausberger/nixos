@@ -14,7 +14,7 @@
       flake = {
         # Define the username here as a flake-level configuration
         lib = {
-          user = "fesch";
+          user = "schausberger";
         };
       };
 

@@ -48,6 +48,8 @@
           if test -d $HOME/.ssh
               ssh-add $HOME/.ssh/id_ed25519_magazino_pki
           end
+
+          sudo chmod +0666 /dev/kvm
       end
     '';
 

@@ -4,12 +4,11 @@
   lib,
   ...
 }: let
-  capitalizeFirstChar = str:
-    str
-    |> builtins.substring 0 1
-    |> lib.strings.toUpper
-    |> (firstChar: firstChar + builtins.substring 1 (builtins.stringLength str - 1) str);
-
+  # capitalizeFirstChar = str:
+  #   str
+  #   |> builtins.substring 0 1
+  #   |> lib.strings.toUpper
+  #   |> (firstChar: firstChar + builtins.substring 1 (builtins.stringLength str - 1) str);
   inherit (inputs.nixpkgs.lib) nixosSystem;
 
   inherit (import "${inputs.self}/system") desktop laptop;
@@ -30,7 +29,7 @@
         baseModules
         ++ [
           {
-            networking.hostName = hostName |> capitalizeFirstChar;
+            networking.hostName = hostName; # |> capitalizeFirstChar;
             _module.args.hostName = hostName;
           }
           {
@@ -57,10 +56,10 @@ in {
       extraModules = [./surface];
     };
 
-    thinkpad = mkHostConfig {
-      hostName = "thinkpad";
+    pdemu1cml000312 = mkHostConfig {
+      hostName = "pdemu1cml000312";
       baseModules = laptop;
-      extraModules = [./thinkpad];
+      extraModules = [./pdemu1cml000312];
     };
 
     portable = mkHostConfig {
