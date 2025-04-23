@@ -281,10 +281,6 @@
       {
         directory = ".zen";
       }
-      {
-        directory = ".cache/zen";
-        method = "symlink";
-      }
     ];
     allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };

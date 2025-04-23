@@ -1,7 +1,6 @@
 {pkgs, ...}: {
   home.packages = with pkgs; [
     gnome-tweaks # Tool to customize advanced GNOME 3 options
-    flameshot # Powerful yet simple to use screenshot software
     # satty # Screenshot annotation tool inspired by Swappy and Flameshot
     wl-clipboard # Command-line copy/paste utilities for Wayland
   ];

@@ -3,7 +3,6 @@
     # displayManager = {
     #   autoLogin = {
     #     enable = true;
-    #     user = "fesch";
     #   };
     #   defaultSession = "gnome";
     # };

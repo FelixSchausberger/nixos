@@ -36,5 +36,6 @@
     pull = "git pull"; # --rebase origin main
     push = "git push"; # origin main
     rebase = "git rebase -i HEAD~2";
+    show = "git show";
   };
 }

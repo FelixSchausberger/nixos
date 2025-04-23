@@ -4,10 +4,10 @@
   lib,
   ...
 }: let
-  capitalizeFirstChar = str: 
-    str 
-    |> builtins.substring 0 1 
-    |> lib.strings.toUpper 
+  capitalizeFirstChar = str:
+    str
+    |> builtins.substring 0 1
+    |> lib.strings.toUpper
     |> (firstChar: firstChar + builtins.substring 1 (builtins.stringLength str - 1) str);
 
   inherit (inputs.nixpkgs.lib) nixosSystem;
@@ -35,7 +35,7 @@
           }
           {
             home-manager = {
-              users.${inputs.self.lib.user}.imports = 
+              users.${inputs.self.lib.user}.imports =
                 homeImports."${inputs.self.lib.user}@${hostName}";
               extraSpecialArgs = specialArgs // {inherit hostName;};
             };

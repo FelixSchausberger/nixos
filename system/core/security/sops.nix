@@ -16,5 +16,6 @@
   sops = {
     defaultSopsFile = "${inputs.self}/secrets/secrets.json";
     age.keyFile = "/per/system/sops-key.txt";
+    # age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
   };
 }

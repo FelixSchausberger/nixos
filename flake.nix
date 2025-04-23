@@ -62,18 +62,6 @@
       url = "github:NixOS/nixpkgs/nixos-unstable";
     };
 
-    lix = {
-      url = "git+https://git@git.lix.systems/lix-project/lix";
-    };
-
-    lix-module = {
-      url = "git+https://git.lix.systems/lix-project/nixos-module";
-      inputs = {
-        lix.follows = "lix";
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
-
     # Rest of inputs, alphabetical order
     arc-2-theme = {
       url = "github:YashjitPal/Arc-2.0";
@@ -103,6 +91,8 @@
     impermanence.url = "github:nix-community/impermanence";
 
     nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
 
     nix-index-db = {
       url = "github:Mic92/nix-index-database";

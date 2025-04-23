@@ -16,9 +16,10 @@
     age = {
       generateKey = false;
       keyFile = "/per/system/sops-key.txt";
+      # sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
     };
 
     defaultSopsFile = "${inputs.self}/secrets/secrets.json";
-    gnupg.sshKeyPaths = [];
+    # gnupg.sshKeyPaths = [];
   };
 }

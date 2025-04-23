@@ -1,5 +1,6 @@
 {
   config,
+  hostName,
   inputs,
   ...
 }: let
@@ -24,6 +25,8 @@
     config.xdg.cacheHome
     |> getPath "cache"
     |> (path: "${path}/less/history");
+
+  username = inputs.self.lib.user;
 in {
   imports = [
     inputs.nix-index-db.hmModules.nix-index
@@ -31,8 +34,8 @@ in {
   ];
 
   home = {
-    homeDirectory = "/home/${inputs.self.lib.user}";
-    username = inputs.self.lib.user;
+    homeDirectory = "/home/${username}";
+    username = "${username}";
 
     sessionVariables = {
       XDG_RUNTIME_DIR = "/run/user/$UID";
