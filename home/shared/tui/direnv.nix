@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   inputs,
   ...
 }: {
@@ -20,13 +20,13 @@
     nix-direnv.enable = true;
   };
 
-  home.persistence."/per/home/${config.home.username}" = {
-    directories = [
-      {
-        directory = ".local/share/direnv";
-        method = "symlink";
-      }
-    ];
-    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
-  };
+  # home.persistence."/per/home/${config.home.username}" = {
+  #   directories = [
+  #     {
+  #       directory = ".local/share/direnv";
+  #       method = "symlink";
+  #     }
+  #   ];
+  #   allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
+  # };
 }

@@ -47,9 +47,9 @@
         "/var/lib/nixos" # Contains state files for NixOS, critical for preserving system and package state across reboots
         "/var/lib/systemd/coredump" # Stores core dumps from crashed applications, useful for debugging and analyzing issues
       ];
-      files = [
-        "/etc/machine-id" # A unique identifier for the system, used by systemd and other services for consistent identification
-      ];
+      #      files = [
+      #        "/etc/machine-id" # A unique identifier for the system, used by systemd and other services for consistent identification
+      #      ];
       users.${inputs.self.lib.user} = {
         directories = [
           "Downloads"

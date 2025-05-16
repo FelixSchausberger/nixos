@@ -6,7 +6,7 @@
 
     # Javascript
     # nodejs
-    nodejs_23
+    # nodejs_23
 
     # Python
     jq
@@ -21,7 +21,7 @@
     clang-tools # C/C++
     marksman # Markdown
     nil # Nix
-    python311Packages.python-lsp-server # Python
+    # python311Packages.python-lsp-server # Python
     rust-analyzer # Rust
     taplo # TOML
     yaml-language-server # YAML

@@ -117,7 +117,7 @@
     # scripts.url = "./home/scripts";
 
     spicetify-nix = {
-      url = "github:Gerg-L/spicetify-nix";
+      url = "github:Gerg-L/spicetify-nix/24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -131,7 +131,7 @@
     yazi.url = "github:sxyazi/yazi";
 
     yazi-clipboard = {
-      url = "git+https://gitee.com/DreamMaoMao/clipboard.yazi";
+      url = "github:DreamMaoMao/clipboard.yazi";
       flake = false; # This repo doesn't contain a flake.nix
     };
 
@@ -141,7 +141,7 @@
     };
 
     yazi-fg = {
-      url = "git+https://gitee.com/DreamMaoMao/fg.yazi";
+      url = "github:DreamMaoMao/fg.yazi";
       flake = false; # This repo doesn't contain a flake.nix
     };
 

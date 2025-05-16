@@ -42,7 +42,11 @@ in {
       playlistIcons # Give your playlists icons in the left sidebar.
     ];
 
+    experimentalFeatures = true;
+
     # theme = spicePkgs.themes.hazy;
+    theme = spicePkgs.themes.catppuccin;
+    colorScheme = "mocha";
   };
 
   home.persistence."/per/home/${config.home.username}" = {

@@ -35,7 +35,7 @@
     # prune = "git filter-branch --index-filter \"git rm -f --cached --ignore-unmatch $1/*\" --prune-empty --tag-name-filter cat -- --all"
     pull = "git pull"; # --rebase origin main
     push = "git push"; # origin main
-    rebase = "git rebase -i HEAD~2";
+    rebase = "git rebase -i";
     show = "git show";
   };
 }
