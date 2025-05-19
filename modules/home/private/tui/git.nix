@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   pkgs,
   ...
 }: {
@@ -13,12 +13,12 @@
     enable = true;
     userEmail = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
     extraConfig = {
-      github.token = "${config.sops.secrets."github/token".path}";
+      # github.token = "${config.sops.secrets."github/token".path}";
       init.defaultBranch = "main";
     };
   };
 
-  sops.secrets = {
-    "github/token" = {};
-  };
+  # sops.secrets = {
+  #   "github/token" = {};
+  # };
 }

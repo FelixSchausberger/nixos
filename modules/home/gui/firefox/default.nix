@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   inputs,
   lib,
   pkgs,
@@ -393,14 +393,14 @@ in {
     };
   };
 
-  home.persistence."/per/home/${config.home.username}" = {
-    directories = [
-      {
-        directory = ".mozilla";
-      }
-    ];
-    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
-  };
+  # home.persistence."/per/home/${config.home.username}" = {
+  #   directories = [
+  #     {
+  #       directory = ".mozilla";
+  #     }
+  #   ];
+  #   allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
+  # };
 
   xdg = {
     enable = true;

@@ -8,11 +8,11 @@
     "${inputs.impermanence}/nixos.nix"
   ];
 
-  # services = {
-  #   desktopManager.cosmic.enable = true;
-  #   displayManager.cosmic-greeter.enable = true;
-  #   #   # getty.autologinUser = inputs.self.lib.user;
-  # };
+  services = {
+    desktopManager.cosmic.enable = true;
+    displayManager.cosmic-greeter.enable = true;
+    #   #   # getty.autologinUser = inputs.self.lib.user;
+  };
 
   xdg.portal = {
     enable = true;

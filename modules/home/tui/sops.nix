@@ -16,10 +16,16 @@
     age = {
       generateKey = false;
       keyFile = "/per/system/sops-key.txt";
-      # sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
     };
 
     defaultSopsFile = "${inputs.self}/secrets/secrets.json";
-    # gnupg.sshKeyPaths = [];
+
+    # Add this line to set the environment variable
+    defaultSopsFormat = "json";
+  };
+
+  # Ensure the SOPS_AGE_KEY_FILE environment variable is set
+  home.sessionVariables = {
+    SOPS_AGE_KEY_FILE = "/per/system/sops-key.txt";
   };
 }

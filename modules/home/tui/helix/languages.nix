@@ -51,6 +51,12 @@ in {
           inherit (model1) completion;
         };
       };
+
+      # https://github.com/mhersson/mpls
+      mpls = {
+        command = "mpls";
+        args = ["--dark-mode", "--enable-emoji"];
+      };
     };
 
     # language-server.typescript-language-server = with pkgs.nodePackages; {
@@ -81,6 +87,7 @@ in {
         };
         language-servers = [
           "markdown-oxide"
+          "mpls"
         ];
         rulers = [
           120
