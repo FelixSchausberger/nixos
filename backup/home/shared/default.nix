@@ -3,6 +3,6 @@
     ./gui
     ./shells
     ./tui
-    ./cli-tools.nix
+    ./cli-tools.nix # Add this line
   ];
 }

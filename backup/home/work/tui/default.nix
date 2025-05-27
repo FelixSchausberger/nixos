@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   imports = [
     ./awscli.nix # Unified tool to manage your AWS services
-    ./work-git-features.nix
+    ./work-git-features.nix # Work Git feature additions
   ];
 
   home.packages = with pkgs; [
