@@ -1,6 +1,8 @@
+# home/private/tui/default.nix
 {
   imports = [
-    ./private-git-features.nix
-    ./typix.nix # Typst: A markup-based typesetting system
+    ../../../modules/home/tui/git.nix # Base shared Git module
+    ./private-git-features.nix        # Private Git additions
+    ./typix.nix
   ];
 }

@@ -3,31 +3,30 @@
 
   outputs = inputs:
     let
-      user = "schausberger"; # Define user here for convenience
-      system = "x86_64-linux"; # Define system here for convenience
-      hostnames = ["desktop" "surface" "portable" "pdemu1cml000312"]; # Define hostnames
-      # Load system module sets from system/default.nix.
-      systemModules = import ./system; # This loads system/default.nix
+      user = "schausberger";
+      system = "x86_64-linux";
+      hostnames = ["desktop" "surface" "portable" "pdemu1cml000312"];
+      systemModules = import ./system; # Load system module sets from system/default.nix.
       # Helper function to generate nixosConfigurations
       mkNixosConfiguration = hostname:
-          let
-            # Dynamically select system modules based on hostname and defined roles.
-            hostSystemModules =
-              if hostname == "desktop" then
-                systemModules.standardSystemModules ++ systemModules.gamingSystemModules
-              else if hostname == "surface" || hostname == "pdemu1cml000312" || hostname == "portable" then
-                systemModules.standardSystemModules
-              else []; # Should not happen with the defined hostnames list
-          in
-          inputs.nixpkgs.lib.nixosSystem {
-            inherit system; # system = "x86_64-linux";
-            specialArgs = {inherit inputs;};
-            modules = [
-              ./hosts/${hostname}/default.nix
-              inputs.sops-nix.nixosModules.sops
-              inputs.home-manager.nixosModules.home-manager
-            ] ++ hostSystemModules;
-          };
+        let
+          # Select system modules based on hostname.
+          # All hosts receive 'platformModules'; 'desktop' gets additional 'gamingSystemModules'.
+          hostSystemModules =
+            if hostname == "desktop" then
+              systemModules.platformModules ++ systemModules.gamingSystemModules
+            else # For surface, pdemu1cml000312, portable
+              systemModules.platformModules;
+        in
+        inputs.nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = {inherit inputs;};
+          modules = [
+            ./hosts/${hostname}/default.nix
+            inputs.sops-nix.nixosModules.sops
+            inputs.home-manager.nixosModules.home-manager
+          ] ++ hostSystemModules;
+        };
       # Helper function to generate homeConfigurations
       mkHomeConfiguration = hostname:
         inputs.home-manager.lib.homeManagerConfiguration {
@@ -40,27 +39,22 @@
         };
     in
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = [system]; # Use the defined system variable
+      systems = [system];
 
       imports = [
-        # ./home/profiles # Removed as per instructions
-        # ./hosts # Removed as per instructions
         ./pre-commit-hooks.nix
       ];
 
       flake = {
-        # Define the username here as a flake-level configuration
         lib = {
-          inherit user; # Use the defined user variable
+          inherit user;
         };
 
-        # NixOS configurations
         nixosConfigurations = builtins.listToAttrs (map (name: {
           inherit name;
           value = mkNixosConfiguration name;
         }) hostnames);
 
-        # Home Manager configurations
         homeConfigurations = builtins.listToAttrs (map (name: {
           name = "${user}-${name}";
           value = mkHomeConfiguration name;
@@ -89,18 +83,16 @@
           '';
         };
 
-        formatter = pkgs.alejandra; # Ensure alejandra is used for formatting
+        formatter = pkgs.alejandra;
       };
     };
 
   inputs = {
-    # Local Flakes
     localScripts = {
-      url = "path:./home/scripts"; # Ensures it points to the subdirectory
-      flake = true; # Explicitly state it's a flake
+      url = "path:./home/scripts";
+      flake = true;
     };
 
-    # Global, so they can be `.follow`ed
     systems.url = "github:nix-systems/default-linux";
 
     flake-compat.url = "github:edolstra/flake-compat";
@@ -120,7 +112,7 @@
     # Rest of inputs, alphabetical order
     arc-2-theme = {
       url = "github:YashjitPal/Arc-2.0";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     cosmic-manager = {
@@ -187,32 +179,32 @@
 
     yazi-clipboard = {
       url = "github:DreamMaoMao/clipboard.yazi";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     yazi-eza-preview = {
       url = "github:ahkohd/eza-preview.yazi";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     yazi-fg = {
       url = "github:DreamMaoMao/fg.yazi";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     yazi-mount = {
       url = "git+https://github.com/SL-RU/mount.yazi";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     yazi-starship = {
       url = "github:Rolv-Apneseth/starship.yazi";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     yazi-plugins = {
       url = "github:yazi-rs/plugins";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
     zen-browser.url = "github:0xc000022070/zen-browser-flake";

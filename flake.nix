@@ -89,7 +89,7 @@
 
   inputs = {
     localScripts = {
-      url = "path:./home/scripts";
+      url = "path:./tools/scripts"; # Path to the local flake
       flake = true;
     };
 

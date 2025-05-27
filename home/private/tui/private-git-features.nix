@@ -1,8 +1,9 @@
-# Augments base Git config with settings for private use (e.g., personal email, GitHub token).
+# home/private/tui/private-git-features.nix
+# Augments base Git config with settings for private use.
 { config, pkgs, ... }: {
   home.packages = with pkgs; [
-    act # Run your GitHub Actions locally
-    lazygit # A simple terminal UI for git commands
+    act
+    lazygit
   ];
 
   programs.git.userEmail = "131732042+FelixSchausberger@users.noreply.github.com";
