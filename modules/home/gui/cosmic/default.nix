@@ -1,8 +1,4 @@
-{
-  inputs,
-  pkgs,
-  ...
-}: {
+{inputs, ...}: {
   imports = [
     inputs.cosmic-manager.homeManagerModules.cosmic-manager
     ./cosmic-applets.nix
@@ -26,11 +22,11 @@
     '';
   };
 
-  programs.cosmic-manager.enable = true;
-
-  home.packages = with pkgs; [
-    cosmic-ext-ctl # CLI for COSMIC Desktop configuration management
-  ];
+  programs = {
+    cosmic-ext-ctl.enable = true; # CLI for COSMIC Desktop configuration management
+    cosmic-manager.enable = true; # Manage COSMIC desktop declaratively using home-manager
+    cosmic-ext-tweaks.enable = true; # # A tweaking tool for the COSMIC desktop
+  };
 
   wayland.desktopManager.cosmic = {
     enable = true;

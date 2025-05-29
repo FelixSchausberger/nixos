@@ -92,6 +92,11 @@
 
     impermanence.url = "github:nix-community/impermanence";
 
+    nix-ai-help = {
+      url = "github:olafkfreund/nix-ai-help";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
 
     nixos-hardware.url = "github:NixOS/nixos-hardware";

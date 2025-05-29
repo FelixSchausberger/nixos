@@ -11,7 +11,7 @@
   # services = {
   #   desktopManager.cosmic.enable = true;
   #   displayManager.cosmic-greeter.enable = true;
-  #   #   # getty.autologinUser = inputs.self.lib.user;
+  #   # getty.autologinUser = inputs.self.lib.user;
   # };
 
   xdg.portal = {
@@ -65,15 +65,22 @@
     };
 
     systemPackages = with pkgs; [
-      # cosmic-reader # WIP COSMIC PDF reader.
+      cosmic-ext-applet-caffeine # Prevents your screen from going to sleep
       cosmic-ext-applet-clipboard-manager # Clipboard manager for COSMIC.
       cosmic-ext-applet-emoji-selector # Emoji Selector for COSMIC DE.
-      # cosmic-ext-applet-external-monitor-brightness # Change brightness of external monitors via DDC/CI protocol.
-      # cosmic-ext-examine # A system information viewer for the COSMIC desktop.
-      # cosmic-ext-tweaks # A tweaking tool for the COSMIC desktop.
+      cosmic-ext-applet-external-monitor-brightness # Change brightness of external monitors via DDC/CI protocol.
+      # cosmic-applet-ollama # Applet for Ollama
+      # cosmic-ext-applet-privacy-indicator # Privacy Indicator applet for COSMIC
+      # cosmic-ext-applet-system-monitor # A highly configurable resource monitor applet for the COSMIC DE
+      examine # A system information viewer for the COSMIC desktop.
 
       xdg-desktop-portal-cosmic # XDG Desktop Portal for the COSMIC Desktop Environment
       xdg-desktop-portal-wlr
     ];
   };
+
+  # systemd = {
+  #   packages = [pkgs.observatory];
+  #   services.monitord.wantedBy = ["multi-user.target"];
+  # };
 }

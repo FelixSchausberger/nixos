@@ -9,14 +9,14 @@
     ./git.nix # Distributed version control system
     ./helix
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
-    ./nix.nix # Nix tooling
     ./nixvim # Configure Neovim with Nix
     # ./neovim.nix # Vim text editor fork focused on extensibility and agility
+    ./ollama.nix # Get up and running with large language models locally
+    ./pay-respects.nix # Command suggestions, command-not-found and thefuck replacement
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./rip.nix # Replacement for rm with focus on safety, ergonomics and performance
     ./sops.nix # Simple and flexible tool for managing secrets
     ./tealdeer.nix # A very fast implementation of tldr
-    ./thefuck.nix # Magnificent app which corrects your previous console command
     ./yazi
   ];
 
@@ -26,6 +26,13 @@
     home-manager.enable = true; # A Nix-based user environment configurator
     nix-index.enable = true; # A files database for nixpkgs
   };
+
+  # Nix tooling
+  # home.packages = with pkgs; [
+  #   alejandra
+  #   deadnix
+  #   statix
+  # ];
 
   home.packages = with pkgs; [
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal

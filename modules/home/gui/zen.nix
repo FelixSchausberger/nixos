@@ -153,7 +153,8 @@
           };
 
           "home manager" = {
-            urls = [{template = "https://mipmip.github.io/home-manager-option-search/?query={searchTerms}";}];
+            # urls = [{template = "https://mipmip.github.io/home-manager-option-search/?query={searchTerms}";}];
+            urls = [{template = "https://home-manager-options.extranix.com/?query={searchTerms}&release=master";}];
             icon = "https://nixos.org/favicon.ico";
             definedAliases = ["@hm"];
           };
