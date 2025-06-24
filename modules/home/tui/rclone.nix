@@ -1,79 +1,53 @@
-{
-  config,
-  pkgs,
-  ...
-}: let
-  mountdir = "/per/mnt/gdrive";
-  setupScript = pkgs.writeShellScript "setup-rclone" ''
-      mkdir -p ${config.xdg.configHome}/rclone
-      ${pkgs.coreutils}/bin/cat > ${config.xdg.configHome}/rclone/rclone.conf << EOF
-    [gdrive]
-    type = drive
-    scope = drive
-    root_folder_id = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/root-id".path})
-    client_id = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/client-id".path})
-    client_secret = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/client-secret".path})
-    token = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/token".path})
-    config_is_local = true
-    disable_http2 = true
-    EOF
-  '';
-  cleanupScript = pkgs.writeShellScript "cleanup-mount" ''
-    # Check if the mount is stale
-    if mountpoint -q ${mountdir} || grep -q "${mountdir}" /proc/mounts; then
-      # Try to unmount it cleanly
-      fusermount -u ${mountdir} 2>/dev/null || umount -f ${mountdir} 2>/dev/null || true
-    fi
-
-    # Recreate the directory structure
-    rm -rf ${mountdir} 2>/dev/null || true
-    mkdir -p /per/mnt
-    mkdir -p ${mountdir}
-  '';
+{config, ...}: let
+  mountPoint = "/per/mnt/gdrive";
 in {
+  sops.secrets = {
+    "rclone/token" = {};
+    "rclone/client-secret" = {};
+  };
+
   programs.rclone = {
     enable = true;
-    package = pkgs.rclone;
+
+    remotes = {
+      gdrive = {
+        config = {
+          type = "drive";
+          scope = "drive";
+          root_folder_id = "0AGsk4MwDWp9HUk9PVA";
+          client_id = "1009718778774-dt220ti1a4qpoo1p0u91umdhonavfn6h.apps.googleusercontent.com";
+          client_secret = "{client_secret}";
+          token = "{token}";
+          config_is_local = true;
+          disable_http2 = true;
+        };
+
+        secrets = {
+          client_secret = config.sops.secrets."rclone/client-secret".path;
+          token = config.sops.secrets."rclone/token".path;
+        };
+
+        mounts = {
+          gdrive = {
+            enable = true;
+            mountPoint = mountPoint;
+            options = {
+              vfs-cache-mode = "full";
+              vfs-read-chunk-size = "128M";
+              vfs-read-chunk-size-limit = "1G";
+              buffer-size = "256M";
+              log-level = "INFO";
+            };
+          };
+        };
+      };
+    };
   };
 
-  sops.secrets = {
-    "rclone/client-id" = {};
-    "rclone/client-secret" = {};
-    "rclone/token" = {};
-    "rclone/root-id" = {};
-  };
-
-  systemd.user.services.gdrive-mount = {
-    Unit = {
-      Description = "Google Drive Mount";
-      After = ["sops-nix.service"];
-      Requires = ["sops-nix.service"];
-    };
-
-    Service = {
-      Type = "notify";
-      ExecStartPre = [
-        "${cleanupScript}"
-        "${setupScript}"
-      ];
-      ExecStart = ''
-        ${pkgs.rclone}/bin/rclone mount \
-          --config=${config.xdg.configHome}/rclone/rclone.conf \
-          --vfs-cache-mode full \
-          --vfs-read-chunk-size 128M \
-          --vfs-read-chunk-size-limit 1G \
-          --buffer-size 256M \
-          --log-level INFO \
-          --allow-other \
-          gdrive: ${mountdir}
-      '';
-      ExecStop = "${pkgs.util-linux}/bin/umount -f ${mountdir} || true";
-      Restart = "on-failure";
-      RestartSec = "30s";
-    };
-
-    Install = {
-      WantedBy = ["default.target"];
-    };
+  systemd.user = {
+    startServices = "sd-switch"; # https://home-manager-options.extranix.com/?query=rclone&release=master
+    tmpfiles.rules = [
+      "d ${mountPoint} 0755 ${config.home.username} users -"
+    ];
   };
 }

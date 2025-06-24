@@ -1,19 +1,16 @@
 {pkgs, ...}: {
   services = {
-    # displayManager = {
-    #   autoLogin = {
-    #     enable = true;
-    #   };
-    #   defaultSession = "gnome";
-    # };
+    displayManager = {
+      #   autoLogin = {
+      #     enable = true;
+      #   };
+      #   defaultSession = "gnome";
+      gdm.enable = true;
+    };
 
     gnome.gnome-keyring.enable = true;
 
-    xserver = {
-      enable = true;
-      desktopManager.gnome.enable = true;
-      displayManager.gdm.enable = true;
-    };
+    desktopManager.gnome.enable = true;
 
     # Better hardware compatibility
     libinput = {

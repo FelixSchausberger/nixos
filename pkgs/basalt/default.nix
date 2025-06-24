@@ -7,7 +7,7 @@ pkgs.rustPlatform.buildRustPackage rec {
     owner = "erikjuhani";
     repo = "basalt";
     rev = "main";
-    sha256 = "sha256-JXQRtjxSj/aawYnfbTGp55K3ydvFXqh/6ot+B/aL/ak=";
+    sha256 = "sha256-omvMeQm2pq0fmvpLwa66VjwiuTG2zdkJEakfm5Zw9WQ=";
   };
 
   cargoLock = {
