@@ -34,8 +34,8 @@
   };
 
   # Surface-specific configurations
-  microsoft-surface.ipts.enable = true;
-  microsoft-surface.surface-control.enable = true;
+  # microsoft-surface.ipts.enable = true;
+  # microsoft-surface.surface-control.enable = true;
 
   console.keyMap = "de";
 }

@@ -11,7 +11,7 @@
   # services = {
   #   desktopManager.cosmic.enable = true;
   #   displayManager.cosmic-greeter.enable = true;
-  #   # getty.autologinUser = inputs.self.lib.user;
+  #   #   # getty.autologinUser = inputs.self.lib.user;
   # };
 
   xdg.portal = {
@@ -23,6 +23,7 @@
   environment = {
     cosmic.excludePackages = with pkgs; [
       cosmic-wallpapers
+      libsForQt5.xwaylandvideobridge # Utility to allow streaming Wayland windows to X applications (needed for MS Teams)
     ];
 
     # Allow auto-login

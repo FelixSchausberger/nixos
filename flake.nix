@@ -34,6 +34,7 @@
             git
             nodejs # Need for prettier
             nodePackages.prettier
+            pre-commit
           ];
           name = "dots";
           DIRENV_LOG_FORMAT = "";
@@ -47,16 +48,6 @@
     };
 
   inputs = {
-    # Global, so they can be `.follow`ed
-    systems.url = "github:nix-systems/default-linux";
-
-    flake-compat.url = "github:edolstra/flake-compat";
-
-    flake-utils = {
-      url = "github:numtide/flake-utils";
-      inputs.systems.follows = "systems";
-    };
-
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     nixpkgs = {
@@ -92,7 +83,7 @@
 
     impermanence.url = "github:nix-community/impermanence";
 
-    nix-ai-help = {
+    nixai = {
       url = "github:olafkfreund/nix-ai-help";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -115,10 +106,7 @@
 
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-compat.follows = "flake-compat";
-      };
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # scripts.url = "./home/scripts";

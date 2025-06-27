@@ -2,7 +2,7 @@
   imports = [
     ../../../modules/home
     ../../../modules/home/gui/cosmic
-    ../../private
+    ../../../modules/home/private
   ];
 
   home.packages = with pkgs; [

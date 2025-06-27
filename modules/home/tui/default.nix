@@ -1,5 +1,6 @@
 {pkgs, ...}: {
   imports = [
+    ./claude-code.nix # An agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster
     ./bat.nix # A cat clone with syntax highlighting and Git integration
     ./direnv.nix # A shell extension that manages your environment
     ./eza.nix # A modern, maintained replacement for ls
@@ -9,6 +10,7 @@
     ./git.nix # Distributed version control system
     ./helix
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
+    ./nixai.nix # Ai based nix help system from the command line
     ./nixvim # Configure Neovim with Nix
     # ./neovim.nix # Vim text editor fork focused on extensibility and agility
     ./ollama.nix # Get up and running with large language models locally
@@ -45,6 +47,7 @@
     rm-improved # Replacement for rm
     superfile # Pretty fancy and modern terminal file manager
     tree # Command to produce a depth indented directory listing
+    typst # New markup-based typesetting system that is powerful and easy to learn
     xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
   ];
 

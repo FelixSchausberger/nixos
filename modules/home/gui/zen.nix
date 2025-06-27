@@ -8,8 +8,8 @@
   imports = [
     (inputs.impermanence + "/home-manager.nix")
     # inputs.zen-browser.homeModules.beta
-    inputs.zen-browser.homeModules.twilight
-    # inputs.zen-browser.homeModules.twilight-official
+    # inputs.zen-browser.homeModules.twilight
+    inputs.zen-browser.homeModules.twilight-official
   ];
 
   home.sessionVariables = {
@@ -146,10 +146,22 @@
             definedAliases = ["@nw"];
           };
 
-          "github" = {
+          "noogle" = {
+            urls = [{template = "https://noogle.dev/q?term={searchTerms}";}];
+            icon = "https://noogle.dev/favicon.png";
+            definedAliases = ["@no"];
+          };
+
+          "github repos" = {
             urls = [{template = "https://github.com/search?q={searchTerms}&type=repositories";}];
             icon = "https://github.com/favicon.ico";
             definedAliases = ["@gh"];
+          };
+
+          "github nix" = {
+            urls = [{template = "https://github.com/search?q=lang%3Anix+{searchTerms}&type=code";}];
+            icon = "https://github.com/favicon.ico";
+            definedAliases = ["@ng"];
           };
 
           "home manager" = {

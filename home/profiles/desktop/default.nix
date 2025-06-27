@@ -2,10 +2,10 @@
   imports = [
     ../../../modules/home
     ../../../modules/home/gui/cosmic
-    ../../private
-    ../../private/gui/freecad.nix # General purpose Open Source 3D CAD/MCAD/CAx/CAE/PLM modeler
-    ../../private/gui/steam.nix # A digital distribution platform
-    ../../private/gui/prusaslicer.nix # G-code generator for 3D printer
+    ../../../modules/home/private
+    ../../../modules/home/private/gui/freecad.nix # General purpose Open Source 3D CAD/MCAD/CAx/CAE/PLM modeler
+    ../../../modules/home/private/gui/steam.nix # A digital distribution platform
+    ../../../modules/home/private/gui/prusaslicer.nix # G-code generator for 3D printer
   ];
 
   home.packages = with pkgs; [

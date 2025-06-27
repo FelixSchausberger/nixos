@@ -19,11 +19,13 @@
   fileSystems."/" = {
     device = "rpool/eyd/root";
     fsType = "zfs";
+    neededForBoot = true;
   };
 
   fileSystems."/nix" = {
     device = "rpool/eyd/nix";
     fsType = "zfs";
+    neededForBoot = true;
   };
 
   fileSystems."/per" = {
@@ -35,12 +37,14 @@
   fileSystems."/home" = {
     device = "rpool/eyd/home";
     fsType = "zfs";
+    neededForBoot = true;
   };
 
   fileSystems."/boot" = {
     device = "/dev/nvme0n1p1";
     fsType = "vfat";
     options = ["fmask=0022" "dmask=0022"];
+    neededForBoot = true;
   };
 
   swapDevices = []; # Swap will be configured in configuration.nix

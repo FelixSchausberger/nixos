@@ -1,11 +1,8 @@
 {config, ...}: let
-  mountPoint = "/per/mnt/gdrive";
+  mountdir = "/per/mnt/gdrive";
+  root_folder_id = "0AGsk4MwDWp9HUk9PVA";
+  client_id = "1009718778774-dt220ti1a4qpoo1p0u91umdhonavfn6h.apps.googleusercontent.com";
 in {
-  sops.secrets = {
-    "rclone/token" = {};
-    "rclone/client-secret" = {};
-  };
-
   programs.rclone = {
     enable = true;
 
@@ -16,8 +13,6 @@ in {
           scope = "drive";
           root_folder_id = "0AGsk4MwDWp9HUk9PVA";
           client_id = "1009718778774-dt220ti1a4qpoo1p0u91umdhonavfn6h.apps.googleusercontent.com";
-          client_secret = "{client_secret}";
-          token = "{token}";
           config_is_local = true;
           disable_http2 = true;
         };
@@ -27,27 +22,43 @@ in {
           token = config.sops.secrets."rclone/token".path;
         };
 
-        mounts = {
-          gdrive = {
-            enable = true;
-            mountPoint = mountPoint;
-            options = {
-              vfs-cache-mode = "full";
-              vfs-read-chunk-size = "128M";
-              vfs-read-chunk-size-limit = "1G";
-              buffer-size = "256M";
-              log-level = "INFO";
-            };
+        mounts."" = {
+          enable = true;
+          mountPoint = mountdir;
+          options = {
+            allow-non-empty = true;
+            allow-other = true;
+            buffer-size = "256M";
+            cache-dir = "/home/${config.home.username}/.cache/rclone";
+            vfs-cache-mode = "full";
+            vfs-read-chunk-size = "128M";
+            vfs-read-chunk-size-limit = "1G";
+            # Additional stability options
+            dir-cache-time = "5000h";
+            poll-interval = "15s";
+            # Reduce memory usage
+            vfs-cache-max-age = "1h";
+            vfs-cache-max-size = "1G";
+            # Permissions
+            umask = "000";
+            gid = "100"; # Users group
           };
         };
       };
     };
   };
 
+  sops.secrets = {
+    "rclone/client-secret" = {};
+    "rclone/token" = {};
+  };
+
   systemd.user = {
     startServices = "sd-switch"; # https://home-manager-options.extranix.com/?query=rclone&release=master
+
+    # Ensure mount directory exists with correct permissions
     tmpfiles.rules = [
-      "d ${mountPoint} 0755 ${config.home.username} users -"
+      "d ${mountdir} 0755 ${config.home.username} users -"
     ];
   };
 }

@@ -1,7 +1,6 @@
 {
   imports = [
     ./boot-zfs.nix
-    ../../system/programs/private
     ../../modules/system
     ./hardware-configuration.nix
   ];

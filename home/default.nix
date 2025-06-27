@@ -29,7 +29,7 @@
   username = inputs.self.lib.user;
 in {
   imports = [
-    inputs.nix-index-db.hmModules.nix-index
+    inputs.nix-index-db.homeModules.nix-index
     (inputs.impermanence + "/home-manager.nix")
   ];
 
