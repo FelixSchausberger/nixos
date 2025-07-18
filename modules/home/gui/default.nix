@@ -8,7 +8,7 @@
     ./obsidian.nix # A powerful knowledge base
     # ./planify.nix # Task manager with Todoist support designed for GNU/Linux
     ./spicetify.nix # Play music from the Spotify music service
-    ./vscode.nix # Open source source code editor developed by Microsoft
+    # ./vscode.nix # Open source source code editor developed by Microsoft - TEMPORARILY DISABLED DUE TO SOPS ISSUE
     ./zen.nix # Open-source fork of Mozilla Firefox
   ];
 

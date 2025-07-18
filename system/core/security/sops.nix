@@ -3,9 +3,10 @@
   pkgs,
   ...
 }: {
-  imports = [
-    inputs.sops-nix.nixosModules.sops
-  ];
+  # TEMPORARILY DISABLED - SOPS SYSTEM CAUSING BUILD FAILURES
+  # imports = [
+  #   inputs.sops-nix.nixosModules.sops
+  # ];
 
   environment.systemPackages = with pkgs; [
     age # Modern encryption tool with small explicit keys
@@ -13,9 +14,10 @@
     sops # Simple and flexible tool for managing secrets
   ];
 
-  sops = {
-    defaultSopsFile = "${inputs.self}/secrets/secrets.json";
-    age.keyFile = "/per/system/sops-key.txt";
-    # age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
-  };
+  # TEMPORARILY DISABLED - SOPS CONFIGURATION CAUSING BUILD FAILURES
+  # sops = {
+  #   defaultSopsFile = "${inputs.self}/secrets/secrets.json";
+  #   age.keyFile = "/per/system/sops-key.txt";
+  #   # age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+  # };
 }

@@ -17,10 +17,11 @@ in {
           disable_http2 = true;
         };
 
-        secrets = {
-          client_secret = config.sops.secrets."rclone/client-secret".path;
-          token = config.sops.secrets."rclone/token".path;
-        };
+        # TEMPORARILY DISABLED - SOPS SECRETS CAUSING BUILD FAILURES
+        # secrets = {
+        #   client_secret = config.sops.secrets."rclone/client-secret".path;
+        #   token = config.sops.secrets."rclone/token".path;
+        # };
 
         mounts."" = {
           enable = true;
@@ -48,10 +49,11 @@ in {
     };
   };
 
-  sops.secrets = {
-    "rclone/client-secret" = {};
-    "rclone/token" = {};
-  };
+  # TEMPORARILY DISABLED - SOPS SECRETS CAUSING BUILD FAILURES
+  # sops.secrets = {
+  #   "rclone/client-secret" = {};
+  #   "rclone/token" = {};
+  # };
 
   systemd.user = {
     startServices = "sd-switch"; # https://home-manager-options.extranix.com/?query=rclone&release=master

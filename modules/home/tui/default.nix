@@ -10,7 +10,7 @@
     ./git.nix # Distributed version control system
     ./helix
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
-    ./nixai.nix # Ai based nix help system from the command line
+    # ./nixai.nix # Ai based nix help system from the command line - TEMPORARILY DISABLED DUE TO SOPS ISSUE
     ./nixvim # Configure Neovim with Nix
     # ./neovim.nix # Vim text editor fork focused on extensibility and agility
     ./ollama.nix # Get up and running with large language models locally

@@ -55,7 +55,7 @@ in {
       # https://github.com/mhersson/mpls
       mpls = {
         command = "mpls";
-        args = ["--dark-mode", "--enable-emoji"];
+        args = ["--dark-mode" "--enable-emoji"];
       };
     };
 
