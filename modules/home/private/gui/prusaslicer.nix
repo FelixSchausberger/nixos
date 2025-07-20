@@ -14,14 +14,4 @@
     fi
     chmod a+rw /dev/ttyACM0 || echo "Error: Cannot change permissions for /dev/ttyACM0."
   '';
-
-  home.persistence."/per/home/${config.home.username}" = {
-    directories = [
-      {
-        directory = ".config/PrusaSlicer";
-        method = "symlink";
-      }
-    ];
-    allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
-  };
 }

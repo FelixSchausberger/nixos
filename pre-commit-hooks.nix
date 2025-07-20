@@ -20,10 +20,17 @@
         flake-checker.enable = true; # Run health checks on your flake-powered Nix projects.
         markdownlint.enable = true; # Style checker and linter for markdown files.
         nil.enable = true; # Incremental analysis assistant for writing in Nix.
-        pre-commit-hook-ensure-sops.enable = true; # Ensure that files that should be encrypted with sops are
         prettier = {
           enable = true;
           excludes = [".js" ".md" ".ts"];
+        };
+        # Security: Ensure sops secrets are encrypted
+        pre-commit-hook-ensure-sops = {
+          enable = true;
+          #   name = "Ensure sops secrets are encrypted";
+          #   entry = "${inputs.pre-commit-hook-ensure-sops.packages.${system}.default}/bin/pre-commit-hook-ensure-sops";
+          files = "secrets\\.yaml$|secrets\\.json$";
+          #   language = "system";
         };
       };
     };

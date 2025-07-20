@@ -1,14 +1,5 @@
-{inputs, ...}: {
-  imports = [
-    "${inputs.impermanence}/nixos.nix"
-  ];
-
-  # environment.persistence."/per" = {
-  #   hideMounts = true;
-  #   directories = [
-  #     "/var/lib/bluetooth"
-  #   ];
-  # };
+{...}: {
+  # Bluetooth persistence moved to system/core/persistence.nix for consolidation
 
   hardware = {
     bluetooth = {
@@ -26,8 +17,6 @@
       };
     };
   };
-
-  environment.persistence."/per".directories = ["/var/lib/bluetooth"];
 
   systemd.tmpfiles.rules = [
     "L /var/lib/bluetooth - - - - /per/var/lib/bluetooth"

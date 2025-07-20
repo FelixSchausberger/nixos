@@ -16,6 +16,9 @@
     cargo
     rustc
 
+    # GitHub Actions local runner
+    act
+
     # Language Servers
     nodePackages.bash-language-server # Bash
     clang-tools # C/C++

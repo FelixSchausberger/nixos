@@ -53,7 +53,7 @@ in {
         timeout = 0;
       };
 
-      kernelPackages = kernelPackages;
+      kernelPackages = lib.mkDefault kernelPackages;
 
       # Ensure ZFS kernel module matches userspace tools
       zfs = {

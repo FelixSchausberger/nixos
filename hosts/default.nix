@@ -11,10 +11,10 @@
   #   |> (firstChar: firstChar + builtins.substring 1 (builtins.stringLength str - 1) str);
   inherit (inputs.nixpkgs.lib) nixosSystem;
 
-  inherit (import "${inputs.self}/system") desktop laptop;
+  inherit (import ../system) desktop laptop;
 
   specialArgs = {
-    secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets.json");
+    secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets.yaml");
     inherit inputs;
   };
 
@@ -32,13 +32,18 @@
             networking.hostName = hostName; # |> capitalizeFirstChar;
             _module.args.hostName = hostName;
           }
-          {
+          ({config, ...}: {
             home-manager = {
               users.${inputs.self.lib.user}.imports =
                 homeImports."${inputs.self.lib.user}@${hostName}";
-              extraSpecialArgs = specialArgs // {inherit hostName;};
+              extraSpecialArgs =
+                specialArgs
+                // {
+                  inherit hostName;
+                  inherit (config._module.args) hostConfig;
+                };
             };
-          }
+          })
         ]
         ++ extraModules;
     };

@@ -18,8 +18,6 @@
       credential.helper = "libsecret";
       core.editor = "${pkgs.helix}/bin/hx";
       safe.directory = "*";
-      # Ensures hooks use PATH lookup instead of hardcoded paths
-      init.templatedir = "/nix/store";
     };
   };
 
@@ -39,6 +37,9 @@
     push = "git push"; # origin main
     rebase = "git rebase -i";
     show = "git show";
+    undo = "git reset --soft HEAD~1";
+    redo = "git reset --hard HEAD@{1}";
+    ragequit = "sh -c 'git commit -am wip && shutdown -h now'";
     # https://junegunn.github.io/fzf/releases/0.63.0/
     gsearch =
       "git ls-files | fzf --style full --scheme path "

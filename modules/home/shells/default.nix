@@ -1,24 +1,19 @@
-{
-  config,
-  hostName,
-  ...
-}: {
+{config, ...}: {
   imports = [
-    ./fish.nix # Smart and user-friendly command line shell
+    ./bash.nix # GNU Bourne-Again Shell, the de facto standard shell on Linux (for interactive use)
+    ./fish # Smart and user-friendly command line shell
     ./starship.nix # A minimal, blazing fast, and extremely customizable prompt
+    ./zellij.nix # Terminal multiplexer with modern features
     ./zoxide.nix # A fast cd command that learns your habits
   ];
 
   home.shellAliases = {
     build = "nix build -L";
-    cleanup = "sudo nix-collect-garbage";
     cp = "cp -rpv";
     list-errors = "journalctl -p err -b --output=cat | sort | uniq -c | sort -nr";
     merge = "rsync -avhu --progress";
     nixinfo = "nix-shell -p nix-info --run 'nix-info -m'";
-    nxup = "sudo nixos-rebuild --flake /per/etc/nixos/#${hostName} switch";
     pls = "sudo";
-    upgrade = "nix flake update && nxup";
     repair = "sudo nix-store --verify --check-contents --repair";
     rip = "rip --graveyard /per/home/${config.home.username}/.local/share/graveyard";
   };

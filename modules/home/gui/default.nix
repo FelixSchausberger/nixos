@@ -1,15 +1,12 @@
 {pkgs, ...}: {
   # Import configurations of graphical applications
   imports = [
-    ./cosmic
-    ./chromium.nix # Open source web browser from Google
-    ./firefox # A web browser built from Firefox source tree
+    ./browsers # Web browsers (Chrome, Firefox, Zen)
+    ./editors # Editors (VS Code, Zed)
     ./mpv.nix # General-purpose media player, fork of MPlayer and mplayer2
     ./obsidian.nix # A powerful knowledge base
-    # ./planify.nix # Task manager with Todoist support designed for GNU/Linux
+    ./planify.nix # Task manager with Todoist support designed for GNU/Linux
     ./spicetify.nix # Play music from the Spotify music service
-    ./vscode.nix # Open source source code editor developed by Microsoft
-    ./zen.nix # Open-source fork of Mozilla Firefox
   ];
 
   home.packages = with pkgs; [

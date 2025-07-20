@@ -2,15 +2,28 @@
   inputs,
   pkgs,
   ...
-}: {
-  imports = [
-    ./boot-zfs.nix
-    ../../modules/system
-    ./hardware-configuration.nix
+}: let
+  hostLib = import ../lib.nix;
+  wms = ["cosmic"];
+in {
+  imports =
+    [
+      ../shared.nix
+      ./boot-zfs.nix
+      ./hardware-configuration.nix
 
-    # Surface-specific hardware module
-    inputs.nixos-hardware.nixosModules.microsoft-surface-pro-intel
-  ];
+      # Surface-specific hardware module
+      inputs.nixos-hardware.nixosModules.microsoft-surface-pro-intel
+    ]
+    ++ hostLib.wmModules wms;
+
+  # Host-specific configuration
+  hostConfig = {
+    hostName = "surface";
+    user = "schausberger";
+    wm = wms;
+    system = "x86_64-linux";
+  };
 
   # Set kernel parameters
   boot.kernelParams = ["i915.force_probe=5916"];

@@ -8,7 +8,7 @@
   ...
 }: {
   imports = [
-    "${inputs.impermanence}/nixos.nix"
+    ./persistence.nix
     ./security
     ./users.nix
   ];
@@ -40,30 +40,7 @@
       xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
     ];
 
-    persistence."/per" = {
-      hideMounts = true;
-      directories = [
-        "/var/log" # Stores system and application logs essential for troubleshooting and auditing
-        "/var/lib/nixos" # Contains state files for NixOS, critical for preserving system and package state across reboots
-        "/var/lib/systemd/coredump" # Stores core dumps from crashed applications, useful for debugging and analyzing issues
-      ];
-      #      files = [
-      #        "/etc/machine-id" # A unique identifier for the system, used by systemd and other services for consistent identification
-      #      ];
-      users.${inputs.self.lib.user} = {
-        directories = [
-          "Downloads"
-          "Music"
-          "Pictures"
-          "Documents"
-          "Videos"
-          {
-            directory = ".local/share/fish";
-            mode = "0700";
-          }
-        ];
-      };
-    };
+    # Persistence configuration moved to ./persistence.nix for better organization
   };
 
   services = {

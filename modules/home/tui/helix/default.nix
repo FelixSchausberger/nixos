@@ -60,6 +60,7 @@
             w = ":write";
             q = ":quit";
             space = "file_picker";
+            W = ":lsp-workspace-command"; # LSP workspace commands
           };
 
           # Colemak-DH: hjkl -> neio

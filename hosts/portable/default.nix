@@ -1,34 +1,59 @@
-{
-  imports = [
-    ./boot-zfs.nix
-    ../../modules/system
-    ./hardware-configuration.nix
-  ];
+let
+  hostLib = import ../lib.nix;
+  wms = ["hyprland"];
+in {
+  imports =
+    [
+      ../shared.nix
+      ./boot-zfs.nix
+      # ./hardware-configuration.nix  # TODO: Create hardware configuration
+    ]
+    ++ hostLib.wmModules wms;
+
+  # Host-specific configuration
+  hostConfig = {
+    hostName = "portable";
+    user = "schausberger";
+    wm = wms;
+    system = "x86_64-linux";
+  };
+
+  # Platform configuration (usually in hardware-configuration.nix)
+  nixpkgs.hostPlatform = "x86_64-linux";
+
+  # Basic file system configuration (normally in hardware-configuration.nix)
+  fileSystems."/" = {
+    device = "none";
+    fsType = "tmpfs";
+    options = ["defaults" "size=2G" "mode=755"];
+  };
 
   # Essential hardware support for portable use
   hardware = {
     # Better GPU compatibility
-    opengl = {
+    graphics = {
       enable = true;
-      driSupport = true;
-      driSupport32Bit = true;
+      enable32Bit = true;
     };
-    # Support for various graphics cards
-    nvidia.modesetting.enable = true;
+    # Support for various graphics cards - NVIDIA configuration disabled for now
+    # nvidia = {
+    #   modesetting.enable = true;
+    #   open = true;  # Use open source kernel modules for RTX/GTX 16xx series
+    # };
   };
 
   # Support for ZFS datasets
   services.zfs = {
     autoScrub.enable = true;
     autoSnapshot.enable = true;
-    # We want auto-mount for the portable system when used as a workstation
-    autoMount.enable = true;
+    # ZFS auto-mounting is handled by boot configuration
   };
 
-  services.xserver = {
-    # Support for common GPUs
-    videoDrivers = ["modesetting" "nvidia" "intel" "amdgpu"];
-  };
+  # X server configuration disabled for Hyprland-only setup
+  # services.xserver = {
+  #   # Support for common GPUs
+  #   videoDrivers = ["modesetting" "nvidia" "intel" "amdgpu"];
+  # };
 
   # Recovery tools and scripts
   system.activationScripts.rescueScripts = ''

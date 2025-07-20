@@ -4,7 +4,6 @@ let
     ./hardware
     ./network.nix
     ./nix
-    # ./programs
   ];
 
   laptop =

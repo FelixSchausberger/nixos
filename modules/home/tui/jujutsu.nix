@@ -1,4 +1,8 @@
-{
+{pkgs, ...}: {
+  home.packages = with pkgs; [
+    jjui # A TUI for Jujutsu VCS
+  ];
+
   programs.jujutsu = {
     enable = true;
 

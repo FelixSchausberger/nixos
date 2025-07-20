@@ -1,7 +1,6 @@
 {pkgs, ...}: {
   imports = [
-    ../../../modules/home
-    ../../../modules/home/gui/cosmic
+    # Private/personal configuration
     ../../../modules/home/private
   ];
 

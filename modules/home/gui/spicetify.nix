@@ -1,5 +1,4 @@
 {
-  config,
   inputs,
   pkgs,
   ...
@@ -8,7 +7,6 @@
 in {
   imports = [
     inputs.spicetify-nix.homeManagerModules.default
-    (inputs.impermanence + "/home-manager.nix")
   ];
 
   systemd.user.services.spotify = {
@@ -47,23 +45,5 @@ in {
     # theme = spicePkgs.themes.hazy;
     theme = spicePkgs.themes.catppuccin;
     colorScheme = "mocha";
-  };
-
-  home.persistence."/per/home/${config.home.username}" = {
-    directories = [
-      #     {
-      #       directory = ".config/spotify";
-      #       method = "symlink";
-      #     }
-      #     {
-      #       directory = ".cache/spotify/Users";
-      #       method = "symlink";
-      #     }
-      {
-        directory = ".cache/spotify/Storage";
-        # method = "symlink";
-      }
-    ];
-    # allowOther = true; #  Requires programs.fuse.userAllowOther to be enabled
   };
 }

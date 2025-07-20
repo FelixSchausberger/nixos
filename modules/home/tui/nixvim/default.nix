@@ -1,6 +1,10 @@
-{inputs, ...}: {
+{
+  inputs,
+  pkgs,
+  ...
+}: {
   imports = [
-    inputs.nixvim.homeManagerModules.nixvim
+    inputs.nixvim.homeModules.nixvim
     ./autocommands.nix
     ./options.nix
     ./plugins
@@ -20,5 +24,18 @@
     vimdiffAlias = true;
 
     luaLoader.enable = true;
+
+    # Extra plugins
+    extraPlugins = with pkgs.vimPlugins; [
+      claude-code-nvim
+    ];
+
+    # Configure claude-code.nvim
+    extraConfigLua = ''
+      require('claude-code').setup({
+        -- Default configuration
+        -- See: https://github.com/greggh/claude-code.nvim for options
+      })
+    '';
   };
 }

@@ -6,18 +6,19 @@
     ./eza.nix # A modern, maintained replacement for ls
     ./fd.nix # A simple, fast and user-friendly alternative to find
     ./fzf.nix # A command-line fuzzy finder written in Go
-    ./gammastep.nix # Screen color temperature manager
     ./git.nix # Distributed version control system
     ./helix
+    ./impala.nix # WiFi TUI management tool
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
-    ./nixai.nix # Ai based nix help system from the command line
+    ./markdown-oxide.nix # Markdown LSP server inspired by Obsidian
     ./nixvim # Configure Neovim with Nix
-    # ./neovim.nix # Vim text editor fork focused on extensibility and agility
     ./ollama.nix # Get up and running with large language models locally
     ./pay-respects.nix # Command suggestions, command-not-found and thefuck replacement
+    ./rbw.nix # Unofficial Bitwarden CLI for password management
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./rip.nix # Replacement for rm with focus on safety, ergonomics and performance
     ./sops.nix # Simple and flexible tool for managing secrets
+    # ./spotify-player.nix # Terminal-based Spotify client with full feature parity
     ./tealdeer.nix # A very fast implementation of tldr
     ./yazi
   ];
@@ -27,24 +28,21 @@
     bottom.enable = true; # A cross-platform graphical process/system monitor
     home-manager.enable = true; # A Nix-based user environment configurator
     nix-index.enable = true; # A files database for nixpkgs
+    # comma (nix-index-database) is automatically available via the home module import
   };
-
-  # Nix tooling
-  # home.packages = with pkgs; [
-  #   alejandra
-  #   deadnix
-  #   statix
-  # ];
 
   home.packages = with pkgs; [
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
+    dua # Tool to conveniently learn about the disk usage of directories
     lazyjournal # TUI for journalctl, file system logs, as well as Docker and Podman containers
+    nix-inspect # Interactive TUI for inspecting nix configs
     ouch # A CLI for easily compressing and decompressing files and directories
     pik # Process Interactive Kill
     procs # A modern replacement for ps
     # quickemu # Quickly create and run virtual machines
     ripgrep # Utility that combines the usability of The Silver Searcher with the raw speed of grep
     rm-improved # Replacement for rm
+    spotify-player # Terminal spotify player that has feature parity with the official client
     superfile # Pretty fancy and modern terminal file manager
     tree # Command to produce a depth indented directory listing
     typst # New markup-based typesetting system that is powerful and easy to learn

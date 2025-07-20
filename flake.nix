@@ -12,9 +12,10 @@
       ];
 
       flake = {
-        # Define the username here as a flake-level configuration
+        # Utility functions (keep minimal)
         lib = {
-          user = "schausberger";
+          mkHost = import ./lib/mkHost.nix;
+          user = "schausberger"; # Default user
         };
       };
 
@@ -26,20 +27,29 @@
         packages = {
           basalt = pkgs.callPackage ./pkgs/basalt {};
           lumen = pkgs.callPackage ./pkgs/lumen {};
+          vigiland = pkgs.callPackage ./pkgs/vigiland {};
         };
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            # Nix tools
             alejandra
             git
-            nodejs # Need for prettier
+
+            # Documentation and formatting
+            nodejs # For prettier
             nodePackages.prettier
+
+            # Development tools
             pre-commit
           ];
-          name = "dots";
+
+          name = "nixos-config";
           DIRENV_LOG_FORMAT = "";
+
           shellHook = ''
             ${config.pre-commit.installationScript}
+            echo "Guten Morgen!"
           '';
         };
 
@@ -48,81 +58,81 @@
     };
 
   inputs = {
+    # Core Nix infrastructure
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-
-    nixpkgs = {
-      follows = "nixos-cosmic/nixpkgs";
-      url = "github:NixOS/nixpkgs/nixos-unstable";
-    };
-
-    # Rest of inputs, alphabetical order
-    arc-2-theme = {
-      url = "github:YashjitPal/Arc-2.0";
-      flake = false; # This repo doesn't contain a flake.nix
-    };
-
-    cosmic-manager = {
-      url = "github:HeitorAugustoLN/cosmic-manager";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        home-manager.follows = "home-manager";
-      };
-    };
-
-    firefox-nightly = {
-      url = "github:nix-community/flake-firefox-nightly";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    helix.url = "github:helix-editor/helix";
-
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # System utilities
+    cosmic-manager = {
+      url = "github:HeitorAugustoLN/cosmic-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
     impermanence.url = "github:nix-community/impermanence";
-
-    nixai = {
-      url = "github:olafkfreund/nix-ai-help";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
-
     nixos-hardware.url = "github:NixOS/nixos-hardware";
-
-    nix-index-db = {
-      url = "github:Mic92/nix-index-database";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixvim = {
-      url = "github:nix-community/nixvim";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nur.url = "github:nix-community/NUR";
-
-    pre-commit-hooks = {
-      url = "github:cachix/pre-commit-hooks.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # scripts.url = "./home/scripts";
-
-    spicetify-nix = {
-      url = "github:Gerg-L/spicetify-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    sopswarden = {
+      url = "github:pfassina/sopswarden/unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.sops-nix.follows = "sops-nix";
+    };
 
+    # Desktop environments
+    nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
+    hyprland.url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
+    hyprland-plugins = {
+      url = "github:hyprwm/hyprland-plugins";
+      inputs.hyprland.follows = "hyprland";
+    };
+
+    # Window manager and system tools
+    ironbar = {
+      url = "github:JakeStanger/ironbar";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    wayland-pipewire-idle-inhibit = {
+      url = "github:rafaelrc7/wayland-pipewire-idle-inhibit";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    walker = {
+      url = "github:abenz1267/walker";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Editors
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    helix.url = "github:helix-editor/helix";
+
+    # Applications
+    bluetui = {
+      url = "github:pythops/bluetui";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    firefox-nightly = {
+      url = "github:nix-community/flake-firefox-nightly";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    ghostty = {
+      url = "github:ghostty-org/ghostty";
+    };
+    spicetify-nix = {
+      url = "github:Gerg-L/spicetify-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     typix.url = "github:loqusion/typix";
+    zen-browser.url = "github:0xc000022070/zen-browser-flake";
 
+    # File manager and plugins
     yazi.url = "github:sxyazi/yazi";
 
     yazi-clipboard = {
@@ -152,9 +162,28 @@
 
     yazi-plugins = {
       url = "github:yazi-rs/plugins";
-      flake = false; # This repo doesn't contain a flake.nix
+      flake = false;
     };
 
-    zen-browser.url = "github:0xc000022070/zen-browser-flake";
+    # Utilities
+    nix-index-db = {
+      url = "github:Mic92/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-inspect.url = "github:bluskript/nix-inspect";
+    nur.url = "github:nix-community/NUR";
+    pre-commit-hooks = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Local packages and tools
+    scripts.url = "./tools/scripts";
+
+    # Themes
+    arc-2-theme = {
+      url = "github:YashjitPal/Arc-2.0";
+      flake = false;
+    };
   };
 }

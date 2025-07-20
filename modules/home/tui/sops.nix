@@ -12,14 +12,10 @@
     sops # Simple and flexible tool for managing secrets
   ];
 
+  # Minimal sops config - use same key as system
   sops = {
-    age = {
-      generateKey = false;
-      keyFile = "/per/system/sops-key.txt";
-      # sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
-    };
-
-    defaultSopsFile = "${inputs.self}/secrets/secrets.json";
-    # gnupg.sshKeyPaths = [];
+    age.keyFile = "/per/system/sops-key.txt";
+    defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
+    defaultSopsFormat = "yaml";
   };
 }

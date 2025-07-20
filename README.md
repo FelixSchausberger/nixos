@@ -32,17 +32,15 @@ create a public SSH key.
 
      ```bash
      # Create an empty secrets file
-     touch secrets/secrets.json
+     touch secrets/secrets.yaml
      # Encrypt it with your age key
-     sops secrets/secrets.json
+     sops secrets/secrets.yaml
      ```
 
   4. Update the secrets file with your configuration:
 
-     ```json
-     {
-       "example_key": "example_value"
-     }
+     ```yaml
+     example_key: "example_value"
      ```
 
   5. Make sure your age private key is available in the environment:
@@ -58,11 +56,11 @@ create a public SSH key.
 - To edit secrets:
 
   ```bash
-  sops edit secrets/secrets.json
+  sops edit secrets/secrets.yaml
   ```
   
 - To add a new key for another user:
   1. Get their SSH public key
   2. Convert it to age format: `ssh-to-age -i their_key.pub`
   3. Add the age public key to `.sops.yaml`
-  4. Re-encrypt the secrets file: `sops updatekeys secrets/secrets.json`
+  4. Re-encrypt the secrets file: `sops updatekeys secrets/secrets.yaml`

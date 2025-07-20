@@ -12,7 +12,7 @@
     backupFileExtension = "backup";
 
     extraSpecialArgs = {
-      secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets.json");
+      secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets.yaml");
     };
 
     sharedModules = [

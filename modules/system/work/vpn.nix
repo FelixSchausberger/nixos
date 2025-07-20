@@ -1,13 +1,8 @@
 {
   config,
-  inputs,
   pkgs,
   ...
 }: {
-  imports = [
-    inputs.sops-nix.nixosModules.sops
-  ];
-
   users.users.openvpn = {
     isSystemUser = true;
     group = "openvpn";
@@ -42,26 +37,6 @@
     '';
     updateResolvConf = true;
     autoStart = false;
-  };
-
-  sops.secrets = {
-    "vpn/auth" = {
-      owner = "openvpn";
-      mode = "0400";
-    };
-    "vpn/ca.crt" = {
-      owner = "openvpn";
-      mode = "0440";
-    };
-    "vpn/client.crt" = {
-      owner = "openvpn";
-      mode = "0440";
-    };
-    "vpn/key" = {
-      owner = "openvpn";
-      mode = "0400";
-      path = "/etc/openvpn/magazino/client.pem";
-    };
   };
 
   environment.systemPackages = [

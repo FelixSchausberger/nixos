@@ -1,9 +1,5 @@
-{
-  config,
-  inputs,
-  ...
-}: {
-  imports = ["${inputs.impermanence}/nixos.nix"];
+{config, ...}: {
+  # Impermanence import moved to ../persistence.nix for consolidation
 
   services.openssh = {
     enable = true;
@@ -35,16 +31,7 @@
       };
     };
 
-    persistence."/per" = {
-      users.${inputs.self.lib.user} = {
-        directories = [
-          {
-            directory = ".ssh";
-            mode = "0700";
-          }
-        ];
-      };
-    };
+    # SSH persistence moved to ../persistence.nix for consolidation
   };
 
   system.activationScripts.sshdKeyPermissions = ''

@@ -4,7 +4,6 @@
   ...
 }: {
   home.packages = with pkgs; [
-    act # Run your GitHub Actions locally
     # graphite-cli # CLI that makes creating stacked git changes fast & intuitive
     lazygit # A simple terminal UI for git commands
   ];

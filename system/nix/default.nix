@@ -21,12 +21,22 @@
       ];
       trusted-users = ["root" "@wheel"];
       warn-dirty = false;
+
+      # Network optimization for faster downloads
+      max-substitution-jobs = 4; # Parallel downloads
+      http-connections = 25; # More HTTP connections
+      connect-timeout = 5; # Faster timeout
+
+      # Build optimization
+      cores = 0; # Use all CPU cores
+      max-jobs = "auto"; # Auto-detect job count
+      keep-going = true; # Continue building other derivations on failure
     };
 
     gc = {
       automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 14d";
+      dates = "daily"; # More frequent cleanup
+      options = "--delete-older-than 7d --delete-generations +5"; # Keep last 5 generations, delete older than 7 days
       persistent = true;
     };
   };
