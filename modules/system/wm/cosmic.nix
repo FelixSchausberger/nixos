@@ -73,7 +73,7 @@
       # cosmic-applet-ollama # Applet for Ollama
       # cosmic-ext-applet-privacy-indicator # Privacy Indicator applet for COSMIC
       # cosmic-ext-applet-system-monitor # A highly configurable resource monitor applet for the COSMIC DE
-      examine # A system information viewer for the COSMIC desktop.
+      # examine # A system information viewer for the COSMIC desktop.
 
       xdg-desktop-portal-cosmic # XDG Desktop Portal for the COSMIC Desktop Environment
       xdg-desktop-portal-wlr

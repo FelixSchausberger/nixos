@@ -34,7 +34,9 @@
   home.packages = with pkgs; [
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     dua # Tool to conveniently learn about the disk usage of directories
+    fclones # Efficient Duplicate File Finder and Remover
     lazyjournal # TUI for journalctl, file system logs, as well as Docker and Podman containers
+    lstr # Fast, minimalist directory tree viewer written in Rust
     nix-inspect # Interactive TUI for inspecting nix configs
     ouch # A CLI for easily compressing and decompressing files and directories
     pik # Process Interactive Kill
@@ -44,7 +46,6 @@
     rm-improved # Replacement for rm
     spotify-player # Terminal spotify player that has feature parity with the official client
     superfile # Pretty fancy and modern terminal file manager
-    tree # Command to produce a depth indented directory listing
     typst # New markup-based typesetting system that is powerful and easy to learn
     xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
   ];

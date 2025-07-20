@@ -25,9 +25,6 @@ in {
     system = "x86_64-linux";
   };
 
-  # Set kernel parameters
-  boot.kernelParams = ["i915.force_probe=5916"];
-
   # Override vaapiIntel with enableHybridCodec
   nixpkgs.config.packageOverrides = pkgs: {
     vaapiIntel = pkgs.vaapiIntel.override {enableHybridCodec = true;};
@@ -47,8 +44,10 @@ in {
   };
 
   # Surface-specific configurations
-  # microsoft-surface.ipts.enable = true;
-  # microsoft-surface.surface-control.enable = true;
+  # microsoft-surface = {
+  #   ipts.enable = true;
+  #   surface-control.enable = true;
+  # };
 
   console.keyMap = "de";
 }

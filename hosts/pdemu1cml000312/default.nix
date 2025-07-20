@@ -22,19 +22,6 @@ in {
   # Enable container tools
   modules.system.containers.enable = true;
 
-  # Essential kernel parameters
-  boot = {
-    kernelModules = ["amdgpu" "kvm-amd"];
-    kernelParams = [
-      "amdgpu.dc=1"
-      "amdgpu.sg_display=0"
-      "amdgpu.dpm=1"
-      "amdgpu.modeset=1"
-      "amd_pstate=active"
-    ];
-    initrd.kernelModules = ["amdgpu"];
-  };
-
   # AMD 680M iGPU configuration
   hardware = {
     enableRedistributableFirmware = true;

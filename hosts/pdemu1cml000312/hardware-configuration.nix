@@ -11,52 +11,69 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = ["nvme" "xhci_pci" "usb_storage" "sd_mod"];
-  boot.initrd.kernelModules = [];
-  boot.kernelModules = ["kvm-amd"];
-  boot.extraModulePackages = [];
-
-  fileSystems."/" = {
-    device = "rpool/eyd/root";
-    fsType = "zfs";
-    neededForBoot = true;
+  boot = {
+    initrd = {
+      availableKernelModules = ["nvme" "xhci_pci" "usb_storage" "sd_mod"];
+      kernelModules = ["amdgpu"];
+    };
+    kernelModules = ["amdgpu" "kvm-amd"];
+    kernelParams = [
+      "amdgpu.dc=1"
+      "amdgpu.sg_display=0"
+      "amdgpu.dpm=1"
+      "amdgpu.modeset=1"
+      "amd_pstate=active"
+    ];
+    extraModulePackages = [];
   };
 
-  fileSystems."/nix" = {
-    device = "rpool/eyd/nix";
-    fsType = "zfs";
-    neededForBoot = true;
+  fileSystems = {
+    "/" = {
+      device = "rpool/eyd/root";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
+    "/nix" = {
+      device = "rpool/eyd/nix";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
+    "/per" = {
+      device = "rpool/eyd/per";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
+    "/home" = {
+      device = "rpool/eyd/home";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
+    "/boot" = {
+      device = "/dev/nvme0n1p1";
+      fsType = "vfat";
+      options = ["fmask=0022" "dmask=0022"];
+      neededForBoot = true;
+    };
   };
 
-  fileSystems."/per" = {
-    device = "rpool/eyd/per";
-    fsType = "zfs";
-    neededForBoot = true;
-  };
-
-  fileSystems."/home" = {
-    device = "rpool/eyd/home";
-    fsType = "zfs";
-    neededForBoot = true;
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/nvme0n1p1";
-    fsType = "vfat";
-    options = ["fmask=0022" "dmask=0022"];
-    neededForBoot = true;
-  };
-
-  swapDevices = []; # Swap will be configured in configuration.nix
+  swapDevices = [];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's
   # still possible to use this option, but it's recommended to use it in conjunction
   # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
-  networking.useDHCP = lib.mkDefault true;
-  # networking.interfaces.enp1s0f0.useDHCP = lib.mkDefault true;
-  # networking.interfaces.enp5s0f4u1u1.useDHCP = lib.mkDefault true;
-  # networking.interfaces.wlp2s0.useDHCP = lib.mkDefault true;
+  networking = {
+    useDHCP = lib.mkDefault true;
+    interfaces = {
+      enp1s0f0.useDHCP = lib.mkDefault true;
+      enp5s0f4u1u1.useDHCP = lib.mkDefault true;
+      wlp2s0.useDHCP = lib.mkDefault true;
+    };
+  };
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
