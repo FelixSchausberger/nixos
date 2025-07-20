@@ -32,11 +32,20 @@
       "kvm-amd"
     ];
     kernelParams = [
-      "amdgpu.dc=1"
-      "amdgpu.sg_display=0"
-      "amdgpu.dpm=1"
-      "amdgpu.modeset=1"
       "amd_pstate=active"
+      # Hide boot messages for cleaner LUKS prompt
+      "quiet"
+      "splash"
+      "loglevel=3"
+      "systemd.show_status=false"
+      "rd.udev.log_level=3"
+      # Additional boot log hiding
+      "plymouth.ignore-serial-consoles"
+      "rd.systemd.show_status=false"
+      "rd.luks.show_status=false"
+      # Performance optimizations
+      "systemd.default_timeout_start_sec=15"
+      "systemd.default_device_timeout_sec=5"
     ];
     extraModulePackages = [];
   };
@@ -93,11 +102,10 @@
   # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
   networking = {
     useDHCP = lib.mkDefault true;
-    interfaces = {
-      enp1s0f0.useDHCP = lib.mkDefault true;
-      enp5s0f4u1u1.useDHCP = lib.mkDefault true;
-      wlp2s0.useDHCP = lib.mkDefault true;
-    };
+    # interfaces = {
+    #   enp1s0f0.useDHCP = lib.mkDefault true;
+    #   wlp2s0.useDHCP = lib.mkDefault true;
+    # };
   };
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

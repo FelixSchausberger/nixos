@@ -85,6 +85,14 @@ in {
           background: transparent;
         }
 
+        /* Floating notification window background blur */
+        .floating-notifications .notification {
+          backdrop-filter: blur(25px);
+          -webkit-backdrop-filter: blur(25px);
+          background: rgba(49, 50, 68, 0.9);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
         .notification-center {
           background: rgba(30, 30, 46, 0.85);
           border-radius: 12px;
@@ -110,17 +118,21 @@ in {
 
         /* Individual Notifications */
         .notification {
-          background: rgba(49, 50, 68, 0.6);
+          background: rgba(49, 50, 68, 0.85);
           border-radius: 8px;
           margin: 6px 8px;
           padding: 12px;
           border: 1px solid rgba(137, 180, 250, 0.2);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
           transition: all 0.15s ease-in-out;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
 
         .notification:hover {
-          background: rgba(49, 50, 68, 0.8);
+          background: rgba(49, 50, 68, 0.95);
           border-color: rgba(137, 180, 250, 0.4);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
         }
 
         .notification.critical {

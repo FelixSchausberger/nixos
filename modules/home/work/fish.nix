@@ -2,7 +2,8 @@
   programs.fish = {
     interactiveShellInit = ''
       # Only run in graphical sessions, not TTY
-      if test -n "$XDG_SESSION_TYPE"; and test "$XDG_SESSION_TYPE" != "tty"
+      # Check multiple conditions to ensure we're in a proper user session
+      if test -n "$XDG_SESSION_TYPE"; and test "$XDG_SESSION_TYPE" != "tty"; and test -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY"; and test -n "$XDG_RUNTIME_DIR"
         # Set environment variables
         set -x IS_ROBOT no
         set -x COLOR_PROMPT yes

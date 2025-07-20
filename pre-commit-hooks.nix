@@ -22,6 +22,7 @@
         deadnix.enable = true; # Scan Nix files for dead code (unused variable bindings).
         flake-checker.enable = true; # Run health checks on your flake-powered Nix projects.
         markdownlint.enable = true; # Style checker and linter for markdown files.
+        statix.enable = true; # Lints and suggestions for Nix code
         prettier = {
           enable = true;
           excludes = [

@@ -3,11 +3,9 @@
   pkgs,
   config,
   inputs,
-  hostName ? "unknown",
   ...
 }: let
   cfg = config.wm.hyprland;
-  isDesktop = hostName == "desktop";
 
   # Package mappings for applications
   browserPkg =
@@ -28,31 +26,20 @@
     then pkgs.wezterm
     else inputs.ghostty.packages.${pkgs.system}.default;
 
-  fileManagerPkg =
-    if cfg.fileManager == "cosmic-files"
-    then pkgs.cosmic-files
-    else if cfg.fileManager == "nautilus"
-    then pkgs.nautilus
-    else if cfg.fileManager == "thunar"
-    then pkgs.xfce.thunar
-    else pkgs.cosmic-files;
+  fileManagerPkg = pkgs.cosmic-files;
 in {
-  imports =
-    [
-      # Using correct homeManagerModules attribute
-      inputs.cosmic-manager.homeManagerModules.default
-      inputs.wayland-pipewire-idle-inhibit.homeModules.default
-      ./animations.nix
-      ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
-      ./keybinds.nix
-      ./scratchpads.nix
-      ./swaync.nix # Modern notification daemon
-      ./walker.nix # Wayland-native application launcher
-      ./workspaces.nix
-    ]
-    ++ lib.optionals isDesktop [
-      ./gaming.nix
-    ];
+  imports = [
+    inputs.cosmic-manager.homeManagerModules.default
+    inputs.wayland-pipewire-idle-inhibit.homeModules.default
+    ./animations.nix
+    ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
+    ./keybinds.nix
+    ./scratchpads.nix
+    ./swaync.nix # Modern notification daemon
+    ./themes.nix # Theme and appearance configuration
+    ./walker.nix # Wayland-native application launcher
+    ./workspaces.nix
+  ];
 
   options.wm.hyprland = {
     enable = lib.mkEnableOption "Hyprland window manager" // {default = true;};
@@ -75,16 +62,16 @@ in {
       type = lib.types.str;
       default = "cosmic-files";
       description = "Default file manager";
-      example = "cosmic-files, nautilus, thunar";
+      example = "cosmic-files";
     };
 
     monitors = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = ["eDP-1,1920x1080@60,0x0,1"];
+      default = [",preferred,auto,1"];
       description = "Monitor configuration";
       example = [
         "HDMI-A-1,1920x1080@60,0x0,1"
-        "eDP-1,1920x1080@60,1920x0,1"
+        "eDP-1,1920x1200@60,1920x0,1"
       ];
     };
 
@@ -104,47 +91,23 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs;
-      [
-        # Core Hyprland utilities
-        hyprpicker # Color picker
-        hyprcursor # Cursor theme
-        hyprpaper # Wallpaper utility
-        hyprlock # Screen locker
-        hypridle # Idle daemon
-        hyprsunset # Blue light filter
-        hyprpolkitagent # Authentication agent
+    home.packages = with pkgs; [
+      # Home-specific utilities (not in system config)
+      hyprsunset # Blue light filter
+      hyprpolkitagent # Authentication agent
+      swappy # Screenshot annotation
+      wf-recorder # Screen recording
+      cliphist # Clipboard history
+      avizo # OSD for volume/brightness
+      inputs.walker.packages.${pkgs.system}.default # Wayland-native application launcher with plugins
+      inputs.self.packages.${pkgs.system}.vigiland # Wayland idle inhibitor
+      udiskie # Auto-mount
+      cosmic-files # File manager
 
-        # Screenshots and media
-        grim # Screenshot utility
-        slurp # Region selection
-        swappy # Screenshot annotation
-        wf-recorder # Screen recording
-
-        # System utilities
-        wl-clipboard # Wayland clipboard
-        cliphist # Clipboard history
-        avizo # OSD for volume/brightness
-        playerctl # Media control
-        pavucontrol # Audio control
-        inputs.bluetui.packages.${pkgs.system}.default # Bluetooth management
-
-        # Utilities
-        inputs.walker.packages.${pkgs.system}.default # Wayland-native application launcher with plugins
-        udiskie # Auto-mount
-
-        # Cursor themes
-        adwaita-icon-theme # For Adwaita cursor theme
-        bibata-cursors # Better cursor theme
-        hyprcursor # Hyprland cursor engine
-      ]
-      ++ lib.optionals isDesktop [
-        # Gaming packages only on desktop
-        steam
-        lutris
-        mangohud
-        gamemode
-      ];
+      # Cursor themes (user-specific)
+      adwaita-icon-theme # For Adwaita cursor theme
+      bibata-cursors # Better cursor theme
+    ];
 
     wayland.windowManager.hyprland = {
       enable = true;
@@ -155,26 +118,9 @@ in {
       ];
 
       settings = {
-        # Environment variables
+        # Environment variables (home/user-specific only)
         env = [
-          "QT_QPA_PLATFORM,wayland"
-          "QT_QPA_PLATFORMTHEME,qt6ct"
-          "QT_WAYLAND_DISABLE_WINDOWDECORATION,1"
-          "QT_AUTO_SCREEN_SCALE_FACTOR,1"
-          "QT_SCALE_FACTOR,1"
-
-          "GDK_BACKEND,wayland,x11,*"
-          "GDK_SCALE,1"
-
-          "XDG_CURRENT_DESKTOP,Hyprland"
-          "XDG_SESSION_TYPE,wayland"
-          "XDG_SESSION_DESKTOP,Hyprland"
-
-          "MOZ_ENABLE_WAYLAND,1"
-          "MOZ_WEBRENDER,1"
-          "MOZ_ACCELERATED,1"
-
-          # Application defaults
+          # Application defaults (user-configurable)
           "TERMINAL,${terminalPkg}/bin/${cfg.terminal}"
           "BROWSER,${browserPkg}/bin/${
             if cfg.browser == "zen"
@@ -183,7 +129,7 @@ in {
           }"
           "FILEMANAGER,${fileManagerPkg}/bin/${cfg.fileManager}"
 
-          # Cursor configuration
+          # User-specific cursor configuration
           "XCURSOR_THEME,Bibata-Modern-Classic"
           "XCURSOR_SIZE,24"
           "HYPRCURSOR_THEME,Bibata-Modern-Classic"
@@ -220,43 +166,12 @@ in {
 
         # General configuration with improved auto-tiling
         general = {
-          gaps_in = 4;
-          gaps_out = 8;
-          border_size = 2;
-          "col.active_border" = "rgb(89b4fa) rgb(cba6f7) 45deg";
-          "col.inactive_border" = "rgb(45475a)";
           layout = "dwindle";
           allow_tearing = true;
-          resize_on_border = true;
-          extend_border_grab_area = 15;
         };
 
-        # Enhanced decoration
+        # Decoration settings (themes are handled by themes.nix)
         decoration = {
-          rounding = lib.mkDefault 12;
-
-          blur = {
-            enabled = lib.mkDefault true;
-            size = 6;
-            passes = 3;
-            new_optimizations = true;
-            ignore_opacity = true;
-            noise = 0.1;
-            contrast = 1.1;
-            brightness = 1.2;
-            xray = false;
-          };
-
-          shadow = {
-            enabled = true;
-            range = 20;
-            render_power = 3;
-            ignore_window = true;
-            color = "rgba(1e1e2eee)";
-            offset = "0 8";
-            scale = 1.0;
-          };
-
           dim_inactive = false;
           dim_strength = 0.1;
         };
@@ -288,12 +203,9 @@ in {
           workspace_swipe_create_new = false;
         };
 
-        # Group configuration
+        # Group configuration (colors handled by themes.nix)
         group = {
-          "col.border_active" = "rgb(cba6f7)";
-          "col.border_inactive" = "rgb(45475a)";
-          "col.border_locked_active" = "rgb(f38ba8)";
-          "col.border_locked_inactive" = "rgb(45475a)";
+          # Group behavior settings only
         };
 
         # Miscellaneous settings
@@ -344,54 +256,92 @@ in {
         };
 
         # Advanced window rules
-        windowrulev2 =
-          [
-            # Scratchpad rules
-            "float,class:^(scratchpad-.*)$"
-            "size 80% 80%,class:^(scratchpad-.*)$"
-            "center,class:^(scratchpad-.*)$"
-            "opacity 0.95,class:^(scratchpad-.*)$"
+        windowrulev2 = [
+          # Scratchpad rules
+          "float,class:^(scratchpad-.*)$"
+          "size 80% 80%,class:^(scratchpad-.*)$"
+          "center,class:^(scratchpad-.*)$"
+          "opacity 0.95,class:^(scratchpad-.*)$"
 
-            # Application-specific rules
-            "workspace 2,class:^(${cfg.browser})$"
-            "workspace 3,class:^(code-url-handler)$"
-            "workspace 3,class:^(Code)$"
+          # Scratchpad help popup
+          "float,class:^(scratchpad-help)$"
+          "center,class:^(scratchpad-help)$"
+          "size 600 400,class:^(scratchpad-help)$"
+          "rounding 12,class:^(scratchpad-help)$"
+          "opacity 0.95,class:^(scratchpad-help)$"
+          "stayfocused,class:^(scratchpad-help)$"
 
-            # Floating windows
-            "float,class:^(floating-mode)$"
-            "float,class:^(pavucontrol)$"
-            "float,class:^(it.mijorus.smile)$"
-            "float,class:^(org.gnome.Calculator)$"
-            "float,class:^(nm-connection-editor)$"
+          # Application-specific rules
+          "workspace 2,class:^(${cfg.browser})$"
+          "workspace 3,class:^(code-url-handler)$"
+          "workspace 3,class:^(Code)$"
 
-            # Picture-in-picture
-            "float,title:^(Picture-in-Picture)$"
-            "pin,title:^(Picture-in-Picture)$"
-            "move 75% 75%,title:^(Picture-in-Picture)$"
-            "size 24% 24%,title:^(Picture-in-Picture)$"
+          # Floating windows
+          "float,class:^(floating-mode)$"
+          "float,class:^(pavucontrol)$"
+          "float,class:^(it.mijorus.smile)$"
+          "float,class:^(org.gnome.Calculator)$"
+          "float,class:^(nm-connection-editor)$"
 
-            # Transparency
-            "opacity 0.9,class:^(${cfg.terminal})$"
-            "opacity 0.95,class:^(${cfg.fileManager})$"
-          ]
-          ++ lib.optionals isDesktop [
-            # Gaming rules (only on desktop)
-            "workspace 7,class:^(steam)$"
-            "workspace 7,class:^(lutris)$"
-            "fullscreen,class:^(steam_app_).*"
-            "immediate,class:^(steam_app_).*"
-            "allowsinput,class:^(steam_app_).*"
-            "noinitialfocus,class:^(steam)$"
-          ];
+          # Authentication and keyring dialogs - float on current workspace with priority focus
+          "float,class:^(org.freedesktop.secrets)$"
+          "float,class:^(gnome-keyring)$"
+          "float,class:^(seahorse)$"
+          "float,title:^(.*Authentication.*)"
+          "float,title:^(.*Unlock.*)"
+          "float,title:^(.*Password.*)"
+          "center,class:^(org.freedesktop.secrets)$"
+          "center,class:^(gnome-keyring)$"
+          "center,title:^(.*Authentication.*)"
+          "center,title:^(.*Unlock.*)"
+          "center,title:^(.*Password.*)"
+          "stayfocused,class:^(org.freedesktop.secrets)$"
+          "stayfocused,title:^(.*Authentication.*)"
+          "stayfocused,title:^(.*Unlock.*)"
+          "stayfocused,title:^(.*Password.*)"
+          "pin,title:^(.*Authentication.*)"
+          "pin,title:^(.*Unlock.*)"
+          "pin,title:^(.*Password.*)"
+          "opaque,title:^(.*Authentication.*)"
+          "opaque,title:^(.*Unlock.*)"
+          "opaque,title:^(.*Password.*)"
+          "immediate,title:^(.*Authentication.*)"
+          "immediate,title:^(.*Unlock.*)"
+          "immediate,title:^(.*Password.*)"
+
+          # Picture-in-picture
+          "float,title:^(Picture-in-Picture)$"
+          "pin,title:^(Picture-in-Picture)$"
+          "move 75% 75%,title:^(Picture-in-Picture)$"
+          "size 24% 24%,title:^(Picture-in-Picture)$"
+
+          # Bitwarden extension popup
+          "float,title:^(Bitwarden)$"
+          "float,title:^(.*Bitwarden.*)$"
+          "center,title:^(Bitwarden)$"
+          "center,title:^(.*Bitwarden.*)$"
+          "stayfocused,title:^(Bitwarden)$"
+          "stayfocused,title:^(.*Bitwarden.*)$"
+          "pin,title:^(Bitwarden)$"
+          "pin,title:^(.*Bitwarden.*)$"
+
+          # Transparency
+          "opacity 0.9,class:^(${cfg.terminal})$"
+          "opacity 0.95,class:^(${cfg.fileManager})$"
+          "opacity 0.95,class:^(zed)$"
+        ];
 
         # Layer rules for better blur effects
         layerrule = [
+          "blur,gtk-layer-shell"
           "blur,ironbar"
-          "ignorezero,ironbar"
+          "ignorezero,ironbar" # Prevents blur gaps when background-color is near 0 alpha
+          "xray,ironbar" # Renders Ironbar over blur without darkening behind
           "blur,notifications"
           "blur,walker"
-          "blur,gtk-layer-shell"
           "dimaround,walker"
+          "blur,zed"
+          "ignorezero,zed"
         ];
 
         # Startup applications
@@ -404,20 +354,26 @@ in {
           "${pkgs.udiskie}/bin/udiskie --tray"
           "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store"
           "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store"
-          "${pkgs.hyprsunset}/bin/hyprsunset -t 4500"
           "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent"
           # "${pkgs.networkmanagerapplet}/bin/nm-applet"
           "${pkgs.hyprland-autoname-workspaces}/bin/hyprland-autoname-workspaces"
-
-          # Start on workspace 1 then let window rules assign to correct workspaces
-          "sleep 2 && ${browserPkg}/bin/${
-            if cfg.browser == "zen"
-            then "zen"
-            else cfg.browser
-          }"
-          "sleep 3 && ${pkgs.code-cursor}/bin/cursor"
         ];
       };
+    };
+
+    # Hyprsunset service for automatic sunset/sunrise blue light filtering
+    systemd.user.services.hyprsunset = {
+      Unit = {
+        Description = "Hyprsunset Blue Light Filter";
+        After = ["hyprland-session.target"];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.hyprsunset}/bin/hyprsunset -t 4500";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      Install.WantedBy = ["hyprland-session.target"];
     };
 
     # Configure wayland-pipewire-idle-inhibit service
@@ -439,13 +395,15 @@ in {
 
     # XDG configuration files
     xdg.configFile = {
-      "hypr/hyprpaper.conf".text = ''
+      "hypr/hyprpaper.conf".text = let
+        wallpaperPath = config.lib.wallpapers.getCurrentWallpaperPath or "${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg";
+      in ''
         # Preload wallpaper
-        preload = ${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg
+        preload = ${wallpaperPath}
 
         # Set wallpaper for all monitors
-        wallpaper = eDP-1,${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg
-        wallpaper = ,${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg
+        wallpaper = eDP-1,${wallpaperPath}
+        wallpaper = ,${wallpaperPath}
 
         # Configuration
         splash = false
@@ -477,7 +435,9 @@ in {
         }
       '';
 
-      "hypr/hyprlock.conf".text = ''
+      "hypr/hyprlock.conf".text = let
+        wallpaperPath = config.lib.wallpapers.getCurrentWallpaperPath or "${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg";
+      in ''
         general {
             disable_loading_bar = true
             grace = 300
@@ -491,7 +451,7 @@ in {
 
         background {
             monitor = eDP-1
-            path = ${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg
+            path = ${wallpaperPath}
             blur_passes = 3
             blur_size = 8
             noise = 0.0117
@@ -557,55 +517,8 @@ in {
             shadow_size = 10
         }
       '';
-
-      "wallpapers/.keep".text = "";
-
-      # GTK cursor theme configuration
-      "gtk-3.0/settings.ini".text = ''
-        [Settings]
-        gtk-cursor-theme-name=Bibata-Modern-Classic
-        gtk-cursor-theme-size=24
-      '';
-
-      "gtk-4.0/settings.ini".text = ''
-        [Settings]
-        gtk-cursor-theme-name=Bibata-Modern-Classic
-        gtk-cursor-theme-size=24
-      '';
-
-      # Bluetui configuration
-      "bluetui/config.toml".text = ''
-        # Bluetui configuration
-        toggle_scanning = "s"
-
-        [adapter]
-        toggle_pairing = "p"
-        toggle_power = "o"
-        toggle_discovery = "d"
-
-        [paired_device]
-        unpair = "u"
-        toggle_connect = " "
-        toggle_trust = "t"
-        rename = "e"
-
-        [new_device]
-        pair = "p"
-      '';
     };
 
-    # Copy wallpapers to user config directory
-    home.file = {
-      "${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg" = {
-        source = ../../wallpapers/solar-system.jpg;
-      };
-      "${config.home.homeDirectory}/.config/wallpapers/the-whale.jpg" = {
-        source = ../../wallpapers/the-whale.jpg;
-      };
-      "${config.home.homeDirectory}/.config/wallpapers/appa.jpg" = {
-        source = ../../wallpapers/appa.jpg;
-      };
-      "${config.home.homeDirectory}/.config/wallpapers/.keep".text = "";
-    };
+    # Wallpapers are now managed centrally by the wallpapers module
   };
 }

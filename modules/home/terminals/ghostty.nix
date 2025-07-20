@@ -12,7 +12,7 @@
 
       # Theme and colors
       theme = "catppuccin-mocha";
-      background-opacity = 0.85; # More transparent for better blur effect
+      background-opacity = 0.75; # More transparent for better blur effect
       background-blur-radius = 20; # Add blur effect (requires compositor support)
 
       # Window configuration

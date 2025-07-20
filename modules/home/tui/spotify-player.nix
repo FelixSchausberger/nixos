@@ -32,7 +32,7 @@
   config = lib.mkIf config.modules.home.tui.spotify-player.enable {
     programs.spotify-player = {
       enable = true;
-      package = config.modules.home.tui.spotify-player.package;
+      inherit (config.modules.home.tui.spotify-player) package;
 
       # State-of-the-art configuration for modern PipeWire setup
       settings = {

@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }: let
   hostLib = import ../lib.nix;
@@ -10,7 +11,6 @@ in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
     ]
     ++ hostLib.wmModules wms;
@@ -23,30 +23,32 @@ in {
   };
 
   # Hardware compatibility enhancements for portable use
-  boot.kernelParams = [
-    "nohibernate"
-    # Add parameters for better hardware compatibility
-    "i915.force_probe=*" # Force Intel GPU drivers
-    "nvidia.NVreg_PreserveVideoMemoryAllocations=1" # Better NVIDIA compatibility
-    "usbcore.autosuspend=-1" # Prevent USB devices from auto-suspending
-  ];
+  boot = {
+    kernelParams = [
+      "nohibernate"
+      # Add parameters for better hardware compatibility
+      "i915.force_probe=*" # Force Intel GPU drivers
+      "nvidia.NVreg_PreserveVideoMemoryAllocations=1" # Better NVIDIA compatibility
+      "usbcore.autosuspend=-1" # Prevent USB devices from auto-suspending
+    ];
 
-  # Extra kernel modules for better hardware compatibility
-  boot.extraModulePackages = with config.boot.kernelPackages; [
-    v4l2loopback # For virtual webcam support
-    # Note: broadcom_sta removed due to security issues (CVE-2019-9501, CVE-2019-9502)
-    # rtl8821au # Common WiFi driver - removed due to potential compatibility issues
-    # rtl8821cu # Common WiFi driver - removed due to potential compatibility issues
-  ];
+    # Extra kernel modules for better hardware compatibility
+    extraModulePackages = with config.boot.kernelPackages; [
+      v4l2loopback # For virtual webcam support
+      # Note: broadcom_sta removed due to security issues (CVE-2019-9501, CVE-2019-9502)
+      # rtl8821au # Common WiFi driver - removed due to potential compatibility issues
+      # rtl8821cu # Common WiFi driver - removed due to potential compatibility issues
+    ];
 
-  # Load additional kernel modules for better hardware compatibility
-  boot.kernelModules = [
-    "v4l2loopback"
-    # Common hardware support
-    "thunderbolt"
-    "uvcvideo"
-    "hid_multitouch"
-  ];
+    # Load additional kernel modules for better hardware compatibility
+    kernelModules = [
+      "v4l2loopback"
+      # Common hardware support
+      "thunderbolt"
+      "uvcvideo"
+      "hid_multitouch"
+    ];
+  };
 
   # Essential hardware support for portable use
   hardware = {
@@ -130,16 +132,21 @@ in {
     # Archive tools
     p7zip # 7zip support
     unzip # ZIP support
+
+    # Installation tools (optional for portable workstation)
+    inputs.nixos-wizard.packages.${pkgs.system}.default # NixOS installation wizard
   ];
 
   # Enable services for workstation + recovery
   services = {
     openssh = {
       enable = true;
-      settings.PermitRootLogin = "yes";
-      # Disable password auth by default for security
-      settings.PasswordAuthentication = false;
-      settings.KbdInteractiveAuthentication = false;
+      settings = {
+        PermitRootLogin = "yes";
+        # Disable password auth by default for security
+        PasswordAuthentication = false;
+        KbdInteractiveAuthentication = false;
+      };
     };
 
     # Network discovery
@@ -333,12 +340,17 @@ in {
     echo "   - Fast, reliable, pre-configured"
     echo "   - Best for most users"
     echo
-    echo "2. 🛠️ Custom ZFS Installation (Advanced)"
+    echo "2. 🧙 NixOS Wizard (Interactive GUI)"
+    echo "   - User-friendly graphical installer"
+    echo "   - Step-by-step guided setup"
+    echo "   - Good for beginners"
+    echo
+    echo "3. 🛠️ Custom ZFS Installation (Advanced)"
     echo "   - Full control over partitioning and encryption"
     echo "   - Uses the legacy ZFS setup tool"
     echo
 
-    read -p "Choose installation method [1/2]: " choice
+    read -p "Choose installation method [1/2/3]: " choice
 
     case $choice in
         1)
@@ -410,6 +422,38 @@ in {
             ;;
 
         2)
+            echo
+            echo "🧙 NixOS Wizard Installation Selected"
+            echo "===================================="
+            echo
+            echo "Starting the graphical NixOS installation wizard..."
+            echo "This provides a user-friendly GUI for installing NixOS."
+            echo
+            echo "Features:"
+            echo "• Graphical step-by-step installer"
+            echo "• Automatic hardware detection"
+            echo "• User-friendly disk partitioning"
+            echo "• Desktop environment selection"
+            echo
+
+            # Check if we're in a graphical environment
+            if [[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]]; then
+                echo "⚠️  No graphical environment detected."
+                echo "Starting a basic X session for the installer..."
+
+                # Start a basic X session with the installer
+                startx nixos-wizard
+            else
+                echo "Starting nixos-wizard..."
+                nixos-wizard
+            fi
+
+            echo
+            echo "✅ Installation completed using NixOS Wizard!"
+            echo "Follow any post-installation instructions shown by the wizard."
+            ;;
+
+        3)
             echo
             echo "🛠️ Custom ZFS Installation Selected"
             echo "=================================="

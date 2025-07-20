@@ -1,4 +1,10 @@
-{pkgs, ...}: {
+{
+  inputs,
+  pkgs,
+  ...
+}: let
+  inherit (inputs.self.lib) personalInfo;
+in {
   imports = [
     ../shells/fish/functions/jj.nix
   ];
@@ -13,7 +19,7 @@
 
     settings = {
       user = {
-        name = "Felix Schausberger";
+        inherit (personalInfo) name;
         email = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
       };
     };

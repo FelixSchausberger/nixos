@@ -7,6 +7,14 @@
   home = {
     packages = with pkgs; [
       icu # Required for .NET globalization support (MCP servers)
+      # Create a 'code' symlink to vscodium/code executable
+      (pkgs.writeShellScriptBin "code" ''
+        exec ${config.programs.vscode.package}/bin/${
+          if config.programs.vscode.package == pkgs.vscodium
+          then "codium"
+          else "code"
+        } "$@"
+      '')
     ];
 
     sessionVariables = {

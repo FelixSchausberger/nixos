@@ -1,4 +1,3 @@
-# Augments base Git config with settings for work use (e.g., work email, LFS, specific include paths).
 {
   config,
   pkgs,
@@ -9,7 +8,7 @@
   ];
 
   programs.git.extraConfig = {
-    init.defaultBranch = "master";
+    # init.defaultBranch = "master";
     # Ensure include.path uses an absolute path or a path relative to home
     include.path = "${config.home.homeDirectory}/.gitconfig.local";
   };

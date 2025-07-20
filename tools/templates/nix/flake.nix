@@ -21,44 +21,46 @@
         pkgs,
         ...
       }: {
-        # Main package - a Nix-based tool
-        packages.default = pkgs.writeShellApplication {
-          name = "my-nix-tool"; # CHANGE THIS: Update to your tool name
+        packages = {
+          # Main package - a Nix-based tool
+          default = pkgs.writeShellApplication {
+            name = "my-nix-tool"; # CHANGE THIS: Update to your tool name
 
-          # Runtime dependencies available in PATH
-          runtimeInputs = with pkgs; [
-            # Add tools your script needs
-            coreutils
-            findutils
-            gnused
-            gnugrep
-            jq
-            # nix
-            # git
-            # curl
-          ];
+            # Runtime dependencies available in PATH
+            runtimeInputs = with pkgs; [
+              # Add tools your script needs
+              coreutils
+              findutils
+              gnused
+              gnugrep
+              jq
+              # nix
+              # git
+              # curl
+            ];
 
-          text = builtins.readFile ./src/main.sh;
-        };
+            text = builtins.readFile ./src/main.sh;
+          };
 
-        # Alternative: Pure Nix function package
-        packages.nix-function = pkgs.callPackage ./src/default.nix {};
+          # Alternative: Pure Nix function package
+          nix-function = pkgs.callPackage ./src/default.nix {};
 
-        # Alternative: Python-based tool
-        packages.python-tool = pkgs.python3Packages.buildPythonApplication {
-          pname = "my-python-tool"; # CHANGE THIS
-          version = "0.1.0";
-          src = ./src;
+          # Alternative: Python-based tool
+          python-tool = pkgs.python3Packages.buildPythonApplication {
+            pname = "my-python-tool"; # CHANGE THIS
+            version = "0.1.0";
+            src = ./src;
 
-          propagatedBuildInputs = [
-            # Add Python dependencies
-            # pkgs.python3Packages.requests
-            # pkgs.python3Packages.pyyaml
-            # pkgs.python3Packages.click
-          ];
+            propagatedBuildInputs = [
+              # Add Python dependencies
+              # pkgs.python3Packages.requests
+              # pkgs.python3Packages.pyyaml
+              # pkgs.python3Packages.click
+            ];
 
-          # If you have a setup.py or pyproject.toml
-          # pyproject = true;
+            # If you have a setup.py or pyproject.toml
+            # pyproject = true;
+          };
         };
 
         # Development shell

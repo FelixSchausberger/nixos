@@ -5,7 +5,7 @@
   lib,
   ...
 }: let
-  nixpkgs = inputs.nixpkgs;
+  inherit (inputs) nixpkgs;
 in {
   # Installation ISO with ZFS support
   installer-iso = nixpkgs.lib.nixosSystem {
@@ -15,9 +15,11 @@ in {
       ./tools/image-builder
       {
         # Customize for your needs
-        isoImage.volumeID = "NIXOS-ZFS-INSTALLER";
-        isoImage.makeEfiBootable = true;
-        isoImage.makeUsbBootable = true;
+        isoImage = {
+          volumeID = "NIXOS-ZFS-INSTALLER";
+          makeEfiBootable = true;
+          makeUsbBootable = true;
+        };
       }
     ];
   };
@@ -25,7 +27,7 @@ in {
   # VMDK images for each host profile
   vmdk-portable = import "${nixpkgs}/nixos/lib/make-disk-image.nix" {
     inherit pkgs lib;
-    config =
+    inherit
       (nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
@@ -36,18 +38,22 @@ in {
             fileSystems."/".device = "/dev/disk/by-label/nixos";
           }
         ];
-      }).config;
+      })
+      config
+      ;
     format = "vmdk";
     diskSize = 32768; # 32GB
   };
 
   vmdk-surface = import "${nixpkgs}/nixos/lib/make-disk-image.nix" {
     inherit pkgs lib;
-    config =
+    inherit
       (nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [./hosts/surface];
-      }).config;
+      })
+      config
+      ;
     format = "vmdk";
     diskSize = 32768;
   };

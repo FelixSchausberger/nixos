@@ -1,6 +1,6 @@
 {
   imports = [
-    # Private/personal configuration
-    ../../../modules/home/private
+    ../shared.nix
+    ./hyprland.nix
   ];
 }

@@ -1,4 +1,4 @@
-{...}: {
+_: {
   # Bluetooth persistence moved to system/core/persistence.nix for consolidation
 
   hardware = {

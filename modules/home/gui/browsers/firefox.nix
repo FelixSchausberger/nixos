@@ -12,7 +12,7 @@ in {
   programs.firefox = {
     enable = true;
     package = inputs.firefox-nightly.packages.${pkgs.system}.firefox-nightly-bin;
-    languagePacks = browserCommon.languagePacks;
+    inherit (browserCommon) languagePacks;
 
     policies =
       browserCommon.commonPolicies

@@ -44,7 +44,6 @@
       '';
     };
 
-
     jj_log = {
       description = "Show jj log";
       body = ''
@@ -88,7 +87,6 @@
       '';
     };
 
-
     jj_search = {
       description = "Interactive file search with fzf";
       body = ''
@@ -116,7 +114,7 @@
     # Completions for jj command
     complete -c jj -f -a "log diff commit sync search ui" -d "Jujutsu VCS subcommands"
     complete -c jj -s h -l help -d "Show help message"
-    
+
     # Add lazyjj alias for convenience
     alias jjui="lazyjj"
   '';

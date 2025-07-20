@@ -52,7 +52,7 @@ in {
       zfs = {
         package = pkgs.zfs.override {
           # Use the same kernel sources as our kernelPackages
-          kernel = kernelPackages.kernel;
+          inherit (kernelPackages) kernel;
         };
         extraPools = ["rpool"];
       };
@@ -91,6 +91,24 @@ in {
       };
 
       kernelParams = ["nohibernate"];
+
+      # Plymouth boot splash screen for better LUKS unlock experience
+      plymouth = {
+        enable = true;
+        theme = "catppuccin-mocha";
+        themePackages = with pkgs; [
+          (catppuccin-plymouth.override {
+            variant = "mocha";
+          })
+        ];
+        # Add extra spacing and theming enhancements
+        extraConfig = ''
+          [Daemon]
+          Theme=catppuccin-mocha
+          ShowDelay=0
+          DeviceTimeout=8
+        '';
+      };
     };
 
     services.zfs = {

@@ -13,8 +13,7 @@ in {
 
   programs.zen-browser = {
     enable = true;
-    languagePacks = browserCommon.languagePacks;
-    nativeMessagingHosts = browserCommon.nativeMessagingHosts;
+    inherit (browserCommon) languagePacks nativeMessagingHosts;
 
     # Firefox/Zen policies - control browser behavior at the organization level
     policies =
@@ -67,6 +66,13 @@ in {
           "browser.tabs.allow_transparent_browser" = true; # Allow browser transparency
           "zen.widget.linux.transparency" = true; # Enable Linux-specific transparency
           "toolkit.legacyUserProfileCustomizations.stylesheets" = true; # Enable userChrome.css
+
+          # Skip first-time setup and onboarding
+          "browser.aboutwelcome.enabled" = false; # Disable welcome screen
+          "zen.welcome.enabled" = false; # Disable Zen welcome screen
+          "zen.onboarding.enabled" = false; # Disable Zen onboarding
+          "startup.homepage_welcome_url" = ""; # Disable welcome homepage
+          "startup.homepage_welcome_url.additional" = ""; # Disable additional welcome pages
         };
     };
   };

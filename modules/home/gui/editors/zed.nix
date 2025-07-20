@@ -6,6 +6,10 @@
   home = {
     packages = with pkgs; [
       icu # Required for .NET globalization support (MCP servers)
+
+      # Performance and compatibility tools for NixOS
+      vulkan-tools # For Vulkan debugging and validation
+      vulkan-loader # Vulkan compatibility
     ];
 
     sessionVariables = {
@@ -15,33 +19,50 @@
       # Increase connection pools and timeouts
       CHROME_NET_TCP_SOCKET_CONNECT_TIMEOUT_MS = "60000";
       CHROME_NET_TCP_SOCKET_CONNECT_ATTEMPT_DELAY_MS = "2000";
+
+      # NixOS-specific optimizations for Zed
+      # Vulkan support (required for Zed) - Auto-detected drivers
+      VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json:/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json:/run/opengl-driver/share/vulkan/icd.d/intel_icd.x86_64.json";
+      # GPU library paths
+      LD_LIBRARY_PATH = "/run/opengl-driver/lib";
+      # Mesa GPU acceleration
+      MESA_GL_VERSION_OVERRIDE = "4.6";
     };
   };
 
   programs.zed-editor = {
     enable = true;
 
+    # Extensions using Home Manager's built-in support
     extensions = [
       "nix"
-      "python"
-      "rust"
-      "cpp"
-      "yaml"
-      "dockerfile"
-      "prettier"
-      "markdownlint"
+      "catppuccin-blur" # Catppuccin theme with blur effects
+      "catppuccin-icons" # Catppuccin-styled icons
       "toml"
-      "typst"
-      "catppuccin"
-      "material-icons"
-      "github-copilot"
-      "eslint"
-      "html"
-      "css"
-      "json"
-      "clangd"
-      "fish"
+      "dockerfile"
       "git-firefly"
+      "typst"
+      "prettier"
+      "eslint"
+      "mcp-server-gitlab"
+    ];
+
+    # Additional packages available to Zed's environment
+    extraPackages = with pkgs; [
+      # LSP servers
+      nixd
+      rust-analyzer
+      pyright
+      clang-tools
+      marksman
+
+      # Formatters
+      alejandra
+      black
+      nodePackages.prettier
+
+      # Additional tools
+      claude-code
     ];
 
     userSettings = {
@@ -49,11 +70,11 @@
       theme = {
         mode = "dark";
         light = "Catppuccin Latte";
-        dark = "Catppuccin Mocha";
+        dark = "Catppuccin Mocha (Blur)"; # Using the blur theme from catppuccin-blur extension
       };
 
       # Window transparency (requires compositor support)
-      window_background_opacity = 0.95;
+      window_background_opacity = 0.75;
 
       # Editor settings
       editor = {
@@ -61,7 +82,7 @@
         font_features = {
           calt = true; # Enable font ligatures
         };
-        font_size = 20;
+        font_size = 14;
 
         # Format on save and type
         format_on_save = "on";
@@ -149,7 +170,7 @@
           language_servers = ["nixd"];
           formatter = {
             external = {
-              command = "alejandra";
+              command = "${pkgs.alejandra}/bin/alejandra";
               arguments = [];
             };
           };
@@ -161,7 +182,7 @@
           language_servers = ["pyright"];
           formatter = {
             external = {
-              command = "black";
+              command = "${pkgs.black}/bin/black";
               arguments = ["-"];
             };
           };
@@ -200,6 +221,17 @@
         Typst = {
           tab_size = 2;
           format_on_save = "on";
+        };
+
+        Markdown = {
+          language_servers = ["marksman"];
+          tab_size = 2;
+          format_on_save = "on";
+        };
+
+        Diff = {
+          tab_size = 2;
+          format_on_save = "off";
         };
       };
 
@@ -300,10 +332,15 @@
       restore_on_startup = "none"; # Skip welcome page
       confirm_quit = false;
 
-      # Performance settings
+      # Performance settings (NixOS optimized)
       use_autoclose = true;
       cursor_blink = false;
       show_call_status_icon = true;
+
+      # Enhanced performance for NixOS
+      enable_language_server = true;
+      show_completions_on_input = true;
+      use_on_type_format = false; # Can be resource intensive on large files
 
       # Vim mode settings
       vim_mode = true;
@@ -418,17 +455,45 @@
           binary = {
             path = "${pkgs.rust-analyzer}/bin/rust-analyzer";
           };
+          settings = {
+            "rust-analyzer" = {
+              checkOnSave = true;
+              check = {
+                command = "check";
+              };
+            };
+          };
         };
 
         pyright = {
           binary = {
             path = "${pkgs.pyright}/bin/pyright";
           };
+          settings = {
+            python = {
+              analysis = {
+                typeCheckingMode = "basic";
+                autoImportCompletions = true;
+              };
+            };
+          };
         };
 
         clangd = {
           binary = {
             path = "${pkgs.clang-tools}/bin/clangd";
+          };
+          settings = {
+            clangd = {
+              fallbackFlags = ["-std=c++17"];
+              compilationDatabasePath = "./";
+            };
+          };
+        };
+
+        marksman = {
+          binary = {
+            path = "${pkgs.marksman}/bin/marksman";
           };
         };
       };

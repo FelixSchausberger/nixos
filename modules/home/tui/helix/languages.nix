@@ -43,7 +43,7 @@ in {
     nodePackages.bash-language-server # Bash LSP
     python312Packages.python-lsp-server # Python LSP
     lua-language-server # Lua LSP
-    tinymist # Typst LSP (replaces deprecated typst-lsp)
+    tinymist # Typst LSP
     gopls # Go language server
     dockerfile-language-server-nodejs # Docker LSP
     docker-compose-language-service # Docker Compose LSP
@@ -54,7 +54,7 @@ in {
 
     # Formatters
     rustfmt # Rust formatter
-    nodePackages.prettier # JavaScript/TypeScript/CSS/HTML formatter
+    # nodePackages.prettier # Use development shell version to avoid conflicts
     black # Python formatter
     taplo # TOML formatter
     shfmt # Shell script formatter

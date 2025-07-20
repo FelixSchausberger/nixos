@@ -19,21 +19,20 @@
     enable = true;
     wlr.enable = true;
 
-    # Use Hyprland portal as primary, with GTK and wlr as fallbacks
+    # Use Hyprland portal as primary, with GTK as fallback for file operations
     config = {
       common = {
-        default = ["hyprland"];
-        "org.freedesktop.impl.portal.FileChooser" = ["gtk"];
-        "org.freedesktop.impl.portal.AppChooser" = ["gtk"];
+        default = ["hyprland" "gtk"];
       };
       hyprland = {
         default = ["hyprland" "gtk"];
-        "org.freedesktop.impl.portal.Screenshot" = ["hyprland"];
-        "org.freedesktop.impl.portal.ScreenCast" = ["hyprland"];
-        "org.freedesktop.impl.portal.Inhibit" = ["hyprland"];
         "org.freedesktop.impl.portal.FileChooser" = ["gtk"];
         "org.freedesktop.impl.portal.AppChooser" = ["gtk"];
         "org.freedesktop.impl.portal.Print" = ["gtk"];
+        "org.freedesktop.impl.portal.Settings" = ["gtk"];
+        "org.freedesktop.impl.portal.Screenshot" = ["hyprland"];
+        "org.freedesktop.impl.portal.ScreenCast" = ["hyprland"];
+        "org.freedesktop.impl.portal.Inhibit" = ["hyprland"];
       };
     };
 
@@ -73,10 +72,12 @@
     # Low-latency configuration
     extraConfig.pipewire."92-low-latency" = {
       context.properties = {
-        default.clock.rate = 48000;
-        default.clock.quantum = 32;
-        default.clock.min-quantum = 32;
-        default.clock.max-quantum = 32;
+        default.clock = {
+          rate = 48000;
+          quantum = 32;
+          min-quantum = 32;
+          max-quantum = 32;
+        };
       };
     };
   };
@@ -117,15 +118,6 @@
     # Development and utilities
     jq # For Hyprland scripting
     socat # For Hyprland IPC
-
-    # Fonts (essential for consistent UI)
-    font-awesome
-    noto-fonts
-    noto-fonts-emoji
-    noto-fonts-cjk-sans
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
-    nerd-fonts.hack
 
     # Theme support
     libsForQt5.qt5.qtwayland
@@ -281,25 +273,25 @@
   ];
 
   # Gaming and performance optimizations (system-level)
-  # programs = {
-  #   # GameMode for automatic game optimizations
-  #   gamemode = {
-  #     enable = true;
-  #     settings = {
-  #       general = {
-  #         renice = 10;
-  #         ioprio = 4;
-  #         inhibit_screensaver = 1;
-  #       };
+  programs = {
+    # GameMode for automatic game optimizations
+    gamemode = {
+      enable = true;
+      settings = {
+        general = {
+          renice = 10;
+          ioprio = 4;
+          inhibit_screensaver = 1;
+        };
 
-  #       gpu = {
-  #         apply_gpu_optimisations = "accept-responsibility";
-  #         gpu_device = 0;
-  #         amd_performance_level = "high";
-  #       };
-  #     };
-  #   };
-  # };
+        gpu = {
+          apply_gpu_optimisations = "accept-responsibility";
+          gpu_device = 0;
+          amd_performance_level = "high";
+        };
+      };
+    };
+  };
 
   # Virtual console configuration for better Wayland experience
   console = {

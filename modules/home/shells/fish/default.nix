@@ -10,15 +10,19 @@
 
   programs.fish = {
     enable = true;
+    shellAliases = {
+      # Fix Zed editor binary conflict with ZFS daemon
+      zed = "zeditor";
+    };
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
       # COMPLETE=fish jj | source
       direnv hook fish | source
 
       # Auto-start zellij if not already inside one
-      if status is-interactive; and not set -q ZELLIJ
-        exec zellij
-      end
+      # if status is-interactive; and not set -q ZELLIJ
+      #   exec zellij
+      # end
     '';
   };
 }

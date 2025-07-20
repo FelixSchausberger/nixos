@@ -1,11 +1,10 @@
 {pkgs, ...}: let
   hostLib = import ../lib.nix;
-  wms = ["gnome"];
+  wms = ["hyprland" "gnome"];
 in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
       ../../modules/system/work
       ../../system/nix/work/substituters.nix
@@ -22,37 +21,57 @@ in {
   # Enable container tools
   modules.system.containers.enable = true;
 
-  # AMD 680M iGPU configuration
-  hardware = {
-    enableRedistributableFirmware = true;
+  # Network performance optimizations
+  networking = {
+    # Disable dhcpcd on ethernet interface to prevent 30s boot delay
+    dhcpcd.enable = false;
 
+    # Use NetworkManager for all interfaces (WiFi and ethernet)
+    networkmanager.enable = true;
+
+    # Disable unused network interfaces to speed up boot
+    # interfaces.enp1s0f0.useDHCP = false;
+  };
+
+  # Boot optimizations
+  systemd.services = {
+    # Don't wait for network-online for faster boot
+    "NetworkManager-wait-online".enable = false;
+
+    # Reduce timeout for device detection
+    "systemd-udevd".serviceConfig = {
+      TimeoutSec = "10s";
+    };
+  };
+
+  # Hardware configuration
+  hardware = {
     # Enable WiFi support
     enableAllFirmware = true;
-    graphics = {
+
+    # AMD 680M iGPU configuration via profile
+    profiles.amdGpu = {
       enable = true;
-      enable32Bit = true;
+      variant = "laptop";
+    };
+  };
 
-      # Use bleeding-edge Mesa drivers
-      package = pkgs.mesa;
-      package32 = pkgs.pkgsi686Linux.mesa;
-
-      extraPackages = with pkgs; [
-        libva
-        vulkan-loader
-        vulkan-validation-layers
-        amdvlk
-      ];
-      extraPackages32 = with pkgs.pkgsi686Linux; [
-        libva
-        amdvlk
-      ];
+  # System maintenance and monitoring (work laptop)
+  modules.system.maintenance = {
+    enable = true;
+    autoUpdate.enable = false; # Disable auto-updates for work stability
+    monitoring = {
+      enable = true;
+      alerts = true;
     };
   };
 
   # System packages
   environment.systemPackages = with pkgs; [
-    vulkan-tools
-    glxinfo
+    # Zed editor wrapper to override ZFS daemon conflict
+    (pkgs.writeShellScriptBin "zed" ''
+      exec ${pkgs.zed-editor}/bin/zeditor "$@"
+    '')
   ];
 
   # Work-specific secrets
@@ -60,6 +79,9 @@ in {
     # AWS CLI credentials
     "awscli/id" = "AWS CLI Access Key ID";
     "awscli/key" = "AWS CLI Secret Access Key";
+
+    # GitHub token for Nix API access
+    "github/token" = "GitHub Personal Access Token";
 
     # GitLab token
     "gitlab/token" = "GitLab Personal Access Token";

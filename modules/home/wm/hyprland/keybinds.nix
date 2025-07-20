@@ -22,7 +22,6 @@ in {
           "$mod, w, exec, $browser"
           "$mod, e, exec, $fileManager"
           "$mod, c, exec, ${pkgs.helix}/bin/hx"
-          "$mod SHIFT, c, exec, ${pkgs.vscode}/bin/code"
 
           # Application launcher
           "$mod, D, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker"
@@ -85,33 +84,40 @@ in {
           "$mod SHIFT, Prior, movetoworkspace, e-1"
           "$mod SHIFT, Next, movetoworkspace, e+1"
 
-          # Scratchpads (Super + letter for application name)
-          "$mod, T, togglespecialworkspace, terminal"
-          "$mod SHIFT, T, movetoworkspace, special:terminal"
-          "$mod, S, togglespecialworkspace, spotify"
-          "$mod SHIFT, S, movetoworkspace, special:spotify"
-          "$mod, N, togglespecialworkspace, planify"
-          "$mod SHIFT, N, movetoworkspace, special:planify"
-          "$mod, O, togglespecialworkspace, obsidian"
-          "$mod SHIFT, O, movetoworkspace, special:obsidian"
+          # Modern Scratchpads using pyprland - reliable and feature-rich
+          "$mod, T, exec, ${pkgs.pyprland}/bin/pypr toggle terminal"
+          "$mod, S, exec, ${pkgs.pyprland}/bin/pypr toggle music"
+          "$mod, N, exec, ${pkgs.pyprland}/bin/pypr toggle planify"
+          "$mod, O, exec, ${pkgs.pyprland}/bin/pypr toggle notes"
+          "$mod, B, exec, ${pkgs.pyprland}/bin/pypr toggle bluetui"
+          "$mod, Y, exec, ${pkgs.pyprland}/bin/pypr toggle teams" # MS Teams (work-specific)
 
-          # Screenshots (enhanced)
+          # Pyprland Quality of Life Features
+          "$mod, slash, exec, ${pkgs.pyprland}/bin/pypr menu" # Show shortcuts menu
+          "$mod SHIFT, slash, exec, scratchpad list" # Show scratchpad help
+          "$mod CTRL, K, exec, ${pkgs.pyprland}/bin/pypr change_workspace +1" # Next workspace (follow focus)
+          "$mod CTRL, J, exec, ${pkgs.pyprland}/bin/pypr change_workspace -1" # Prev workspace (follow focus)
+
+          # Monitor Management
+          "$mod SHIFT, Left, exec, ${pkgs.pyprland}/bin/pypr shift_monitors -1" # Shift workspaces left
+          "$mod SHIFT, Right, exec, ${pkgs.pyprland}/bin/pypr shift_monitors +1" # Shift workspaces right
+          "$mod ALT, D, exec, ${pkgs.pyprland}/bin/pypr toggle_dpms" # Toggle displays (DPMS)
+
+          # Screenshots
           ", Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" - | ${pkgs.wl-clipboard}/bin/wl-copy && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Area copied to clipboard'"
           "$mod, Print, exec, ${pkgs.grim}/bin/grim - | ${pkgs.wl-clipboard}/bin/wl-copy && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Screen copied to clipboard'"
           "SHIFT, Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Saved to Pictures/Screenshots'"
           "$mod SHIFT, Print, exec, ${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Saved to Pictures/Screenshots'"
-
-          # Screen recording
-          "$mod, R, exec, ${pkgs.wf-recorder}/bin/wf-recorder -g \"$(${pkgs.slurp}/bin/slurp)\" -f ${config.home.homeDirectory}/Videos/Recordings/$(date +'%Y-%m-%d_%H-%M-%S').mp4"
-          "$mod SHIFT, R, exec, ${pkgs.killall}/bin/killall wf-recorder && ${pkgs.libnotify}/bin/notify-send 'Recording stopped'"
-
           # Utilities
           "$mod, V, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules clipboard"
           "$mod, period, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules emoji" # Emoji picker
-          "$mod ALT, B, exec, ${inputs.bluetui.packages.${pkgs.system}.default}/bin/bluetui" # Bluetooth management
+          # Bluetui keybinding moved to scratchpads section above
 
           # Color picker
           "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${pkgs.libnotify}/bin/notify-send 'Color picked' 'Copied to clipboard'"
+
+          # Vigiland idle inhibitor toggle
+          "$mod SHIFT, V, exec, if pgrep -x vigiland > /dev/null; then pkill vigiland && ${pkgs.libnotify}/bin/notify-send 'Vigiland' 'Idle inhibitor disabled'; else ${inputs.self.packages.${pkgs.system}.vigiland}/bin/vigiland & ${pkgs.libnotify}/bin/notify-send 'Vigiland' 'Idle inhibitor enabled'; fi"
 
           # Audio controls (additional)
           "$mod, equal, exec, ${pkgs.avizo}/bin/volumectl -u up"
@@ -134,7 +140,7 @@ in {
           "$mod, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch toggleopaque"
           "$mod SHIFT, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch pin"
           # "$mod CTRL, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch togglechromakey" # Toggle ChromaKey transparency - disabled due to plugin build issues
-          "$mod, U, pseudo"
+          "$mod SHIFT, P, pseudo" # Moved from U to give priority to scratchpads
           "$mod SHIFT, U, togglesplit"
 
           # Layout switching
@@ -148,17 +154,11 @@ in {
           "$mod ALT, Escape, exec, ${pkgs.swaynotificationcenter}/bin/swaync-client -d -sw" # Toggle DND mode
 
           # System controls
-          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl reload"
+          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl reload && ${pkgs.libnotify}/bin/notify-send 'Hyprland' 'Configuration reloaded'"
           "$mod CTRL, Q, exec, ${pkgs.systemd}/bin/systemctl --user restart hyprland"
 
-          # Quick applications
-          "$mod ALT, T, exec, ${pkgs.btop}/bin/btop"
-          "$mod ALT, F, exec, ${cfg.fileManager}"
-          "$mod ALT, W, exec, ${cfg.browser} --new-window"
-          "$mod ALT, C, exec, ${pkgs.gnome-calculator}/bin/gnome-calculator"
-
           # Resize mode
-          "$mod, B, submap, resize" # B for reSize (avoiding R for recording)
+          "$mod, R, submap, resize"
         ]
         ++ (
           # Workspace bindings 1-10
@@ -204,7 +204,7 @@ in {
         # Laptop special keys
         ", XF86Display, exec, ${pkgs.wdisplays}/bin/wdisplays"
         ", XF86WLAN, exec, ${pkgs.networkmanagerapplet}/bin/nm-connection-editor"
-        ", XF86Bluetooth, exec, ${inputs.bluetui.packages.${pkgs.system}.default}/bin/bluetui"
+        ", XF86Bluetooth, exec, hypr-scratchpad bluetui"
         ", XF86Tools, exec, ${pkgs.gnome-control-center}/bin/gnome-control-center"
         ", XF86Search, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker"
         ", XF86LaunchA, exec, ${cfg.fileManager}"
@@ -274,7 +274,7 @@ in {
       # Exit resize mode
       bind = , escape, submap, reset
       bind = , Return, submap, reset
-      bind = $mod, B, submap, reset
+      bind = $mod, R, submap, reset
 
       submap = reset
     '';

@@ -23,11 +23,7 @@
       username,
       modules ? [],
     }: {
-      imports =
-        [
-          # Default modules every generated config should have
-        ]
-        ++ modules;
+      imports = modules;
 
       networking.hostName = hostname;
 
@@ -43,18 +39,17 @@
     # Configuration validation function
     validateConfig = config: let
       errors =
-        []
-        ++ (lib.optional (!config ? networking.hostName) "hostname is required")
+        (lib.optional (!config ? networking.hostName) "hostname is required")
         ++ (lib.optional (!config ? users) "users configuration is required");
     in
       if errors == []
       then {
         success = true;
-        config = config;
+        inherit config;
       }
       else {
         success = false;
-        errors = errors;
+        inherit errors;
       };
 
     # Package builder function

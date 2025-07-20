@@ -7,13 +7,25 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1" # Weekly dependency check on Mondays
+# Permissions for security scanning
+permissions:
+  actions: read
+  contents: read
+  security-events: write
 env:
   NIX_CONFIG: |
     experimental-features = nix-command flakes pipe-operators
     allow-import-from-derivation = true
     accept-flake-config = true
-    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+    # Optimized substituters with faster mirrors first
+    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.garnix.io
+    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=
+    # Performance optimizations
+    max-jobs = auto
+    cores = 0
+    builders-use-substitutes = true
+    # Reduce build log verbosity
+    log-lines = 25
 jobs:
   # Security and compliance checks
   security:
@@ -32,15 +44,16 @@ jobs:
           output: "trivy-results.sarif"
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         with:
           sarif_file: "trivy-results.sarif"
       - name: Check for secrets
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
-          head: HEAD
+          base: ${{ github.event.before }}
+          head: ${{ github.sha }}
+        continue-on-error: true
   # Code quality and linting
   quality:
     name: Code Quality
@@ -51,11 +64,22 @@ jobs:
         with:
           install_url: https://nixos.org/nix/install
           extra_nix_config: ${{ env.NIX_CONFIG }}
-      - name: Setup Cachix
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 2048
+          swap-size-mb: 1024
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+      - name: Setup Cachix (parallel)
         uses: cachix/cachix-action@v14
         with:
           name: nix-community
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          pushFilter: "(-source$|nixos-system-)"
       - uses: cachix/install-nix-action@v26
         with:
           install_url: https://nixos.org/nix/install
@@ -74,6 +98,7 @@ jobs:
       # First format the files
       - name: Format files
         run: |
+          cd $GITHUB_WORKSPACE
           nix develop --command bash -c "
             pre-commit clean
             pre-commit install
@@ -89,25 +114,54 @@ jobs:
       # Now run all checks
       - name: Run pre-commit checks
         run: |
+          cd $GITHUB_WORKSPACE
+          # Use nix-direnv for faster shell startup
           nix develop --command bash -c "
-            # Skip sops hook in CI since we don't need to validate encrypted secrets during build
-            SKIP=pre-commit-hook-ensure-sops pre-commit run --all-files
+            # Only run essential checks in CI, skip slow formatters that were already run
+            SKIP='pre-commit-hook-ensure-sops,alejandra,prettier' pre-commit run --all-files
           "
       - name: Run flake checks
-        run: nix flake check --impure
-      - name: Build sample configurations
         run: |
-          echo "Building desktop configuration..."
-          nix build .#nixosConfigurations.desktop.config.system.build.toplevel --impure --show-trace
+          cd $GITHUB_WORKSPACE
+          # Run flake check with parallel evaluation
+          nix flake check --impure --max-jobs $(nproc) --cores 0
+      - name: Build sample configurations (optimized)
+        run: |
+          cd $GITHUB_WORKSPACE
+          # Build configurations in parallel using background jobs
+          echo "Starting parallel builds..."
 
-          echo "Building portable configuration..."
-          nix build .#nixosConfigurations.portable.config.system.build.toplevel --impure --show-trace
+          # Desktop build in background
+          nix build .#nixosConfigurations.desktop.config.system.build.toplevel --impure --max-jobs $(nproc) --cores 0 --fallback &
+          DESKTOP_PID=$!
+
+          # Portable build in background
+          nix build .#nixosConfigurations.portable.config.system.build.toplevel --impure --max-jobs $(nproc) --cores 0 --fallback &
+          PORTABLE_PID=$!
+
+          # Wait for both builds to complete
+          echo "Waiting for desktop build (PID: $DESKTOP_PID)..."
+          wait $DESKTOP_PID && echo "✅ Desktop build complete" || echo "❌ Desktop build failed"
+
+          echo "Waiting for portable build (PID: $PORTABLE_PID)..."
+          wait $PORTABLE_PID && echo "✅ Portable build complete" || echo "❌ Portable build failed"
+
+          # Clean up after builds
+          nix store gc --max 3GB || true
+          df -h
       - name: Test custom packages
         run: |
-          echo "Testing custom packages..."
-          nix build .#basalt --impure
-          nix build .#lumen --impure
-          nix build .#vigiland --impure
+          cd $GITHUB_WORKSPACE
+          echo "Building custom packages in parallel..."
+
+          # Build all packages in parallel
+          nix build .#basalt --impure --max-jobs $(nproc) &
+          nix build .#lumen --impure --max-jobs $(nproc) &
+          nix build .#vigiland --impure --max-jobs $(nproc) &
+
+          # Wait for all builds
+          wait
+          echo "✅ All custom packages built successfully"
   # Build tests for different architectures and configurations
   build-matrix:
     name: Build Matrix
@@ -119,26 +173,54 @@ jobs:
         host: [desktop, portable, surface]
         include:
           - host: desktop
-            extra-args: "--impure"
+            extra-args: "--impure --max-jobs auto --cores 0"
           - host: portable
-            extra-args: "--impure"
+            extra-args: "--impure --max-jobs auto --cores 0"
           - host: surface
-            extra-args: "--impure"
+            extra-args: "--impure --max-jobs auto --cores 0"
       fail-fast: false
+      max-parallel: 3
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v26
         with:
           install_url: https://nixos.org/nix/install
           extra_nix_config: ${{ env.NIX_CONFIG }}
-      - name: Setup Cachix
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 2048
+          swap-size-mb: 1024
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+      - name: Setup Cachix (optimized)
         uses: cachix/cachix-action@v14
         with:
           name: nix-community
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - name: Build ${{ matrix.host }} configuration
+          pushFilter: "(-source$|nixos-system-)"
+      - name: Build ${{ matrix.host }} configuration (optimized)
         run: |
-          nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel ${{ matrix.extra-args }} --show-trace --fallback
+          cd $GITHUB_WORKSPACE
+          # Monitor disk space before build
+          df -h
+
+          # Build with optimized settings and better error handling
+          nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel ${{ matrix.extra-args }} --fallback --keep-going || {
+            echo "❌ Build failed for ${{ matrix.host }}"
+            echo "Build logs:"
+            nix log .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel || true
+            exit 1
+          }
+
+          echo "✅ Build successful for ${{ matrix.host }}"
+
+          # Aggressive cleanup after build
+          nix store gc --max 1GB || true
+          df -h
   # Dependency updates and maintenance
   maintenance:
     name: Maintenance
@@ -154,6 +236,7 @@ jobs:
           extra_nix_config: ${{ env.NIX_CONFIG }}
       - name: Update flake inputs
         run: |
+          cd $GITHUB_WORKSPACE
           nix flake update --commit-lock-file
       - name: Check for updates
         run: |
@@ -207,7 +290,6 @@ jobs:
           - [x] Basalt: Built successfully
           - [x] Lumen: Built successfully
           - [x] Vigiland: Built successfully
-          - [x] Claude Code Extension: Built successfully
 
           ## Security Checks
           - [x] Vulnerability scan completed

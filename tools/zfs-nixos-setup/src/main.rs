@@ -679,23 +679,23 @@ fn create_zfs_pool(device: &str) -> Result<()> {
         &[
             "create",
             "-o",
-            "compression=lz4",
+            "compression=lz4",      // Fast compression with good ratio
             "-o",
-            "acltype=posixacl",
+            "acltype=posixacl",     // POSIX ACLs for proper permissions
             "-o",
-            "xattr=sa",
+            "xattr=sa",             // System attribute-based extended attributes (faster)
             "-o",
-            "relatime=on",
+            "atime=off",            // Disable access time updates (major performance boost)
             "-o",
-            "normalization=formD",
+            "normalization=formD",  // Unicode normalization for consistent filename handling
             "-o",
-            "mountpoint=none", // or "/" if mounting directly
+            "mountpoint=none",      // This dataset is just a container, not mounted directly
             &root_dataset,
         ],
     )?;
 
     // Set mutable properties on the POOL
-    run_command("zpool", &["set", "autotrim=on", &pool_name])?;
+    run_command("zpool", &["set", "autotrim=on", &pool_name])?;  // Automatic TRIM for SSDs (maintains performance)
 
     Ok(())
 }

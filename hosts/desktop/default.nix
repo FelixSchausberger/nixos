@@ -1,11 +1,10 @@
 {pkgs, ...}: let
   hostLib = import ../lib.nix;
-  wms = ["hyprland"];
+  wms = ["gnome" "hyprland"];
 in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
     ]
     ++ hostLib.wmModules wms;
@@ -18,50 +17,25 @@ in {
     system = "x86_64-linux";
   };
 
-  # AMD RX 6700XT GPU configuration
+  # Hardware configuration
   hardware = {
-    enableRedistributableFirmware = true;
-
     # Desktop-specific hardware configuration
     keyboard.qmk.enable = true;
-
-    graphics = {
+    
+    # AMD RX 6700XT GPU configuration via profile
+    profiles.amdGpu = {
       enable = true;
-      enable32Bit = true;
-
-      package = pkgs.mesa;
-      package32 = pkgs.pkgsi686Linux.mesa;
-
-      extraPackages = with pkgs; [
-        libva
-        vulkan-loader
-        vulkan-validation-layers
-        amdvlk
-      ];
-      extraPackages32 = with pkgs.pkgsi686Linux; [
-        libva
-        amdvlk
-      ];
+      variant = "desktop";
     };
   };
-
-  # AMD GPU kernel modules and parameters
-  boot = {
-    kernelModules = ["amdgpu" "kvm-amd"];
-    kernelParams = [
-      "amdgpu.dc=1"
-      "amdgpu.sg_display=0"
-      "amdgpu.dpm=1"
-      "amdgpu.modeset=1"
-      "amd_pstate=active"
-    ];
-    initrd.kernelModules = ["amdgpu"];
+  
+  # System maintenance and monitoring
+  modules.system.maintenance = {
+    enable = true;
+    autoUpdate.enable = true;
+    monitoring = {
+      enable = true;
+      alerts = true;
+    };
   };
-
-  # System packages for GPU monitoring and debugging
-  environment.systemPackages = with pkgs; [
-    vulkan-tools
-    glxinfo
-    radeontop
-  ];
 }

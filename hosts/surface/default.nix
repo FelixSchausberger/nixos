@@ -9,7 +9,6 @@ in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
 
       # Surface-specific hardware module

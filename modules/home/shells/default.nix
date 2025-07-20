@@ -3,7 +3,7 @@
     ./bash.nix # GNU Bourne-Again Shell, the de facto standard shell on Linux (for interactive use)
     ./fish # Smart and user-friendly command line shell
     ./starship.nix # A minimal, blazing fast, and extremely customizable prompt
-    ./zellij.nix # Terminal multiplexer with modern features
+    # ./zellij.nix # Terminal multiplexer with modern features
     ./zoxide.nix # A fast cd command that learns your habits
   ];
 

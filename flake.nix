@@ -16,6 +16,21 @@
         lib = {
           mkHost = import ./lib/mkHost.nix;
           user = "schausberger"; # Default user
+          
+          # Personal information variables
+          personalInfo = {
+            name = "Felix Schausberger";
+            email = "fel.schausberger@gmail.com";
+            workEmail = "schausberger@magazino.ai";
+          };
+          
+          # Common paths
+          paths = {
+            nixosConfig = "/per/etc/nixos";
+            obsidianVault = "/per/vault/Brain";
+            homeDir = "/home/schausberger";
+            repos = "/per/repos";
+          };
         };
       };
 
@@ -27,33 +42,37 @@
         vm-pdemu1cml000312 = inputs.self.nixosConfigurations.pdemu1cml000312.config.system.build.vm;
       };
 
-      # Deploy-rs configuration for remote deployments
+      # Modern deployment with nixos-anywhere (faster, more reliable)
+      # Usage: nix run .#nixos-anywhere -- --flake .#hostname root@target-ip
+      flake.packages.x86_64-linux.nixos-anywhere = inputs.nixos-anywhere.packages.x86_64-linux.default;
+
+      # Legacy deploy-rs configuration (kept for compatibility)
       flake.deploy = {
         sshUser = "schausberger";
         nodes = {
           desktop = {
-            hostname = "desktop.local"; # Adjust to your actual hostname/IP
+            hostname = "desktop.local";
             profiles.system = {
               user = "root";
               path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.desktop;
             };
           };
           portable = {
-            hostname = "portable.local"; # Adjust to your actual hostname/IP
+            hostname = "portable.local";
             profiles.system = {
               user = "root";
               path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.portable;
             };
           };
           surface = {
-            hostname = "surface.local"; # Adjust to your actual hostname/IP
+            hostname = "surface.local";
             profiles.system = {
               user = "root";
               path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.surface;
             };
           };
           pdemu1cml000312 = {
-            hostname = "192.168.1.100"; # Adjust to your work laptop IP/hostname
+            hostname = "192.168.1.100";
             profiles.system = {
               user = "root";
               path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.pdemu1cml000312;
@@ -62,7 +81,7 @@
         };
       };
 
-      # Add deploy-rs checks
+      # Deploy checks
       flake.checks = inputs.deploy-rs.lib.x86_64-linux.deployChecks inputs.self.deploy;
 
       perSystem = {
@@ -74,6 +93,179 @@
           basalt = pkgs.callPackage ./pkgs/basalt {};
           lumen = pkgs.callPackage ./pkgs/lumen {};
           vigiland = pkgs.callPackage ./pkgs/vigiland {};
+
+          # VMDK builder for portable workstation
+          vmdk-portable = pkgs.callPackage ./tools/vmdk-builder {inherit inputs;};
+
+          # Development workflow improvements
+          config-editor = pkgs.writeShellApplication {
+            name = "nx-config-editor";
+            runtimeInputs = with pkgs; [yazi git];
+            text = ''
+              set -euo pipefail
+              
+              cd "${inputs.self.lib.paths.nixosConfig}"
+              
+              echo "📝 NixOS Configuration Editor"
+              echo "=============================="
+              echo "Opening configuration in yazi..."
+              echo "Tip: Use 'q' to quit yazi when done"
+              echo ""
+              
+              yazi .
+              
+              # Check for changes
+              if [[ -n "$(git status --porcelain)" ]]; then
+                echo ""
+                echo "📄 Changes detected:"
+                git status --short | head -10
+                echo ""
+                
+                read -p "Review changes? [y/N]: " -n 1 -r review
+                echo ""
+                
+                if [[ $review =~ ^[Yy]$ ]]; then
+                  git diff --stat
+                  echo ""
+                  echo "📝 Detailed diff:"
+                  git diff --color=always | head -50
+                  echo ""
+                fi
+                
+                read -p "Commit and deploy changes? [y/N]: " -n 1 -r deploy
+                echo ""
+                
+                if [[ $deploy =~ ^[Yy]$ ]]; then
+                  read -p "Commit message: " -r message
+                  if [[ -n "$message" ]]; then
+                    git add .
+                    git commit -m "$message"
+                    echo ""
+                    echo "🚀 Deploying configuration..."
+                    sudo nixos-rebuild switch --flake .
+                  else
+                    echo "Empty commit message, skipping deployment."
+                  fi
+                else
+                  echo "Changes saved but not deployed."
+                  echo "Use 'nx deploy' when ready to apply changes."
+                fi
+              else
+                echo "No changes made."
+              fi
+            '';
+          };
+
+          config-validator = pkgs.writeShellApplication {
+            name = "nx-validate";
+            runtimeInputs = with pkgs; [nix git];
+            text = ''
+              set -euo pipefail
+              
+              cd "${inputs.self.lib.paths.nixosConfig}"
+              
+              echo "🔍 NixOS Configuration Validator"
+              echo "==============================="
+              echo ""
+              
+              echo "📋 Step 1: Syntax check..."
+              if nix flake check --no-build; then
+                echo "✅ Syntax check passed"
+              else
+                echo "❌ Syntax check failed"
+                exit 1
+              fi
+              echo ""
+              
+              echo "🏗️  Step 2: Build test (all configurations)..."
+              if nix build .#nixosConfigurations.desktop.config.system.build.toplevel --no-link --quiet; then
+                echo "✅ Desktop build successful"
+              else
+                echo "❌ Desktop build failed"
+                exit 1
+              fi
+              
+              if nix build .#nixosConfigurations.portable.config.system.build.toplevel --no-link --quiet; then
+                echo "✅ Portable build successful"  
+              else
+                echo "❌ Portable build failed"
+                exit 1
+              fi
+              
+              echo ""
+              echo "🔒 Step 3: Security check..."
+              if command -v statix >/dev/null; then
+                if statix check .; then
+                  echo "✅ Security check passed"
+                else
+                  echo "⚠️  Security warnings found (non-fatal)"
+                fi
+              else
+                echo "ℹ️  Statix not available, skipping security check"
+              fi
+              
+              echo ""
+              echo "✅ All validations completed successfully!"
+              echo "🚀 Configuration ready for deployment"
+            '';
+          };
+
+          system-backup = pkgs.writeShellApplication {
+            name = "nx-backup";
+            runtimeInputs = with pkgs; [zfs git rsync];
+            text = ''
+              set -euo pipefail
+              
+              BACKUP_DIR="/per/backups/nixos-$(date +%Y%m%d_%H%M%S)"
+              
+              echo "💾 NixOS System Backup"
+              echo "======================"
+              echo "Backup location: $BACKUP_DIR"
+              echo ""
+              
+              mkdir -p "$BACKUP_DIR"
+              
+              echo "📁 Step 1: Backing up configuration..."
+              cp -r "${inputs.self.lib.paths.nixosConfig}" "$BACKUP_DIR/nixos-config"
+              
+              echo "🔑 Step 2: Backing up secrets..."
+              if [[ -d "/per/system" ]]; then
+                cp -r /per/system "$BACKUP_DIR/system-keys"
+                chmod -R go-rwx "$BACKUP_DIR/system-keys"
+              fi
+              
+              echo "📋 Step 3: Saving system state..."
+              {
+                echo "# NixOS System Backup - $(date)"
+                echo "# =============================="
+                echo ""
+                echo "## System Information"
+                echo "Hostname: $(hostname)"
+                echo "NixOS Version: $(nixos-version)"
+                echo "Generation: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | tail -1)"
+                echo ""
+                echo "## Hardware Information"
+                lscpu | head -10
+                echo ""
+                lsblk -f
+                echo ""
+                echo "## ZFS Status"
+                zpool status || echo "ZFS not available"
+                echo ""
+                echo "## Network Configuration"
+                ip addr show | grep -E "inet|link" | head -10
+              } > "$BACKUP_DIR/system-info.txt"
+              
+              echo "📦 Step 4: Creating archive..."
+              tar -czf "$BACKUP_DIR.tar.gz" -C "$(dirname "$BACKUP_DIR")" "$(basename "$BACKUP_DIR")"
+              rm -rf "$BACKUP_DIR"
+              
+              echo ""
+              echo "✅ Backup completed successfully!"
+              echo "📦 Archive: $BACKUP_DIR.tar.gz"
+              echo "📏 Size: $(du -h "$BACKUP_DIR.tar.gz" | cut -f1)"
+            '';
+          };
 
           # ZFS setup tool
           zfs-nixos-setup = pkgs.rustPlatform.buildRustPackage {
@@ -170,117 +362,14 @@
                     rsync
                   ];
 
-                  isoImage.volumeID = "NIXOS-ZFS-INSTALLER";
-                  isoImage.makeEfiBootable = true;
-                  isoImage.makeUsbBootable = true;
+                  isoImage = {
+                    volumeID = "NIXOS-ZFS-INSTALLER";
+                    makeEfiBootable = true;
+                    makeUsbBootable = true;
+                  };
                 }
               ];
             }).config.system.build.isoImage;
-
-          # ZFS VMDK image for portable workstation
-          # Since make-disk-image.nix doesn't support ZFS, we create a script that builds
-          # a ZFS-ready VMDK using our zfs-nixos-setup tool
-          vmdk-portable = pkgs.writeShellScriptBin "build-portable-vmdk" ''
-            set -e
-
-            echo "Building ZFS-based VMDK for portable workstation..."
-
-            # Create temporary directory for image building
-            TEMP_DIR=$(mktemp -d)
-            trap "rm -rf $TEMP_DIR" EXIT
-
-            # Create 1TB raw image
-            IMAGE_FILE="$TEMP_DIR/portable.raw"
-            ${pkgs.qemu}/bin/qemu-img create -f raw "$IMAGE_FILE" 1T
-
-            # Set up loop device
-            LOOP_DEVICE=$(sudo ${pkgs.util-linux}/bin/losetup -f --show "$IMAGE_FILE")
-            trap "sudo ${pkgs.util-linux}/bin/losetup -d $LOOP_DEVICE || true; rm -rf $TEMP_DIR" EXIT
-
-            echo "Using loop device: $LOOP_DEVICE"
-
-            # Create partitions: boot (512MB), swap (16GB), ZFS (rest)
-            sudo ${pkgs.parted}/bin/parted "$LOOP_DEVICE" --script -- \
-              mklabel gpt \
-              mkpart ESP fat32 1MiB 512MiB \
-              set 1 boot on \
-              mkpart swap linux-swap 512MiB 16896MiB \
-              mkpart primary 16896MiB 100%
-
-            # Inform kernel about partition changes
-            sudo ${pkgs.util-linux}/bin/partprobe "$LOOP_DEVICE"
-            sleep 2
-
-            # Format boot and swap partitions
-            sudo ${pkgs.dosfstools}/bin/mkfs.fat -F 32 -n boot "''${LOOP_DEVICE}p1"
-            sudo ${pkgs.util-linux}/bin/mkswap -L swap "''${LOOP_DEVICE}p2"
-
-            # Create ZFS pool on the third partition
-            sudo ${pkgs.zfs}/bin/zpool create -f -R /mnt \
-              -O canmount=off \
-              -O mountpoint=none \
-              -O atime=off \
-              -O compression=zstd \
-              -O xattr=sa \
-              -O acltype=posixacl \
-              rpool "''${LOOP_DEVICE}p3"
-
-            # Create ZFS datasets
-            sudo ${pkgs.zfs}/bin/zfs create -o canmount=off -o mountpoint=none rpool/eyd
-            sudo ${pkgs.zfs}/bin/zfs create -o canmount=noauto -o mountpoint=/ rpool/eyd/root
-            sudo ${pkgs.zfs}/bin/zfs create -o canmount=noauto -o mountpoint=/home rpool/eyd/home
-            sudo ${pkgs.zfs}/bin/zfs create -o canmount=noauto -o mountpoint=/nix rpool/eyd/nix
-            sudo ${pkgs.zfs}/bin/zfs create -o canmount=noauto -o mountpoint=/per rpool/eyd/per
-
-
-            # Create blank snapshot for impermanence
-            sudo ${pkgs.zfs}/bin/zfs snapshot rpool/eyd/root@blank
-
-            # Mount filesystems
-            sudo ${pkgs.zfs}/bin/zfs mount rpool/eyd/root
-            sudo ${pkgs.zfs}/bin/zfs mount rpool/eyd/home
-            sudo ${pkgs.zfs}/bin/zfs mount rpool/eyd/nix
-            sudo ${pkgs.zfs}/bin/zfs mount rpool/eyd/per
-
-            sudo mkdir -p /mnt/boot
-            sudo mount "''${LOOP_DEVICE}p1" /mnt/boot
-
-            # Enable swap partition
-            echo "Enabling swap..."
-            sudo ${pkgs.util-linux}/bin/swapon "''${LOOP_DEVICE}p2"
-
-            # Build the system configuration
-            echo "Building NixOS system configuration..."
-            SYSTEM_CONFIG=$(nix build --no-link --print-out-paths .#nixosConfigurations.portable.config.system.build.toplevel)
-
-            # Install the system
-            echo "Installing NixOS to ZFS..."
-            sudo mkdir -p /mnt/nix/var/nix/profiles/system
-            sudo cp -r "$SYSTEM_CONFIG" /mnt/nix/var/nix/profiles/system/
-            sudo ln -sf /nix/var/nix/profiles/system "$SYSTEM_CONFIG"
-
-            # Install bootloader
-            sudo mkdir -p /mnt/boot/EFI/BOOT
-            sudo NIXOS_INSTALL_BOOTLOADER=1 /mnt/nix/var/nix/profiles/system/bin/switch-to-configuration boot
-
-            # Unmount filesystems
-            echo "Cleaning up..."
-            sudo ${pkgs.util-linux}/bin/swapoff "''${LOOP_DEVICE}p2"
-            sudo umount /mnt/boot
-            sudo ${pkgs.zfs}/bin/zfs umount -a
-            sudo ${pkgs.zfs}/bin/zpool export rpool
-
-            # Convert to VMDK
-            OUTPUT_DIR="$PWD/result"
-            mkdir -p "$OUTPUT_DIR"
-            ${pkgs.qemu}/bin/qemu-img convert -f raw -O vmdk "$IMAGE_FILE" "$OUTPUT_DIR/portable-workstation.vmdk"
-
-            echo "✅ ZFS VMDK created successfully!"
-            echo "📁 Output: $OUTPUT_DIR/portable-workstation.vmdk"
-            echo "💾 Layout: 512MB boot + 16GB encrypted swap + ~1TB ZFS with impermanence"
-            echo "🛠️  Includes: Full workstation + recovery tools"
-            echo "⚡ Best Practice: Dedicated encrypted swap for maximum performance"
-          '';
         };
 
         devShells.default = pkgs.mkShell {
@@ -342,7 +431,7 @@
 
     # Desktop environments
     nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
-    hyprland.url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
+    hyprland.url = "github:hyprwm/Hyprland";
     hyprland-plugins = {
       url = "github:hyprwm/hyprland-plugins";
       inputs.hyprland.follows = "hyprland";
@@ -368,10 +457,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     helix.url = "github:helix-editor/helix";
-    zed-extensions = {
-      url = "github:DuskSystems/nix-zed-extensions";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     # Applications
     bluetui = {
@@ -425,9 +510,13 @@
       flake = false;
     };
 
-    # Utilities
+    # Deployment utilities
     deploy-rs = {
       url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixos-anywhere = {
+      url = "github:nix-community/nixos-anywhere";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-index-db = {
@@ -447,6 +536,12 @@
     arc-2-theme = {
       url = "github:YashjitPal/Arc-2.0";
       flake = false;
+    };
+
+    # Installation tools (optional for portable host)
+    nixos-wizard = {
+      url = "github:km-clay/nixos-wizard";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 }

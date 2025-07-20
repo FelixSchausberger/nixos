@@ -8,6 +8,7 @@
   # This module provides common functionality used across all host configurations
 
   imports = [
+    ./boot-zfs.nix
     ../modules/system
     inputs.sopswarden.nixosModules.default
     inputs.sops-nix.nixosModules.sops
@@ -82,6 +83,7 @@
     services.sopswarden = {
       enable = true;
       sopsFile = "/per/etc/nixos/secrets/secrets.yaml";
+      ageKeyFile = "/per/system/sops-key.txt";
       secrets = {
         # API tokens
         "claude/default" = "Claude API Token";
