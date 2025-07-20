@@ -8,7 +8,7 @@
   cfg = config.wm.hyprland;
 in {
   imports = [
-    inputs.walker.homeModules.default
+    inputs.walker.homeManagerModules.default
   ];
   config = lib.mkIf cfg.enable {
     # Walker program configuration

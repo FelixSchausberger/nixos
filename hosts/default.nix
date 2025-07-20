@@ -1,9 +1,9 @@
 {
   homeImports,
   inputs,
-  lib,
   ...
-}: let
+}:
+let
   # capitalizeFirstChar = str:
   #   str
   #   |> builtins.substring 0 1
@@ -18,11 +18,12 @@
     inherit inputs;
   };
 
-  mkHostConfig = {
-    hostName,
-    baseModules,
-    extraModules ? [],
-  }:
+  mkHostConfig =
+    {
+      hostName,
+      baseModules,
+      extraModules ? [ ],
+    }:
     nixosSystem {
       inherit specialArgs;
       modules =
@@ -32,45 +33,46 @@
             networking.hostName = hostName; # |> capitalizeFirstChar;
             _module.args.hostName = hostName;
           }
-          ({config, ...}: {
-            home-manager = {
-              users.${inputs.self.lib.user}.imports =
-                homeImports."${inputs.self.lib.user}@${hostName}";
-              extraSpecialArgs =
-                specialArgs
-                // {
+          (
+            { config, ... }:
+            {
+              home-manager = {
+                users.${inputs.self.lib.user}.imports = homeImports."${inputs.self.lib.user}@${hostName}";
+                extraSpecialArgs = specialArgs // {
                   inherit hostName;
                   inherit (config._module.args) hostConfig;
                 };
-            };
-          })
+              };
+            }
+          )
         ]
         ++ extraModules;
     };
-in {
+in
+{
   flake.nixosConfigurations = {
     desktop = mkHostConfig {
       hostName = "desktop";
       baseModules = desktop;
-      extraModules = [./desktop];
+      extraModules = [ ./desktop ];
     };
 
     surface = mkHostConfig {
       hostName = "surface";
       baseModules = laptop;
-      extraModules = [./surface];
+      extraModules = [ ./surface ];
     };
 
     pdemu1cml000312 = mkHostConfig {
       hostName = "pdemu1cml000312";
       baseModules = laptop;
-      extraModules = [./pdemu1cml000312];
+      extraModules = [ ./pdemu1cml000312 ];
     };
 
     portable = mkHostConfig {
       hostName = "portable";
       baseModules = desktop;
-      extraModules = [./portable];
+      extraModules = [ ./portable ];
     };
   };
 }

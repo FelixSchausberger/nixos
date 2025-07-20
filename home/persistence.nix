@@ -80,6 +80,32 @@
         directory = ".cache/rclone";
         method = "symlink";
       }
+
+      # Development tool configurations and caches
+      {
+        directory = ".docker";
+        method = "symlink";
+      }
+      {
+        directory = ".cargo";
+        method = "symlink";
+      }
+      {
+        directory = ".rustup";
+        method = "symlink";
+      }
+      {
+        directory = ".npm";
+        method = "symlink";
+      }
+      {
+        directory = ".cache/pip";
+        method = "symlink";
+      }
+      {
+        directory = ".vscode";
+        method = "symlink";
+      }
     ];
 
     # Important config files
@@ -87,6 +113,9 @@
       ".config/Code/User/settings.json"
       ".config/Code/User/keybindings.json"
       ".zen/profiles.ini"
+      ".gitconfig"
+      ".config/git/config"
+      ".config/gh/config.yml"
     ];
   };
 }

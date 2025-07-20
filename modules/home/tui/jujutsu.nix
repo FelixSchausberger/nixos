@@ -1,4 +1,8 @@
 {pkgs, ...}: {
+  imports = [
+    ../shells/fish/functions/jj.nix
+  ];
+
   home.packages = with pkgs; [
     jjui # A TUI for Jujutsu VCS
   ];

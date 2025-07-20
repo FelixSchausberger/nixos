@@ -40,7 +40,6 @@ in {
     nodePackages.typescript-language-server # TypeScript/JavaScript LSP
     nodePackages.vscode-langservers-extracted # HTML/CSS/JSON LSPs
     yaml-language-server # YAML LSP
-    nil # Nix LSP (already available via system)
     nodePackages.bash-language-server # Bash LSP
     python312Packages.python-lsp-server # Python LSP
     lua-language-server # Lua LSP
@@ -193,7 +192,11 @@ in {
       {
         name = "bash";
         scope = "source.bash";
-        file-types = ["sh" "bash" "zsh"];
+        file-types = [
+          "sh"
+          "bash"
+          "zsh"
+        ];
         auto-format = true;
         formatter.command = "shfmt";
         language-servers = ["bash-language-server"];
@@ -209,12 +212,19 @@ in {
       {
         name = "markdown";
         scope = "source.markdown";
-        file-types = ["md" "markdown"];
+        file-types = [
+          "md"
+          "markdown"
+        ];
         auto-format = true;
         soft-wrap.enable = true;
         formatter = {
           command = "dprint";
-          args = ["fmt" "--stdin" "md"];
+          args = [
+            "fmt"
+            "--stdin"
+            "md"
+          ];
         };
         language-servers = [
           "markdown-oxide"
@@ -225,7 +235,13 @@ in {
       {
         name = "python";
         scope = "source.python";
-        file-types = ["py" "pyi" "py3" "pyw" "ptl"];
+        file-types = [
+          "py"
+          "pyi"
+          "py3"
+          "pyw"
+          "ptl"
+        ];
         auto-format = true;
         formatter.command = "black";
         language-servers = ["pylsp"];
@@ -288,7 +304,10 @@ in {
       {
         name = "c";
         scope = "source.c";
-        file-types = ["c" "h"];
+        file-types = [
+          "c"
+          "h"
+        ];
         auto-format = true;
         language-servers = ["clangd"];
         debugger = {
@@ -315,7 +334,16 @@ in {
       {
         name = "cpp";
         scope = "source.cpp";
-        file-types = ["cpp" "cc" "cxx" "c++" "hpp" "hh" "hxx" "h++"];
+        file-types = [
+          "cpp"
+          "cc"
+          "cxx"
+          "c++"
+          "hpp"
+          "hh"
+          "hxx"
+          "h++"
+        ];
         auto-format = true;
         language-servers = ["clangd"];
         debugger = {
@@ -342,28 +370,47 @@ in {
       {
         name = "javascript";
         scope = "source.js";
-        file-types = ["js" "jsx" "mjs"];
+        file-types = [
+          "js"
+          "jsx"
+          "mjs"
+        ];
         auto-format = true;
         formatter.command = "prettier";
-        formatter.args = ["--parser" "babel"];
+        formatter.args = [
+          "--parser"
+          "babel"
+        ];
         language-servers = ["typescript-language-server"];
       }
       {
         name = "typescript";
         scope = "source.ts";
-        file-types = ["ts" "tsx"];
+        file-types = [
+          "ts"
+          "tsx"
+        ];
         auto-format = true;
         formatter.command = "prettier";
-        formatter.args = ["--parser" "typescript"];
+        formatter.args = [
+          "--parser"
+          "typescript"
+        ];
         language-servers = ["typescript-language-server"];
       }
       {
         name = "html";
         scope = "text.html.basic";
-        file-types = ["html" "htm"];
+        file-types = [
+          "html"
+          "htm"
+        ];
         auto-format = true;
         formatter.command = "prettier";
-        formatter.args = ["--parser" "html"];
+        formatter.args = [
+          "--parser"
+          "html"
+        ];
         language-servers = ["vscode-html-language-server"];
       }
       {
@@ -372,7 +419,10 @@ in {
         file-types = ["css"];
         auto-format = true;
         formatter.command = "prettier";
-        formatter.args = ["--parser" "css"];
+        formatter.args = [
+          "--parser"
+          "css"
+        ];
         language-servers = ["vscode-css-language-server"];
       }
       {
@@ -381,13 +431,19 @@ in {
         file-types = ["json"];
         auto-format = true;
         formatter.command = "prettier";
-        formatter.args = ["--parser" "json"];
+        formatter.args = [
+          "--parser"
+          "json"
+        ];
         language-servers = ["vscode-json-language-server"];
       }
       {
         name = "yaml";
         scope = "source.yaml";
-        file-types = ["yaml" "yml"];
+        file-types = [
+          "yaml"
+          "yml"
+        ];
         auto-format = true;
         formatter.command = "yamlfmt";
         language-servers = ["yaml-language-server"];
@@ -406,20 +462,30 @@ in {
         file-types = ["lua"];
         auto-format = true;
         formatter.command = "stylua";
-        formatter.args = ["--stdin-filepath" "file.lua" "-"];
+        formatter.args = [
+          "--stdin-filepath"
+          "file.lua"
+          "-"
+        ];
         language-servers = ["lua-language-server"];
       }
       {
         name = "vim";
         scope = "source.viml";
-        file-types = ["vim" "vimrc"];
+        file-types = [
+          "vim"
+          "vimrc"
+        ];
         auto-format = false;
       }
       {
         name = "git-commit";
         scope = "text.git-commit";
         file-types = ["COMMIT_EDITMSG"];
-        rulers = [50 72];
+        rulers = [
+          50
+          72
+        ];
         text-width = 72;
       }
       {
@@ -439,7 +505,10 @@ in {
       {
         name = "dockerfile";
         scope = "source.dockerfile";
-        file-types = ["Dockerfile" "dockerfile"];
+        file-types = [
+          "Dockerfile"
+          "dockerfile"
+        ];
         auto-format = false;
         language-servers = ["docker-langserver"];
       }
@@ -448,7 +517,10 @@ in {
         name = "jjdescription";
         scope = "text.jjdescription";
         file-types = ["jjdescription"];
-        rulers = [50 72];
+        rulers = [
+          50
+          72
+        ];
         text-width = 72;
       }
       {

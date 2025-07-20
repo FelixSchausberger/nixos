@@ -1,6 +1,5 @@
 keys:
   - &user age1elrgtf20dvls9ewkuax6m48fgc7vy8xahtkzk7avdyxtldry3etsppl959 # ssh-to-age -i ~/.ssh/id_ed25519_magazino_pki.pub
-
 creation_rules:
   - path_regex: secrets/[^/]+\.(json|yaml|yml)$
     key_groups:

@@ -5,7 +5,7 @@ in {
   imports =
     [
       ../shared.nix
-      ./boot-zfs.nix
+      ../boot-zfs.nix
       ./hardware-configuration.nix
       ../../modules/system/work
       ../../system/nix/work/substituters.nix

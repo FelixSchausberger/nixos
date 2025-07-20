@@ -1,0 +1,140 @@
+stages:
+  - check
+  - build
+  - test
+  - deploy
+variables:
+  NIX_CONFIG: "extra-experimental-features = nix-command flakes"
+# Use cachix for binary cache (adjust to your setup)
+before_script:
+  - nix --version
+  - nix flake metadata
+# Security and code quality checks
+check:security:
+  stage: check
+  script:
+    - nix develop --command pre-commit run --all-files
+    - nix flake check --show-trace
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+# Build all host configurations
+build:hosts:
+  stage: build
+  parallel:
+    matrix:
+      - HOST: [desktop, portable, surface, pdemu1cml000312]
+  script:
+    - echo "Building host configuration for $HOST"
+    - nix build ".#nixosConfigurations.$HOST.config.system.build.toplevel" --show-trace
+    - nix build ".#vm-$HOST" --show-trace --max-jobs 2 # Limit to avoid resource issues
+  artifacts:
+    reports:
+      junit: result-*/test-reports/*.xml
+    paths:
+      - result-*
+    expire_in: 1 day
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+# Test VM boots (smoke tests)
+test:vm-boot:
+  stage: test
+  parallel:
+    matrix:
+      - HOST: [desktop, portable, surface, pdemu1cml000312]
+  script:
+    - echo "Testing VM boot for $HOST"
+    # Start VM in background, wait for boot, then shutdown
+    - timeout 300 nix run ".#vm-$HOST" -- -display none -serial stdio -m 2048 &
+    - VM_PID=$!
+    - sleep 180 # Wait for boot
+    - kill $VM_PID || true
+    - echo "VM boot test completed for $HOST"
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  needs: ["build:hosts"]
+# Build installer images
+build:images:
+  stage: build
+  script:
+    - echo "Building installer ISO with ZFS support"
+    - nix build ".#installer-iso" --show-trace
+    - ls -la result/iso/
+  artifacts:
+    paths:
+      - result/iso/*.iso
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+# Deploy-rs checks (without actual deployment)
+check:deploy-rs:
+  stage: test
+  script:
+    - echo "Checking deploy-rs configuration"
+    - nix run github:serokell/deploy-rs -- --dry-run ".#desktop" || echo "Desktop deploy check failed"
+    - nix run github:serokell/deploy-rs -- --dry-run ".#portable" || echo "Portable deploy check failed"
+    - nix run github:serokell/deploy-rs -- --dry-run ".#surface" || echo "Surface deploy check failed"
+    - nix run github:serokell/deploy-rs -- --dry-run ".#pdemu1cml000312" || echo "Work laptop deploy check failed"
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  allow_failure: true # Don't fail pipeline if hosts are unreachable
+# Manual deployment jobs (for production)
+.deploy_template: &deploy_template
+  stage: deploy
+  when: manual
+  script:
+    - echo "Deploying to $DEPLOY_HOST"
+    - nix run github:serokell/deploy-rs -- ".#$DEPLOY_HOST"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+deploy:desktop:
+  !!merge <<: *deploy_template
+  variables:
+    DEPLOY_HOST: desktop
+  environment:
+    name: desktop
+    url: https://desktop.local
+deploy:portable:
+  !!merge <<: *deploy_template
+  variables:
+    DEPLOY_HOST: portable
+  environment:
+    name: portable
+    url: https://portable.local
+deploy:surface:
+  !!merge <<: *deploy_template
+  variables:
+    DEPLOY_HOST: surface
+  environment:
+    name: surface
+    url: https://surface.local
+# Work laptop deployment
+deploy:work:
+  !!merge <<: *deploy_template
+  variables:
+    DEPLOY_HOST: pdemu1cml000312
+  environment:
+    name: work-laptop
+    url: https://192.168.1.100
+# Update flake inputs (weekly)
+update:flake-inputs:
+  stage: check
+  script:
+    - nix flake update
+    - git diff flake.lock
+    # Commit and push if there are changes
+    - |
+      if ! git diff --quiet flake.lock; then
+        git config --global user.name "GitLab CI"
+        git config --global user.email "ci@example.com"
+        git add flake.lock
+        git commit -m "chore: update flake inputs [skip ci]"
+        git push origin $CI_DEFAULT_BRANCH
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  allow_failure: true

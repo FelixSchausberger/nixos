@@ -23,7 +23,7 @@
     nodePackages.bash-language-server # Bash
     clang-tools # C/C++
     marksman # Markdown
-    nil # Nix
+    nixd # Nix
     # python311Packages.python-lsp-server # Python
     rust-analyzer # Rust
     taplo # TOML

@@ -1,6 +1,6 @@
 {inputs, ...}: {
   imports = [
-    inputs.cosmic-manager.homeModules.cosmic-manager
+    inputs.cosmic-manager.homeManagerModules.cosmic-manager
     ./cosmic-applets.nix
     ./cosmic-compositor.nix
     ./cosmic-files.nix

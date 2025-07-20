@@ -1,13 +1,17 @@
 let
-  desktop = [
+  # Common modules shared across all systems
+  common = [
     ./core
     ./hardware
     ./network.nix
     ./nix
   ];
 
-  laptop =
-    desktop;
+  # Desktop systems (includes common modules)
+  desktop = common;
+
+  # Laptop systems (same as desktop for now, but allows future differentiation)
+  laptop = common;
 in {
-  inherit desktop laptop;
+  inherit desktop laptop common;
 }

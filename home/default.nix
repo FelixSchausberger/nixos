@@ -1,15 +1,13 @@
 {
   config,
-  hostName,
+  # hostName,
   inputs,
   ...
-}: let
+}:
+let
   # Use pipe operator to create derived paths more functionally
   getPath = base: suffix: "${base}/${suffix}";
-  data =
-    config.xdg.dataHome
-    |> getPath "data"
-    |> (path: "${path}/wine");
+  data = config.xdg.dataHome |> getPath "data" |> (path: "${path}/wine");
 
   conf =
     config.xdg.configHome
@@ -21,13 +19,14 @@
       };
     });
 
-  cache =
-    config.xdg.cacheHome
-    |> getPath "cache"
-    |> (path: "${path}/less/history");
+  # cache =
+  #   config.xdg.cacheHome
+  #   |> getPath "cache"
+  #   |> (path: "${path}/less/history");
 
   username = inputs.self.lib.user;
-in {
+in
+{
   imports = [
     inputs.nix-index-db.homeModules.nix-index
     ./persistence.nix

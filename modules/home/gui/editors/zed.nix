@@ -290,9 +290,9 @@
       };
 
       # UI settings
-      ui_font_size = 20;
+      ui_font_size = 24;
       ui_font_family = "Zed Sans";
-      buffer_font_size = 20;
+      buffer_font_size = 24;
       buffer_font_family = "Fira Code Mono";
 
       # Window settings

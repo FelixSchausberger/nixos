@@ -121,7 +121,7 @@ The project uses pre-commit hooks with:
 - **deadnix**: Dead code detection
 - **flake-checker**: Flake health checks
 - **markdownlint**: Markdown linting
-- **nil**: Nix language server
+- **nixd**: Nix language server
 - **prettier**: General formatting (excludes .js, .md, .ts)
 
 ## Secrets Management

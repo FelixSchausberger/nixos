@@ -1,0 +1,13 @@
+[formatter.alejandra]
+command = "alejandra"
+includes = ["*.nix"]
+
+[formatter.prettier]
+command = "prettier"
+options = ["--tab-width", "2", "--write"]
+includes = ["*.json", "*.md", "*.toml", "*.yaml", "*.yml"]
+
+[formatter.trailing-whitespace]
+command = "trailing-whitespace-fixer"
+includes = ["*"]
+excludes = ["*.patch"]

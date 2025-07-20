@@ -1,6 +1,6 @@
 {pkgs, ...}: {
   imports = [
-    ./functions.nix
+    ./functions
     ./plugins.nix
   ];
 

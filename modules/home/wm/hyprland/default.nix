@@ -39,8 +39,8 @@
 in {
   imports =
     [
-      inputs.hyprland.homeModules.default
-      inputs.cosmic-manager.homeModules.cosmic-manager
+      # Using correct homeManagerModules attribute
+      inputs.cosmic-manager.homeManagerModules.default
       inputs.wayland-pipewire-idle-inhibit.homeModules.default
       ./animations.nix
       ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
@@ -148,6 +148,8 @@ in {
 
     wayland.windowManager.hyprland = {
       enable = true;
+      package = inputs.hyprland.packages.${pkgs.system}.hyprland;
+      portalPackage = inputs.hyprland.packages.${pkgs.system}.xdg-desktop-portal-hyprland;
       plugins = [
         inputs.hyprland-plugins.packages.${pkgs.system}.hyprexpo
       ];

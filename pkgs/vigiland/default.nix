@@ -6,7 +6,7 @@
   wayland,
   wayland-protocols,
 }:
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage {
   pname = "vigiland";
   version = "0.1.0";
 

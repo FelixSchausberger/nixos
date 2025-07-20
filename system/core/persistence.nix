@@ -24,6 +24,12 @@
 
       # Core dumps for debugging
       "/var/lib/systemd/coredump"
+
+      # Docker containers and images
+      "/var/lib/docker"
+
+      # Libvirt virtual machines
+      "/var/lib/libvirt"
     ];
 
     # User-specific persistent data

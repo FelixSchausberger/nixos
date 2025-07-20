@@ -4,24 +4,17 @@
   pkgs,
   ...
 }: let
-  # Get the latest stable ZFS-compatible kernel
-  latestStableKernel = let
-    kernels = lib.filterAttrs (name: _: lib.hasPrefix "linux_" name) pkgs.linuxKernel.packages;
-    stableKernels = lib.filterAttrs (_: pkg: !(pkg.kernel.features ? preemptrt)) kernels;
-  in
-    lib.last (lib.sort (a: b: lib.versionOlder a.kernel.version b.kernel.version)
-      (lib.attrValues stableKernels));
-
-  # Use either the latest stable kernel or the default one
+  # Use ZFS-compatible kernel
   kernelPackages =
     if config.boot.zfs.forceLatestStableKernel
-    then latestStableKernel
+    # https://discourse.nixos.org/t/zfs-latestcompatiblelinuxpackages-is-deprecated/52540
+    then pkgs.linuxPackages_6_6 # Use stable LTS kernel compatible with ZFS
     else pkgs.linuxPackages;
 in {
   options.boot.zfs = {
     forceLatestStableKernel = lib.mkOption {
       type = lib.types.bool;
-      default = false;
+      default = true; # Default to true for ZFS compatibility across all hosts
       description = "Whether to force the latest stable kernel for ZFS compatibility";
     };
   };
@@ -64,7 +57,10 @@ in {
         extraPools = ["rpool"];
       };
 
-      supportedFilesystems = ["ntfs" "zfs"];
+      supportedFilesystems = [
+        "ntfs"
+        "zfs"
+      ];
 
       initrd = {
         systemd.enable = true;
@@ -121,13 +117,25 @@ in {
 
       # Ensure proper ordering with ZFS
       system-systemd-swap = {
-        after = ["zfs.target" "zfs-mount.service"];
-        requires = ["zfs.target" "zfs-mount.service"];
+        after = [
+          "zfs.target"
+          "zfs-mount.service"
+        ];
+        requires = [
+          "zfs.target"
+          "zfs-mount.service"
+        ];
       };
 
       nsncd = {
-        after = ["zfs.target" "systemd-swap.target"];
-        requires = ["zfs.target" "systemd-swap.target"];
+        after = [
+          "zfs.target"
+          "systemd-swap.target"
+        ];
+        requires = [
+          "zfs.target"
+          "systemd-swap.target"
+        ];
       };
     };
   };

@@ -55,9 +55,9 @@
       keybinds = {
         normal = {
           # Quick plugin access
-          "Ctrl f" = {LaunchPlugin = {location = "file:forgot";};};
-          "Ctrl g" = {LaunchPlugin = {location = "file:git-branch";};};
-          "Ctrl h" = {LaunchPlugin = {location = "file:harpoon";};};
+          "Ctrl f" = "LaunchPlugin \"file:forgot\"";
+          "Ctrl g" = "LaunchPlugin \"file:git-branch\"";
+          "Ctrl h" = "LaunchPlugin \"file:harpoon\"";
         };
       };
     };

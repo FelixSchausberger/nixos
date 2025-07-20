@@ -5,7 +5,7 @@ in {
   imports =
     [
       ../shared.nix
-      ./boot-zfs.nix
+      ../boot-zfs.nix
       ./hardware-configuration.nix
     ]
     ++ hostLib.wmModules wms;
@@ -18,9 +18,13 @@ in {
     system = "x86_64-linux";
   };
 
-  # Enable 32-bit support for Direct Rendering Infrastructure (DRI)
+  # AMD RX 6700XT GPU configuration
   hardware = {
     enableRedistributableFirmware = true;
+
+    # Desktop-specific hardware configuration
+    keyboard.qmk.enable = true;
+
     graphics = {
       enable = true;
       enable32Bit = true;
@@ -28,7 +32,6 @@ in {
       package = pkgs.mesa;
       package32 = pkgs.pkgsi686Linux.mesa;
 
-      # AMD RX 6700XT GPU configuration
       extraPackages = with pkgs; [
         libva
         vulkan-loader
@@ -40,8 +43,19 @@ in {
         amdvlk
       ];
     };
-    # Desktop-specific hardware configuration
-    keyboard.qmk.enable = true;
+  };
+
+  # AMD GPU kernel modules and parameters
+  boot = {
+    kernelModules = ["amdgpu" "kvm-amd"];
+    kernelParams = [
+      "amdgpu.dc=1"
+      "amdgpu.sg_display=0"
+      "amdgpu.dpm=1"
+      "amdgpu.modeset=1"
+      "amd_pstate=active"
+    ];
+    initrd.kernelModules = ["amdgpu"];
   };
 
   # System packages for GPU monitoring and debugging

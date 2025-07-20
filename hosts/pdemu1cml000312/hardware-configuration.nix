@@ -13,10 +13,24 @@
 
   boot = {
     initrd = {
-      availableKernelModules = ["nvme" "xhci_pci" "usb_storage" "sd_mod"];
+      availableKernelModules = [
+        "nvme"
+        "xhci_pci"
+        "usb_storage"
+        "sd_mod"
+      ];
       kernelModules = ["amdgpu"];
+      luks.devices = {
+        "luks-rpool" = {
+          device = "/dev/disk/by-id/nvme-SAMSUNG_MZVL4512HBLU-00BL7_S67VNF0TA81898-part2";
+          preLVM = true;
+        };
+      };
     };
-    kernelModules = ["amdgpu" "kvm-amd"];
+    kernelModules = [
+      "amdgpu"
+      "kvm-amd"
+    ];
     kernelParams = [
       "amdgpu.dc=1"
       "amdgpu.sg_display=0"
@@ -55,12 +69,23 @@
     "/boot" = {
       device = "/dev/nvme0n1p1";
       fsType = "vfat";
-      options = ["fmask=0022" "dmask=0022"];
+      options = [
+        "fmask=0022"
+        "dmask=0022"
+      ];
       neededForBoot = true;
     };
   };
 
-  swapDevices = [];
+  swapDevices = [
+    {
+      device = "/dev/disk/by-id/nvme-SAMSUNG_MZVL4512HBLU-00BL7_S67VNF0TA81898-part3";
+      randomEncryption = {
+        enable = true;
+        allowDiscards = true;
+      };
+    }
+  ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's

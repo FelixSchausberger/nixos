@@ -10,10 +10,10 @@ use uuid::Uuid;
 fn get_hostname() -> Result<String> {
     let output = Command::new("hostname").output()?;
     let hostname = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    
+
     // Convert to lowercase first
     let hostname_lower = hostname.to_lowercase();
-    
+
     // Sanitize: Remove any characters that are not alphanumeric or hyphens
     let sanitized = hostname_lower
         .chars()
@@ -28,9 +28,7 @@ fn get_disk_serial(disk: &str) -> Result<String> {
         .args(&["-d", "-n", "-o", "SERIAL", disk])
         .output()?;
 
-    let serial = String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .to_string();
+    let serial = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
     if serial.is_empty() {
         // Fallback: Use disk ID or part of the UUID
@@ -56,7 +54,7 @@ fn generate_pool_name(disk: &str) -> Result<String> {
 
 fn cleanup_existing_setup(disk: &str) -> Result<()> {
     println!("Cleaning up any existing setup...");
-    
+
     // 1. Destroy ZFS pool first (if exists)
     let pool_name = generate_pool_name(disk)?;
     let _ = Command::new("sudo")
@@ -67,13 +65,11 @@ fn cleanup_existing_setup(disk: &str) -> Result<()> {
     let swap_partitions = Command::new("lsblk")
         .args(&["-nlpo", "NAME,TYPE", disk])
         .output()?;
-    
+
     for line in String::from_utf8_lossy(&swap_partitions.stdout).lines() {
         if line.contains("part") && line.contains("swap") {
             let part = line.split_whitespace().next().unwrap_or_default();
-            let _ = Command::new("sudo")
-                .args(&["swapoff", "-v", part])
-                .status();
+            let _ = Command::new("sudo").args(&["swapoff", "-v", part]).status();
         }
     }
 
@@ -137,15 +133,15 @@ struct Args {
     /// Disable trim/discard (for non-SSD)
     #[arg(long)]
     no_trim: bool,
-    
+
     /// Flake source path (location of your flake.nix)
     #[arg(short, long, default_value = "/per/etc/nixos")]
     flake_source: String,
-    
+
     /// Host profile to use from flake (desktop, portable, surface, thinkpad, etc.)
     #[arg(short = 'p', long)]
     profile: Option<String>,
-    
+
     /// Skip NixOS installation, only prepare the disk
     #[arg(long)]
     prepare_only: bool,
@@ -169,7 +165,10 @@ fn main() -> Result<()> {
 
     // Check if disk exists
     if !Path::new(&args.disk).exists() {
-        return Err(anyhow!("Disk {} does not exist or is not a block device", args.disk));
+        return Err(anyhow!(
+            "Disk {} does not exist or is not a block device",
+            args.disk
+        ));
     }
 
     // Determine host profile
@@ -185,7 +184,7 @@ fn main() -> Result<()> {
                     chassis.contains("laptop") || chassis.contains("notebook")
                 })
                 .unwrap_or(false);
-            
+
             if laptop_markers {
                 // Check if it's a Surface or ThinkPad
                 let system_vendor = Command::new("dmidecode")
@@ -193,13 +192,13 @@ fn main() -> Result<()> {
                     .output()
                     .map(|out| String::from_utf8_lossy(&out.stdout).to_lowercase())
                     .unwrap_or_default();
-                
+
                 let system_product = Command::new("dmidecode")
                     .args(&["-s", "system-product-name"])
                     .output()
                     .map(|out| String::from_utf8_lossy(&out.stdout).to_lowercase())
                     .unwrap_or_default();
-                
+
                 if system_vendor.contains("microsoft") || system_product.contains("surface") {
                     "surface".to_string()
                 } else if system_vendor.contains("lenovo") {
@@ -284,7 +283,11 @@ fn main() -> Result<()> {
     // Get partition names
     let efi_part = format!("{}1", args.disk);
     let zfs_part = format!("{}2", args.disk);
-    let swap_part = if use_swap { Some(format!("{}3", args.disk)) } else { None };
+    let swap_part = if use_swap {
+        Some(format!("{}3", args.disk))
+    } else {
+        None
+    };
 
     // Format EFI partition
     println!("Formatting EFI partition...");
@@ -314,19 +317,23 @@ fn main() -> Result<()> {
 
     // Create ZFS pool
     println!("Creating ZFS pool with 'erase your darlings' layout...");
+    let pool_name = generate_pool_name(&args.disk)?;
     create_zfs_pool(&zfs_dev)?;
 
     // Create datasets for erase-your-darlings setup
     println!("Creating datasets...");
-    create_zfs_datasets()?;
+    create_zfs_datasets(&pool_name)?;
 
     // Create a blank snapshot for "erase your darlings"
     println!("Creating blank snapshot...");
-    run_command("zfs", &["snapshot", "rpool/eyd/root@blank"])?;
+    run_command(
+        "zfs",
+        &["snapshot", &format!("{}/eyd/root@blank", pool_name)],
+    )?;
 
     // Mount filesystems for NixOS installation
     println!("Mounting filesystems...");
-    mount_filesystems(&efi_part)?;
+    mount_filesystems(&efi_part, &pool_name)?;
 
     // Display disk-by-id information
     println!("\nDisk by-id paths (useful for configuration):");
@@ -338,20 +345,23 @@ fn main() -> Result<()> {
 
     // Create basic flake configuration for bootstrapping if needed
     println!("\nSetting up NixOS configuration...");
-    
+
     let flake_source_path = Path::new(&args.flake_source);
-    
+
     if !flake_source_path.exists() {
-        return Err(anyhow!("Flake source path {} does not exist", args.flake_source));
+        return Err(anyhow!(
+            "Flake source path {} does not exist",
+            args.flake_source
+        ));
     }
-    
+
     // Create /mnt/persist/etc/nixos directory
     fs::create_dir_all("/mnt/persist/etc/nixos")
         .context("Failed to create /mnt/persist/etc/nixos")?;
-    
+
     // Check for existing flake and copy it if it exists
     println!("Copying flake configuration from {}...", args.flake_source);
-    
+
     // Use rsync to copy the flake files to the new system
     let status = Command::new("rsync")
         .args(&[
@@ -359,69 +369,87 @@ fn main() -> Result<()> {
             "--exclude='.git'",
             "--exclude='result'",
             &format!("{}/", args.flake_source),
-            "/mnt/persist/etc/nixos/"
+            "/mnt/persist/etc/nixos/",
         ])
         .status()
         .context("Failed to copy flake configuration")?;
-    
+
     if !status.success() {
         return Err(anyhow!("Failed to copy flake configuration"));
     }
-    
+
     // Create symlink for /mnt/etc/nixos to /mnt/persist/etc/nixos
     fs::create_dir_all("/mnt/etc").context("Failed to create /mnt/etc")?;
     std::os::unix::fs::symlink("/persist/etc/nixos", "/mnt/etc/nixos")
         .context("Failed to create symlink for /mnt/etc/nixos")?;
-    
+
     // Update host-id in hardware configuration for the target host
     let host_config_dir = format!("/mnt/persist/etc/nixos/hosts/{}", profile);
-    
+
     if !Path::new(&host_config_dir).exists() {
-        fs::create_dir_all(&host_config_dir).context("Failed to create host configuration directory")?;
+        fs::create_dir_all(&host_config_dir)
+            .context("Failed to create host configuration directory")?;
     }
-    
+
     // Generate machine-id (hostId for ZFS)
-    let machine_id = Uuid::new_v4().to_string().chars().take(8).collect::<String>();
-    
+    let machine_id = Uuid::new_v4()
+        .to_string()
+        .chars()
+        .take(8)
+        .collect::<String>();
+
     // Check if we need to create/update hardware configuration
     let hw_config_path = format!("{}/hardware-configuration.nix", host_config_dir);
-    
+
     // Create or update hardware configuration
-    update_hardware_configuration(&hw_config_path, &machine_id, &args.hostname, args.encrypt, 
-        use_swap, allow_discard, swap_part.as_deref())?;
+    update_hardware_configuration(
+        &hw_config_path,
+        &machine_id,
+        &args.hostname,
+        &pool_name,
+        args.encrypt,
+        use_swap,
+        allow_discard,
+        swap_part.as_deref(),
+    )?;
 
     // Update hostname in flake.nix if needed
     update_flake_hostname(&args.hostname, &profile, "/mnt/persist/etc/nixos/flake.nix")?;
-    
+
     // Create a basic script to bootstrap the system after reboot
     create_bootstrap_script(&args.hostname, &profile, &username)?;
 
     // If we're not just preparing, install NixOS now
     if !args.prepare_only {
         println!("\nInstalling NixOS...");
-    
+
         // Make sure /mnt/persist/etc/nixos/flake.nix exists
         if !Path::new("/mnt/persist/etc/nixos/flake.nix").exists() {
-            return Err(anyhow!("Flake configuration not found at /mnt/persist/etc/nixos/flake.nix"));
+            return Err(anyhow!(
+                "Flake configuration not found at /mnt/persist/etc/nixos/flake.nix"
+            ));
         }
-    
+
         // Create a longer-lived string for the flake path
         let flake_path = format!("/mnt/persist/etc/nixos#{}", args.hostname);
-    
+
         // Install NixOS using the flake
         let nixos_install_args = vec![
-            "--option", "pure-eval", "no",
-            "--flake", &flake_path,
-            "/mnt"
+            "--option",
+            "pure-eval",
+            "no",
+            "--flake",
+            &flake_path,
+            "/mnt",
         ];
-    
+
         println!("Running: nixos-install {}", nixos_install_args.join(" "));
-    
+
         let status = Command::new("nixos-install")
             .args(&nixos_install_args)
             .status()
             .context("Failed to run nixos-install")?;
-        
+
         if !status.success() {
             return Err(anyhow!("nixos-install failed"));
         }
@@ -432,14 +460,17 @@ fn main() -> Result<()> {
     println!("\nYour ZFS layout:");
     run_command("zfs", &["list"])?;
     println!("\nNext steps:");
-    
+
     if args.prepare_only {
-        println!("1. Complete the installation: nixos-install --flake /mnt/persist/etc/nixos#{}", args.hostname);
+        println!(
+            "1. Complete the installation: nixos-install --flake /mnt/persist/etc/nixos#{}",
+            args.hostname
+        );
     } else {
         println!("1. Reboot into your new system");
         println!("2. Run the bootstrap script: /persist/bootstrap.sh");
     }
-    
+
     println!("\nSee /mnt/persist/bootstrap.sh for more details");
     println!("=================================================");
 
@@ -449,47 +480,60 @@ fn main() -> Result<()> {
 fn get_disk_size(disk: &str) -> Result<u64> {
     // Try using lsblk to get the size in bytes first (more reliable)
     let output = Command::new("lsblk")
-        .args(&["--bytes", "--nodeps", "--noheadings", "--output", "SIZE", disk])
+        .args(&[
+            "--bytes",
+            "--nodeps",
+            "--noheadings",
+            "--output",
+            "SIZE",
+            disk,
+        ])
         .output();
-    
+
     if let Ok(output) = output {
         let size_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if !size_str.is_empty() {
             // Convert bytes to sectors (assuming 512-byte sectors as default)
             let sector_size = get_sector_size(disk).unwrap_or(512);
-            let bytes = size_str.parse::<u64>().context("Failed to parse disk size")?;
+            let bytes = size_str
+                .parse::<u64>()
+                .context("Failed to parse disk size")?;
             return Ok(bytes / sector_size);
         }
     }
-    
+
     // Fall back to blockdev if lsblk failed
     let output = Command::new("blockdev")
         .args(&["--getsz", disk])
         .output()
         .context("Failed to get disk size")?;
-    
+
     let size_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if size_str.is_empty() {
-        return Err(anyhow!("Could not determine disk size: empty output from blockdev"));
+        return Err(anyhow!(
+            "Could not determine disk size: empty output from blockdev"
+        ));
     }
-    
-    let size = size_str.parse::<u64>().context("Failed to parse disk size")?;
+
+    let size = size_str
+        .parse::<u64>()
+        .context("Failed to parse disk size")?;
     Ok(size)
 }
 
 fn get_sector_size(disk: &str) -> Result<u64> {
     // Try blockdev first
-    let output = Command::new("blockdev")
-        .args(&["--getss", disk])
-        .output();
-    
+    let output = Command::new("blockdev").args(&["--getss", disk]).output();
+
     if let Ok(output) = output {
         let size_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if !size_str.is_empty() {
-            return size_str.parse::<u64>().context("Failed to parse sector size");
+            return size_str
+                .parse::<u64>()
+                .context("Failed to parse sector size");
         }
     }
-    
+
     // If blockdev fails, use a standard sector size of 512 bytes
     println!("Warning: Couldn't determine sector size, using default of 512 bytes");
     Ok(512)
@@ -500,38 +544,78 @@ fn run_command(cmd: &str, args: &[&str]) -> Result<()> {
         .args(args)
         .status()
         .with_context(|| format!("Failed to execute '{}' with args: {:?}", cmd, args))?;
-    
+
     if !status.success() {
         return Err(anyhow!("Command '{}' with args {:?} failed", cmd, args));
     }
-    
+
     Ok(())
 }
 
-fn create_partition_table(disk: &str, efi_size: u32, rpool_end_gb: f64, swap_end_gb: f64, use_swap: bool) -> Result<()> {
+fn create_partition_table(
+    disk: &str,
+    efi_size: u32,
+    rpool_end_gb: f64,
+    swap_end_gb: f64,
+    use_swap: bool,
+) -> Result<()> {
     // Create GPT partition table
-    run_command("parted", &["--script", "-s", "--align=optimal", disk, "mklabel", "gpt"])?;
-        
+    run_command(
+        "parted",
+        &["--script", "-s", "--align=optimal", disk, "mklabel", "gpt"],
+    )?;
+
     // Create EFI partition
-    run_command("parted", &[
-        "--script", "--align=optimal", disk, "mkpart", "efi", "fat32", "1MiB", &format!("{}GiB", efi_size)
-    ])?;
-    
+    run_command(
+        "parted",
+        &[
+            "--script",
+            "--align=optimal",
+            disk,
+            "mkpart",
+            "efi",
+            "fat32",
+            "1MiB",
+            &format!("{}GiB", efi_size),
+        ],
+    )?;
+
     // Set ESP flag
-    run_command("parted", &["--script", "--align=optimal", disk, "set", "1", "esp", "on"])?;
-    
+    run_command(
+        "parted",
+        &["--script", "--align=optimal", disk, "set", "1", "esp", "on"],
+    )?;
+
     // Create ZFS partition
-    run_command("parted", &[
-        "--script", "--align=optimal", disk, "mkpart", "rpool", &format!("{}GiB", efi_size), &format!("{}GiB", rpool_end_gb)
-    ])?;
-    
+    run_command(
+        "parted",
+        &[
+            "--script",
+            "--align=optimal",
+            disk,
+            "mkpart",
+            "rpool",
+            &format!("{}GiB", efi_size),
+            &format!("{}GiB", rpool_end_gb),
+        ],
+    )?;
+
     // Create swap partition if needed
     if use_swap {
-        run_command("parted", &[
-            "--script", "--align=optimal", disk, "mkpart", "swap", &format!("{}GiB", rpool_end_gb), &format!("{}GiB", swap_end_gb)
-        ])?;
+        run_command(
+            "parted",
+            &[
+                "--script",
+                "--align=optimal",
+                disk,
+                "mkpart",
+                "swap",
+                &format!("{}GiB", rpool_end_gb),
+                &format!("{}GiB", swap_end_gb),
+            ],
+        )?;
     }
-    
+
     Ok(())
 }
 
@@ -545,14 +629,17 @@ fn setup_luks_encryption(device: &str, name: &str) -> Result<()> {
         .context("Failed to spawn cryptsetup")?;
 
     // User needs to confirm and enter password
-    println!("Please confirm and enter a password for LUKS encryption on {}", device);
-    
+    println!(
+        "Please confirm and enter a password for LUKS encryption on {}",
+        device
+    );
+
     // Let cryptsetup handle the interaction directly
     let status = child.wait().context("Failed to wait for cryptsetup")?;
     if !status.success() {
         return Err(anyhow!("cryptsetup luksFormat failed"));
     }
-    
+
     // Open the encrypted device
     let mut child = Command::new("cryptsetup")
         .args(&["luksOpen", device, name])
@@ -560,14 +647,16 @@ fn setup_luks_encryption(device: &str, name: &str) -> Result<()> {
         .stdout(Stdio::piped())
         .spawn()
         .context("Failed to spawn cryptsetup luksOpen")?;
-    
+
     println!("Please enter the password to open the encrypted device");
-    
-    let status = child.wait().context("Failed to wait for cryptsetup luksOpen")?;
+
+    let status = child
+        .wait()
+        .context("Failed to wait for cryptsetup luksOpen")?;
     if !status.success() {
         return Err(anyhow!("cryptsetup luksOpen failed"));
     }
-    
+
     Ok(())
 }
 
@@ -576,12 +665,7 @@ fn create_zfs_pool(device: &str) -> Result<()> {
 
     // Create the pool
     let status = Command::new("zpool")
-        .args(&[
-            "create", "-f",
-            "-o", "ashift=12",
-            &pool_name,
-            device
-        ])
+        .args(&["create", "-f", "-o", "ashift=12", &pool_name, device])
         .status()?;
 
     if !status.success() {
@@ -590,16 +674,25 @@ fn create_zfs_pool(device: &str) -> Result<()> {
 
     // Create a root dataset with immutable properties set upfront
     let root_dataset = format!("{}/root", pool_name);
-    run_command("zfs", &[
-        "create",
-        "-o", "compression=lz4",
-        "-o", "acltype=posixacl",
-        "-o", "xattr=sa",
-        "-o", "relatime=on",
-        "-o", "normalization=formD",
-        "-o", "mountpoint=none", // or "/" if mounting directly
-        &root_dataset
-    ])?;
+    run_command(
+        "zfs",
+        &[
+            "create",
+            "-o",
+            "compression=lz4",
+            "-o",
+            "acltype=posixacl",
+            "-o",
+            "xattr=sa",
+            "-o",
+            "relatime=on",
+            "-o",
+            "normalization=formD",
+            "-o",
+            "mountpoint=none", // or "/" if mounting directly
+            &root_dataset,
+        ],
+    )?;
 
     // Set mutable properties on the POOL
     run_command("zpool", &["set", "autotrim=on", &pool_name])?;
@@ -607,37 +700,94 @@ fn create_zfs_pool(device: &str) -> Result<()> {
     Ok(())
 }
 
-fn create_zfs_datasets() -> Result<()> {
+fn create_zfs_datasets(pool_name: &str) -> Result<()> {
     // Root dataset
-    run_command("zfs", &["create", "-o", "mountpoint=none", "rpool/eyd"])?;
-    run_command("zfs", &["create", "-o", "mountpoint=/", "rpool/eyd/root"])?;
-    
+    run_command(
+        "zfs",
+        &[
+            "create",
+            "-o",
+            "mountpoint=none",
+            &format!("{}/eyd", pool_name),
+        ],
+    )?;
+    run_command(
+        "zfs",
+        &[
+            "create",
+            "-o",
+            "mountpoint=/",
+            &format!("{}/eyd/root", pool_name),
+        ],
+    )?;
+
     // Persistent datasets
-    run_command("zfs", &["create", "-o", "mountpoint=/nix", "rpool/eyd/nix"])?;
-    run_command("zfs", &["create", "-o", "mountpoint=/home", "rpool/eyd/home"])?;
-    run_command("zfs", &["create", "-o", "mountpoint=/persist", "rpool/eyd/per"])?;
-    
+    run_command(
+        "zfs",
+        &[
+            "create",
+            "-o",
+            "mountpoint=/nix",
+            &format!("{}/eyd/nix", pool_name),
+        ],
+    )?;
+    run_command(
+        "zfs",
+        &[
+            "create",
+            "-o",
+            "mountpoint=/home",
+            &format!("{}/eyd/home", pool_name),
+        ],
+    )?;
+    run_command(
+        "zfs",
+        &[
+            "create",
+            "-o",
+            "mountpoint=/persist",
+            &format!("{}/eyd/per", pool_name),
+        ],
+    )?;
+
     Ok(())
 }
 
-fn mount_filesystems(efi_part: &str) -> Result<()> {
+fn mount_filesystems(efi_part: &str, pool_name: &str) -> Result<()> {
     // Create mount directories
     fs::create_dir_all("/mnt").context("Failed to create /mnt")?;
-    
+
     // Mount ZFS root
-    run_command("mount", &["-t", "zfs", "rpool/eyd/root", "/mnt"])?;
-    
+    run_command(
+        "mount",
+        &["-t", "zfs", &format!("{}/eyd/root", pool_name), "/mnt"],
+    )?;
+
     // Create other mount points
     for dir in &["/mnt/boot", "/mnt/nix", "/mnt/home", "/mnt/persist"] {
         fs::create_dir_all(dir).with_context(|| format!("Failed to create {}", dir))?;
     }
-    
+
     // Mount other filesystems
     run_command("mount", &[efi_part, "/mnt/boot"])?;
-    run_command("mount", &["-t", "zfs", "rpool/eyd/nix", "/mnt/nix"])?;
-    run_command("mount", &["-t", "zfs", "rpool/eyd/home", "/mnt/home"])?;
-    run_command("mount", &["-t", "zfs", "rpool/eyd/per", "/mnt/persist"])?;
-    
+    run_command(
+        "mount",
+        &["-t", "zfs", &format!("{}/eyd/nix", pool_name), "/mnt/nix"],
+    )?;
+    run_command(
+        "mount",
+        &["-t", "zfs", &format!("{}/eyd/home", pool_name), "/mnt/home"],
+    )?;
+    run_command(
+        "mount",
+        &[
+            "-t",
+            "zfs",
+            &format!("{}/eyd/per", pool_name),
+            "/mnt/persist",
+        ],
+    )?;
+
     Ok(())
 }
 
@@ -647,21 +797,22 @@ fn show_disk_by_id(efi_part: &str, zfs_part: &str) -> Result<()> {
             .args(&["-f", part])
             .output()
             .context("Failed to readlink")?;
-        
+
         let real_path = String::from_utf8(output.stdout)?.trim().to_string();
-        let filename = Path::new(&real_path).file_name()
+        let filename = Path::new(&real_path)
+            .file_name()
             .ok_or_else(|| anyhow!("Failed to get filename from {}", real_path))?
             .to_string_lossy()
             .to_string();
-        
+
         // Find disk-by-id symlinks
         let output = Command::new("ls")
             .args(&["-l", "/dev/disk/by-id"])
             .output()
             .context("Failed to list disk-by-id")?;
-        
+
         let ls_output = String::from_utf8(output.stdout)?;
-        
+
         for line in ls_output.lines() {
             if line.contains(&filename) {
                 println!("{} -> {}", part, line);
@@ -669,7 +820,7 @@ fn show_disk_by_id(efi_part: &str, zfs_part: &str) -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -681,37 +832,41 @@ fn setup_persist_directories(username: &str) -> Result<()> {
         "/mnt/persist/var/lib",
         "/mnt/persist/var/log",
         "/mnt/persist/etc/ssh",
-        "/mnt/persist/etc/NetworkManager/system-connections"
+        "/mnt/persist/etc/NetworkManager/system-connections",
     ] {
         fs::create_dir_all(dir).with_context(|| format!("Failed to create {}", dir))?;
     }
-    
+
     // Create user-specific directories
     let user_dirs = [
         format!("/mnt/home/{}", username),
         format!("/mnt/home/{}/.ssh", username),
         format!("/mnt/home/{}/.gnupg", username),
-        format!("/mnt/home/{}/.config", username)
+        format!("/mnt/home/{}/.config", username),
     ];
-    
+
     for dir in &user_dirs {
         fs::create_dir_all(dir).with_context(|| format!("Failed to create {}", dir))?;
     }
-    
+
     // Ensure correct permissions
-    run_command("chown", &["-R", &format!("{}:{}", username, username), &user_dirs[0]])?;
-    
+    run_command(
+        "chown",
+        &["-R", &format!("{}:{}", username, username), &user_dirs[0]],
+    )?;
+
     Ok(())
 }
 
 fn update_hardware_configuration(
-    hw_config_path: &str, 
+    hw_config_path: &str,
     machine_id: &str,
     hostname: &str,
-    encryption: bool, 
-    use_swap: bool, 
+    pool_name: &str,
+    encryption: bool,
+    use_swap: bool,
     allow_discard: bool,
-    swap_part: Option<&str>
+    swap_part: Option<&str>,
 ) -> Result<()> {
     // Get disk UUIDs for boot device and swap
     let boot_uuid = get_partition_uuid("/dev/disk/by-partlabel/efi")?;
@@ -721,14 +876,14 @@ fn update_hardware_configuration(
     } else {
         None
     };
-    
+
     // Create hardware-configuration.nix
     let hardware_config = format!(
         r#"{{ config, lib, pkgs, modulesPath, ... }}:
 
 {{
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
-  
+
   # Host specific configuration
   networking.hostName = "{}";
   networking.hostId = "{}"; # Required for ZFS
@@ -736,28 +891,28 @@ fn update_hardware_configuration(
   # Bootloader
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  
+
   # File systems
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.requestEncryptionCredentials = true;
-  
+
   fileSystems."/" = {{
-    device = "rpool/eyd/root";
+    device = "{}/eyd/root";
     fsType = "zfs";
   }};
 
   fileSystems."/nix" = {{
-    device = "rpool/eyd/nix";
+    device = "{}/eyd/nix";
     fsType = "zfs";
   }};
 
   fileSystems."/home" = {{
-    device = "rpool/eyd/home";
+    device = "{}/eyd/home";
     fsType = "zfs";
   }};
 
   fileSystems."/persist" = {{
-    device = "rpool/eyd/per";
+    device = "{}/eyd/per";
     fsType = "zfs";
   }};
 
@@ -776,19 +931,19 @@ fn update_hardware_configuration(
       "/etc/NetworkManager/system-connections"
     ];
   }};
-  
+
   # Make /etc/nixos point to /persist/etc/nixos
   boot.initrd.postMountCommands = ''
     mkdir -p /mnt-root/etc
     ln -s /persist/etc/nixos /mnt-root/etc/nixos
   '';
 "#,
-        hostname, machine_id, boot_uuid
+        hostname, machine_id, pool_name, pool_name, pool_name, pool_name, boot_uuid
     );
-    
+
     // Add encryption configuration if enabled
     let mut config = hardware_config;
-    
+
     if encryption {
         let encryption_config = format!(
             r#"
@@ -803,7 +958,7 @@ fn update_hardware_configuration(
         );
         config.push_str(&encryption_config);
     }
-    
+
     // Add swap configuration if enabled
     if use_swap && swap_uuid.is_some() {
         let swap_config = format!(
@@ -816,20 +971,24 @@ fn update_hardware_configuration(
         );
         config.push_str(&swap_config);
     }
-    
+
     // Close the module
     config.push_str("\n}\n");
-    
+
     // Create the directory if it doesn't exist
     if let Some(parent) = Path::new(hw_config_path).parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("Failed to create directory {}", parent.display()))?;
     }
-    
+
     // Write the hardware configuration
-    fs::write(hw_config_path, config)
-        .with_context(|| format!("Failed to write hardware configuration to {}", hw_config_path))?;
-    
+    fs::write(hw_config_path, config).with_context(|| {
+        format!(
+            "Failed to write hardware configuration to {}",
+            hw_config_path
+        )
+    })?;
+
     Ok(())
 }
 
@@ -839,13 +998,13 @@ fn get_partition_uuid(dev_path: &str) -> Result<String> {
         .args(&["-s", "UUID", "-o", "value", dev_path])
         .output()
         .context("Failed to run blkid")?;
-    
+
     let uuid = String::from_utf8(output.stdout)?.trim().to_string();
-    
+
     if uuid.is_empty() {
         return Err(anyhow!("Failed to get UUID for {}", dev_path));
     }
-    
+
     Ok(format!("/dev/disk/by-uuid/{}", uuid))
 }
 
@@ -854,17 +1013,20 @@ fn update_flake_hostname(hostname: &str, profile: &str, flake_path: &str) -> Res
     let flake_content = match fs::read_to_string(flake_path) {
         Ok(content) => content,
         Err(e) => {
-            println!("Warning: Could not read flake.nix: {}. Will not update hostname.", e);
+            println!(
+                "Warning: Could not read flake.nix: {}. Will not update hostname.",
+                e
+            );
             return Ok(());
         }
     };
-    
+
     // Update profile to use the current hostname if needed
     // This is more complex and would require parsing the flake.nix structure properly
     // For simplicity, we'll just provide a helpful message
     println!("NOTE: You may need to update your flake.nix to use the hostname '{}' with the '{}' profile.", hostname, profile);
     println!("      Typically this would involve adding an entry for this host in your flake outputs section.");
-    
+
     Ok(())
 }
 
@@ -909,12 +1071,12 @@ echo "Remember to change your password with 'passwd'"
 "#,
         username, username, username, username, username, username, hostname
     );
-    
+
     fs::write("/mnt/persist/bootstrap.sh", bootstrap_script)
         .context("Failed to write bootstrap script")?;
-    
+
     // Make the script executable
     run_command("chmod", &["+x", "/mnt/persist/bootstrap.sh"])?;
-    
+
     Ok(())
 }
