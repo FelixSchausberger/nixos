@@ -12,7 +12,6 @@
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
     ./nixai.nix # Ai based nix help system from the command line
     ./nixvim # Configure Neovim with Nix
-    # ./neovim.nix # Vim text editor fork focused on extensibility and agility
     ./ollama.nix # Get up and running with large language models locally
     ./pay-respects.nix # Command suggestions, command-not-found and thefuck replacement
     ./rclone.nix # Sync files and directories to and from major cloud storage

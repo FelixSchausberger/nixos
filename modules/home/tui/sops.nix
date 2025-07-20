@@ -19,7 +19,8 @@
       # sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
     };
 
-    defaultSopsFile = "${inputs.self}/secrets/secrets.json";
+    defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
+    defaultSopsFormat = "yaml";
     # gnupg.sshKeyPaths = [];
   };
 }

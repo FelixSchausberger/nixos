@@ -14,7 +14,8 @@
   ];
 
   sops = {
-    defaultSopsFile = "${inputs.self}/secrets/secrets.json";
+    defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
+    defaultSopsFormat = "yaml";
     age.keyFile = "/per/system/sops-key.txt";
     # age.sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
   };

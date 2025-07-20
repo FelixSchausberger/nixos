@@ -1,6 +1,6 @@
 {pkgs, ...}: {
   imports = [
-    ./awscli.nix # Unified tool to manage your AWS services
+    ./awscli.nix
     ./work-git-features.nix
   ];
 
