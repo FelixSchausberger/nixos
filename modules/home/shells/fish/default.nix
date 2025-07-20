@@ -16,9 +16,9 @@
       direnv hook fish | source
 
       # Auto-start zellij if not already inside one
-      if status is-interactive; and not set -q ZELLIJ
-        exec zellij
-      end
+      # if status is-interactive; and not set -q ZELLIJ
+      #   exec zellij
+      # end
     '';
   };
 }

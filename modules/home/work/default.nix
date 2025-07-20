@@ -1,17 +1,14 @@
 {pkgs, ...}: {
   imports = [
-    # Work-specific modules
-    ./shells/fish.nix # Smart and user-friendly command line shell
-    ./tui/awscli.nix
-    ./tui/work-git-features.nix
+    ./fish.nix # Smart and user-friendly command line shell
+    ./awscli.nix
+    ./git.nix
   ];
 
   home.packages = with pkgs; [
-    # Communication
     teams-for-linux # Unofficial Microsoft Teams client for Linux
-
-    # Infrastructure and security
     nss_latest # Set of libraries for development of security-enabled client and server applications
+    openssl # Cryptographic library that implements the SSL and TLS protocols
     opentofu # Tool for building, changing, and versioning infrastructure
     openvpn # robust and highly flexible tunneling application
     sqlite # Self-contained, serverless, zero-configuration, transactional SQL database engine

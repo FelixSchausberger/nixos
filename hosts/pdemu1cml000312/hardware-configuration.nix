@@ -95,7 +95,6 @@
     useDHCP = lib.mkDefault true;
     interfaces = {
       enp1s0f0.useDHCP = lib.mkDefault true;
-      enp5s0f4u1u1.useDHCP = lib.mkDefault true;
       wlp2s0.useDHCP = lib.mkDefault true;
     };
   };

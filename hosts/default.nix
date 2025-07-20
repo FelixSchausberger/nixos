@@ -2,13 +2,7 @@
   homeImports,
   inputs,
   ...
-}:
-let
-  # capitalizeFirstChar = str:
-  #   str
-  #   |> builtins.substring 0 1
-  #   |> lib.strings.toUpper
-  #   |> (firstChar: firstChar + builtins.substring 1 (builtins.stringLength str - 1) str);
+}: let
   inherit (inputs.nixpkgs.lib) nixosSystem;
 
   inherit (import ../system) desktop laptop;
@@ -18,61 +12,60 @@ let
     inherit inputs;
   };
 
-  mkHostConfig =
-    {
-      hostName,
-      baseModules,
-      extraModules ? [ ],
-    }:
+  mkHostConfig = {
+    hostName,
+    baseModules,
+    extraModules ? [],
+  }:
     nixosSystem {
       inherit specialArgs;
       modules =
         baseModules
         ++ [
           {
-            networking.hostName = hostName; # |> capitalizeFirstChar;
+            networking.hostName = hostName;
             _module.args.hostName = hostName;
           }
           (
-            { config, ... }:
-            {
+            {config, ...}: {
               home-manager = {
                 users.${inputs.self.lib.user}.imports = homeImports."${inputs.self.lib.user}@${hostName}";
-                extraSpecialArgs = specialArgs // {
-                  inherit hostName;
-                  inherit (config._module.args) hostConfig;
-                };
+                extraSpecialArgs =
+                  specialArgs
+                  // {
+                    inherit hostName;
+                    inherit (config._module.args) hostConfig;
+                  };
               };
             }
           )
         ]
         ++ extraModules;
     };
-in
-{
+in {
   flake.nixosConfigurations = {
     desktop = mkHostConfig {
       hostName = "desktop";
       baseModules = desktop;
-      extraModules = [ ./desktop ];
+      extraModules = [./desktop];
     };
 
     surface = mkHostConfig {
       hostName = "surface";
       baseModules = laptop;
-      extraModules = [ ./surface ];
+      extraModules = [./surface];
     };
 
     pdemu1cml000312 = mkHostConfig {
       hostName = "pdemu1cml000312";
       baseModules = laptop;
-      extraModules = [ ./pdemu1cml000312 ];
+      extraModules = [./pdemu1cml000312];
     };
 
     portable = mkHostConfig {
       hostName = "portable";
       baseModules = desktop;
-      extraModules = [ ./portable ];
+      extraModules = [./portable];
     };
   };
 }

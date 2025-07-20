@@ -1,10 +1,8 @@
 {
   config,
-  # hostName,
   inputs,
   ...
-}:
-let
+}: let
   # Use pipe operator to create derived paths more functionally
   getPath = base: suffix: "${base}/${suffix}";
   data = config.xdg.dataHome |> getPath "data" |> (path: "${path}/wine");
@@ -19,14 +17,8 @@ let
       };
     });
 
-  # cache =
-  #   config.xdg.cacheHome
-  #   |> getPath "cache"
-  #   |> (path: "${path}/less/history");
-
   username = inputs.self.lib.user;
-in
-{
+in {
   imports = [
     inputs.nix-index-db.homeModules.nix-index
     ./persistence.nix
@@ -59,6 +51,4 @@ in
 
   # Let HM manage itself when in standalone mode
   programs.home-manager.enable = true;
-
-  # Persistence configuration moved to ./persistence.nix for better organization
 }

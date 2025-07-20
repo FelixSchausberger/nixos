@@ -8,6 +8,7 @@
   # This module provides common functionality used across all host configurations
 
   imports = [
+    ./boot-zfs.nix
     ../modules/system
     inputs.sopswarden.nixosModules.default
     inputs.sops-nix.nixosModules.sops

@@ -10,7 +10,6 @@ in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
     ]
     ++ hostLib.wmModules wms;

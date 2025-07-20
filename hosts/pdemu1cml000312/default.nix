@@ -1,13 +1,11 @@
 {pkgs, ...}: let
   hostLib = import ../lib.nix;
-  wms = ["gnome"];
+  wms = ["gnome" "hyprland"];
 in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
-      ../../modules/system/work
       ../../system/nix/work/substituters.nix
     ]
     ++ hostLib.wmModules wms;

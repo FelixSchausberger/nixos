@@ -100,7 +100,7 @@ in {
         "noshadow,class:^(steam_app_).*"
         "norounding,class:^(steam_app_).*"
         "opaque,class:^(steam_app_).*"
-        "forceinput,class:^(steam_app_).*"
+        # "forceinput,class:^(steam_app_).*" # forceinput is not a valid windowrulev2 property
         "dimaround,class:^(steam_app_).*"
         "idleinhibit focus,class:^(steam_app_).*"
 
@@ -233,7 +233,9 @@ in {
         };
 
         # Minimal shadows for games
-        drop_shadow = false;
+        shadow = {
+          enabled = lib.mkForce false;
+        };
 
         # Simple rounding
         rounding = 0;

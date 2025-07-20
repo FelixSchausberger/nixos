@@ -1,11 +1,10 @@
 {pkgs, ...}: let
   hostLib = import ../lib.nix;
-  wms = ["hyprland"];
+  wms = ["gnome" "hyprland"];
 in {
   imports =
     [
       ../shared.nix
-      ../boot-zfs.nix
       ./hardware-configuration.nix
     ]
     ++ hostLib.wmModules wms;
@@ -54,6 +53,9 @@ in {
       "amdgpu.dpm=1"
       "amdgpu.modeset=1"
       "amd_pstate=active"
+      # Disable serial console and reduce serial device timeouts
+      "8250.nr_uarts=0"
+      "console=tty0"
     ];
     initrd.kernelModules = ["amdgpu"];
   };

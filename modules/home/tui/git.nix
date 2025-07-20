@@ -1,24 +1,34 @@
 {
+  config,
   inputs,
   pkgs,
   ...
 }: {
   home.packages = with pkgs; [
     inputs.self.packages.${pkgs.system}.lumen # Instant AI Git Commit message, Git changes summary from the CLI
+    lazygit # A simple terminal UI for git commands
     pre-commit # A framework for managing and maintaining multi-language pre-commit hooks
     serie # A rich git commit graph in your terminal, like magic
+    # graphite-cli # CLI that makes creating stacked git changes fast & intuitive
   ];
 
   programs.git = {
     enable = true;
     userName = "Felix Schausberger";
+    userEmail = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
     delta = {enable = true;};
     extraConfig = {
+      github.token = "${config.sops.secrets."github/token".path}";
+      init.defaultBranch = "main";
       pull.rebase = true;
       credential.helper = "libsecret";
       core.editor = "${pkgs.helix}/bin/hx";
       safe.directory = "*";
     };
+  };
+
+  sops.secrets = {
+    "github/token" = {};
   };
 
   home.shellAliases = {

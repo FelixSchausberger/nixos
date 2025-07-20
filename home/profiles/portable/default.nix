@@ -1,6 +1,13 @@
 {
   imports = [
-    # Private/personal configuration
-    ../../../modules/home/private
+    ../shared.nix
   ];
+
+  # # Configure for portable workstation
+  # wm.hyprland = {
+  #   browser = "firefox";
+  #   terminal = "ghostty";
+  #   fileManager = "nautilus";
+  #   enableGaming = false;
+  # };
 }

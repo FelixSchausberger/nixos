@@ -54,7 +54,7 @@ in {
 
     # Formatters
     rustfmt # Rust formatter
-    nodePackages.prettier # JavaScript/TypeScript/CSS/HTML formatter
+    # nodePackages.prettier # Use development shell version to avoid conflicts
     black # Python formatter
     taplo # TOML formatter
     shfmt # Shell script formatter

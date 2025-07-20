@@ -1,17 +1,18 @@
 {pkgs, ...}: {
   imports = [
-    ./claude-code.nix # An agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster
+    ./helix # Post-modern modal text editor
+    ./nixvim # Vim text editor fork focused on extensibility and agility
+    ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
     ./bat.nix # A cat clone with syntax highlighting and Git integration
+    ./claude-code.nix # An agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster
     ./direnv.nix # A shell extension that manages your environment
     ./eza.nix # A modern, maintained replacement for ls
     ./fd.nix # A simple, fast and user-friendly alternative to find
     ./fzf.nix # A command-line fuzzy finder written in Go
     ./git.nix # Distributed version control system
-    ./helix
     ./impala.nix # WiFi TUI management tool
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
     ./markdown-oxide.nix # Markdown LSP server inspired by Obsidian
-    ./nixvim # Configure Neovim with Nix
     ./ollama.nix # Get up and running with large language models locally
     ./pay-respects.nix # Command suggestions, command-not-found and thefuck replacement
     ./rbw.nix # Unofficial Bitwarden CLI for password management
@@ -20,7 +21,7 @@
     ./sops.nix # Simple and flexible tool for managing secrets
     # ./spotify-player.nix # Terminal-based Spotify client with full feature parity
     ./tealdeer.nix # A very fast implementation of tldr
-    ./yazi
+    ./typix.nix # Typst: A markup-based typesetting system
   ];
 
   programs = {

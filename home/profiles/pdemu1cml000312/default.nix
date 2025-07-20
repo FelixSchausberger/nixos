@@ -1,14 +1,14 @@
-{pkgs, ...}: {
+{
   imports = [
-    # Work configuration
+    ../shared.nix
     ../../../modules/home/work
-    # TUI tools including rclone
-    ../../../modules/home/tui
   ];
 
-  # Host-specific packages and configuration
-  home.packages = with pkgs; [
-    # Security and networking
-    openssl # Cryptographic library that implements the SSL and TLS protocols
-  ];
+  # # Configure Hyprland for work environment
+  # wm.hyprland = {
+  #   browser = "zen";
+  #   terminal = "ghostty";
+  #   fileManager = "nautilus";
+  #   enableGaming = false;
+  # };
 }

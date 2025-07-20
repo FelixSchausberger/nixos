@@ -11,28 +11,26 @@ in {
     home.packages = with pkgs; [
       inputs.ironbar.packages.${pkgs.system}.default
       hyprland-autoname-workspaces # Automatic workspace naming
-      (writeShellScriptBin "ironbar-autohide" ''
-        #!/${bash}/bin/bash
-
-        # Monitor active window and hide/show ironbar accordingly
-        handle() {
-          case $1 in
-            fullscreen*)
-              # Hide ironbar when entering fullscreen
-              pkill -SIGUSR1 ironbar || true
-              ;;
-            closefullscreen*)
-              # Show ironbar when exiting fullscreen
-              pkill -SIGUSR2 ironbar || true
-              ;;
-          esac
-        }
-
-        # Listen to hyprland events
-        socat -U - UNIX-CONNECT:/tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock | while read -r line; do
-          handle "$line"
-        done
-      '')
+      # (writeShellScriptBin "ironbar-autohide" ''
+      #   #!/${bash}/bin/bash
+      #   # Monitor active window and hide/show ironbar accordingly
+      #   handle() {
+      #     case $1 in
+      #       fullscreen*)
+      #         # Hide ironbar when entering fullscreen
+      #         pkill -SIGUSR1 ironbar || true
+      #         ;;
+      #       closefullscreen*)
+      #         # Show ironbar when exiting fullscreen
+      #         pkill -SIGUSR2 ironbar || true
+      #         ;;
+      #     esac
+      #   }
+      #   # Listen to hyprland events
+      #   socat -U - UNIX-CONNECT:/tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock | while read -r line; do
+      #     handle "$line"
+      #   done
+      # '')
     ];
 
     # Ironbar configuration with Catppuccin theme
@@ -54,18 +52,18 @@ in {
         {
           type = "workspaces";
           # Keep fallback icons for empty workspaces
-          name_map = {
-            "1" = "";
-            "2" = "󰈹";
-            "3" = "";
-            "4" = "";
-            "5" = "";
-            "6" = "󰙯";
-            "7" = "";
-            "8" = "";
-            "9" = "";
-            "10" = "";
-          };
+          # name_map = {
+          #   "1" = "";
+          #   "2" = "󰈹";
+          #   "3" = "";
+          #   "4" = "";
+          #   "5" = "";
+          #   "6" = "󰙯";
+          #   "7" = "";
+          #   "8" = "";
+          #   "9" = "";
+          #   "10" = "";
+          # };
           hide_empty = false;
           all_monitors = false;
           # Allow dynamic workspace names from hyprland-autoname-workspaces
@@ -233,24 +231,24 @@ in {
       '';
     };
 
-    # Ironbar service with auto-start
-    systemd.user.services.ironbar = {
-      Unit = {
-        Description = "Ironbar status bar";
-        Documentation = "https://github.com/JakeStanger/ironbar";
-        PartOf = ["hyprland-session.target"];
-        After = ["hyprland-session.target"];
-      };
+    # # Ironbar service with auto-start
+    # systemd.user.services.ironbar = {
+    #   Unit = {
+    #     Description = "Ironbar status bar";
+    #     Documentation = "https://github.com/JakeStanger/ironbar";
+    #     PartOf = ["hyprland-session.target"];
+    #     After = ["hyprland-session.target"];
+    #   };
 
-      Service = {
-        Type = "simple";
-        ExecStart = "${inputs.ironbar.packages.${pkgs.system}.default}/bin/ironbar --config %h/.config/ironbar/config.json";
-        Restart = "always";
-        RestartSec = "5";
-      };
+    #   Service = {
+    #     Type = "simple";
+    #     ExecStart = "${inputs.ironbar.packages.${pkgs.system}.default}/bin/ironbar --config %h/.config/ironbar/config.json";
+    #     Restart = "always";
+    #     RestartSec = "5";
+    #   };
 
-      Install.WantedBy = ["hyprland-session.target"];
-    };
+    #   Install.WantedBy = ["hyprland-session.target"];
+    # };
 
     # Hyprland autoname workspaces service
     systemd.user.services.hyprland-autoname-workspaces = {

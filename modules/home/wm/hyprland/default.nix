@@ -33,13 +33,10 @@
     then pkgs.cosmic-files
     else if cfg.fileManager == "nautilus"
     then pkgs.nautilus
-    else if cfg.fileManager == "thunar"
-    then pkgs.xfce.thunar
     else pkgs.cosmic-files;
 in {
   imports =
     [
-      # Using correct homeManagerModules attribute
       inputs.cosmic-manager.homeManagerModules.default
       inputs.wayland-pipewire-idle-inhibit.homeModules.default
       ./animations.nix
@@ -408,14 +405,6 @@ in {
           "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent"
           # "${pkgs.networkmanagerapplet}/bin/nm-applet"
           "${pkgs.hyprland-autoname-workspaces}/bin/hyprland-autoname-workspaces"
-
-          # Start on workspace 1 then let window rules assign to correct workspaces
-          "sleep 2 && ${browserPkg}/bin/${
-            if cfg.browser == "zen"
-            then "zen"
-            else cfg.browser
-          }"
-          "sleep 3 && ${pkgs.code-cursor}/bin/cursor"
         ];
       };
     };
