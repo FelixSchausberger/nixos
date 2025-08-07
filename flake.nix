@@ -368,6 +368,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     helix.url = "github:helix-editor/helix";
+    zed-extensions = {
+      url = "github:DuskSystems/nix-zed-extensions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Applications
     bluetui = {

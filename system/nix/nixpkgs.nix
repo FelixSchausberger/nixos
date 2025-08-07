@@ -9,6 +9,7 @@
     };
     overlays = [
       inputs.nur.overlays.default
+      inputs.zed-extensions.overlays.default
     ];
   };
 }
