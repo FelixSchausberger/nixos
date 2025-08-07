@@ -14,11 +14,11 @@
           echo "  jj log [--graph]   - Show change log"
           echo "  jj diff [--stat]   - Show diff"
           echo "  jj commit [-m]     - Create commit"
-          echo "  jj edit <change>   - Edit specific change"
-          echo "  jj branch          - Branch operations"
           echo "  jj sync            - Fetch and push"
-          echo "  jj workspace       - Workspace operations"
           echo "  jj search          - Interactive file search"
+          echo "  jj ui              - Open lazyjj TUI"
+          echo ""
+          echo "Note: Use 'lazyjj' for visual TUI operations"
           echo ""
           return 0
         end
@@ -30,16 +30,13 @@
             jj_diff $flags
           case commit c
             jj_commit $flags
-          case edit e
-            jj_edit $flags
-          case branch b
-            jj_branch $flags
           case sync
             jj_sync $flags
-          case workspace ws
-            jj_workspace $flags
           case search
             jj_search $flags
+          case ui
+            # Launch lazyjj TUI
+            command lazyjj $flags
           case '*'
             # Pass through to actual jj command
             command jj $subcommand $flags
@@ -81,29 +78,6 @@
       '';
     };
 
-    jj_edit = {
-      description = "Edit specific change";
-      body = ''
-        if test -z "$argv[1]"
-          echo "Usage: jj edit <change-id>"
-          return 1
-        end
-        command jj edit $argv
-      '';
-    };
-
-    jj_branch = {
-      description = "Branch operations";
-      body = ''
-        if test -z "$argv[1]"
-          command jj branch list
-        else
-          command jj branch $argv
-        end
-      '';
-    };
-
-
     jj_sync = {
       description = "Fetch and push";
       body = ''
@@ -114,16 +88,6 @@
       '';
     };
 
-    jj_workspace = {
-      description = "Workspace operations";
-      body = ''
-        if test -z "$argv[1]"
-          command jj workspace list
-        else
-          command jj workspace $argv
-        end
-      '';
-    };
 
     jj_search = {
       description = "Interactive file search with fzf";
@@ -150,7 +114,10 @@
 
   programs.fish.interactiveShellInit = ''
     # Completions for jj command
-    complete -c jj -f -a "log diff commit edit branch sync workspace search" -d "Jujutsu VCS subcommands"
+    complete -c jj -f -a "log diff commit sync search ui" -d "Jujutsu VCS subcommands"
     complete -c jj -s h -l help -d "Show help message"
+    
+    # Add lazyjj alias for convenience
+    alias jjui="lazyjj"
   '';
 }

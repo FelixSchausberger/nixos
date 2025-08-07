@@ -26,6 +26,32 @@
         modified = "!($count)";
         staged = "[++($count)](green)";
       };
+
+      # Custom JJ (Jujutsu) module until native support is available
+      # Shows current change ID and working copy status
+      custom.jj = {
+        command = "jj log -r @ --no-graph --color never -T 'change_id.shortest(8)'";
+        when = "jj root";
+        format = "on [$output]($style) ";
+        style = "bold purple";
+        symbol = "jj";
+        description = "Show current Jujutsu change ID";
+      };
+
+      # Add custom JJ status indicator
+      custom.jj_status = {
+        command = ''
+          if jj status --no-pager 2>/dev/null | grep -q "Working copy changes:"; then
+            echo "●"
+          else
+            echo "○"
+          fi
+        '';
+        when = "jj root";
+        format = "[$output]($style)";
+        style = "bold yellow";
+        description = "Show if working copy has changes";
+      };
     };
   };
 }
