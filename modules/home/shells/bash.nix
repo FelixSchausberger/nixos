@@ -5,6 +5,7 @@
 
   programs.bash = {
     enable = true;
+    package = pkgs.bashInteractive;
 
     # Shell aliases
     shellAliases = {
@@ -55,11 +56,14 @@
       }
 
       # Better directory navigation
-      shopt -s autocd        # Change to directory by typing name
-      shopt -s cdspell       # Autocorrect typos in path names
-      shopt -s dirspell      # Autocorrect typos in directory names
-      shopt -s checkwinsize  # Check window size after each command
-      shopt -s histappend    # Append to history file, don't overwrite
+      shopt -s autocd 2>/dev/null || true        # Change to directory by typing name
+      shopt -s cdspell 2>/dev/null || true       # Autocorrect typos in path names
+      shopt -s dirspell 2>/dev/null || true      # Autocorrect typos in directory names
+      shopt -s checkwinsize 2>/dev/null || true  # Check window size after each command
+      shopt -s histappend 2>/dev/null || true    # Append to history file, don't overwrite
+
+      # Enable programmable completion
+      shopt -s progcomp 2>/dev/null || true
 
       # If fish shell is available and not already running, exec to fish
       if [[ $(${pkgs.procps}/bin/ps --no-header --pid=$PPID --format=comm) != "fish" && -z ''${BASH_EXECUTION_STRING} ]]; then

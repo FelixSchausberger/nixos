@@ -12,7 +12,7 @@
       ];
 
       flake = {
-        # Utility functions (keep minimal)
+        # Utility functions
         lib = {
           mkHost = import ./lib/mkHost.nix;
           user = "schausberger"; # Default user
@@ -34,55 +34,9 @@
         };
       };
 
-      flake.packages.x86_64-linux = {
-        # VM testing - run VMs with: nix run .#vm-<hostname>
-        vm-desktop = inputs.self.nixosConfigurations.desktop.config.system.build.vm;
-        vm-portable = inputs.self.nixosConfigurations.portable.config.system.build.vm;
-        vm-surface = inputs.self.nixosConfigurations.surface.config.system.build.vm;
-        vm-pdemu1cml000312 = inputs.self.nixosConfigurations.pdemu1cml000312.config.system.build.vm;
-      };
-
       # Modern deployment with nixos-anywhere (faster, more reliable)
       # Usage: nix run .#nixos-anywhere -- --flake .#hostname root@target-ip
       flake.packages.x86_64-linux.nixos-anywhere = inputs.nixos-anywhere.packages.x86_64-linux.default;
-
-      # Legacy deploy-rs configuration (kept for compatibility)
-      flake.deploy = {
-        sshUser = "schausberger";
-        nodes = {
-          desktop = {
-            hostname = "desktop.local";
-            profiles.system = {
-              user = "root";
-              path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.desktop;
-            };
-          };
-          portable = {
-            hostname = "portable.local";
-            profiles.system = {
-              user = "root";
-              path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.portable;
-            };
-          };
-          surface = {
-            hostname = "surface.local";
-            profiles.system = {
-              user = "root";
-              path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.surface;
-            };
-          };
-          pdemu1cml000312 = {
-            hostname = "192.168.1.100";
-            profiles.system = {
-              user = "root";
-              path = inputs.deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.pdemu1cml000312;
-            };
-          };
-        };
-      };
-
-      # Deploy checks
-      flake.checks = inputs.deploy-rs.lib.x86_64-linux.deployChecks inputs.self.deploy;
 
       perSystem = {
         config,
@@ -97,176 +51,6 @@
           # VMDK builder for portable workstation
           vmdk-portable = pkgs.callPackage ./tools/vmdk-builder {inherit inputs;};
 
-          # Development workflow improvements
-          config-editor = pkgs.writeShellApplication {
-            name = "nx-config-editor";
-            runtimeInputs = with pkgs; [yazi git];
-            text = ''
-              set -euo pipefail
-
-              cd "${inputs.self.lib.paths.nixosConfig}"
-
-              echo "📝 NixOS Configuration Editor"
-              echo "=============================="
-              echo "Opening configuration in yazi..."
-              echo "Tip: Use 'q' to quit yazi when done"
-              echo ""
-
-              yazi .
-
-              # Check for changes
-              if [[ -n "$(git status --porcelain)" ]]; then
-                echo ""
-                echo "📄 Changes detected:"
-                git status --short | head -10
-                echo ""
-
-                read -p "Review changes? [y/N]: " -n 1 -r review
-                echo ""
-
-                if [[ $review =~ ^[Yy]$ ]]; then
-                  git diff --stat
-                  echo ""
-                  echo "📝 Detailed diff:"
-                  git diff --color=always | head -50
-                  echo ""
-                fi
-
-                read -p "Commit and deploy changes? [y/N]: " -n 1 -r deploy
-                echo ""
-
-                if [[ $deploy =~ ^[Yy]$ ]]; then
-                  read -p "Commit message: " -r message
-                  if [[ -n "$message" ]]; then
-                    git add .
-                    git commit -m "$message"
-                    echo ""
-                    echo "🚀 Deploying configuration..."
-                    sudo nixos-rebuild switch --flake .
-                  else
-                    echo "Empty commit message, skipping deployment."
-                  fi
-                else
-                  echo "Changes saved but not deployed."
-                  echo "Use 'nx deploy' when ready to apply changes."
-                fi
-              else
-                echo "No changes made."
-              fi
-            '';
-          };
-
-          config-validator = pkgs.writeShellApplication {
-            name = "nx-validate";
-            runtimeInputs = with pkgs; [nix git];
-            text = ''
-              set -euo pipefail
-
-              cd "${inputs.self.lib.paths.nixosConfig}"
-
-              echo "🔍 NixOS Configuration Validator"
-              echo "==============================="
-              echo ""
-
-              echo "📋 Step 1: Syntax check..."
-              if nix flake check --no-build; then
-                echo "✅ Syntax check passed"
-              else
-                echo "❌ Syntax check failed"
-                exit 1
-              fi
-              echo ""
-
-              echo "🏗️  Step 2: Build test (all configurations)..."
-              if nix build .#nixosConfigurations.desktop.config.system.build.toplevel --no-link --quiet; then
-                echo "✅ Desktop build successful"
-              else
-                echo "❌ Desktop build failed"
-                exit 1
-              fi
-
-              if nix build .#nixosConfigurations.portable.config.system.build.toplevel --no-link --quiet; then
-                echo "✅ Portable build successful"
-              else
-                echo "❌ Portable build failed"
-                exit 1
-              fi
-
-              echo ""
-              echo "🔒 Step 3: Security check..."
-              if command -v statix >/dev/null; then
-                if statix check .; then
-                  echo "✅ Security check passed"
-                else
-                  echo "⚠️  Security warnings found (non-fatal)"
-                fi
-              else
-                echo "ℹ️  Statix not available, skipping security check"
-              fi
-
-              echo ""
-              echo "✅ All validations completed successfully!"
-              echo "🚀 Configuration ready for deployment"
-            '';
-          };
-
-          system-backup = pkgs.writeShellApplication {
-            name = "nx-backup";
-            runtimeInputs = with pkgs; [zfs git rsync];
-            text = ''
-              set -euo pipefail
-
-              BACKUP_DIR="/per/backups/nixos-$(date +%Y%m%d_%H%M%S)"
-
-              echo "💾 NixOS System Backup"
-              echo "======================"
-              echo "Backup location: $BACKUP_DIR"
-              echo ""
-
-              mkdir -p "$BACKUP_DIR"
-
-              echo "📁 Step 1: Backing up configuration..."
-              cp -r "${inputs.self.lib.paths.nixosConfig}" "$BACKUP_DIR/nixos-config"
-
-              echo "🔑 Step 2: Backing up secrets..."
-              if [[ -d "/per/system" ]]; then
-                cp -r /per/system "$BACKUP_DIR/system-keys"
-                chmod -R go-rwx "$BACKUP_DIR/system-keys"
-              fi
-
-              echo "📋 Step 3: Saving system state..."
-              {
-                echo "# NixOS System Backup - $(date)"
-                echo "# =============================="
-                echo ""
-                echo "## System Information"
-                echo "Hostname: $(hostname)"
-                echo "NixOS Version: $(nixos-version)"
-                echo "Generation: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | tail -1)"
-                echo ""
-                echo "## Hardware Information"
-                lscpu | head -10
-                echo ""
-                lsblk -f
-                echo ""
-                echo "## ZFS Status"
-                zpool status || echo "ZFS not available"
-                echo ""
-                echo "## Network Configuration"
-                ip addr show | grep -E "inet|link" | head -10
-              } > "$BACKUP_DIR/system-info.txt"
-
-              echo "📦 Step 4: Creating archive..."
-              tar -czf "$BACKUP_DIR.tar.gz" -C "$(dirname "$BACKUP_DIR")" "$(basename "$BACKUP_DIR")"
-              rm -rf "$BACKUP_DIR"
-
-              echo ""
-              echo "✅ Backup completed successfully!"
-              echo "📦 Archive: $BACKUP_DIR.tar.gz"
-              echo "📏 Size: $(du -h "$BACKUP_DIR.tar.gz" | cut -f1)"
-            '';
-          };
-
           # ZFS setup tool
           zfs-nixos-setup = pkgs.rustPlatform.buildRustPackage {
             pname = "zfs-nixos-setup";
@@ -276,125 +60,20 @@
             nativeBuildInputs = with pkgs; [pkg-config];
             buildInputs = [];
           };
-
-          # Tool creation helper
-          create-tool = pkgs.writeShellApplication {
-            name = "create-tool";
-            runtimeInputs = with pkgs; [coreutils findutils gnused cargo];
-            text = ''
-              set -euo pipefail
-
-              if [[ $# -lt 2 ]]; then
-                echo "Usage: create-tool <type> <name>"
-                echo "Types: rust, nix"
-                echo "Example: create-tool rust my-awesome-cli"
-                exit 1
-              fi
-
-              tool_type="$1"
-              tool_name="$2"
-              template_dir="tools/templates/$tool_type"
-              target_dir="tools/$tool_name"
-
-              if [[ ! -d "$template_dir" ]]; then
-                echo "Error: Unknown tool type '$tool_type'"
-                echo "Available types: rust, nix"
-                exit 1
-              fi
-
-              if [[ -d "$target_dir" ]]; then
-                echo "Error: Tool '$tool_name' already exists at $target_dir"
-                exit 1
-              fi
-
-              echo "Creating $tool_type tool: $tool_name"
-              cp -r "$template_dir" "$target_dir"
-
-              # Update template placeholders
-              case "$tool_type" in
-                rust)
-                  sed -i "s/my-rust-tool/$tool_name/g" "$target_dir/Cargo.toml"
-                  sed -i "s/my-rust-tool/$tool_name/g" "$target_dir/flake.nix"
-                  cd "$target_dir"
-                  cargo generate-lockfile
-                  ;;
-                nix)
-                  sed -i "s/my-nix-tool/$tool_name/g" "$target_dir/flake.nix"
-                  sed -i "s/my-nix-tool/$tool_name/g" "$target_dir/src/main.sh"
-                  sed -i "s/my-nix-function/$tool_name/g" "$target_dir/src/default.nix"
-                  ;;
-              esac
-
-              echo "✅ Created $tool_type tool at $target_dir"
-              echo ""
-              echo "Next steps:"
-              echo "1. cd $target_dir"
-              echo "2. Edit the source files to implement your tool"
-              echo "3. Test with: nix develop"
-              echo "4. Build with: nix build"
-              echo "5. Add to main flake packages section"
-            '';
-          };
-
-          # Installer ISO with ZFS support
-          installer-iso =
-            (inputs.nixpkgs.lib.nixosSystem {
-              system = "x86_64-linux";
-              modules = [
-                "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
-                {
-                  # ZFS support in installer
-                  boot.supportedFilesystems = ["zfs"];
-                  boot.kernelPackages = pkgs.linuxPackages_6_6; # Use stable LTS kernel compatible with ZFS
-
-                  # Essential recovery tools
-                  environment.systemPackages = with pkgs; [
-                    zfs
-                    cryptsetup
-                    parted
-                    gparted
-                    testdisk
-                    ddrescue
-                    git
-                    vim
-                    curl
-                    wget
-                    rsync
-                  ];
-
-                  isoImage = {
-                    volumeID = "NIXOS-ZFS-INSTALLER";
-                    makeEfiBootable = true;
-                    makeUsbBootable = true;
-                  };
-                }
-              ];
-            }).config.system.build.isoImage;
         };
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            # Nix tools
             alejandra
+            bashInteractive # Use interactive bash with full features
             git
-
-            # Documentation and formatting
-            nodejs # For prettier
-            nodePackages.prettier
-
-            # Development tools
             pre-commit
-
-            # Deployment tools
-            inputs.deploy-rs.packages.${pkgs.system}.default
           ];
 
           name = "nixos-config";
-          DIRENV_LOG_FORMAT = "";
 
           shellHook = ''
             ${config.pre-commit.installationScript}
-            echo "Guten Morgen!"
           '';
         };
 
@@ -419,6 +98,10 @@
     };
     impermanence.url = "github:nix-community/impermanence";
     nixos-hardware.url = "github:NixOS/nixos-hardware";
+    nixos-wsl = {
+      url = "github:nix-community/NixOS-WSL";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -447,11 +130,11 @@
     };
 
     # Editors
-    # nixvim = {
-    #   url = "github:nix-community/nixvim";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # }; # Temporarily disabled due to tree-sitter-ada HTTP 401 error
-    # helix.url = "github:helix-editor/helix"; # Temporarily disabled due to tree-sitter HTTP 401 errors
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    helix.url = "github:helix-editor/helix";
 
     # Applications
     bluetui = {
@@ -524,8 +207,6 @@
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # Local packages and tools
 
     # Themes
     arc-2-theme = {

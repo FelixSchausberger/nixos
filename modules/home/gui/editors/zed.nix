@@ -51,7 +51,6 @@
     extraPackages = with pkgs; [
       # LSP servers
       nixd
-      rust-analyzer
       pyright
       clang-tools
       marksman

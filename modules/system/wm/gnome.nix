@@ -1,7 +1,5 @@
 {pkgs, ...}: {
   services = {
-    xserver.enable = true;
-    displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
     gnome.gnome-keyring.enable = true;
 
@@ -16,6 +14,12 @@
 
     # Needed to get systray icons
     udev.packages = [pkgs.gnome-settings-daemon];
+  };
+
+  # GNOME-specific PAM configuration for keyring integration
+  security.pam.services = {
+    login.enableGnomeKeyring = true;
+    greetd.enableGnomeKeyring = true;
   };
 
   environment = {

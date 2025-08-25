@@ -3,7 +3,10 @@
     enable = true;
 
     bashrcExtra = ''
-      eval "$(starship init bash)"
+      # Only initialize starship in interactive shells with proper terminal
+      if [[ $- == *i* ]] && [[ "$TERM" != "dumb" ]]; then
+        eval "$(starship init bash)"
+      fi
     '';
   };
 

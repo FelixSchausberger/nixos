@@ -1,5 +1,4 @@
-# statix: skip
-_: let
+let
   hostLib = import ../lib.nix;
   wms = ["gnome" "hyprland"];
 in {

@@ -12,10 +12,6 @@
     jq
     python3
 
-    # Rust
-    cargo
-    rustc
-
     # GitHub Actions local runner
     act
 
@@ -25,7 +21,6 @@
     marksman # Markdown
     nixd # Nix
     # python311Packages.python-lsp-server # Python
-    rust-analyzer # Rust
     taplo # TOML
     yaml-language-server # YAML
   ];

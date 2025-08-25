@@ -49,25 +49,13 @@
         method = "symlink";
       }
 
-      # Zen browser essential data only
+      # Zen browser essential data only - persist entire default profile
       {
         directory = ".zen/browsers";
         method = "symlink";
       }
       {
-        directory = ".zen/default/bookmarkbackups";
-        method = "symlink";
-      }
-      {
-        directory = ".zen/default/sessionstore-backups";
-        method = "symlink";
-      }
-      {
-        directory = ".zen/default/workspaces";
-        method = "symlink";
-      }
-      {
-        directory = ".zen/default/storage";
+        directory = ".zen/default";
         method = "symlink";
       }
       {

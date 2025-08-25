@@ -10,11 +10,6 @@
         "home/default.nix"
         "home/profiles/default.nix"
         "hosts/default.nix"
-
-        "/per/repos/magazino"
-
-        # Exclude host-specific placeholder secrets files
-        "secrets/hosts/.*/secrets\\.yaml$"
       ];
 
       hooks = {

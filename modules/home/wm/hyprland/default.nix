@@ -32,6 +32,10 @@ in {
     inputs.cosmic-manager.homeManagerModules.default
     inputs.wayland-pipewire-idle-inhibit.homeModules.default
     ./animations.nix
+    ./hypridle.nix # Idle management daemon
+    ./hyprlock.nix # Screen locker
+    ./hyprpaper.nix # Wallpaper daemon
+    ./hyprsunset.nix # Blue light filter
     ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
     ./keybinds.nix
     ./scratchpads.nix
@@ -92,11 +96,9 @@ in {
 
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
-      # Home-specific utilities (not in system config)
-      hyprsunset # Blue light filter
+      # Home-specific utilities
       hyprpolkitagent # Authentication agent
       swappy # Screenshot annotation
-      wf-recorder # Screen recording
       cliphist # Clipboard history
       avizo # OSD for volume/brightness
       inputs.walker.packages.${pkgs.system}.default # Wayland-native application launcher with plugins
@@ -104,7 +106,7 @@ in {
       udiskie # Auto-mount
       cosmic-files # File manager
 
-      # Cursor themes (user-specific)
+      # Cursor themes
       adwaita-icon-theme # For Adwaita cursor theme
       bibata-cursors # Better cursor theme
     ];
@@ -118,9 +120,9 @@ in {
       ];
 
       settings = {
-        # Environment variables (home/user-specific only)
+        # Environment variables
         env = [
-          # Application defaults (user-configurable)
+          # Application defaults
           "TERMINAL,${terminalPkg}/bin/${cfg.terminal}"
           "BROWSER,${browserPkg}/bin/${
             if cfg.browser == "zen"
@@ -129,7 +131,7 @@ in {
           }"
           "FILEMANAGER,${fileManagerPkg}/bin/${cfg.fileManager}"
 
-          # User-specific cursor configuration
+          # Cursor configuration
           "XCURSOR_THEME,Bibata-Modern-Classic"
           "XCURSOR_SIZE,24"
           "HYPRCURSOR_THEME,Bibata-Modern-Classic"
@@ -170,7 +172,7 @@ in {
           allow_tearing = true;
         };
 
-        # Decoration settings (themes are handled by themes.nix)
+        # Decoration settings
         decoration = {
           dim_inactive = false;
           dim_strength = 0.1;
@@ -192,22 +194,6 @@ in {
           mfact = 0.5;
         };
 
-        # Gesture configuration
-        gestures = {
-          workspace_swipe = true;
-          workspace_swipe_fingers = 3;
-          workspace_swipe_distance = 300;
-          workspace_swipe_invert = true;
-          workspace_swipe_min_speed_to_force = 30;
-          workspace_swipe_cancel_ratio = 0.5;
-          workspace_swipe_create_new = false;
-        };
-
-        # Group configuration (colors handled by themes.nix)
-        group = {
-          # Group behavior settings only
-        };
-
         # Miscellaneous settings
         misc = {
           force_default_wallpaper = 0;
@@ -220,6 +206,17 @@ in {
           focus_on_activate = true;
           mouse_move_focuses_monitor = true;
         };
+
+        # Gesture configuration (replaces deprecated workspace_swipe options)
+        # gestures = {
+        #   workspace_swipe = true;
+        #   workspace_swipe_fingers = 3;
+        #   workspace_swipe_distance = 300;
+        #   workspace_swipe_invert = true;
+        #   workspace_swipe_min_speed_to_force = 30;
+        #   workspace_swipe_cancel_ratio = 0.5;
+        #   workspace_swipe_create_new = false;
+        # };
 
         render = {
           direct_scanout = true;
@@ -336,7 +333,6 @@ in {
           "blur,gtk-layer-shell"
           "blur,ironbar"
           "ignorezero,ironbar" # Prevents blur gaps when background-color is near 0 alpha
-          "xray,ironbar" # Renders Ironbar over blur without darkening behind
           "blur,notifications"
           "blur,walker"
           "dimaround,walker"
@@ -348,32 +344,13 @@ in {
         exec-once = [
           "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
           "${pkgs.avizo}/bin/avizo-service"
-          "${pkgs.hypridle}/bin/hypridle"
-          "${pkgs.hyprpaper}/bin/hyprpaper"
           "${inputs.ironbar.packages.${pkgs.system}.default}/bin/ironbar"
           "${pkgs.udiskie}/bin/udiskie --tray"
           "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store"
           "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store"
           "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent"
-          # "${pkgs.networkmanagerapplet}/bin/nm-applet"
-          "${pkgs.hyprland-autoname-workspaces}/bin/hyprland-autoname-workspaces"
         ];
       };
-    };
-
-    # Hyprsunset service for automatic sunset/sunrise blue light filtering
-    systemd.user.services.hyprsunset = {
-      Unit = {
-        Description = "Hyprsunset Blue Light Filter";
-        After = ["hyprland-session.target"];
-      };
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.hyprsunset}/bin/hyprsunset -t 4500";
-        Restart = "on-failure";
-        RestartSec = 5;
-      };
-      Install.WantedBy = ["hyprland-session.target"];
     };
 
     # Configure wayland-pipewire-idle-inhibit service
@@ -384,7 +361,6 @@ in {
         verbosity = "INFO";
         media_minimum_duration = 5;
         idle_inhibitor = "wayland";
-        # You can customize these filters as needed
         sink_whitelist = [];
         node_blacklist = [
           {name = "spotify";}
@@ -392,133 +368,5 @@ in {
         ];
       };
     };
-
-    # XDG configuration files
-    xdg.configFile = {
-      "hypr/hyprpaper.conf".text = let
-        wallpaperPath = config.lib.wallpapers.getCurrentWallpaperPath or "${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg";
-      in ''
-        # Preload wallpaper
-        preload = ${wallpaperPath}
-
-        # Set wallpaper for all monitors
-        wallpaper = eDP-1,${wallpaperPath}
-        wallpaper = ,${wallpaperPath}
-
-        # Configuration
-        splash = false
-        ipc = on
-      '';
-
-      "hypr/hypridle.conf".text = ''
-        general {
-            lock_cmd = pidof hyprlock || hyprlock
-            before_sleep_cmd = loginctl lock-session
-            after_sleep_cmd = hyprctl dispatch dpms on
-            ignore_dbus_inhibit = false
-        }
-
-        listener {
-            timeout = 300
-            on-timeout = loginctl lock-session
-        }
-
-        listener {
-            timeout = 330
-            on-timeout = hyprctl dispatch dpms off
-            on-resume = hyprctl dispatch dpms on
-        }
-
-        listener {
-            timeout = 1800
-            on-timeout = systemctl suspend
-        }
-      '';
-
-      "hypr/hyprlock.conf".text = let
-        wallpaperPath = config.lib.wallpapers.getCurrentWallpaperPath or "${config.home.homeDirectory}/.config/wallpapers/solar-system.jpg";
-      in ''
-        general {
-            disable_loading_bar = true
-            grace = 300
-            hide_cursor = false
-            no_fade_in = false
-            no_fade_out = false
-            ignore_empty_input = false
-            immediate_render = false
-            pam_module = hyprlock
-        }
-
-        background {
-            monitor = eDP-1
-            path = ${wallpaperPath}
-            blur_passes = 3
-            blur_size = 8
-            noise = 0.0117
-            contrast = 0.8916
-            brightness = 0.8172
-            vibrancy = 0.1696
-            vibrancy_darkness = 0.0
-        }
-
-        input-field {
-            monitor =
-            size = 250, 60
-            outline_thickness = 2
-            dots_size = 0.33
-            dots_spacing = 0.15
-            dots_center = true
-            dots_rounding = -1
-            outer_color = rgb(89b4fa)
-            inner_color = rgb(1e1e2e)
-            font_color = rgb(cdd6f4)
-            fade_on_empty = true
-            fade_timeout = 1000
-            placeholder_text = <i>Password...</i>
-            hide_input = false
-            rounding = 12
-            check_color = rgb(a6e3a1)
-            fail_color = rgb(f38ba8)
-            fail_text = <i>$FAIL <b>($ATTEMPTS)</b></i>
-            fail_transition = 300
-            capslock_color = -1
-            numlock_color = -1
-            bothlock_color = -1
-            invert_numlock = false
-            swap_font_color = false
-            position = 0, -80
-            halign = center
-            valign = center
-        }
-
-        label {
-            monitor =
-            text = $TIME
-            color = rgb(cdd6f4)
-            font_size = 90
-            font_family = JetBrainsMono Nerd Font ExtraBold
-            position = 0, 80
-            halign = center
-            valign = center
-            shadow_passes = 5
-            shadow_size = 10
-        }
-
-        label {
-            monitor =
-            text = Hi there, $USER
-            color = rgb(cdd6f4)
-            font_size = 20
-            font_family = JetBrainsMono Nerd Font
-            position = 0, 0
-            halign = center
-            valign = center
-            shadow_passes = 5
-            shadow_size = 10
-        }
-      '';
-    };
-
-    # Wallpapers are now managed centrally by the wallpapers module
   };
 }

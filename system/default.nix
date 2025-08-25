@@ -4,7 +4,6 @@ let
     ./core
     ./hardware
     ./network.nix
-    ./nix
   ];
 
   # Desktop systems (includes common modules)

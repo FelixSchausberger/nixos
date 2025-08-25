@@ -25,8 +25,8 @@ in {
 
           # Application launcher
           "$mod, D, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker"
-          "$mod, R, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules runner"
-          "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules hyprland"
+          # "$mod, R, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules runner"
+          # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules hyprland"
 
           # Window management
           "$mod, Space, togglefloating"
@@ -66,7 +66,7 @@ in {
           "$mod ALT, k, resizeactive, 0 -40"
           "$mod ALT, j, resizeactive, 0 40"
 
-          # Workspace navigation (enhanced)
+          # Workspace navigation
           "$mod CTRL, right, workspace, e+1"
           "$mod CTRL, left, workspace, e-1"
           "$mod CTRL, l, workspace, e+1"
@@ -84,7 +84,7 @@ in {
           "$mod SHIFT, Prior, movetoworkspace, e-1"
           "$mod SHIFT, Next, movetoworkspace, e+1"
 
-          # Modern Scratchpads using pyprland - reliable and feature-rich
+          # Scratchpads using pyprland
           "$mod, T, exec, ${pkgs.pyprland}/bin/pypr toggle terminal"
           "$mod, S, exec, ${pkgs.pyprland}/bin/pypr toggle music"
           "$mod, N, exec, ${pkgs.pyprland}/bin/pypr toggle planify"
@@ -112,7 +112,6 @@ in {
           # Utilities
           "$mod, V, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules clipboard"
           "$mod, period, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules emoji" # Emoji picker
-          # Bluetui keybinding moved to scratchpads section above
 
           # Color picker
           "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${pkgs.libnotify}/bin/notify-send 'Color picked' 'Copied to clipboard'"
@@ -120,14 +119,14 @@ in {
           # Vigiland idle inhibitor toggle
           "$mod SHIFT, V, exec, if pgrep -x vigiland > /dev/null; then pkill vigiland && ${pkgs.libnotify}/bin/notify-send 'Vigiland' 'Idle inhibitor disabled'; else ${inputs.self.packages.${pkgs.system}.vigiland}/bin/vigiland & ${pkgs.libnotify}/bin/notify-send 'Vigiland' 'Idle inhibitor enabled'; fi"
 
-          # Audio controls (additional)
-          "$mod, equal, exec, ${pkgs.avizo}/bin/volumectl -u up"
-          "$mod, minus, exec, ${pkgs.avizo}/bin/volumectl -u down"
-          "$mod, 0, exec, ${pkgs.avizo}/bin/volumectl toggle-mute"
+          # Audio controls
+          # "$mod, equal, exec, ${pkgs.avizo}/bin/volumectl -u up"
+          # "$mod, minus, exec, ${pkgs.avizo}/bin/volumectl -u down"
+          # "$mod, 0, exec, ${pkgs.avizo}/bin/volumectl toggle-mute"
 
-          # Brightness controls (additional)
-          "$mod SHIFT, equal, exec, ${pkgs.avizo}/bin/lightctl up"
-          "$mod SHIFT, minus, exec, ${pkgs.avizo}/bin/lightctl down"
+          # Brightness controls
+          # "$mod SHIFT, equal, exec, ${pkgs.avizo}/bin/lightctl up"
+          # "$mod SHIFT, minus, exec, ${pkgs.avizo}/bin/lightctl down"
 
           # Window grouping
           "$mod, G, togglegroup"
@@ -141,7 +140,7 @@ in {
           "$mod, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch toggleopaque"
           "$mod SHIFT, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch pin"
           # "$mod CTRL, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch togglechromakey" # Toggle ChromaKey transparency - disabled due to plugin build issues
-          "$mod SHIFT, P, pseudo" # Moved from U to give priority to scratchpads
+          "$mod SHIFT, P, pseudo"
           "$mod SHIFT, U, togglesplit"
 
           # Layout switching

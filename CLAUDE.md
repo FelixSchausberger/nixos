@@ -66,8 +66,11 @@ nx --help
 # Edit configuration files (opens yazi file browser)
 nx config
 
-# Deploy configuration to current host
+# Deploy configuration to current host (includes Home Manager)
 nx deploy
+
+# Deploy Home Manager only (standalone)
+nx home
 
 # Update flake inputs and redeploy
 nx update

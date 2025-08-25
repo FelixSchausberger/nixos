@@ -21,7 +21,6 @@
       (lib.optionals (lib.elem "gui" features) [../modules/home/gui])
       (lib.optionals (lib.elem "gaming" features) [../modules/home/private/gui/steam.nix])
       (lib.optionals (lib.elem "development" features) [../modules/home/private/gui/freecad.nix])
-      (lib.optionals (lib.elem "work" features) [../modules/home/work])
       (lib.optionals (lib.elem "private" features) [../modules/home/private])
     ];
 

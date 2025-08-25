@@ -15,7 +15,7 @@
     verbose = true;
 
     extraSpecialArgs = {
-      secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets_backup.yaml");
+      inherit inputs;
     };
 
     sharedModules = [

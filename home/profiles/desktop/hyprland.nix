@@ -81,23 +81,24 @@
       "SDL_VIDEODRIVER,wayland"
       "QT_QPA_PLATFORM,wayland;xcb"
 
-      # MangoHud
-      "MANGOHUD,1"
+      # MangoHud - disabled globally (use per-application instead)
+      # "MANGOHUD,1"
       "MANGOHUD_DLSYM,1"
 
-      # GameMode
-      "LD_PRELOAD,${pkgs.gamemode}/lib/libgamemodeauto.so.0"
+      # GameMode is handled automatically by the system-level gamemode service
+      # No need for manual LD_PRELOAD - gamemode daemon handles this
     ];
 
     # Desktop-specific window rules (including gaming)
     windowrulev2 = [
-      # Steam
-      "workspace 7,class:^(steam)$"
-      "workspace 7,class:^(Steam)$"
+      # Steam - float dialogs/popups only
       "float,class:^(steam)$,title:^(Friends List)$"
       "float,class:^(steam)$,title:^(Steam Settings)$"
       "float,class:^(steam)$,title:^(Screenshot Uploader)$"
       "float,class:^(steam)$,title:^(Steam Guard)$"
+      "float,class:^(steam)$,title:^(Steam - News)$"
+      "float,class:^(steam)$,title:^(Special Offers)$"
+      "float,class:^(steam)$,title:^(Steam Cloud)$"
 
       # Steam games - fullscreen and performance optimizations
       "fullscreen,class:^(steam_app_).*"
@@ -113,8 +114,6 @@
       "idleinhibit focus,class:^(steam_app_).*"
 
       # Lutris
-      "workspace 7,class:^(lutris)$"
-      "workspace 7,class:^(Lutris)$"
       "float,class:^(lutris)$,title:^(Lutris)$"
 
       # Lutris games
@@ -124,13 +123,9 @@
       "idleinhibit focus,class:^(lutris-wrapper)$"
 
       # Bottles
-      "workspace 7,class:^(com.usebottles.bottles)$"
       "float,class:^(com.usebottles.bottles)$,title:^(Bottles)$"
 
       # Emulators
-      "workspace 7,class:^(dolphin-emu)$"
-      "workspace 7,class:^(PCSX2)$"
-      "workspace 7,class:^(rpcs3)$"
       "fullscreen,class:^(dolphin-emu)$"
       "fullscreen,class:^(PCSX2)$"
       "fullscreen,class:^(rpcs3)$"
@@ -142,16 +137,9 @@
       "idleinhibit focus,class:^(rpcs3)$"
 
       # Minecraft
-      "workspace 7,class:^(org.prismlauncher.PrismLauncher)$"
-      "workspace 7,class:^(Minecraft)$"
       "fullscreen,class:^(Minecraft)$"
       "immediate,class:^(Minecraft)$"
       "idleinhibit focus,class:^(Minecraft)$"
-
-      # Discord (gaming communication)
-      "workspace 6,class:^(discord)$"
-      "workspace 6,class:^(Discord)$"
-      "workspace 6,class:^(WebCord)$"
 
       # MangoHud settings
       "float,class:^(mangohud)$"

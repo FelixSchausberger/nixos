@@ -80,12 +80,14 @@
 
     # Configure sops-nix for secrets management
     sops = {
-      defaultSopsFile = "/per/etc/nixos/secrets/secrets.yaml";
+      defaultSopsFile = ../secrets/secrets.yaml;
       age.keyFile = "/per/system/sops-key.txt";
       secrets = {
         # API tokens
         "claude/default" = {};
-        "github/token" = {};
+        "github/token" = {
+          owner = "schausberger";
+        };
 
         # Cloud storage
         "rclone/client-secret" = {};
@@ -93,21 +95,13 @@
 
         # Bitwarden master password
         "bitwarden/master-password" = {};
-
-        # SSH authorized keys
-        "ssh/authorized_keys/magazino" = {};
-
-        # Host-specific secrets (available in shared file for pdemu1cml000312)
-        "awscli/id" = {};
-        "awscli/key" = {};
-        "gitlab/token" = {};
-        "magazino/email" = {};
-        "magazino/vault-token" = {};
-        "vpn/auth" = {};
-        "vpn/ca.crt" = {};
-        "vpn/client.crt" = {};
-        "vpn/key" = {};
       };
     };
+
+    # Create system mount directories for rclone
+    systemd.tmpfiles.rules = [
+      "d /per/mnt 0755 root root -"
+      "d /per/mnt/gdrive 0755 root root -"
+    ];
   };
 }
