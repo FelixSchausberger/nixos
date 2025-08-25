@@ -80,7 +80,7 @@
 
     # Configure sops-nix for secrets management
     sops = {
-      defaultSopsFile = "/per/etc/nixos/secrets/secrets.yaml";
+      defaultSopsFile = ../secrets/secrets.yaml;
       age.keyFile = "/per/system/sops-key.txt";
       secrets = {
         # API tokens

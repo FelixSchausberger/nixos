@@ -33,22 +33,6 @@
         "type": "github"
       }
     },
-    "arc-2-theme": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1754456843,
-        "narHash": "sha256-vYl3gSJo6+Z6B3TuzaP/o7LfrzgkYuO1xtruQ9S2pMk=",
-        "owner": "YashjitPal",
-        "repo": "Arc-2.0",
-        "rev": "3bbee81538df38b234e160f08b949722b1cf0825",
-        "type": "github"
-      },
-      "original": {
-        "owner": "YashjitPal",
-        "repo": "Arc-2.0",
-        "type": "github"
-      }
-    },
     "bluetui": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -1676,7 +1660,6 @@
     },
     "root": {
       "inputs": {
-        "arc-2-theme": "arc-2-theme",
         "bluetui": "bluetui",
         "cosmic-manager": "cosmic-manager",
         "deploy-rs": "deploy-rs",

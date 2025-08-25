@@ -92,11 +92,10 @@ in {
 
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
-      # Home-specific utilities (not in system config)
+      # Home-specific utilities
       hyprsunset # Blue light filter
       hyprpolkitagent # Authentication agent
       swappy # Screenshot annotation
-      wf-recorder # Screen recording
       cliphist # Clipboard history
       avizo # OSD for volume/brightness
       inputs.walker.packages.${pkgs.system}.default # Wayland-native application launcher with plugins
@@ -104,7 +103,7 @@ in {
       udiskie # Auto-mount
       cosmic-files # File manager
 
-      # Cursor themes (user-specific)
+      # Cursor themes
       adwaita-icon-theme # For Adwaita cursor theme
       bibata-cursors # Better cursor theme
     ];
@@ -118,9 +117,9 @@ in {
       ];
 
       settings = {
-        # Environment variables (home/user-specific only)
+        # Environment variables
         env = [
-          # Application defaults (user-configurable)
+          # Application defaults
           "TERMINAL,${terminalPkg}/bin/${cfg.terminal}"
           "BROWSER,${browserPkg}/bin/${
             if cfg.browser == "zen"
@@ -129,7 +128,7 @@ in {
           }"
           "FILEMANAGER,${fileManagerPkg}/bin/${cfg.fileManager}"
 
-          # User-specific cursor configuration
+          # Cursor configuration
           "XCURSOR_THEME,Bibata-Modern-Classic"
           "XCURSOR_SIZE,24"
           "HYPRCURSOR_THEME,Bibata-Modern-Classic"
@@ -170,7 +169,7 @@ in {
           allow_tearing = true;
         };
 
-        # Decoration settings (themes are handled by themes.nix)
+        # Decoration settings
         decoration = {
           dim_inactive = false;
           dim_strength = 0.1;
@@ -201,11 +200,6 @@ in {
           workspace_swipe_min_speed_to_force = 30;
           workspace_swipe_cancel_ratio = 0.5;
           workspace_swipe_create_new = false;
-        };
-
-        # Group configuration (colors handled by themes.nix)
-        group = {
-          # Group behavior settings only
         };
 
         # Miscellaneous settings
@@ -335,8 +329,8 @@ in {
         layerrule = [
           "blur,gtk-layer-shell"
           "blur,ironbar"
-          "ignorezero,ironbar" # Prevents blur gaps when background-color is near 0 alpha
-          "xray,ironbar" # Renders Ironbar over blur without darkening behind
+          # "ignorezero,ironbar" # Prevents blur gaps when background-color is near 0 alpha
+          # "xray,ironbar" # Renders Ironbar over blur without darkening behind
           "blur,notifications"
           "blur,walker"
           "dimaround,walker"
@@ -355,8 +349,6 @@ in {
           "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store"
           "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store"
           "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent"
-          # "${pkgs.networkmanagerapplet}/bin/nm-applet"
-          "${pkgs.hyprland-autoname-workspaces}/bin/hyprland-autoname-workspaces"
         ];
       };
     };
@@ -384,7 +376,6 @@ in {
         verbosity = "INFO";
         media_minimum_duration = 5;
         idle_inhibitor = "wayland";
-        # You can customize these filters as needed
         sink_whitelist = [];
         node_blacklist = [
           {name = "spotify";}
@@ -518,7 +509,5 @@ in {
         }
       '';
     };
-
-    # Wallpapers are now managed centrally by the wallpapers module
   };
 }

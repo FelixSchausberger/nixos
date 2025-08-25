@@ -3,7 +3,7 @@
   inputs,
   ...
 }: let
-  # Create derived paths more functionally  
+  # Create derived paths more functionally
   getPath = base: suffix: "${base}/${suffix}";
   dataPath = getPath config.xdg.dataHome "data";
   data = "${dataPath}/wine";
@@ -45,9 +45,6 @@ in {
     };
 
     # Specify Home Manager release version
-    stateVersion = "25.05";
+    stateVersion = "25.11";
   };
-
-  # Home Manager is managed by NixOS module, not standalone
-  # programs.home-manager.enable = true;
 }

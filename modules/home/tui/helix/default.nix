@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   pkgs,
   ...
 }: {
@@ -16,8 +15,7 @@
   programs.helix = {
     enable = true;
     defaultEditor = true;
-    package = inputs.helix.packages.${pkgs.system}.default;
-    # package = pkgs.evil-helix;
+    package = pkgs.helix;
 
     settings = {
       editor = {

@@ -1,5 +1,5 @@
 {
-  config,
+  # config,
   inputs,
   pkgs,
   ...
@@ -20,7 +20,7 @@ in {
     userEmail = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
     delta = {enable = true;};
     extraConfig = {
-      github.token = "${config.sops.secrets."github/token".path}";
+      # github.token = "${config.sops.secrets."github/token".path}"; # Temporarily disabled due to sops issues
       init.defaultBranch = "main";
       pull.rebase = true;
       credential.helper = "libsecret";

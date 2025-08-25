@@ -27,21 +27,23 @@ in {
     # Pyprland configuration with quality of life plugins
     xdg.configFile."hypr/pyprland.toml".text = ''
       [pyprland]
-      plugins = ["scratchpads", "system_notifier", "shortcuts_menu", "workspaces_follow_focus", "shift_monitors", "toggle_dpms"]
+      plugins = ["scratchpads"]
 
       [scratchpads.terminal]
-      command = "${terminalPkg}/bin/${cfg.terminal} --class terminal-scratchpad"
+      command = "${terminalPkg}/bin/${cfg.terminal}"
       class = "terminal-scratchpad"
       size = "80% 70%"
       animation = "fromTop"
       margin = 50
+      pinned = true
 
       [scratchpads.music]
-      command = "${terminalPkg}/bin/${cfg.terminal} --class spotify-scratchpad -e ${pkgs.spotify-player}/bin/spotify-player"
+      command = "${terminalPkg}/bin/${cfg.terminal} -e ${pkgs.spotify-player}/bin/spotify-player"
       class = "spotify-scratchpad"
       size = "75% 65%"
       animation = "fromTop"
       margin = 50
+      pinned = true
 
       [scratchpads.planify]
       command = "${pkgs.planify}/bin/io.github.alainm23.planify"
@@ -49,11 +51,12 @@ in {
       size = "70% 60%"
       animation = "fromTop"
       margin = 50
+      pinned = true
 
       [scratchpads.notes]
       command = "${
         if cfg.scratchpad.notesApp == "basalt"
-        then pkgs.basalt
+        then inputs.self.packages.${pkgs.system}.basalt
         else pkgs.obsidian
       }/bin/${notesCommand}"
       class = "${
@@ -64,20 +67,23 @@ in {
       size = "85% 75%"
       animation = "fromTop"
       margin = 50
+      pinned = true
 
       [scratchpads.bluetui]
-      command = "${terminalPkg}/bin/${cfg.terminal} --class bluetui-scratchpad -e ${pkgs.bluetui}/bin/bluetui"
+      command = "${terminalPkg}/bin/${cfg.terminal} -e ${pkgs.bluetui}/bin/bluetui"
       class = "bluetui-scratchpad"
       size = "60% 50%"
       animation = "fromTop"
       margin = 50
+      pinned = true
 
       [scratchpads.impala]
-      command = "${terminalPkg}/bin/${cfg.terminal} --class impala-scratchpad -e ${pkgs.impala}/bin/impala"
+      command = "${terminalPkg}/bin/${cfg.terminal} -e ${pkgs.impala}/bin/impala"
       class = "impala-scratchpad"
       size = "60% 50%"
       animation = "fromTop"
       margin = 50
+      pinned = true
 
       ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "x86_64-linux") ''
         [scratchpads.teams]
@@ -86,72 +92,9 @@ in {
         size = "80% 75%"
         animation = "fromTop"
         margin = 50
+        pinned = true
       ''}
 
-      # System Notifier - Monitor system events and send to swaync
-      [system_notifier.sources.system_errors]
-      command = "journalctl -f --since=now"
-      parser = "system_errors"
-
-      [system_notifier.sources.hypr_events]
-      command = "journalctl -f -u hyprland --since=now"
-      parser = "hypr_events"
-
-      [system_notifier.parsers.system_errors]
-      pattern = ".*(failed|error|critical|fatal).*"
-      filter = "s/.*: (.*)/System Alert: \\1/"
-      color = "#f38ba8"
-
-      [system_notifier.parsers.hypr_events]
-      pattern = ".*(started|stopped|reloaded).*"
-      filter = "s/.*: (.*)/Hyprland: \\1/"
-      color = "#a6e3a1"
-
-      # Workspace Follow Focus - Better multi-monitor workspace management
-      [workspaces_follow_focus]
-      max_workspaces = 10
-
-      # Shift Monitors - Move workspaces between monitors in carousel style
-      [shift_monitors]
-      # No additional configuration needed - works out of the box
-
-      # Toggle DPMS - Toggle display power management for quick screen off
-      [toggle_dpms]
-      # No additional configuration needed - works out of the box
-
-      # Shortcuts Menu - Discoverable command interface
-      [shortcuts_menu.entries."󰣇 System"]
-      " Reload Hyprland" = "${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl reload"
-      "󰒲 Sleep System" = "systemctl suspend"
-      "󰜉 Restart Hyprland" = "${pkgs.systemd}/bin/systemctl --user restart hyprland"
-      "󰗼 Lock Screen" = "loginctl lock-session"
-      "󰍹 Toggle Displays" = "${pkgs.pyprland}/bin/pypr toggle_dpms"
-
-      [shortcuts_menu.entries."󰍹 Monitor Management"]
-      "󰕔 Shift Workspaces Left" = "${pkgs.pyprland}/bin/pypr shift_monitors -1"
-      "󰕒 Shift Workspaces Right" = "${pkgs.pyprland}/bin/pypr shift_monitors +1"
-      "󰤄 Toggle DPMS (Screen Off)" = "${pkgs.pyprland}/bin/pypr toggle_dpms"
-
-      [shortcuts_menu.entries."󰀻 Scratchpads"]
-      "󱆃 Terminal" = "${pkgs.pyprland}/bin/pypr toggle terminal"
-      "󰝚 Music" = "${pkgs.pyprland}/bin/pypr toggle music"
-      "󰸘 Planify" = "${pkgs.pyprland}/bin/pypr toggle planify"
-      "󱞎 Notes" = "${pkgs.pyprland}/bin/pypr toggle notes"
-      "󰂯 Bluetooth" = "${pkgs.pyprland}/bin/pypr toggle bluetui"
-      "󰖩 WiFi Manager" = "${pkgs.pyprland}/bin/pypr toggle impala"
-      ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "x86_64-linux") ''"󰊻 Teams" = "${pkgs.pyprland}/bin/pypr toggle teams"''}
-
-      [shortcuts_menu.entries."󱓷 Applications"]
-      "󰈹 Browser" = "$browser"
-      "󰉋 File Manager" = "$fileManager"
-      "󱓷 Walker" = "${inputs.walker.packages.${pkgs.system}.default}/bin/walker"
-      "󰨞 Code Editor" = "${pkgs.helix}/bin/hx"
-
-      [shortcuts_menu.entries."󰄀 Screenshots"]
-      "󰩭 Area → Clipboard" = "${pkgs.grim}/bin/grim -g \\"$$(${pkgs.slurp}/bin/slurp)\\" - | ${pkgs.wl-clipboard}/bin/wl-copy"
-      "󰍹 Full → Clipboard" = "${pkgs.grim}/bin/grim - | ${pkgs.wl-clipboard}/bin/wl-copy"
-      "󰩭 Area → File" = "${pkgs.grim}/bin/grim -g \\"$$(${pkgs.slurp}/bin/slurp)\\" ~/Pictures/Screenshots/$$(date +'%Y-%m-%d_%H-%M-%S').png"
-      "󰍹 Full → File" = "${pkgs.grim}/bin/grim ~/Pictures/Screenshots/$$(date +'%Y-%m-%d_%H-%M-%S').png"
     '';
 
     # Start pyprland with Hyprland

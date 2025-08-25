@@ -12,7 +12,7 @@
       ];
 
       flake = {
-        # Utility functions (keep minimal)
+        # Utility functions
         lib = {
           mkHost = import ./lib/mkHost.nix;
           user = "schausberger"; # Default user
@@ -42,11 +42,10 @@
         vm-pdemu1cml000312 = inputs.self.nixosConfigurations.pdemu1cml000312.config.system.build.vm;
       };
 
-      # Modern deployment with nixos-anywhere (faster, more reliable)
       # Usage: nix run .#nixos-anywhere -- --flake .#hostname root@target-ip
       flake.packages.x86_64-linux.nixos-anywhere = inputs.nixos-anywhere.packages.x86_64-linux.default;
 
-      # Legacy deploy-rs configuration (kept for compatibility)
+      # Legacy deploy-rs configuration
       flake.deploy = {
         sshUser = "schausberger";
         nodes = {
@@ -447,11 +446,11 @@
     };
 
     # Editors
-    # nixvim = {
-    #   url = "github:nix-community/nixvim";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # }; # Temporarily disabled due to tree-sitter-ada HTTP 401 error
-    # helix.url = "github:helix-editor/helix"; # Temporarily disabled due to tree-sitter HTTP 401 errors
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    }; # Temporarily disabled due to tree-sitter-ada HTTP 401 error
+    helix.url = "github:helix-editor/helix";
 
     # Applications
     bluetui = {
@@ -526,12 +525,11 @@
     };
 
     # Local packages and tools
-
-    # Themes - temporarily disabled due to GitHub API rate limiting
-    # arc-2-theme = {
-    #   url = "github:YashjitPal/Arc-2.0";
-    #   flake = false;
-    # };
+    # Themes
+    arc-2-theme = {
+      url = "github:YashjitPal/Arc-2.0";
+      flake = false;
+    };
 
     # Installation tools (optional for portable host)
     nixos-wizard = {

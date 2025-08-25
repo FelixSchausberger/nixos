@@ -10,25 +10,13 @@
   features = {
     development = {
       enable = true;
-      languages = ["nix" "python" "javascript" "go"];
+      languages = ["nix" "python" "go"];
     };
 
     work = {
       enable = true;
       aws = true;
       vpn = true;
-    };
-
-    media = {
-      enable = true;
-      streaming = true;
-    };
-
-    productivity = {
-      enable = true;
-      office = true;
-      notes = true;
-      tasks = true;
     };
   };
 }

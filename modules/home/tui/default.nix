@@ -1,6 +1,6 @@
 {pkgs, ...}: {
   imports = [
-    # ./helix # Post-modern modal text editor - temporarily disabled due to tree-sitter HTTP 401 errors
+    ./helix # Post-modern modal text editor
     ./neovim.nix # Neovim with basic configuration (replaces nixvim to avoid tree-sitter-ada issue)
     ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
     ./bat.nix # A cat clone with syntax highlighting and Git integration
@@ -27,12 +27,10 @@
     bottom.enable = true; # A cross-platform graphical process/system monitor
     home-manager.enable = true; # A Nix-based user environment configurator
     nix-index.enable = true; # A files database for nixpkgs
-    # comma (nix-index-database) is automatically available via the home module import
 
     # Enable modern monitoring tools
     monitoring.enable = true;
 
-    # Consolidated simple program configurations (previously individual files):
     pay-respects = {
       enable = true;
       enableBashIntegration = true;
@@ -49,25 +47,20 @@
   };
 
   home.packages = with pkgs; [
-    helix # Use stable nixpkgs version instead of flake input to avoid tree-sitter HTTP 401 errors
-    # Previously individual modules, now consolidated:
-    impala # WiFi TUI management tool (was impala.nix)
-    iwd # Modern WiFi daemon (needed by impala, was in impala.nix)
-    # Note: rm-improved is used instead of rip.nix (rm-improved already listed below)
-
-    # Other TUI applications:
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     fclones # Efficient Duplicate File Finder and Remover
+    lan-mouse # Software KVM switch for sharing mouse and keyboard over network
     lazyjournal # TUI for journalctl, file system logs, as well as Docker and Podman containers
     lstr # Fast, minimalist directory tree viewer written in Rust
+    impala # WiFi TUI management tool
+    iwd # Modern WiFi daemon (needed by impala)
     nix-inspect # Interactive TUI for inspecting nix configs
     ouch # A CLI for easily compressing and decompressing files and directories
     pik # Process Interactive Kill
     # quickemu # Quickly create and run virtual machines
     ripgrep # Utility that combines the usability of The Silver Searcher with the raw speed of grep
     rm-improved # Replacement for rm (replaces both rip.nix and provides better rm)
-    spotify-player # Terminal spotify player that has feature parity with the official client
-    superfile # Pretty fancy and modern terminal file manager
+    # superfile # Pretty fancy and modern terminal file manager
     typst # New markup-based typesetting system that is powerful and easy to learn
     xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
   ];
