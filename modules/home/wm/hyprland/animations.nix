@@ -10,7 +10,6 @@ in {
       # Enhanced animations with smooth bezier curves
       animations = {
         enabled = lib.mkDefault true; # Allow override by gaming module
-        first_launch_animation = true;
 
         # Bezier curves for smooth animations
         bezier = [

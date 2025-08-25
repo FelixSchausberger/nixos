@@ -11,12 +11,12 @@
     else "hyprland";
 
   # Map WM names to proper session names
-  sessionName =
-    if firstWm == "gnome"
-    then "gnome"
-    else if firstWm == "cosmic"
-    then "cosmic"
-    else "hyprland";
+  # sessionName =
+  #   if firstWm == "gnome"
+  #   then "gnome"
+  #   else if firstWm == "cosmic"
+  #   then "cosmic"
+  #   else "hyprland";
 
   # Command mapping for tuigreet sessions
   getSessionCommand = wm:
@@ -28,20 +28,19 @@
 
   # Auto-login command based on WM
   autoLoginCommand = getSessionCommand firstWm;
-
   # Build tuigreet session list with all available WMs
-  sessionsList = builtins.concatStringsSep "," (map (
-      wm: let
-        sessionCmd = getSessionCommand wm;
-        sessionLabel =
-          if wm == "gnome"
-          then "GNOME"
-          else if wm == "cosmic"
-          then "COSMIC"
-          else "Hyprland";
-      in "${sessionLabel}:${sessionCmd}"
-    )
-    hostConfig.wm);
+  # sessionsList = builtins.concatStringsSep "," (map (
+  #     wm: let
+  #       sessionCmd = getSessionCommand wm;
+  #       sessionLabel =
+  #         if wm == "gnome"
+  #         then "GNOME"
+  #         else if wm == "cosmic"
+  #         then "COSMIC"
+  #         else "Hyprland";
+  #     in "${sessionLabel}:${sessionCmd}"
+  #   )
+  #   hostConfig.wm);
 in {
   services = {
     xserver = {
@@ -53,7 +52,7 @@ in {
     greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --sessions '${sessionsList}' --cmd '${autoLoginCommand}'";
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
         user = "greeter";
       };
       settings.initial_session = lib.mkIf (hostConfig ? autoLogin && hostConfig.autoLogin ? enable && hostConfig.autoLogin.enable) {
@@ -62,25 +61,45 @@ in {
       };
     };
 
-    displayManager.defaultSession = sessionName;
+    # Allow tuigreet to handle session selection
+    # displayManager.defaultSession = sessionName;
 
     gnome = lib.mkIf (builtins.elem "gnome" hostConfig.wm) {
       core-apps.enable = true;
     };
   };
 
-  environment.systemPackages = with pkgs;
-    [
-      mesa
-      # Additional packages for theming
-      bibata-cursors
-      nerd-fonts.jetbrains-mono
-      catppuccin-papirus-folders
-    ]
-    ++ lib.optionals (builtins.elem "gnome" hostConfig.wm) [
-      gnome-session
-      gnome-shell
+  environment = {
+    systemPackages = with pkgs;
+      [
+        mesa
+        # Additional packages for theming
+        bibata-cursors
+        nerd-fonts.jetbrains-mono
+        catppuccin-papirus-folders
+      ]
+      ++ lib.optionals (builtins.elem "gnome" hostConfig.wm) [
+        gnome-session
+        gnome-shell
+      ]
+      ++ lib.optionals (builtins.elem "hyprland" hostConfig.wm) [
+        hyprland
+      ];
+
+    # Use consistent environment variables from Hyprland configuration
+    variables = {
+      XCURSOR_THEME = "Bibata-Modern-Classic";
+      XCURSOR_SIZE = "24";
+      HYPRCURSOR_THEME = "Bibata-Modern-Classic";
+      HYPRCURSOR_SIZE = "24";
+    };
+
+    # Ensure session files are available for tuigreet
+    pathsToLink = [
+      "/share/wayland-sessions"
+      "/share/xsessions"
     ];
+  };
 
   hardware = {
     graphics = {
@@ -118,14 +137,6 @@ in {
     XDG_RUNTIME_DIR = "/run/user/988";
     # Ensure consistent display resolution
     GREETD_VIDEO_MODE = "1920x1200@60";
-  };
-
-  # Use consistent environment variables from Hyprland configuration
-  environment.variables = {
-    XCURSOR_THEME = "Bibata-Modern-Classic";
-    XCURSOR_SIZE = "24";
-    HYPRCURSOR_THEME = "Bibata-Modern-Classic";
-    HYPRCURSOR_SIZE = "24";
   };
 
   boot.kernelParams = ["usbcore.autosuspend=-1"];

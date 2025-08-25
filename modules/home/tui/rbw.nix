@@ -1,18 +1,33 @@
 {
-  inputs,
+  config,
   pkgs,
+  lib,
   ...
-}: let
-  inherit (inputs.self.lib) personalInfo;
-in {
+}: {
   programs.rbw = {
     enable = true;
     settings = {
-      inherit (personalInfo) email;
+      # Placeholder email - will be overwritten by activation script
+      email = "placeholder@example.com";
       pinentry = pkgs.pinentry-gtk2;
       lock_timeout = 3600;
     };
   };
+
+  # Set email from secret via activation script
+  home.activation.setupRbwEmail = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    if [ -f "${config.sops.secrets."schausberger/email".path}" ]; then
+      email=$(cat "${config.sops.secrets."schausberger/email".path}")
+      # Update rbw config with the email from secret
+      mkdir -p ~/.config/rbw
+      if [ -f ~/.config/rbw/config.json ]; then
+        ${pkgs.jq}/bin/jq --arg email "$email" '.email = $email' ~/.config/rbw/config.json > ~/.config/rbw/config.json.tmp
+        mv ~/.config/rbw/config.json.tmp ~/.config/rbw/config.json
+      else
+        echo '{"email":"'$email'","lock_timeout":3600,"pinentry":"${pkgs.pinentry-gtk2}/bin/pinentry-gtk-2"}' > ~/.config/rbw/config.json
+      fi
+    fi
+  '';
 
   # Packages needed for rbw
   home.packages = with pkgs; [
@@ -71,9 +86,12 @@ in {
   #   };
   # };
 
-  # Secret for Bitwarden master password - stored in main secrets.yaml
+  # Secrets for Bitwarden - stored in main secrets.yaml
   sops.secrets = {
     "bitwarden/master-password" = {
+      mode = "0400";
+    };
+    "schausberger/email" = {
       mode = "0400";
     };
   };

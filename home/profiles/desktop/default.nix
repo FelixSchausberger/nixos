@@ -9,7 +9,7 @@
   features = {
     development = {
       enable = true;
-      languages = ["nix" "rust" "javascript" "python"];
+      languages = ["nix" "rust" "python"];
     };
 
     creative = {
@@ -20,19 +20,6 @@
     gaming = {
       enable = true;
       platforms = ["steam" "lutris"];
-    };
-
-    media = {
-      enable = true;
-      streaming = true;
-      local = true;
-    };
-
-    productivity = {
-      enable = true;
-      office = true;
-      notes = true;
-      tasks = true;
     };
   };
 

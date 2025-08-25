@@ -102,8 +102,11 @@ After installation with either method:
 ### Local Deployment
 
 ```bash
-# Deploy current host locally (via nx commands)
+# Deploy current host locally (includes Home Manager)
 nx deploy
+
+# Deploy Home Manager only (standalone)
+nx home
 
 # Update and deploy
 nx update

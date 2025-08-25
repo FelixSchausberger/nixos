@@ -1,6 +1,4 @@
-{config, ...}: {
-  # Impermanence import moved to ../persistence.nix for consolidation
-
+{
   services.openssh = {
     enable = true;
 
@@ -14,21 +12,6 @@
         type = "ed25519";
       }
     ];
-  };
-
-  sops.secrets = {
-    "ssh/authorized_keys/magazino" = {};
-  };
-
-  environment = {
-    etc = {
-      # Removed regular SSH key reference since it doesn't exist in secrets
-      "ssh/ssh_host_ed25519_magazino_pki.pub" = {
-        source = config.sops.secrets."ssh/authorized_keys/magazino".path;
-      };
-    };
-
-    # SSH persistence moved to ../persistence.nix for consolidation
   };
 
   system.activationScripts.sshdKeyPermissions = ''

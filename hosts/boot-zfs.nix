@@ -90,11 +90,12 @@ in {
         };
       };
 
-      kernelParams = ["nohibernate"];
+      kernelParams = [
+        "nohibernate"
+        "console=tty1"
+        "systemd.show_status=true"
+      ];
 
-      # Plymouth boot splash screen disabled due to known issue with ZFS/LUKS encryption
-      # where it hides the password prompt causing apparent boot loop
-      # See: https://github.com/NixOS/nixpkgs/issues/44965
       plymouth = {
         enable = false;
       };

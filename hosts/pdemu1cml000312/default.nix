@@ -1,13 +1,12 @@
-{pkgs, ...}: let
+let
   hostLib = import ../lib.nix;
-  wms = ["hyprland" "gnome"];
+  wms = ["gnome" "hyprland"];
 in {
   imports =
     [
       ../shared.nix
       ./hardware-configuration.nix
-      ../../modules/system/work
-      ../../system/nix/work/substituters.nix
+      ./nix/work-substituters.nix
     ]
     ++ hostLib.wmModules wms;
 
@@ -28,9 +27,6 @@ in {
 
     # Use NetworkManager for all interfaces (WiFi and ethernet)
     networkmanager.enable = true;
-
-    # Disable unused network interfaces to speed up boot
-    # interfaces.enp1s0f0.useDHCP = false;
   };
 
   # Boot optimizations
@@ -59,7 +55,7 @@ in {
   # System maintenance and monitoring (work laptop)
   modules.system.maintenance = {
     enable = true;
-    autoUpdate.enable = false; # Disable auto-updates for work stability
+    autoUpdate.enable = true;
     monitoring = {
       enable = true;
       alerts = true;
@@ -67,15 +63,13 @@ in {
   };
 
   # System packages
-  environment.systemPackages = with pkgs; [
-    # Zed editor wrapper to override ZFS daemon conflict
-    (pkgs.writeShellScriptBin "zed" ''
-      exec ${pkgs.zed-editor}/bin/zeditor "$@"
-    '')
+  # environment.systemPackages = with pkgs; [
+  #   # Zed editor wrapper to override ZFS daemon conflict
+  #   (pkgs.writeShellScriptBin "zed" ''
+  #     exec ${pkgs.zed-editor}/bin/zeditor "$@"
+  #   '')
 
-    # LAN Mouse - Software KVM switch for sharing mouse and keyboard over network
-    lan-mouse
-  ];
-
-  # All secrets are now in the shared secrets.yaml file
+  #   # LAN Mouse - Software KVM switch for sharing mouse and keyboard over network
+  #   lan-mouse
+  # ];
 }
