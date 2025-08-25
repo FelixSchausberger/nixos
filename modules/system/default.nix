@@ -6,5 +6,6 @@
     ./fonts.nix
     ./home-manager.nix
     ./maintenance.nix
+    ./nix.nix
   ];
 }

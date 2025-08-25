@@ -57,8 +57,12 @@ in {
       };
 
       Service = {
-        Type = "notify";
-        ExecStartPre = ["${setupScript}"];
+        Type = "simple";
+        ExecStartPre = [
+          "${setupScript}"
+          "${pkgs.coreutils}/bin/mkdir -p ${mountDir}"
+          "${pkgs.coreutils}/bin/mkdir -p ${cacheDir}"
+        ];
         ExecStart = ''
           ${pkgs.rclone}/bin/rclone mount \
             --config=${config.xdg.configHome}/rclone/rclone.conf \
@@ -80,6 +84,8 @@ in {
         ExecStop = "${pkgs.util-linux}/bin/umount -f ${mountDir} || true";
         Restart = "on-failure";
         RestartSec = "30s";
+        StartLimitIntervalSec = "300";
+        StartLimitBurst = "3";
         TimeoutStartSec = "60s";
         TimeoutStopSec = "30s";
       };
@@ -89,9 +95,7 @@ in {
       };
     };
 
-    tmpfiles.rules = [
-      "d ${mountDir} 0755 ${config.home.username} users -"
-      "d ${cacheDir} 0755 ${config.home.username} users -"
-    ];
+    # Mount directory created by system tmpfiles in hosts/shared.nix
+    # Cache directory created by service ExecStartPre if needed
   };
 }

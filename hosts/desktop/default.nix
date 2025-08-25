@@ -1,11 +1,10 @@
-# statix: skip
-_: let
+let
   hostLib = import ../lib.nix;
   wms = ["gnome" "hyprland"];
 in {
   imports =
     [
-      ../shared.nix
+      ../shared-gui.nix
       ./hardware-configuration.nix
     ]
     ++ hostLib.wmModules wms;

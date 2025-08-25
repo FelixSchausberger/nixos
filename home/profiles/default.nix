@@ -4,7 +4,7 @@
     inherit inputs;
   };
 
-  hosts = ["desktop" "surface" "pdemu1cml000312" "portable"];
+  hosts = ["desktop" "surface" "pdemu1cml000312" "portable" "hp-probook-wsl"];
   homeImports = lib.mkProfileImports hosts;
 
   # Extract hostname from configuration name for each host

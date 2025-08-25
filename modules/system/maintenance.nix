@@ -68,12 +68,12 @@
             fi
 
             # Check disk space
-            root_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+            root_usage=$(df / | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
             if [[ $root_usage -gt 90 ]]; then
               echo "WARNING: Root filesystem is $root_usage% full"
             fi
 
-            nix_usage=$(df /nix | tail -1 | awk '{print $5}' | sed 's/%//')
+            nix_usage=$(df /nix | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
             if [[ $nix_usage -gt 85 ]]; then
               echo "WARNING: Nix store is $nix_usage% full"
               echo "Consider running: nx clean && nx gc"
@@ -86,7 +86,7 @@
             fi
 
             # Check memory usage
-            mem_usage=$(free | grep Mem | awk '{printf "%.0f", $3/$2 * 100.0}')
+            mem_usage=$(${pkgs.procps}/bin/free | grep Mem | ${pkgs.gawk}/bin/awk '{printf "%.0f", $3/$2 * 100.0}')
             if [[ $mem_usage -gt 90 ]]; then
               echo "WARNING: Memory usage is $mem_usage%"
             fi

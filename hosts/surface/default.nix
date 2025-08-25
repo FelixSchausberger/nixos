@@ -8,7 +8,7 @@
 in {
   imports =
     [
-      ../shared.nix
+      ../shared-gui.nix
       ./hardware-configuration.nix
 
       # Surface-specific hardware module

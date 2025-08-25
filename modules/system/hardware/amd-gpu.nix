@@ -30,6 +30,14 @@
           # Desktop-specific optimizations
           "8250.nr_uarts=0"
           "console=tty0"
+          # Fix EDID detection issues - force display detection
+          "amdgpu.force_detect=1"
+          "drm.force_dp_encoder=true"
+          "amdgpu.deep_color=1"
+          "amdgpu.exp_hw_support=1"
+          # USB stability improvements
+          "usbcore.autosuspend=-1"
+          "usb-storage.delay_use=0"
         ];
       initrd.kernelModules = ["amdgpu"];
     };

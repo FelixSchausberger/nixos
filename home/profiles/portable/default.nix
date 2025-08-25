@@ -1,6 +1,6 @@
 {
   imports = [
     ../shared.nix
-    ./hyprland.nix
+    # No GUI - this is a TUI-only emergency/recovery system
   ];
 }

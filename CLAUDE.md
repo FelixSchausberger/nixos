@@ -7,8 +7,8 @@ code in this repository.
 
 This is a personal NixOS and Home Manager configuration using flakes and
 flake-parts architecture. The configuration supports multiple hosts
-(desktop, portable, surface, pdemu1cml000312) with modular system and home
-configurations.
+(desktop, portable, surface, pdemu1cml000312, hp-probook-wsl) with modular
+system and home configurations.
 
 ## Core Architecture
 
@@ -18,8 +18,10 @@ configurations.
 - **Hosts**: `hosts/` - System-level configurations per machine
 - **Home profiles**: `home/profiles/` - User-specific configurations per machine
 - **Modules**: `modules/` - Reusable system and home manager modules
-- **Packages**: `pkgs/` - Custom package definitions (basalt, lumen)
-- **Tools**: `tools/` - Utility scripts and ZFS setup tools
+- **Packages**: `pkgs/` - Custom package definitions (basalt, lumen, vigiland)
+- **Tools**: `tools/` - Utility scripts, templates, builders, and ZFS setup tools
+- **System**: `system/` - Core system configurations (users, hardware, persistence)
+- **Lib**: `lib/` - Custom utility functions and host builders
 
 ### Key Configuration Areas
 
@@ -66,8 +68,14 @@ nx --help
 # Edit configuration files (opens yazi file browser)
 nx config
 
-# Deploy configuration to current host
+# Deploy configuration to current host (includes Home Manager)
 nx deploy
+
+# Deploy to remote host
+nx deploy remote [hostname]
+
+# Deploy Home Manager only (standalone)
+nx home
 
 # Update flake inputs and redeploy
 nx update
@@ -81,11 +89,26 @@ nx gc
 # Run full maintenance (update + cleanup + optimize)
 nx doctor
 
+# Comprehensive maintenance with confirmation
+nx maintain
+
 # Rollback to previous generation
 nx rollback
 
 # View system generation history
 nx history
+
+# Performance benchmarking
+nx bench
+
+# System status report
+nx status
+
+# Quick status and deploy
+nx quick
+
+# Edit configuration with deploy option
+nx edit
 ```
 
 ### Development Environment
@@ -107,6 +130,12 @@ pre-commit run --all-files
 # Build custom packages
 nix build .#basalt
 nix build .#lumen
+nix build .#vigiland
+
+# Build additional tools
+nix build .#zfs-nixos-setup
+nix build .#vmdk-portable
+nix build .#nixos-anywhere
 
 # Enter package development shell
 nix develop .#packagename
@@ -118,10 +147,19 @@ The project uses pre-commit hooks with:
 
 - **alejandra**: Nix code formatter
 - **deadnix**: Dead code detection
+- **statix**: Lints and suggestions for Nix code
 - **flake-checker**: Flake health checks
 - **markdownlint**: Markdown linting
-- **nixd**: Nix language server
 - **prettier**: General formatting (excludes .js, .md, .ts)
+- **ripsecrets**: Detect secrets in code
+- **trim-trailing-whitespace**: Clean up whitespace
+- **yamlfmt**: YAML formatter
+- **taplo**: TOML formatter
+- **pre-commit-hook-ensure-sops**: Ensure sops secrets are encrypted
+
+Additional formatting via `treefmt.toml`:
+
+- **trailing-whitespace-fixer**: Remove trailing whitespace
 
 ## Secrets Management
 
@@ -165,15 +203,41 @@ Each host has:
 
 - **basalt**: Custom package in `pkgs/basalt/`
 - **lumen**: Custom package in `pkgs/lumen/`
+- **vigiland**: Wayland idle inhibitor in `pkgs/vigiland/`
 
 ## Tools and Scripts
 
 - **zfs-nixos-setup**: Rust-based ZFS setup utility in `tools/zfs-nixos-setup/`
+- **vmdk-builder**: VMDK builder for portable workstation in `tools/vmdk-builder/`
+- **image-builder**: System image builder utilities in `tools/image-builder/`
+- **templates**: Project templates (Nix, Rust) in `tools/templates/`
 - **scripts**: Custom scripts in `tools/scripts/`
 
 ## Username Configuration
 
-The flake defines the username as "schausberger" in `flake.lib.user`.
+The flake defines the username as "schausberger" in `flake.lib.user` and includes
+personal information in `flake.lib.personalInfo`.
+
+## Additional Features
+
+### Dependency Management
+
+- **renovate.json**: Automated dependency updates via Renovate bot
+- Configured for Nix flake inputs with scheduled maintenance
+- Ignores nixpkgs to prevent unwanted updates
+
+### Deployment Tools
+
+- **nixos-anywhere**: Modern deployment tool for faster, more reliable deployments
+- **deploy-rs**: Alternative deployment framework
+- Support for remote deployments via `nx deploy remote`
+
+### Templates
+
+Includes project templates in `tools/templates/`:
+
+- **Nix template**: Basic Nix project structure
+- **Rust template**: Rust project with Nix flake integration
 
 ## Important Claude Code Guidelines
 

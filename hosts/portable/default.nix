@@ -4,21 +4,18 @@
   lib,
   inputs,
   ...
-}: let
-  hostLib = import ../lib.nix;
-  wms = ["hyprland"];
-in {
-  imports =
-    [
-      ../shared.nix
-      ./hardware-configuration.nix
-    ]
-    ++ hostLib.wmModules wms;
+}: {
+  imports = [
+    ../shared-tui.nix
+    ../boot-zfs.nix # Portable needs ZFS support for recovery
+    ./hardware-configuration.nix
+  ];
+  # Note: Removed WM modules - this is an emergency/recovery system
 
   hostConfig = {
     hostName = "portable";
     user = "schausberger";
-    wm = wms;
+    wm = []; # TUI-only emergency/recovery system
     system = "x86_64-linux";
   };
 

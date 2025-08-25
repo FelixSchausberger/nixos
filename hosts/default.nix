@@ -8,7 +8,6 @@
   inherit (import ../system) desktop laptop;
 
   specialArgs = {
-    secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets_backup.yaml");
     inherit inputs;
   };
 
@@ -65,6 +64,12 @@ in {
       hostName = "portable";
       baseModules = desktop;
       extraModules = [./portable];
+    };
+
+    hp-probook-wsl = mkHostConfig {
+      hostName = "hp-probook-wsl";
+      baseModules = laptop;
+      extraModules = [./hp-probook-wsl];
     };
   };
 }

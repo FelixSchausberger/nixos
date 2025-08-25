@@ -4,6 +4,32 @@
   ...
 }: {
   programs.fish.functions = {
+    # Helper function to find NixOS configuration directory
+    nx_find_config_dir = {
+      description = "Find NixOS configuration directory";
+      body = ''
+        # Check common locations for NixOS configuration
+        set -l possible_dirs "/per/etc/nixos" "/etc/nixos" "$HOME/.config/nixos" "$HOME/nixos-config"
+
+        for dir in $possible_dirs
+          if test -d "$dir" -a -f "$dir/flake.nix"
+            echo "$dir"
+            return 0
+          end
+        end
+
+        # If no standard location found, check current directory
+        if test -f "./flake.nix"
+          echo "$PWD"
+          return 0
+        end
+
+        # Default fallback
+        echo "/etc/nixos"
+        return 1
+      '';
+    };
+
     # https://pastebin.com/fh5V032Z
     nx = {
       description = "NixOS management commands";
@@ -17,7 +43,8 @@
           echo "NixOS management commands:"
           echo "  🔧 Core Commands:"
           echo "    nx config           - Edit NixOS configuration"
-          echo "    nx deploy [remote]  - Deploy NixOS configuration"
+          echo "    nx deploy [remote]  - Deploy NixOS configuration (includes Home Manager)"
+          echo "    nx home             - Deploy Home Manager only (standalone)"
           echo "    nx update           - Update NixOS flake"
           echo ""
           echo "  🧹 Maintenance:"
@@ -45,7 +72,7 @@
           case config
             nx_config
           case status
-            nx_status
+            nx_status $argv[2..]
           case maintain
             nx_maintain
           case quick
@@ -54,6 +81,8 @@
             nx_edit
           case deploy
             nx_deploy $flags
+          case home
+            nx_home $flags
           case update
             nx_update $flags
           case clean
@@ -79,7 +108,8 @@
       description = "Edit NixOS configuration";
       body = ''
         set -l original_dir $PWD
-        cd /per/etc/nixos
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
 
         # Use yazi to browse and select files to edit
         ${pkgs.yazi}/bin/yazi
@@ -92,7 +122,8 @@
       description = "Deploy current NixOS configuration and Home Manager";
       body = ''
         set -l original_dir $PWD
-        cd /per/etc/nixos
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
 
         # Check if remote deployment is requested
         if test "$argv[1]" = "remote"
@@ -114,12 +145,6 @@
           end
 
           if test $status -eq 0
-            echo "✅ System deployment successful!"
-
-            # Home-manager is activated automatically as part of system rebuild
-            # But we need to ensure the current shell session has the new functions
-            echo "🐠 Reloading shell configuration..."
-
             # Reload fish functions for current session
             if test "$SHELL" = /run/current-system/sw/bin/fish -o "$SHELL" = /usr/bin/fish -o (basename "$SHELL") = fish
               # Check if home-manager created the update marker
@@ -154,10 +179,6 @@
               hyprctl reload >/dev/null 2>&1
               echo "  ↳ Reloaded Hyprland configuration"
             end
-
-            echo ""
-            echo "🎉 Deployment complete! New configurations are active."
-            echo "💡 If new commands aren't available, the shell will auto-reload on next login."
           else
             return 1
           end
@@ -171,11 +192,60 @@
       description = "Update NixOS flake";
       body = ''
         set -l original_dir $PWD
-        cd /per/etc/nixos
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
         nix flake update
         if test $status -eq 0
           nx_deploy
         end
+        cd $original_dir
+      '';
+    };
+
+    nx_home = {
+      description = "Deploy Home Manager configuration standalone";
+      body = ''
+        set -l original_dir $PWD
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
+
+        # Determine the home configuration name (user_hostname pattern)
+        set -l home_config "schausberger_${hostName}"
+
+        echo "🏠 Deploying Home Manager configuration: $home_config"
+
+        # Use nom if available for better output
+        if command -v nom >/dev/null 2>&1
+          nom home-manager switch --flake ".#$home_config" $argv
+        else
+          home-manager switch --flake ".#$home_config" $argv
+        end
+
+        if test $status -eq 0
+          # Reload fish functions for current session
+          if test "$SHELL" = /run/current-system/sw/bin/fish -o "$SHELL" = /usr/bin/fish -o (basename "$SHELL") = fish
+            echo "🐠 Reloading shell configuration..."
+
+            # Force reload all function files
+            for func_file in ~/.config/fish/functions/*.fish
+              if test -f "$func_file"
+                source "$func_file"
+              end
+            end
+            echo "  ↳ Reloaded fish functions"
+
+            # Reload completions
+            if test -f ~/.config/fish/config.fish
+              source ~/.config/fish/config.fish
+              echo "  ↳ Reloaded fish configuration"
+            end
+          end
+
+          echo ""
+        else
+          return 1
+        end
+
         cd $original_dir
       '';
     };
@@ -199,7 +269,8 @@
       description = "Run maintenance tasks";
       body = ''
         set -l original_dir $PWD
-        cd /per/etc/nixos
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
         echo "Running maintenance tasks..."
         nx_update
         nx_garbage_collect
@@ -314,8 +385,63 @@
 
     # Enhanced Quality of Life functions
     nx_status = {
-      description = "Show comprehensive system status";
+      description = "Show comprehensive system status, or WSL-specific with 'wsl' argument";
       body = ''
+        # Check if we're being asked for WSL-specific status
+        if test "$argv[1]" = "wsl"
+          echo "🏠 WSL-Specific Status Report"
+          echo "============================="
+          echo ""
+
+          echo "📊 WSL Environment:"
+          if test -n "$WSL_DISTRO_NAME"
+            echo "  • Distribution: $WSL_DISTRO_NAME"
+          else
+            echo "  • Distribution: $(lsb_release -ds 2>/dev/null || echo 'Unknown')"
+          end
+          echo "  • WSL Version: $(cat /proc/version 2>/dev/null | grep -o 'microsoft.*WSL[0-9]*' || echo 'N/A')"
+          echo "  • User: $(whoami)"
+          echo "  • Hostname: $(hostname)"
+          echo ""
+
+          echo "🌐 Network Status:"
+          if ping -c1 -W2 8.8.8.8 &>/dev/null
+            echo "  ✅ Internet connectivity: OK"
+          else
+            echo "  ❌ Internet connectivity: FAILED"
+          end
+
+          if nslookup google.com &>/dev/null 2>&1
+            echo "  ✅ DNS resolution: OK"
+          else
+            echo "  ❌ DNS resolution: FAILED"
+          end
+          echo ""
+
+          echo "🔧 WSL Integration:"
+          if command -v wslpath >/dev/null 2>&1
+            echo "  ✅ WSL utilities: Available"
+          else
+            echo "  ❌ WSL utilities: Missing"
+          end
+
+          if test -d /mnt/c
+            echo "  ✅ Windows drives: Mounted"
+          else
+            echo "  ❌ Windows drives: Not mounted"
+          end
+          echo ""
+
+          echo "📋 Basic System Info:"
+          echo "  • NixOS Version: $(nixos-version)"
+          echo "  • Uptime: $(uptime | awk '{print $3, $4}' | sed 's/,//')"
+          echo ""
+
+          echo "💡 Use 'nx status' for full system status"
+          return
+        end
+
+        # Regular full status report
         echo "🔍 NixOS System Status Report"
         echo "=============================="
         echo ""
@@ -323,7 +449,7 @@
         echo "📋 System Info:"
         echo "  • NixOS Version: $(nixos-version)"
         echo "  • Hostname: $(hostname)"
-        echo "  • Uptime: $(uptime -p)"
+        echo "  • Uptime: $(uptime | awk '{print $3, $4}' | sed 's/,//')"
         echo "  • Current Generation: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | tail -1 | awk '{print $1}')"
         echo ""
 
@@ -332,14 +458,19 @@
         echo ""
 
         echo "🗑️  Nix Store Status:"
-        echo "  • Store size: $(du -sh /nix/store 2>/dev/null | cut -f1 || echo 'N/A')"
+        # Use timeout for potentially slow commands and faster alternatives
+        set -l store_size (timeout 3s sh -c "df -h /nix | tail -1 | awk '{print \$3}'" 2>/dev/null || echo "N/A")
+        echo "  • Store size: $store_size (used space)"
         echo "  • Generations: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | wc -l) total"
-        echo "  • Last GC: $(sudo nix store gc --dry-run 2>&1 | grep -o '[0-9.]* MiB' | head -1 || echo 'N/A') would be freed"
+        # Show available space instead of slow GC dry-run
+        set -l available_space (timeout 2s sh -c "df -h /nix | tail -1 | awk '{print \$4}'" 2>/dev/null || echo "N/A")
+        echo "  • Available space: $available_space"
         echo ""
 
         echo "🏗️  Build Cache:"
-        if test -d /tmp/nix-build*
-          echo "  • Active builds: $(ls /tmp/nix-build* 2>/dev/null | wc -l)"
+        set -l build_count (ls /tmp/ 2>/dev/null | grep "^nix-build" | wc -l)
+        if test $build_count -gt 0
+          echo "  • Active builds: $build_count"
         else
           echo "  • No active builds"
         end
@@ -355,6 +486,9 @@
 
         echo ""
         echo "💡 Use 'nx doctor' for maintenance tasks"
+        if test -n "$WSL_DISTRO_NAME"
+          echo "💡 Use 'nx status wsl' for WSL-specific information"
+        end
       '';
     };
 
@@ -420,7 +554,8 @@
 
         # Check for changes
         set -l original_dir $PWD
-        cd /per/etc/nixos
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
 
         if git status --porcelain | grep -q .
           echo "📝 Uncommitted changes detected:"
@@ -448,9 +583,8 @@
       description = "Edit configuration and optionally deploy";
       body = ''
         set -l original_dir $PWD
-        cd /per/etc/nixos
-
-        echo "📝 Opening configuration in yazi..."
+        set -l nixos_dir (nx_find_config_dir)
+        cd $nixos_dir
         yazi .
 
         # Check if any files were changed
@@ -488,7 +622,7 @@
 
   programs.fish.interactiveShellInit = ''
     # Completions for nx command
-    complete -c nx -f -a "config deploy update clean garbage_collect maintenance rollback history bench status maintain quick edit" -d "NixOS management subcommands"
+    complete -c nx -f -a "config deploy home update clean garbage_collect maintenance rollback history bench status maintain quick edit" -d "NixOS management subcommands"
     complete -c nx -s h -l help -d "Show help message"
   '';
 }

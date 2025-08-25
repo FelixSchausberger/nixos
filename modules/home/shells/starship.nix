@@ -3,7 +3,10 @@
     enable = true;
 
     bashrcExtra = ''
-      eval "$(starship init bash)"
+      # Only initialize starship in interactive shells with proper terminal
+      if [[ $- == *i* ]] && [[ "$TERM" != "dumb" ]]; then
+        eval "$(starship init bash)"
+      fi
     '';
   };
 
@@ -18,6 +21,18 @@
     settings = {
       # add_newline = false;
       command_timeout = 1000; # Timeout for commands executed by starship (in milliseconds)
+
+      # Enable nerd font symbols and ensure os module is shown
+      format = "$os$all$character";
+
+      # Configure nixos module to show snowflake icon
+      os = {
+        disabled = false;
+        format = "on [$symbol]($style) ";
+        symbols = {
+          NixOS = "❄️";
+        };
+      };
 
       git_status = {
         ahead = "⇡($count)";

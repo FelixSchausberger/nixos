@@ -4,14 +4,15 @@
     "desktop" = ["hyprland"];
     "surface" = ["hyprland"];
     "pdemu1cml000312" = ["hyprland"];
-    "portable" = ["hyprland"];
+    "portable" = []; # TUI-only emergency/recovery system
+    "hp-probook-wsl" = []; # TUI-only WSL system
   };
 
-  # Use provided hostname or default to hyprland
+  # Use provided hostname
   currentHost = hostName;
 
-  # Get WM modules for current host
-  wms = wmForHost.${currentHost} or ["hyprland"];
+  # Get WM modules for current host (default to TUI-only for security/minimalism)
+  wms = wmForHost.${currentHost} or [];
   wmModules = map (wm: ../../modules/home/wm + "/${wm}/default.nix") wms;
 in {
   imports =

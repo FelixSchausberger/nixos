@@ -15,16 +15,9 @@
     initrd = {
       availableKernelModules = ["nvme" "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod"];
       kernelModules = ["amdgpu"];
+      supportedFilesystems = ["zfs"];
     };
-    loader.grub.device = "/dev/nvme0n1";
     kernelModules = ["amdgpu" "kvm-amd"];
-    kernelParams = [
-      "amdgpu.dc=1"
-      "amdgpu.sg_display=0"
-      "amdgpu.dpm=1"
-      "amdgpu.modeset=1"
-      "amd_pstate=active"
-    ];
     extraModulePackages = [];
   };
 
@@ -32,11 +25,13 @@
     "/" = {
       device = "rpool/eyd/root";
       fsType = "zfs";
+      neededForBoot = true;
     };
 
     "/nix" = {
       device = "rpool/eyd/nix";
       fsType = "zfs";
+      neededForBoot = true;
     };
 
     "/per" = {
@@ -45,10 +40,17 @@
       neededForBoot = true;
     };
 
+    "/home" = {
+      device = "rpool/eyd/home";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
     "/boot" = {
-      device = "/dev/disk/by-uuid/5ADE-897B";
+      device = "/dev/disk/by-label/boot";
       fsType = "vfat";
       options = ["fmask=0022" "dmask=0022"];
+      neededForBoot = true;
     };
 
     "/per/mnt/2tb-ssd" = {

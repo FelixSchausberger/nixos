@@ -293,5 +293,11 @@ in {
       swaynotificationcenter
       libnotify # For notify-send command
     ];
+
+    # Override systemd service to only run in hyprland sessions
+    systemd.user.services.swaync = {
+      Unit.After = lib.mkForce ["hyprland-session.target"];
+      Install.WantedBy = lib.mkForce ["hyprland-session.target"];
+    };
   };
 }

@@ -1,27 +1,30 @@
-{
-  config,
-  pkgs,
-  ...
-}: {
-  home.packages = with pkgs; [
-    git-lfs # Git extension for versioning large files
-  ];
+{config, ...}: {
+  # Work-specific Git configuration for PDTS Bitbucket repositories
+  # This extends the base git configuration with work credentials
 
-  programs.git.extraConfig = {
-    # init.defaultBranch = "master";
-    # Ensure include.path uses an absolute path or a path relative to home
-    include.path = "${config.home.homeDirectory}/.gitconfig.local";
+  programs.git = {
+    includes = [
+      {
+        # Corporate Frequentis Git server configuration (SSH-based)
+        condition = "hasconfig:remote.*.url:*git.frequentis.frq*";
+        contents = {
+          user = {
+            name = "Felix Schausberger";
+            email = "$(cat ${config.sops.secrets."work/email".path})";
+          };
+          # SSH is preferred, but keep HTTP config for fallback
+          http = {
+            sslVerify = false; # Disable SSL verification for corporate server
+          };
+        };
+      }
+    ];
   };
 
-  sops.secrets."magazino/email" = {
-    mode = "0400";
+  # Work-related secrets for Corporate Git
+  sops.secrets = {
+    "work/email" = {
+      mode = "0400";
+    };
   };
-
-  home.activation.setupGitEmail = config.lib.dag.entryAfter ["writeBoundary"] ''
-    if [ -f "${config.sops.secrets."magazino/email".path}" ]; then
-      email=$(${pkgs.coreutils}/bin/cat ${config.sops.secrets."magazino/email".path})
-      echo "[user]" > ~/.gitconfig.local
-      echo "    email = $email" >> ~/.gitconfig.local
-    fi
-  '';
 }

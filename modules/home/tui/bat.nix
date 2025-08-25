@@ -5,6 +5,10 @@
     extraPackages = with pkgs.bat-extras; [
       batgrep
     ];
+
+    config = {
+      theme = "base16";
+    };
   };
 
   home.shellAliases = {

@@ -7,8 +7,8 @@
   browserCommon = import ./firefox-common.nix {inherit lib pkgs;};
 in {
   imports = [
-    # inputs.zen-browser.homeModules.beta # More stable, less frequent updates
-    inputs.zen-browser.homeModules.twilight-official # Experimental build with direct official artifacts
+    inputs.zen-browser.homeModules.beta # More stable, less frequent updates
+    # inputs.zen-browser.homeModules.twilight-official # Experimental build with direct official artifacts
   ];
 
   programs.zen-browser = {
@@ -42,9 +42,9 @@ in {
         packages = browserCommon.extensions;
       };
 
-      # Custom theme from Arc-2.0
-      userChrome = builtins.readFile (inputs.arc-2-theme + "/userChrome.css");
-      userContent = builtins.readFile (inputs.arc-2-theme + "/userContent.css");
+      # Custom theme from Arc-2.0 (loaded at build time)
+      userChrome = inputs.arc-2-theme + "/userChrome.css";
+      userContent = inputs.arc-2-theme + "/userContent.css";
 
       # Browser settings
       settings =
@@ -99,13 +99,9 @@ in {
   xdg = {
     enable = true;
     mimeApps = let
-      associations = builtins.listToAttrs (map (name: {
-          inherit name;
-          value = let
-            zen-browser = inputs.zen-browser.packages.${pkgs.system}.twilight;
-          in
-            zen-browser.meta.desktopFile;
-        }) [
+      associations = let
+        zenDesktop = "zen.desktop";
+        mimeTypes = [
           "x-scheme-handler/https"
           "x-scheme-handler/http"
           "text/html"
@@ -120,7 +116,13 @@ in {
           "x-scheme-handler/about"
           "x-scheme-handler/unknown"
           "x-scheme-handler/mailto"
-        ]);
+        ];
+      in
+        builtins.listToAttrs (map (name: {
+            inherit name;
+            value = zenDesktop;
+          })
+          mimeTypes);
     in {
       associations.added = associations;
       defaultApplications = associations;

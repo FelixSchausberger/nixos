@@ -30,12 +30,10 @@
 in {
   home.packages = with pkgs; [
     alejandra # Uncompromising Nix Code Formatter
-    clippy # Bunch of lints to catch common mistakes and improve your Rust code
     # helix-gpt
     lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
 
     # Language servers
-    rust-analyzer # Rust language server
     clang-tools # C/C++ tools (includes clangd)
     nodePackages.typescript-language-server # TypeScript/JavaScript LSP
     nodePackages.vscode-langservers-extracted # HTML/CSS/JSON LSPs
@@ -53,7 +51,6 @@ in {
     lldb # LLDB debugger (includes lldb-dap)
 
     # Formatters
-    rustfmt # Rust formatter
     # nodePackages.prettier # Use development shell version to avoid conflicts
     black # Python formatter
     taplo # TOML formatter
