@@ -17,14 +17,6 @@
     then pkgs.wezterm
     else pkgs.ghostty;
 
-  # Music app command for scratchpad
-  musicCommand =
-    if cfg.scratchpad.musicApp == "spotify-player"
-    then "${cfg.terminal} --class spotify-player-scratchpad -e spotify_player"
-    else if cfg.scratchpad.musicApp == "spicetify"
-    then "spicetify"
-    else "spotify --no-zygote";
-
   # Notes app command for scratchpad
   notesCommand =
     if cfg.scratchpad.notesApp == "basalt"
@@ -45,13 +37,8 @@ in {
       margin = 50
 
       [scratchpads.music]
-      command = "${musicCommand}"
-      # class = "${
-        if cfg.scratchpad.musicApp == "spotify-player"
-        then "spotify-player-scratchpad"
-        else "Spotify"
-      }"
       command = "${terminalPkg}/bin/${cfg.terminal} --class spotify-scratchpad -e ${pkgs.spotify-player}/bin/spotify-player"
+      class = "spotify-scratchpad"
       size = "75% 65%"
       animation = "fromTop"
       margin = 50
@@ -81,6 +68,13 @@ in {
       [scratchpads.bluetui]
       command = "${terminalPkg}/bin/${cfg.terminal} --class bluetui-scratchpad -e ${pkgs.bluetui}/bin/bluetui"
       class = "bluetui-scratchpad"
+      size = "60% 50%"
+      animation = "fromTop"
+      margin = 50
+
+      [scratchpads.impala]
+      command = "${terminalPkg}/bin/${cfg.terminal} --class impala-scratchpad -e ${pkgs.impala}/bin/impala"
+      class = "impala-scratchpad"
       size = "60% 50%"
       animation = "fromTop"
       margin = 50
@@ -144,6 +138,7 @@ in {
       "󰸘 Planify" = "${pkgs.pyprland}/bin/pypr toggle planify"
       "󱞎 Notes" = "${pkgs.pyprland}/bin/pypr toggle notes"
       "󰂯 Bluetooth" = "${pkgs.pyprland}/bin/pypr toggle bluetui"
+      "󰖩 WiFi Manager" = "${pkgs.pyprland}/bin/pypr toggle impala"
       ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "x86_64-linux") ''"󰊻 Teams" = "${pkgs.pyprland}/bin/pypr toggle teams"''}
 
       [shortcuts_menu.entries."󱓷 Applications"]
@@ -169,8 +164,9 @@ in {
       windowrulev2 = [
         # Ensure scratchpad windows are floating and properly styled
         "float,class:^(terminal-scratchpad)$"
-        "float,class:^(spotify-player-scratchpad)$"
+        "float,class:^(spotify-scratchpad)$"
         "float,class:^(bluetui-scratchpad)$"
+        "float,class:^(impala-scratchpad)$"
         "opacity 0.95,class:^(terminal-scratchpad)$"
         "rounding 12,class:^(.*-scratchpad)$"
       ];
@@ -199,6 +195,9 @@ in {
           "bluetui"|"b"|"bluetooth")
             ${pkgs.pyprland}/bin/pypr toggle bluetui
             ;;
+          "impala"|"i"|"wifi")
+            ${pkgs.pyprland}/bin/pypr toggle impala
+            ;;
           "teams"|"ms")
             ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "x86_64-linux") "${pkgs.pyprland}/bin/pypr toggle teams"}
             ;;
@@ -209,6 +208,7 @@ in {
             echo "  planify (p)   - Planify Task Manager     [MOD + N]"
             echo "  notes (o)     - ${cfg.scratchpad.notesApp}                  [MOD + O]"
             echo "  bluetui (b)   - Bluetooth TUI Manager    [MOD + B]"
+            echo "  impala (i)    - WiFi TUI Manager         [MOD + U]"
             ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "x86_64-linux") ''echo "  teams (ms)    - MS Teams (work-specific) [MOD + Y]"''}
             echo ""
             echo "󱓷 Pyprland Quality of Life Features:"
@@ -221,15 +221,15 @@ in {
             echo "  shift right   - Move workspaces right          [MOD + SHIFT + Right]"
             echo "  toggle dpms   - Toggle displays on/off         [MOD + ALT + D]"
             echo ""
-            echo "Usage: scratchpad [terminal|music|planify|notes|bluetui|teams|menu|list]"
-            echo "   or: scratchpad [t|s|p|o|b|ms|m|l]"
+            echo "Usage: scratchpad [terminal|music|planify|notes|bluetui|impala|teams|menu|list]"
+            echo "   or: scratchpad [t|s|p|o|b|i|ms|m|l]"
             ;;
           "menu"|"m")
             ${pkgs.pyprland}/bin/pypr menu
             ;;
           *)
-            echo "Usage: scratchpad [terminal|music|planify|notes|bluetui|teams|list]"
-            echo "   or: scratchpad [t|s|p|o|b|ms|l|h]"
+            echo "Usage: scratchpad [terminal|music|planify|notes|bluetui|impala|teams|list]"
+            echo "   or: scratchpad [t|s|p|o|b|i|ms|l|h]"
             echo "For help: scratchpad list"
             ;;
         esac

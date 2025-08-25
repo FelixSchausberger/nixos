@@ -72,31 +72,10 @@ in {
     (pkgs.writeShellScriptBin "zed" ''
       exec ${pkgs.zed-editor}/bin/zeditor "$@"
     '')
+
+    # LAN Mouse - Software KVM switch for sharing mouse and keyboard over network
+    lan-mouse
   ];
 
-  # Work-specific secrets
-  services.sopswarden.secrets = {
-    # AWS CLI credentials
-    "awscli/id" = "AWS CLI Access Key ID";
-    "awscli/key" = "AWS CLI Secret Access Key";
-
-    # GitHub token for Nix API access
-    "github/token" = "GitHub Personal Access Token";
-
-    # GitLab token
-    "gitlab/token" = "GitLab Personal Access Token";
-
-    # Work-related secrets
-    "magazino/email" = "Magazino Work Email";
-    "magazino/vault-token" = "Magazino Vault Token";
-
-    # SSH authorized keys
-    "ssh/authorized_keys/magazino" = "SSH Authorized Keys Magazino";
-
-    # VPN configuration
-    "vpn/auth" = "VPN Authentication";
-    "vpn/ca.crt" = "VPN CA Certificate";
-    "vpn/client.crt" = "VPN Client Certificate";
-    "vpn/key" = "VPN Private Key";
-  };
+  # All secrets are now in the shared secrets.yaml file
 }

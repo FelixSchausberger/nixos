@@ -90,6 +90,7 @@ in {
           "$mod, N, exec, ${pkgs.pyprland}/bin/pypr toggle planify"
           "$mod, O, exec, ${pkgs.pyprland}/bin/pypr toggle notes"
           "$mod, B, exec, ${pkgs.pyprland}/bin/pypr toggle bluetui"
+          "$mod, U, exec, ${pkgs.pyprland}/bin/pypr toggle impala" # Impala WiFi Manager
           "$mod, Y, exec, ${pkgs.pyprland}/bin/pypr toggle teams" # MS Teams (work-specific)
 
           # Pyprland Quality of Life Features

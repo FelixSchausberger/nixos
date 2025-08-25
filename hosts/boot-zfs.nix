@@ -92,22 +92,11 @@ in {
 
       kernelParams = ["nohibernate"];
 
-      # Plymouth boot splash screen for better LUKS unlock experience
+      # Plymouth boot splash screen disabled due to known issue with ZFS/LUKS encryption
+      # where it hides the password prompt causing apparent boot loop
+      # See: https://github.com/NixOS/nixpkgs/issues/44965
       plymouth = {
-        enable = true;
-        theme = "catppuccin-mocha";
-        themePackages = with pkgs; [
-          (catppuccin-plymouth.override {
-            variant = "mocha";
-          })
-        ];
-        # Add extra spacing and theming enhancements
-        extraConfig = ''
-          [Daemon]
-          Theme=catppuccin-mocha
-          ShowDelay=0
-          DeviceTimeout=8
-        '';
+        enable = false;
       };
     };
 

@@ -3,7 +3,7 @@
     # ./claude-code.nix
     ./lsp.nix
     ./telescope.nix
-    ./treesitter.nix
+    # ./treesitter.nix
     ./vimwiki.nix
     ./obsidian.nix
   ];

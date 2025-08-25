@@ -52,7 +52,7 @@ in {
     services.gdrive-mount = {
       Unit = {
         Description = "Google Drive Mount";
-        After = ["sops-nix.service" "sopswarden-sync.service"];
+        After = ["sops-nix.service"];
         Wants = ["sops-nix.service"];
       };
 

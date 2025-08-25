@@ -1,9 +1,4 @@
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   # Import configurations of graphical applications
   imports = [
     ./browsers # Web browsers (Chrome, Firefox, Zen)
@@ -20,13 +15,13 @@
   home.packages = with pkgs; [
     # Previously individual modules, now consolidated:
     freecad # 3D CAD software (was freecad.nix)
-    oculante # Minimalistic image viewer (was oculante.nix) 
+    oculante # Minimalistic image viewer (was oculante.nix)
     planify # Task manager with Todoist support (was planify.nix)
     steam # Gaming platform (was steam.nix)
-    
+
     # Font needed for planify (from planify.nix)
     noto-fonts-emoji-blob-bin
-    
+
     # Other applications:
     # celeste # GUI file synchronization client that can sync with any cloud provider
     fractal # Matrix group messaging app

@@ -8,7 +8,7 @@
   inherit (import ../system) desktop laptop;
 
   specialArgs = {
-    secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets.yaml");
+    secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets_backup.yaml");
     inherit inputs;
   };
 

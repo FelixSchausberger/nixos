@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   imports = [
-    ./helix # Post-modern modal text editor
-    ./nixvim # Vim text editor fork focused on extensibility and agility
+    # ./helix # Post-modern modal text editor - temporarily disabled due to tree-sitter HTTP 401 errors
+    ./neovim.nix # Neovim with basic configuration (replaces nixvim to avoid tree-sitter-ada issue)
     ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
     ./bat.nix # A cat clone with syntax highlighting and Git integration
     ./bluetui.nix # Bluetooth TUI management tool (kept separate due to config)
@@ -31,7 +31,7 @@
 
     # Enable modern monitoring tools
     monitoring.enable = true;
-    
+
     # Consolidated simple program configurations (previously individual files):
     pay-respects = {
       enable = true;
@@ -39,7 +39,7 @@
       enableFishIntegration = true;
       options = ["--alias" "f"];
     };
-    
+
     tealdeer = {
       enable = true;
       settings = {
@@ -49,11 +49,12 @@
   };
 
   home.packages = with pkgs; [
+    helix # Use stable nixpkgs version instead of flake input to avoid tree-sitter HTTP 401 errors
     # Previously individual modules, now consolidated:
     impala # WiFi TUI management tool (was impala.nix)
     iwd # Modern WiFi daemon (needed by impala, was in impala.nix)
     # Note: rm-improved is used instead of rip.nix (rm-improved already listed below)
-    
+
     # Other TUI applications:
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     fclones # Efficient Duplicate File Finder and Remover

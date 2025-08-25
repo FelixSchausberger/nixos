@@ -27,8 +27,7 @@ configurations.
   development tools
 - **Home modules**: `modules/home/` - GUI applications, TUI tools, shells,
   work configurations
-- **Security**: Uses sops-nix with sopswarden for enhanced secrets management
-  and age encryption
+- **Security**: Uses sops-nix for secrets management with age encryption
 - **ZFS**: Configured with opt-in state (darling erasure) for impermanence
 
 ## Development Commands
@@ -126,13 +125,15 @@ The project uses pre-commit hooks with:
 
 ## Secrets Management
 
-Uses sops-nix with sopswarden for enhanced secrets management and age encryption:
+Uses sops-nix for secrets management with age encryption:
 
-- **sopswarden**: Enhanced secrets management service that extends sops-nix functionality
-- Secrets configured in `services.sopswarden.secrets` in host configurations
-- Age keys configured in `.sops.yaml` and managed at `/per/system/sops-key.txt`
+- **Single shared secrets file**: `/per/etc/nixos/secrets/secrets.yaml`
+  contains all secrets including:
+  - Shared: claude, github, rclone, schausberger, ssh, wifi, bitwarden
+  - Host-specific (pdemu1cml000312): awscli, vpn, gitlab, magazino
+- Secrets configured in `sops.secrets` in host configurations
+- Age keys configured at `/per/system/sops-key.txt`
 - Edit secrets: `sops edit secrets/secrets.yaml`
-- sopswarden input: `github:pfassina/sopswarden/unstable`
 
 ## Host-Specific Configurations
 

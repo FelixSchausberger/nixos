@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   imports = [
     ./fish.nix # Smart and user-friendly command line shell
-    ./awscli.nix
+    # ./awscli.nix # Commented out as AWS CLI no longer needed
     ./git.nix
   ];
 

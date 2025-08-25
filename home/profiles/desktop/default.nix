@@ -11,23 +11,23 @@
       enable = true;
       languages = ["nix" "rust" "javascript" "python"];
     };
-    
+
     creative = {
       enable = true;
       tools = ["image" "3d" "video" "writing"];
     };
-    
+
     gaming = {
       enable = true;
       platforms = ["steam" "lutris"];
     };
-    
+
     media = {
       enable = true;
       streaming = true;
       local = true;
     };
-    
+
     productivity = {
       enable = true;
       office = true;

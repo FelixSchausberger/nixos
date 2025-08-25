@@ -10,7 +10,6 @@
   imports = [
     ./boot-zfs.nix
     ../modules/system
-    inputs.sopswarden.nixosModules.default
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -79,40 +78,36 @@
       enable32Bit = true;
     };
 
-    # Enable sopswarden for secrets management
-    services.sopswarden = {
-      enable = true;
-      sopsFile = "/per/etc/nixos/secrets/secrets.yaml";
-      ageKeyFile = "/per/system/sops-key.txt";
-      secrets = {
-        # API tokens
-        "claude/default" = "Claude API Token";
-        "github/token" = "GitHub Personal Access Token";
-
-        # AWS credentials
-        "awscli/id" = "AWS CLI Access Key ID";
-        "awscli/key" = "AWS CLI Secret Access Key";
-
-        # Cloud storage
-        "rclone/client-secret" = "rclone OAuth Client Secret";
-        "rclone/token" = "rclone OAuth Token";
-
-        # User credentials
-        "schausberger/id_ed25519" = "SSH Private Key";
-
-        # SSH authorized keys
-        "ssh/authorized_keys/regular" = "SSH Authorized Keys Regular";
-
-        # WiFi passwords
-        "wifi/hochbau-talstation" = "WiFi Hochbau Talstation";
-        "wifi/magenta-766410" = "WiFi Magenta 766410";
-      };
-    };
-
-    # Configure sops-nix to use the same file that sopswarden manages
+    # Configure sops-nix for secrets management
     sops = {
       defaultSopsFile = "/per/etc/nixos/secrets/secrets.yaml";
       age.keyFile = "/per/system/sops-key.txt";
+      secrets = {
+        # API tokens
+        "claude/default" = {};
+        "github/token" = {};
+
+        # Cloud storage
+        "rclone/client-secret" = {};
+        "rclone/token" = {};
+
+        # Bitwarden master password
+        "bitwarden/master-password" = {};
+
+        # SSH authorized keys
+        "ssh/authorized_keys/magazino" = {};
+
+        # Host-specific secrets (available in shared file for pdemu1cml000312)
+        "awscli/id" = {};
+        "awscli/key" = {};
+        "gitlab/token" = {};
+        "magazino/email" = {};
+        "magazino/vault-token" = {};
+        "vpn/auth" = {};
+        "vpn/ca.crt" = {};
+        "vpn/client.crt" = {};
+        "vpn/key" = {};
+      };
     };
   };
 }

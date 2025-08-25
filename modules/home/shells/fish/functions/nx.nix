@@ -115,11 +115,11 @@
 
           if test $status -eq 0
             echo "✅ System deployment successful!"
-            
+
             # Home-manager is activated automatically as part of system rebuild
             # But we need to ensure the current shell session has the new functions
             echo "🐠 Reloading shell configuration..."
-            
+
             # Reload fish functions for current session
             if test "$SHELL" = /run/current-system/sw/bin/fish -o "$SHELL" = /usr/bin/fish -o (basename "$SHELL") = fish
               # Check if home-manager created the update marker
@@ -127,7 +127,7 @@
                 rm -f ~/.config/fish/.functions_updated
                 echo "  ↳ Home-manager activation detected"
               end
-              
+
               # Force reload all function files
               for func_file in ~/.config/fish/functions/*.fish
                 if test -f "$func_file"
@@ -135,26 +135,26 @@
                 end
               end
               echo "  ↳ Reloaded fish functions"
-              
+
               # Reload completions
               if test -f ~/.config/fish/config.fish
                 source ~/.config/fish/config.fish
                 echo "  ↳ Reloaded fish configuration"
               end
-              
+
               # Clear fish function cache
               if type -q funcsave
                 # Fish functions are cached, clear and reload
                 echo "  ↳ Cleared function cache"
               end
             end
-            
+
             # Reload Hyprland if running
             if pgrep -x Hyprland >/dev/null 2>&1
               hyprctl reload >/dev/null 2>&1
               echo "  ↳ Reloaded Hyprland configuration"
             end
-            
+
             echo ""
             echo "🎉 Deployment complete! New configurations are active."
             echo "💡 If new commands aren't available, the shell will auto-reload on next login."
@@ -319,31 +319,31 @@
         echo "🔍 NixOS System Status Report"
         echo "=============================="
         echo ""
-        
+
         echo "📋 System Info:"
         echo "  • NixOS Version: $(nixos-version)"
         echo "  • Hostname: $(hostname)"
         echo "  • Uptime: $(uptime -p)"
         echo "  • Current Generation: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | tail -1 | awk '{print $1}')"
         echo ""
-        
+
         echo "💾 Storage Status:"
         df -h / /nix | tail -2
         echo ""
-        
+
         echo "🗑️  Nix Store Status:"
         echo "  • Store size: $(du -sh /nix/store 2>/dev/null | cut -f1 || echo 'N/A')"
         echo "  • Generations: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | wc -l) total"
         echo "  • Last GC: $(sudo nix store gc --dry-run 2>&1 | grep -o '[0-9.]* MiB' | head -1 || echo 'N/A') would be freed"
         echo ""
-        
+
         echo "🏗️  Build Cache:"
         if test -d /tmp/nix-build*
           echo "  • Active builds: $(ls /tmp/nix-build* 2>/dev/null | wc -l)"
         else
           echo "  • No active builds"
         end
-        
+
         echo "🌡️  System Health:"
         # Check for common issues
         if systemctl --failed --quiet
@@ -352,7 +352,7 @@
         else
           echo "  ✅ All services running normally"
         end
-        
+
         echo ""
         echo "💡 Use 'nx doctor' for maintenance tasks"
       '';
@@ -371,31 +371,31 @@
         echo "  4. Optimize Nix store"
         echo "  5. Verify system health"
         echo ""
-        
+
         read -P "Continue with maintenance? [y/N]: " -n 1 confirm
         echo ""
-        
+
         if test "$confirm" = "y" -o "$confirm" = "Y"
           set -l start_time (date +%s)
-          
+
           echo "🔄 Step 1/5: Updating flake inputs..."
           nx_update
-          
+
           echo "🧽 Step 2/5: Cleaning old generations..."
           nx_clean
-          
+
           echo "🗑️  Step 3/5: Running garbage collection..."
           nx_garbage_collect
-          
+
           echo "⚡ Step 4/5: Optimizing Nix store..."
           sudo nix store optimise
-          
+
           echo "🔍 Step 5/5: Health check..."
           nx_status
-          
+
           set -l end_time (date +%s)
           set -l duration (math $end_time - $start_time)
-          
+
           echo ""
           echo "✅ Maintenance completed in {$duration}s!"
           echo "💾 Storage space freed: $(df -h / | tail -1 | awk '{print $4}') available"
@@ -410,26 +410,26 @@
       body = ''
         echo "⚡ Quick NixOS Status & Deploy"
         echo "=============================="
-        
+
         # Quick status
         echo "📊 Quick Status:"
         echo "  • Generation: $(sudo nix-env -p /nix/var/nix/profiles/system --list-generations | tail -1 | awk '{print $1}')"
         echo "  • Disk usage: $(df -h / | tail -1 | awk '{print $5}')"
         echo "  • Store size: $(du -sh /nix/store 2>/dev/null | cut -f1 || echo 'N/A')"
         echo ""
-        
+
         # Check for changes
         set -l original_dir $PWD
         cd /per/etc/nixos
-        
+
         if git status --porcelain | grep -q .
           echo "📝 Uncommitted changes detected:"
           git status --short | head -5
           echo ""
-          
+
           read -P "Deploy with current changes? [y/N]: " -n 1 deploy_confirm
           echo ""
-          
+
           if test "$deploy_confirm" = "y" -o "$deploy_confirm" = "Y"
             nx_deploy
           else
@@ -439,7 +439,7 @@
           echo "✅ Configuration up to date - deploying..."
           nx_deploy
         end
-        
+
         cd $original_dir
       '';
     };
@@ -449,28 +449,28 @@
       body = ''
         set -l original_dir $PWD
         cd /per/etc/nixos
-        
+
         echo "📝 Opening configuration in yazi..."
         yazi .
-        
+
         # Check if any files were changed
         if git status --porcelain | grep -q .
           echo ""
           echo "📄 Changes detected:"
           git status --short | head -10
           echo ""
-          
+
           read -P "Review changes and deploy? [y/N]: " -n 1 review_confirm
           echo ""
-          
+
           if test "$review_confirm" = "y" -o "$review_confirm" = "Y"
             echo "👀 Reviewing changes:"
             git diff --stat
             echo ""
-            
+
             read -P "Deploy these changes? [y/N]: " -n 1 deploy_confirm
             echo ""
-            
+
             if test "$deploy_confirm" = "y" -o "$deploy_confirm" = "Y"
               nx_deploy
             else
@@ -480,7 +480,7 @@
         else
           echo "No changes made."
         end
-        
+
         cd $original_dir
       '';
     };

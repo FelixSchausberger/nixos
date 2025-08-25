@@ -1,4 +1,4 @@
-{lib, ...}: {
+{
   users = {
     mutableUsers = false;
     users = {
@@ -8,13 +8,6 @@
         extraGroups = ["fuse" "networkmanager" "input" "video" "wheel"];
         hashedPassword = "$6$NCvaiR40U202pKeY$4MpPXCDHvMksfQ.V.O3fNR5L/UqtWBMxrbtGCuYjY/nDSqQOu8BqwCmZmp7f/5NMFnkvwqE34aSoPpE2SwqPw/";
       };
-    };
-  };
-
-  sops.secrets = {
-    "schausberger/password-hash" = {
-      neededForUsers = true;
-      mode = lib.mkForce "0600";
     };
   };
 }

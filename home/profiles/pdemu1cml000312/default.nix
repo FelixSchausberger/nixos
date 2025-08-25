@@ -12,18 +12,18 @@
       enable = true;
       languages = ["nix" "python" "javascript" "go"];
     };
-    
+
     work = {
       enable = true;
       aws = true;
       vpn = true;
     };
-    
+
     media = {
       enable = true;
       streaming = true;
     };
-    
+
     productivity = {
       enable = true;
       office = true;

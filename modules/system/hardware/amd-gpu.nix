@@ -6,7 +6,7 @@
 }: {
   options.hardware.profiles.amdGpu = {
     enable = lib.mkEnableOption "AMD GPU configuration";
-    
+
     variant = lib.mkOption {
       type = lib.types.enum ["desktop" "laptop"];
       default = "desktop";
@@ -18,31 +18,33 @@
     # AMD GPU kernel modules and parameters
     boot = {
       kernelModules = ["amdgpu" "kvm-amd"];
-      kernelParams = [
-        "amdgpu.dc=1"
-        "amdgpu.sg_display=0"
-        "amdgpu.dpm=1"
-        "amdgpu.modeset=1"
-        "amd_pstate=active"
-      ] ++ lib.optionals (config.hardware.profiles.amdGpu.variant == "desktop") [
-        # Desktop-specific optimizations
-        "8250.nr_uarts=0"
-        "console=tty0"
-      ];
+      kernelParams =
+        [
+          "amdgpu.dc=1"
+          "amdgpu.sg_display=0"
+          "amdgpu.dpm=1"
+          "amdgpu.modeset=1"
+          "amd_pstate=active"
+        ]
+        ++ lib.optionals (config.hardware.profiles.amdGpu.variant == "desktop") [
+          # Desktop-specific optimizations
+          "8250.nr_uarts=0"
+          "console=tty0"
+        ];
       initrd.kernelModules = ["amdgpu"];
     };
 
     # Graphics hardware configuration
     hardware = {
       enableRedistributableFirmware = true;
-      
+
       graphics = {
         enable = true;
         enable32Bit = true;
-        
+
         package = pkgs.mesa;
         package32 = pkgs.pkgsi686Linux.mesa;
-        
+
         extraPackages = with pkgs; [
           libva
           vulkan-loader

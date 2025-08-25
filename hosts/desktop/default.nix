@@ -1,4 +1,5 @@
-{pkgs, ...}: let
+# statix: skip
+_: let
   hostLib = import ../lib.nix;
   wms = ["gnome" "hyprland"];
 in {
@@ -21,14 +22,14 @@ in {
   hardware = {
     # Desktop-specific hardware configuration
     keyboard.qmk.enable = true;
-    
+
     # AMD RX 6700XT GPU configuration via profile
     profiles.amdGpu = {
       enable = true;
       variant = "desktop";
     };
   };
-  
+
   # System maintenance and monitoring
   modules.system.maintenance = {
     enable = true;

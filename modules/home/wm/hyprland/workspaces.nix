@@ -7,10 +7,17 @@
 in {
   config = lib.mkIf cfg.enable {
     wayland.windowManager.hyprland.settings = {
-      # Dynamic workspace configuration - no persistent workspaces
-      workspace = [];
+      # Dynamic workspace configuration - allow creation on demand
+      workspace = [
+        # Define some common workspace defaults but allow dynamic creation
+        "1, monitor:auto, default:true"
+        "2, monitor:auto"
+        "3, monitor:auto"
+        "4, monitor:auto"
+        "5, monitor:auto"
+      ];
 
-      # Minimal window rules for floating and pinning
+      # Window rules for floating and pinning
       windowrulev2 = [
         # Pin important floating windows
         "pin,class:^(floating-mode)$"
@@ -21,10 +28,11 @@ in {
         "float,class:^(floating-mode)$"
         "float,class:^(it.mijorus.smile)$"
         "float,class:^(org.gnome.Calculator)$"
-      ];
 
-      # Dynamic workspace behavior - keeping only essential bindings
-      bind = [];
+        # Workspace-specific rules
+        "workspace 2 silent,class:^(firefox)$"
+        "workspace 3 silent,class:^(code|helix)$"
+      ];
     };
 
     # Dynamic workspace utilities (minimal)

@@ -16,14 +16,14 @@
         lib = {
           mkHost = import ./lib/mkHost.nix;
           user = "schausberger"; # Default user
-          
+
           # Personal information variables
           personalInfo = {
             name = "Felix Schausberger";
             email = "fel.schausberger@gmail.com";
             workEmail = "schausberger@magazino.ai";
           };
-          
+
           # Common paths
           paths = {
             nixosConfig = "/per/etc/nixos";
@@ -103,27 +103,27 @@
             runtimeInputs = with pkgs; [yazi git];
             text = ''
               set -euo pipefail
-              
+
               cd "${inputs.self.lib.paths.nixosConfig}"
-              
+
               echo "📝 NixOS Configuration Editor"
               echo "=============================="
               echo "Opening configuration in yazi..."
               echo "Tip: Use 'q' to quit yazi when done"
               echo ""
-              
+
               yazi .
-              
+
               # Check for changes
               if [[ -n "$(git status --porcelain)" ]]; then
                 echo ""
                 echo "📄 Changes detected:"
                 git status --short | head -10
                 echo ""
-                
+
                 read -p "Review changes? [y/N]: " -n 1 -r review
                 echo ""
-                
+
                 if [[ $review =~ ^[Yy]$ ]]; then
                   git diff --stat
                   echo ""
@@ -131,10 +131,10 @@
                   git diff --color=always | head -50
                   echo ""
                 fi
-                
+
                 read -p "Commit and deploy changes? [y/N]: " -n 1 -r deploy
                 echo ""
-                
+
                 if [[ $deploy =~ ^[Yy]$ ]]; then
                   read -p "Commit message: " -r message
                   if [[ -n "$message" ]]; then
@@ -161,13 +161,13 @@
             runtimeInputs = with pkgs; [nix git];
             text = ''
               set -euo pipefail
-              
+
               cd "${inputs.self.lib.paths.nixosConfig}"
-              
+
               echo "🔍 NixOS Configuration Validator"
               echo "==============================="
               echo ""
-              
+
               echo "📋 Step 1: Syntax check..."
               if nix flake check --no-build; then
                 echo "✅ Syntax check passed"
@@ -176,7 +176,7 @@
                 exit 1
               fi
               echo ""
-              
+
               echo "🏗️  Step 2: Build test (all configurations)..."
               if nix build .#nixosConfigurations.desktop.config.system.build.toplevel --no-link --quiet; then
                 echo "✅ Desktop build successful"
@@ -184,14 +184,14 @@
                 echo "❌ Desktop build failed"
                 exit 1
               fi
-              
+
               if nix build .#nixosConfigurations.portable.config.system.build.toplevel --no-link --quiet; then
-                echo "✅ Portable build successful"  
+                echo "✅ Portable build successful"
               else
                 echo "❌ Portable build failed"
                 exit 1
               fi
-              
+
               echo ""
               echo "🔒 Step 3: Security check..."
               if command -v statix >/dev/null; then
@@ -203,7 +203,7 @@
               else
                 echo "ℹ️  Statix not available, skipping security check"
               fi
-              
+
               echo ""
               echo "✅ All validations completed successfully!"
               echo "🚀 Configuration ready for deployment"
@@ -215,25 +215,25 @@
             runtimeInputs = with pkgs; [zfs git rsync];
             text = ''
               set -euo pipefail
-              
+
               BACKUP_DIR="/per/backups/nixos-$(date +%Y%m%d_%H%M%S)"
-              
+
               echo "💾 NixOS System Backup"
               echo "======================"
               echo "Backup location: $BACKUP_DIR"
               echo ""
-              
+
               mkdir -p "$BACKUP_DIR"
-              
+
               echo "📁 Step 1: Backing up configuration..."
               cp -r "${inputs.self.lib.paths.nixosConfig}" "$BACKUP_DIR/nixos-config"
-              
+
               echo "🔑 Step 2: Backing up secrets..."
               if [[ -d "/per/system" ]]; then
                 cp -r /per/system "$BACKUP_DIR/system-keys"
                 chmod -R go-rwx "$BACKUP_DIR/system-keys"
               fi
-              
+
               echo "📋 Step 3: Saving system state..."
               {
                 echo "# NixOS System Backup - $(date)"
@@ -255,11 +255,11 @@
                 echo "## Network Configuration"
                 ip addr show | grep -E "inet|link" | head -10
               } > "$BACKUP_DIR/system-info.txt"
-              
+
               echo "📦 Step 4: Creating archive..."
               tar -czf "$BACKUP_DIR.tar.gz" -C "$(dirname "$BACKUP_DIR")" "$(basename "$BACKUP_DIR")"
               rm -rf "$BACKUP_DIR"
-              
+
               echo ""
               echo "✅ Backup completed successfully!"
               echo "📦 Archive: $BACKUP_DIR.tar.gz"
@@ -423,11 +423,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    sopswarden = {
-      url = "github:pfassina/sopswarden/unstable";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.sops-nix.follows = "sops-nix";
-    };
 
     # Desktop environments
     nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
@@ -452,11 +447,11 @@
     };
 
     # Editors
-    nixvim = {
-      url = "github:nix-community/nixvim";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    helix.url = "github:helix-editor/helix";
+    # nixvim = {
+    #   url = "github:nix-community/nixvim";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # }; # Temporarily disabled due to tree-sitter-ada HTTP 401 error
+    # helix.url = "github:helix-editor/helix"; # Temporarily disabled due to tree-sitter HTTP 401 errors
 
     # Applications
     bluetui = {

@@ -16,12 +16,12 @@ in {
     xdg.configFile."ironbar/config.json".text = builtins.toJSON {
       position = "top";
       anchor_to_edges = true;
-      height = 38;
+      height = 32;
       margin = {
-        top = 8;
+        top = 6;
         bottom = 0;
-        left = 8;
-        right = 8;
+        left = 6;
+        right = 6;
       };
       layer = "top";
       exclusive = true;
@@ -32,30 +32,53 @@ in {
           hide_empty = false;
           format = "{name}";
           all_monitors = false;
-        }
-        {
-          type = "focused";
-          show_icon = false;
-          show_title = true;
-          truncate = {
-            length = 40;
-            mode = "end";
-          };
+          on_click_left = "hyprctl dispatch workspace {id}";
+          on_scroll_up = "hyprctl dispatch workspace -1";
+          on_scroll_down = "hyprctl dispatch workspace +1";
         }
       ];
       center = [
         {
-          type = "clock";
-          format = "%H:%M";
+          type = "script";
+          cmd = "${pkgs.bash}/bin/bash ${./sysinfo.sh}";
+          interval = 3000;
+          tooltip = "System Information";
+        }
+        {
+          type = "focused";
+          show_icon = true;
+          show_title = true;
+          icon_size = 16;
+          truncate = {
+            length = 50;
+            mode = "middle";
+          };
         }
       ];
       end = [
         {
-          type = "sys_info";
-          format = ["{cpu_percent}%" "{memory_percent}%"];
+          type = "clock";
+          format = "%a %b %d  %H:%M";
+          tooltip_format = "%A, %B %d, %Y\n%H:%M:%S";
+          on_click_left = "gnome-calendar";
         }
-        {type = "volume";}
-        {type = "upower";}
+        {
+          type = "volume";
+          max_volume = 100;
+          icons = {
+            volume_high = "󰕾";
+            volume_medium = "󰖀";
+            volume_low = "󰕿";
+            muted = "󰖁";
+          };
+          on_click_left = "pactl set-sink-mute @DEFAULT_SINK@ toggle";
+          on_scroll_up = "pactl set-sink-volume @DEFAULT_SINK@ +5%";
+          on_scroll_down = "pactl set-sink-volume @DEFAULT_SINK@ -5%";
+        }
+        {
+          type = "upower";
+          format = "{percentage}%";
+        }
         {
           type = "script";
           cmd = "${pkgs.procps}/bin/pgrep -x vigiland > /dev/null && echo '☕' || echo ''";
@@ -67,34 +90,136 @@ in {
 
       style = ''
         * {
-          font-family: "JetBrainsMono Nerd Font";
+          font-family: "JetBrainsMono Nerd Font", "Font Awesome 6 Free", monospace;
           font-size: 13px;
-          color: #cdd6f4; /* Catppuccin Mocha text */
+          color: #DBD3D3;
+          font-weight: 500;
         }
-        .background {
-          background-color: rgba(17, 17, 27, 0.15);
+
+        /* Main bar styling inspired by Spn4x */
+        .bar {
+          background-color: rgba(56, 58, 60, 0.85);
           border-radius: 12px;
-          backdrop-filter: blur(40px);
-          -webkit-backdrop-filter: blur(40px);
-          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-          border: 1px solid rgba(205, 214, 244, 0.1);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+          border: 1px solid rgba(153, 147, 148, 0.3);
+          margin: 6px;
         }
-        .item {
+
+        /* Widget container styling */
+        .container {
           background-color: transparent;
-          padding: 0 6px;
+          padding: 3px 6px;
+          margin: 0;
+        }
+
+        /* Individual items */
+        .item {
+          background-color: rgba(153, 147, 148, 0.1);
+          padding: 4px 8px;
           margin: 0 2px;
+          border-radius: 8px;
+          border: 1px solid rgba(153, 147, 148, 0.2);
+          transition: all 0.15s ease-in-out;
         }
+
         .item:hover {
-          background-color: rgba(116, 199, 236, 0.1); /* Catppuccin Mocha sky */
+          background-color: rgba(150, 97, 102, 0.3);
+          color: #966166;
+          box-shadow: 0 2px 8px rgba(150, 97, 102, 0.2);
         }
+
+        /* Workspace styling */
+        .workspaces {
+          background-color: transparent;
+          padding: 0;
+        }
+
+        .workspaces .item {
+          padding: 4px 8px;
+          margin: 0 1px;
+          border-radius: 8px;
+          min-width: 28px;
+          text-align: center;
+          background-color: rgba(2, 20, 27, 0.3);
+          border: 1px solid rgba(153, 147, 148, 0.2);
+        }
+
         .workspaces .item.focused {
-          background-color: rgba(137, 180, 250, 0.2); /* Catppuccin Mocha blue */
-          color: #89b4fa; /* Catppuccin Mocha blue */
+          background-color: rgba(150, 97, 102, 0.4);
+          color: #966166;
           font-weight: bold;
+          box-shadow: 0 2px 8px rgba(150, 97, 102, 0.3);
+          border: 1px solid rgba(150, 97, 102, 0.5);
         }
-        .clock { font-weight: bold; }
-        .sys_info, .volume, .upower, .script {
-          color: inherit;
+
+        .workspaces .item.visible {
+          background-color: rgba(150, 97, 102, 0.2);
+          color: #966166;
+          border: 1px solid rgba(150, 97, 102, 0.3);
+        }
+
+        /* Clock styling */
+        .clock {
+          font-weight: bold;
+          color: #966166;
+          font-size: 14px;
+        }
+
+        /* Script (system info) styling */
+        .script {
+          color: #a6e3a1;
+          font-weight: 500;
+          font-size: 12px;
+        }
+
+        /* Volume styling */
+        .volume {
+          color: #f9e2af;
+          font-size: 14px;
+        }
+
+        /* Battery/power styling */
+        .upower {
+          color: #f38ba8;
+          font-size: 13px;
+        }
+
+        /* Focused window title styling */
+        .focused {
+          color: #DBD3D3;
+          font-style: italic;
+          opacity: 0.9;
+          font-size: 12px;
+          max-width: 200px;
+        }
+
+        /* Tooltips */
+        .tooltip {
+          background-color: rgba(56, 58, 60, 0.95);
+          color: #DBD3D3;
+          border: 1px solid rgba(153, 147, 148, 0.4);
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 12px;
+        }
+
+        /* Additional styling for better visual consistency */
+        .start, .center, .end {
+          padding: 0 4px;
+        }
+
+        /* Custom styling for different widget states */
+        .item.urgent {
+          background-color: rgba(231, 130, 132, 0.4);
+          color: #e78284;
+          animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
       '';
     };

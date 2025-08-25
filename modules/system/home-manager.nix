@@ -13,14 +13,14 @@
 
     # Ensure home-manager activates properly during system rebuild
     verbose = true;
-    
+
     extraSpecialArgs = {
-      secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets.yaml");
+      secrets = builtins.fromJSON (builtins.readFile "${inputs.self}/secrets/secrets_backup.yaml");
     };
 
     sharedModules = [
       inputs.sops-nix.homeManagerModules.sops
-      
+
       # Module to ensure fish functions reload properly
       {
         programs.fish = {
@@ -34,7 +34,7 @@
               end
             end
           '';
-          
+
           # Ensure functions are available immediately
           interactiveShellInit = ''
             # Auto-reload functions if they've been updated
@@ -49,8 +49,8 @@
             end
           '';
         };
-        
-        # Create activation script to reload current shell sessions  
+
+        # Create activation script to reload current shell sessions
         home.activation.reloadShellFunctions = inputs.home-manager.lib.hm.dag.entryAfter ["writeBoundary"] ''
           # Create a reload marker for running shells to detect
           $DRY_RUN_CMD touch ~/.config/fish/.functions_updated || true

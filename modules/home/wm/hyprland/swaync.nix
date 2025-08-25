@@ -71,13 +71,12 @@ in {
         };
       };
 
-      # Custom CSS styling for lean and transparent appearance
       style = ''
         * {
           all: unset;
           font-family: "JetBrainsMono Nerd Font";
           font-size: 13px;
-          color: #cdd6f4;
+          color: #DBD3D3;
         }
 
         /* Notification Center */
@@ -85,21 +84,22 @@ in {
           background: transparent;
         }
 
-        /* Floating notification window background blur */
+        /* Floating notification window with Spn4x-inspired styling */
         .floating-notifications .notification {
           backdrop-filter: blur(25px);
           -webkit-backdrop-filter: blur(25px);
-          background: rgba(49, 50, 68, 0.9);
+          background: rgba(56, 58, 60, 0.9);
+          border: 1px solid rgba(153, 147, 148, 0.5);
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
         }
 
         .notification-center {
-          background: rgba(30, 30, 46, 0.85);
+          background: rgba(56, 58, 60, 0.85);
           border-radius: 12px;
-          border: 2px solid rgba(137, 180, 250, 0.6);
+          border: 1px solid rgba(153, 147, 148, 0.5);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(15px);
+          -webkit-backdrop-filter: blur(15px);
           margin: 8px;
           padding: 0;
         }
@@ -113,16 +113,16 @@ in {
         .notification-center-header .widget-title {
           font-size: 16px;
           font-weight: bold;
-          color: #89b4fa;
+          color: #966166;
         }
 
         /* Individual Notifications */
         .notification {
-          background: rgba(49, 50, 68, 0.85);
+          background: rgba(2, 20, 27, 0.5);
           border-radius: 8px;
           margin: 6px 8px;
           padding: 12px;
-          border: 1px solid rgba(137, 180, 250, 0.2);
+          border: 1px solid rgba(153, 147, 148, 0.5);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           transition: all 0.15s ease-in-out;
@@ -130,14 +130,14 @@ in {
         }
 
         .notification:hover {
-          background: rgba(49, 50, 68, 0.95);
-          border-color: rgba(137, 180, 250, 0.4);
+          background: rgba(2, 20, 27, 0.7);
+          border-color: rgba(150, 97, 102, 0.6);
           box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
         }
 
         .notification.critical {
-          border-color: rgba(243, 139, 168, 0.6);
-          background: rgba(243, 139, 168, 0.1);
+          border-color: rgba(231, 130, 132, 0.6);
+          background: rgba(231, 130, 132, 0.1);
         }
 
         .notification-content {
@@ -147,34 +147,34 @@ in {
         .notification-content .summary {
           font-weight: bold;
           font-size: 14px;
-          color: #89b4fa;
+          color: #966166;
         }
 
         .notification-content .body {
-          color: #a6adc8;
+          color: #DBD3D3;
           margin-top: 4px;
           opacity: 0.9;
         }
 
         .notification-content .time {
-          color: #6c7086;
+          color: rgba(219, 211, 211, 0.6);
           font-size: 11px;
           margin-top: 4px;
         }
 
         /* Notification Actions */
         .notification-action {
-          background: rgba(137, 180, 250, 0.2);
-          border: 1px solid rgba(137, 180, 250, 0.3);
+          background: rgba(150, 97, 102, 0.2);
+          border: 1px solid rgba(153, 147, 148, 0.5);
           border-radius: 6px;
           padding: 6px 12px;
           margin: 2px;
-          color: #89b4fa;
+          color: #966166;
           font-size: 12px;
         }
 
         .notification-action:hover {
-          background: rgba(137, 180, 250, 0.3);
+          background: rgba(150, 97, 102, 0.3);
         }
 
         /* Control Center */

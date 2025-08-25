@@ -15,7 +15,7 @@
   # Minimal sops config - use same key as system
   sops = {
     age.keyFile = "/per/system/sops-key.txt";
-    defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
+    defaultSopsFile = "${inputs.self}/secrets/secrets_backup.yaml";
     defaultSopsFormat = "yaml";
   };
 }
