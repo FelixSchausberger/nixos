@@ -1,0 +1,19 @@
+# Namaka snapshot testing configuration
+# https://github.com/nix-community/namaka
+
+[namaka]
+# Working directory for tests (default: current directory)
+working_dir = "."
+
+# Test command to run (default: "namaka check")
+# Run with: nix develop -c namaka check
+check_cmd = "namaka check"
+
+# Review command (default: "namaka review")
+review_cmd = "namaka review"
+
+[tests]
+# Tests are discovered automatically from the tests/ directory
+# Each subdirectory should contain:
+#   - expr.nix: The Nix expression to test
+#   - format.nix (optional): Serialization format ("json", "pretty", or "string")

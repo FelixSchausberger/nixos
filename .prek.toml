@@ -1,0 +1,55 @@
+# Prek configuration - drop-in replacement for pre-commit hooks
+exclude = [
+  "flake.lock",
+  # Exclude because of pipe operators
+  "home/default.nix",
+  "home/profiles/default.nix",
+  "hosts/default.nix",
+]
+
+[hooks.alejandra]
+entry = "alejandra"
+files = "\\.nix$"
+
+[hooks.deadnix]
+entry = "deadnix --fix"
+files = "\\.nix$"
+
+[hooks.statix]
+entry = "statix fix"
+files = "\\.nix$"
+
+[hooks.flake-checker]
+entry = "flake-checker"
+files = "flake\\.nix$"
+
+[hooks.prettier-markdown]
+entry = "prettier --tab-width 2 --prose-wrap always --write"
+files = "\\.md$"
+
+[hooks.prettier]
+entry = "prettier --tab-width 2 --write"
+files = "\\.(json|yaml|yml)$"
+
+[hooks.ripsecrets]
+entry = "ripsecrets --strict-ignore"
+
+[hooks.trim-trailing-whitespace]
+entry = "trailing-whitespace-fixer"
+
+[hooks.yamlfmt]
+entry = "yamlfmt"
+files = "\\.(yaml|yml)$"
+
+[hooks.taplo]
+entry = "taplo format"
+files = "\\.toml$"
+
+[hooks.pre-commit-hook-ensure-sops]
+entry = "pre-commit-hook-ensure-sops"
+files = "^secrets/secrets\\.yaml$"
+
+[hooks.namaka-check]
+entry = "namaka check"
+files = "\\.nix$"
+pass_filenames = false

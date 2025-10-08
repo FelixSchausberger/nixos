@@ -1,0 +1,12 @@
+#pretty
+{
+  console_keymap = "de";
+  graphics_32bit_enabled = true;
+  graphics_enabled = true;
+  has_cosmic = true;
+  has_graphics_packages = true;
+  hostname = "surface";
+  is_gui = true;
+  user_exists = true;
+  wm_count = 1;
+}

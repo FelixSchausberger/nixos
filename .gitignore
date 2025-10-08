@@ -1,0 +1,46 @@
+.direnv/
+
+# Nix build artifacts
+result
+result-*
+
+.pre-commit-config.yaml
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Editor backups
+*.bak
+*.swp
+*.swo
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Claude Code MCP configuration (auto-generated, contains nix store paths)
+.mcp.json
