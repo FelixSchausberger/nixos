@@ -1,0 +1,11 @@
+#pretty
+{
+  containers_enabled = true;
+  has_ssl_cert_file = true;
+  hostname = "hp-probook-wsl";
+  is_gui = false;
+  user_exists = true;
+  wsl_enabled = true;
+  wsl_integration_enabled = true;
+  wsl_packages_enabled = true;
+}

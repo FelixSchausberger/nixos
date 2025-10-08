@@ -1,0 +1,13 @@
+#pretty
+{
+  alerts_enabled = true;
+  auto_update_enabled = true;
+  auto_update_service_type = "oneshot";
+  has_auto_update_service = true;
+  has_auto_update_timer = true;
+  has_health_check_service = true;
+  has_health_check_timer = true;
+  health_check_service_type = "oneshot";
+  maintenance_enabled = true;
+  monitoring_enabled = true;
+}

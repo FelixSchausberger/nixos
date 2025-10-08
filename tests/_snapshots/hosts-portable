@@ -1,0 +1,18 @@
+#pretty
+{
+  docker_enabled = true;
+  docker_on_boot = false;
+  firewall_disabled = true;
+  graphics_32bit_enabled = true;
+  graphics_enabled = true;
+  hostname = "portable";
+  is_gui = false;
+  libvirtd_enabled = true;
+  networkmanager_enabled = true;
+  openssh_enabled = true;
+  rescue_user_exists = true;
+  schausberger_in_docker = true;
+  ssh_password_auth = false;
+  user_exists = true;
+  wm_count = 0;
+}

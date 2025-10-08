@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "ignoreDeps": [
+    "nixpkgs",
+    "nixpkgs-unstable"
+  ],
+  "nix": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 4am on monday"]
+  },
+  "separateMinorPatch": true,
+  "prHourlyLimit": 3,
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "matchManagers": ["regex"],
+      "matchFileNames": ["flake.nix"],
+      "enabled": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "schedule": ["before 4am on monday"]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# Act configuration for NixOS WSL2 SSL certificate support
+# This configuration mounts NixOS certificates into Ubuntu containers
+# and sets up proper SSL environment variables
+
+# Platform configurations with certificate volume mounts
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+
+# Mount NixOS certificate bundle into containers at standard Ubuntu path
+--container-options --volume=/home/schausberger/.local/share/act-certificates/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+
+# Mount certificate directory for broader SSL support
+--container-options --volume=/home/schausberger/.local/share/act-certificates:/usr/local/share/ca-certificates:ro
+
+# Set SSL environment variables for all containers
+--env CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+--env SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+--env SSL_CERT_DIR=/etc/ssl/certs
+--env REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+--env NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+# Additional options for better act performance and debugging
+--container-daemon-socket /var/run/docker.sock
+--bind
+--rm
+
+# Disable pulling images to avoid SSL issues with Docker Hub
+-p=false
+
+# Verbose output for debugging SSL issues
+-v

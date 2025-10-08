@@ -1,0 +1,7 @@
+#pretty
+{
+  drv_path = true;
+  has_meta = true;
+  has_version = true;
+  package_name = "lumen";
+}

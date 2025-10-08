@@ -1,0 +1,17 @@
+#pretty
+{
+  alerts_enabled = true;
+  amd_gpu_enabled = true;
+  amd_gpu_variant = "desktop";
+  auto_update_enabled = true;
+  has_gnome = true;
+  has_hyprland = true;
+  has_niri = true;
+  hostname = "desktop";
+  is_gui = true;
+  maintenance_enabled = true;
+  monitoring_enabled = true;
+  qmk_enabled = true;
+  user_exists = true;
+  wm_count = 3;
+}

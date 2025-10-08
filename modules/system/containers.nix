@@ -1,0 +1,388 @@
+{
+  config,
+  lib,
+  pkgs,
+  hostConfig,
+  ...
+}: {
+  config = lib.mkIf config.modules.system.containers.enable {
+    # Explicit Nix SSL certificate configuration (allow override)
+    nix.settings.ssl-cert-file = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+
+    # Enable Docker daemon
+    virtualisation.docker = {
+      enable = true;
+      enableOnBoot = true;
+
+      # Container daemon configuration
+      daemon.settings = {
+        # Performance optimizations
+        "storage-driver" = "overlay2";
+        "log-driver" = "json-file";
+        "log-opts" = {
+          "max-size" = "10m";
+          "max-file" = "3";
+        };
+
+        # DNS configuration for reliable connectivity
+        "dns" = ["8.8.8.8" "8.8.4.4"];
+
+        # Network settings
+        "userland-proxy" = false;
+        "live-restore" = false;
+      };
+    };
+
+    # Merged systemd configuration
+    systemd = {
+      # Configure systemd Docker service with comprehensive certificate environment
+      services.docker = {
+        environment = {
+          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          CURL_CA_BUNDLE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          CA_BUNDLE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+
+          # Force Go to use the certificate bundle (Docker is written in Go)
+          GOCERTIFI_CAFILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          GO_CERTS_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+
+          # Additional certificate environment variables
+          REQUESTS_CA_BUNDLE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+
+          # Debug certificate verification for troubleshooting
+          GODEBUG = "x509ignoreCN=0,tls13=1";
+
+          # Docker daemon configuration
+          DOCKER_TLS_VERIFY = "0"; # Use Unix socket
+          GOPROXY = "direct";
+          DOCKER_CONFIG = "/etc/docker";
+        };
+
+        # Additional service configuration for WSL2 certificate handling
+        preStart = ''
+                  # Ensure certificate directories exist with proper permissions
+                  mkdir -p /etc/docker/certs.d/registry-1.docker.io
+                  mkdir -p /etc/docker/certs.d/index.docker.io
+                  mkdir -p /etc/docker/certs.d/docker.io
+
+                  # Link system certificates to Docker-specific locations
+                  ln -sf ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/docker/certs.d/registry-1.docker.io/ca.crt
+                  ln -sf ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/docker/certs.d/index.docker.io/ca.crt
+                  ln -sf ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/docker/certs.d/docker.io/ca.crt
+
+                  # Verify certificate bundle is readable
+                  if [ ! -r "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ]; then
+                    echo "Warning: Certificate bundle not readable at ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                  fi
+
+                  # Certificate bundle validation check
+                  echo "Validating certificate bundle integrity..."
+                  CERT_BUNDLE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                  if [ -r "$CERT_BUNDLE" ]; then
+                    CERT_COUNT=$(grep -c 'BEGIN CERTIFICATE' "$CERT_BUNDLE")
+                    echo "✅ Certificate bundle readable with $CERT_COUNT certificates"
+
+                    # Check for expired certificates
+                    TEMP_DIR=$(mktemp -d)
+                    csplit -s -f "$TEMP_DIR/cert-" "$CERT_BUNDLE" '/-----BEGIN CERTIFICATE-----/' '{*}'
+                    EXPIRED_COUNT=0
+                    for cert_file in "$TEMP_DIR"/cert-*; do
+                      if [ -s "$cert_file" ] && grep -q 'BEGIN CERTIFICATE' "$cert_file"; then
+                        if ! openssl x509 -in "$cert_file" -checkend 0 -noout 2>/dev/null; then
+                          EXPIRED_COUNT=$((EXPIRED_COUNT + 1))
+                        fi
+                      fi
+                    done
+                    rm -rf "$TEMP_DIR"
+
+                    if [ "$EXPIRED_COUNT" -eq 0 ]; then
+                      echo "✅ No expired certificates found in bundle"
+                    else
+                      echo "⚠️  Warning: $EXPIRED_COUNT expired certificates found in bundle"
+                    fi
+                  else
+                    echo "❌ Certificate bundle not readable at $CERT_BUNDLE"
+                  fi
+
+                  # Docker certificate configuration initialized
+                  echo "Docker certificate configuration initialized"
+
+                  # Create simplified Docker daemon configuration (remove manual daemon.json creation)
+                  # NixOS will generate the proper daemon.json from our daemon.settings configuration
+                  echo "Docker daemon configuration will be generated by NixOS from daemon.settings"
+
+                  # Ensure Docker can access certificate files with proper permissions
+                  chown root:docker /etc/docker/certs.d/ || true
+                  chmod 755 /etc/docker/certs.d/ || true
+
+                  # Create Docker registry-specific certificate configuration
+                  # This is the proper way to configure registry certificates for Docker
+                  for registry in "registry-1.docker.io" "index.docker.io" "docker.io" "auth.docker.io"; do
+                    if [ -d "/etc/docker/certs.d/$registry" ]; then
+                      chown root:docker "/etc/docker/certs.d/$registry" || true
+                      chmod 755 "/etc/docker/certs.d/$registry" || true
+                      if [ -f "/etc/docker/certs.d/$registry/ca.crt" ]; then
+                        chown root:docker "/etc/docker/certs.d/$registry/ca.crt" || true
+                        chmod 644 "/etc/docker/certs.d/$registry/ca.crt" || true
+                      fi
+                    fi
+                  done
+
+                  # Test Docker registry connectivity and certificate validation
+                  echo "Testing Docker registry connectivity..."
+                  if timeout 10s curl -sS https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
+                    echo "✅ Docker registry connectivity verified"
+                  else
+                    echo "⚠️  Docker registry connectivity issue - testing with explicit certificates..."
+                    # Test with explicit certificate bundle
+                    if timeout 10s curl --cacert ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt -sS https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
+                      echo "✅ Docker registry works with explicit certificates"
+                    else
+                      echo "❌ Docker registry connectivity failed - may need proxy configuration"
+                    fi
+                  fi
+
+                  # Comprehensive activation verification for Docker and Home Manager
+                  echo "=== Activation Verification ==="
+
+                  # Verify Docker daemon.json syntax before Docker starts
+                  if [ -f "/nix/store"*"-daemon.json" ]; then
+                    DAEMON_JSON=$(find /nix/store -name "*daemon.json" -type f | head -1)
+                    if [ -n "$DAEMON_JSON" ]; then
+                      echo "Validating Docker daemon.json syntax..."
+                      if python3 -m json.tool "$DAEMON_JSON" >/dev/null 2>&1; then
+                        echo "✅ Docker daemon.json syntax is valid"
+                      else
+                        echo "❌ Docker daemon.json syntax error detected"
+                        python3 -m json.tool "$DAEMON_JSON" || true
+                      fi
+                    fi
+                  fi
+
+                  # Create activation status tracking
+                  echo "Creating activation status tracking..."
+                  mkdir -p /var/lib/nixos
+                  echo "$(date): Docker preStart activation initiated" >> /var/lib/nixos/activation.log
+
+                  # Set up post-activation verification script
+                  cat > /usr/local/bin/verify-activation << 'VERIFY_EOF'
+          #!/bin/bash
+          echo "=== NixOS Configuration Activation Verification ==="
+          echo "Timestamp: $(date)"
+          echo
+
+          # Check system activation status
+          echo "1. System Activation Status:"
+          if systemctl is-system-running >/dev/null 2>&1; then
+            echo "   ✅ System is running normally"
+          else
+            SYSTEM_STATE=$(systemctl is-system-running 2>/dev/null || echo "unknown")
+            echo "   ⚠️  System state: $SYSTEM_STATE"
+          fi
+
+          # Check Docker service
+          echo "2. Docker Service Status:"
+          if systemctl is-active docker.service >/dev/null 2>&1; then
+            echo "   ✅ Docker service is active"
+          else
+            echo "   ❌ Docker service is not active"
+            echo "   Status: $(systemctl is-active docker.service 2>/dev/null || echo 'failed')"
+            echo "   Recent logs:"
+            journalctl -u docker.service --no-pager -n 3 --quiet 2>/dev/null || echo "   No logs available"
+          fi
+
+          # Check Home Manager activation
+          echo "3. Home Manager Status:"
+          HM_SERVICE="home-manager-schausberger.service"
+          if systemctl is-active $HM_SERVICE >/dev/null 2>&1; then
+            echo "   ✅ Home Manager service is active"
+          elif systemctl show $HM_SERVICE --property=ActiveState | grep -q "ActiveState=inactive"; then
+            if systemctl show $HM_SERVICE --property=Result | grep -q "Result=success"; then
+              echo "   ✅ Home Manager activation completed successfully"
+            else
+              echo "   ❌ Home Manager activation failed"
+              echo "   Status: $(systemctl show $HM_SERVICE --property=Result --value)"
+            fi
+          else
+            echo "   ⚠️  Home Manager status unclear"
+            echo "   State: $(systemctl is-active $HM_SERVICE 2>/dev/null || echo 'unknown')"
+          fi
+
+          # Check for failed units
+          echo "4. Failed Units Check:"
+          FAILED_UNITS=$(systemctl list-units --failed --no-legend --quiet 2>/dev/null | wc -l)
+          if [ "$FAILED_UNITS" -eq 0 ]; then
+            echo "   ✅ No failed units detected"
+          else
+            echo "   ⚠️  $FAILED_UNITS failed unit(s) detected:"
+            systemctl list-units --failed --no-legend --quiet 2>/dev/null | head -5 | sed 's/^/     /'
+          fi
+
+          echo
+          echo "Activation verification completed at $(date)"
+          VERIFY_EOF
+                  chmod +x /usr/local/bin/verify-activation
+
+                  # Create certificate validation script
+                  mkdir -p /usr/local/bin
+                  cat > /usr/local/bin/docker-cert-debug << 'EOF'
+          #!/bin/bash
+          echo "=== Docker Certificate Debug Information ==="
+          echo "SSL_CERT_FILE: $SSL_CERT_FILE"
+          echo "CURL_CA_BUNDLE: $CURL_CA_BUNDLE"
+          echo "DOCKER_CERT_PATH: $DOCKER_CERT_PATH"
+          echo "DOCKER_TLS_VERIFY: $DOCKER_TLS_VERIFY"
+          echo
+          echo "Testing certificate file readability:"
+          if [ -r "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ]; then
+            echo "✅ Certificate bundle is readable"
+            echo "Certificate count: $(grep -c 'BEGIN CERTIFICATE' ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt)"
+          else
+            echo "❌ Certificate bundle is not readable"
+          fi
+          echo
+          echo "Testing Docker registry connectivity:"
+          curl -v --connect-timeout 10 https://registry-1.docker.io/v2/ 2>&1 | head -20
+          echo
+          echo "Testing with explicit certificate bundle:"
+          curl -v --cacert ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt --connect-timeout 10 https://registry-1.docker.io/v2/ 2>&1 | head -20
+          EOF
+                  chmod +x /usr/local/bin/docker-cert-debug
+        '';
+      };
+
+      # Create comprehensive systemd tmpfiles for Docker certificates (WSL2 fix)
+      tmpfiles.rules = [
+        # Main Docker certificate directories
+        "d /etc/docker 0755 root root - -"
+        "d /etc/docker/certs.d 0755 root root - -"
+        "d /etc/docker/certs.d/registry-1.docker.io 0755 root root - -"
+        "d /etc/docker/certs.d/index.docker.io 0755 root root - -"
+        "d /etc/docker/certs.d/docker.io 0755 root root - -"
+        "d /etc/docker/certs.d/auth.docker.io 0755 root root - -"
+        "d /etc/docker/certs.d/production.cloudflare.docker.com 0755 root root - -"
+
+        # Certificate links for Docker registries
+        "L+ /etc/docker/certs.d/ca-certificates.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/ca.pem - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/cert.pem - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/key.pem - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/registry-1.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/index.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/auth.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/production.cloudflare.docker.com/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+
+        # General certificate bundle locations
+        "L+ /etc/ssl/certs/ca-certificates.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/ssl/certs/ca-bundle.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+      ];
+
+      # Systemd service to prepare act-compatible containers with certificates
+      services.act-cert-setup = {
+        description = "Prepare act containers with proper certificate configuration";
+        wantedBy = ["multi-user.target"];
+        after = ["docker.service"];
+        requires = ["docker.service"];
+        path = with pkgs; [docker openssl coreutils];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          User = "root";
+        };
+
+        script = ''
+          # Create certificate directories for act runner environment
+          mkdir -p /etc/act-certificates
+          mkdir -p /usr/local/share/ca-certificates
+
+          # Link NixOS certificates for act
+          if [ ! -f /etc/act-certificates/ca-certificates.crt ]; then
+            ln -sf ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/act-certificates/ca-certificates.crt
+          fi
+
+          # Ensure proper permissions
+          chmod 755 /etc/act-certificates
+          chmod 644 /etc/act-certificates/ca-certificates.crt || true
+
+          echo "✅ Act certificate setup completed"
+        '';
+      };
+    };
+
+    # Add certificate environment variables for Docker containers and WSL2 (allow override)
+    environment.variables = {
+      SSL_CERT_FILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      CURL_CA_BUNDLE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      CA_BUNDLE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+
+      # Docker connection via Unix socket (not TLS)
+      DOCKER_HOST = "unix:///var/run/docker.sock";
+
+      # Go-specific certificate variables (for act and Docker)
+      GOCERTIFI_CAFILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      GO_CERTS_FILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      GO_SSL_CERT_FILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      GODEBUG = lib.mkDefault "x509ignoreCN=0,tls13=1";
+
+      # Git-specific certificate variables for system-wide Git operations
+      GIT_SSL_CAINFO = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    };
+
+    # Ensure CA certificates are available system-wide
+    security.pki.certificateFiles = lib.mkAfter [
+      "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+    ];
+
+    # Add user to docker group
+    users.users.${hostConfig.user}.extraGroups = ["docker"];
+
+    # System packages for container support
+    environment.systemPackages = with pkgs; [
+      cacert # CA certificates for TLS verification
+      docker-compose # Docker Compose tool
+      openssl # SSL/TLS toolkit for certificate debugging
+      curl # For testing registry connectivity
+    ];
+
+    # Install act (GitHub Actions runner) in home packages
+    home-manager.users.${hostConfig.user} = {
+      home.packages = with pkgs; [
+        act # Run your GitHub Actions locally
+      ];
+
+      # Add container development aliases
+      programs.fish.shellAliases = {
+        act-check = "DOCKER_HOST=unix:///var/run/docker.sock DOCKER_TLS_VERIFY=0 act -W .github/workflows/check.yml --pull=false";
+        act-debug = "DOCKER_HOST=unix:///var/run/docker.sock DOCKER_TLS_VERIFY=0 act -W .github/workflows/check.yml --verbose --pull=false";
+        system-health = "/usr/local/bin/verify-activation && /usr/local/bin/docker-cert-debug";
+      };
+
+      # Set comprehensive certificate environment for act and other tools
+      home.sessionVariables = {
+        SSL_CERT_FILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        CURL_CA_BUNDLE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        CA_BUNDLE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+
+        # Docker connection via Unix socket (consistent with system environment)
+        DOCKER_HOST = "unix:///var/run/docker.sock";
+
+        # Go-specific certificate variables (act is written in Go)
+        GOCERTIFI_CAFILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        GO_CERTS_FILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        GODEBUG = lib.mkDefault "x509ignoreCN=0,tls13=1";
+        GOPROXY = lib.mkDefault "direct";
+
+        # Additional certificate environment
+        REQUESTS_CA_BUNDLE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        CERT_FILE = lib.mkDefault "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      };
+    };
+  };
+
+  options.modules.system.containers = {
+    enable = lib.mkEnableOption "container tools (Docker and act)";
+  };
+}

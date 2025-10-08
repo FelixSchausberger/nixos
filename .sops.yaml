@@ -1,0 +1,7 @@
+keys:
+  - &user age1njfl602md7qt36zg957elj8y2xjhcvr0s2pwyxegw64ut6cjzulqs9azj8 # ssh-to-age -i ~/.ssh/id_ed25519.pub
+creation_rules:
+  - path_regex: secrets/[^/]+\.(json|yaml|yml)$
+    key_groups:
+      - age:
+          - *user

@@ -1,0 +1,62 @@
+[package]
+name = "my-rust-tool"                                  # CHANGE THIS: Update to your tool name
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]       # CHANGE THIS
+description = "A CLI tool for NixOS system management" # CHANGE THIS
+license = "MIT"                                        # CHANGE THIS if needed
+repository = "https://github.com/YourUsername/nixos"   # CHANGE THIS
+
+# Uncomment for multiple binaries
+# [[bin]]
+# name = "my-tool"
+# path = "src/bin/my-tool.rs"
+
+[dependencies]
+# CLI and argument parsing
+clap = { version = "4.0", features = ["derive", "env"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Async runtime (if needed)
+# tokio = { version = "1.0", features = ["full"] }
+
+# Serialization (if needed)
+# serde = { version = "1.0", features = ["derive"] }
+# serde_json = "1.0"
+# serde_yaml = "0.9"
+
+# HTTP client (if needed)
+# reqwest = { version = "0.11", features = ["json"] }
+
+# File system operations (if needed)
+# walkdir = "2.0"
+
+# System integration (if needed)
+# nix = "0.26"  # For Unix system calls
+# libc = "0.2"
+
+# Logging
+env_logger = "0.10"
+log = "0.4"
+
+# Progress bars and UI (if needed)
+# indicatif = "0.17"
+# dialoguer = "0.10"
+
+[dev-dependencies]
+# Testing utilities
+tempfile = "3.0" # For temporary files in tests
+
+# Uncomment for property-based testing
+# quickcheck = "1.0"
+# quickcheck_macros = "1.0"
+
+# Uncomment for benchmarking
+# criterion = "0.4"
+
+# [[bench]]
+# name = "benchmarks"
+# harness = false

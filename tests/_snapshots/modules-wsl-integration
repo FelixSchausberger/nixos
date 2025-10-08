@@ -1,0 +1,10 @@
+#pretty
+{
+  has_wsl_cert_service = true;
+  service_after = true;
+  service_description = "WSL Windows certificate integration setup";
+  service_type = "oneshot";
+  service_user = "root";
+  service_wanted_by = true;
+  wsl_integration_enabled = true;
+}
