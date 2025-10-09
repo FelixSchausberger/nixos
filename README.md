@@ -1,6 +1,6 @@
 # FelixSchausberger/nixos
 
-[![CI Pipeline](https://github.com/FelixSchausberger/nixos/workflows/CI%20Pipeline/badge.svg)](https://github.com/FelixSchausberger/nixos/actions)
+[![CI Pipeline](https://github.com/FelixSchausberger/nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions)
 
 ## About
 
@@ -67,6 +67,36 @@ Each host defines:
 - Home Manager profile in `home/profiles/hostname/`
 
 ## Development Workflow
+
+### Jujutsu Workflow (Recommended)
+
+```bash
+# Create feature branch with conventional commit format
+jjbranch
+# → Interactive: Select type (feat/fix/chore/docs/test/refactor/perf)
+# → Enter description (e.g., "optimize-ci-pipeline")
+# → Creates branch: feat/optimize-ci-pipeline
+# → Commits: "feat: optimize ci pipeline"
+# → Pushes to remote automatically
+
+# Make changes (jj automatically tracks them)
+# Edit files...
+
+# Update commit description if needed
+jj describe
+
+# Push and create PR with auto-merge
+jjpush
+# → Pushes changes
+# → Creates PR with auto-merge label
+# → CI runs automatically
+# → Auto-merges when all checks pass ✅
+
+# Aliases available:
+# jjb  - Shorthand for jjbranch
+```
+
+### Git Workflow (Traditional)
 
 ```bash
 # Create feature branch
@@ -187,10 +217,24 @@ The GitHub Actions pipeline executes:
 - Parallel builds for all host configurations
 - VM boot tests
 - Deploy-rs dry-run validation
+- Auto-merge for PRs with `auto-merge` label
 
-Configuration: `.github/workflows/ci.yml`
+Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 
 Binary cache: `felixschausberger.cachix.org` (see [Cachix Setup](../../wiki/Cachix-Setup) for configuration)
+
+#### Required GitHub Settings for Auto-Merge
+
+To enable auto-merge functionality:
+
+1. **Repository Settings → General → Pull Requests:**
+   - ✅ Allow auto-merge
+
+2. **Repository Settings → Branches → Branch protection rules for `main`:**
+   - ✅ Require status checks to pass before merging
+   - Required checks: `security`, `check`, `deployment`
+   - ✅ Require branches to be up to date before merging
+   - Optional: Require pull request reviews before merging
 
 ## Additional Documentation
 
@@ -219,7 +263,14 @@ sops edit secrets/secrets.yaml                   # Edit secrets
 Emergency recovery:
 ```bash
 emergency-status                                 # Check emergency status
+emergency-help                                   # Display emergency guide
 sudo systemctl emergency                         # Enter emergency mode
+```
+
+WSL-specific recovery (from Windows):
+```powershell
+wsl --exec /run/current-system/sw/bin/wsl-emergency-shell
+wsl --exec /run/current-system/sw/bin/bash --noprofile --norc
 ```
 
 See wiki for complete documentation.

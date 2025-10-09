@@ -26,6 +26,17 @@
       system = "x86_64-linux";
     };
 
+    # Emergency recovery user - minimal shell, no customization
+    # Access with: wsl -u emergency
+    users.users.emergency = {
+      isNormalUser = true;
+      description = "Emergency recovery account";
+      shell = inputs.nixpkgs.legacyPackages.x86_64-linux.bash;
+      extraGroups = ["wheel"]; # sudo access for recovery
+      hashedPassword = "$6$rounds=656000$cUk4Xh8KRvx9lTkN$OyVJ7QXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQ"; # Password: emergency (change after first login)
+      home = "/home/emergency";
+    };
+
     # Merged modules configuration
     modules.system = {
       containers.enable = true;

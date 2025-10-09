@@ -144,6 +144,14 @@ Choose simple, readable solutions over complex, clever ones:
 When faced with complexity, ask: Does this problem require this solution, or
 does a simpler approach exist?
 
+### Output Guidelines
+
+Avoid unnecessary output in scripts and tools:
+
+- Successful operations should be quiet by default
+- Verbose output should be opt-in through flags like `-v` or `--verbose`
+- Errors must be clear and actionable, written to stderr
+
 ## Core Architecture
 
 The configuration uses flakes and flake-parts for modular organization. Each
@@ -159,6 +167,59 @@ host combines system configuration, home manager profiles, and shared modules.
 
 For detailed directory structure and module organization, see README.md
 Architecture section.
+
+## Development Workflow
+
+### Jujutsu Workflow with Auto-Merge
+
+The project uses Jujutsu (jj) for version control with automated PR merging:
+
+**Creating a feature branch:**
+
+```bash
+jjbranch  # or jjb
+# Interactive prompts:
+# 1. Select type: feat, fix, chore, docs, test, refactor, perf
+# 2. Enter description (lowercase, hyphens only)
+# Result: Creates branch, commits with conventional format, pushes to remote
+```
+
+**Pushing and creating PR:**
+
+```bash
+jjpush
+# Pushes changes, creates PR with auto-merge label
+# PR auto-merges when CI passes
+```
+
+**Key points:**
+
+- Branch names follow: `type/description` (e.g., `feat/add-auto-merge`)
+- Commit messages follow conventional commits: `type: description`
+- Validation enforced via prek hook
+- Auto-merge requires all CI checks to pass
+- Main branch stays green
+
+### Conventional Commits Validation
+
+Commit messages are validated automatically via prek hook.
+
+**Valid format:**
+
+```
+type(scope?): description
+
+Types: feat, fix, docs, style, refactor, perf, test, chore
+```
+
+**Examples:**
+
+```
+feat: add auto-merge workflow
+fix: resolve jj bookmark creation issue
+docs: update jujutsu workflow guide
+feat(ci): optimize cachix push filter
+```
 
 ## Development Commands
 

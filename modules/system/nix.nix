@@ -25,6 +25,7 @@
   nix.settings = {
     # Basic settings
     experimental-features = ["nix-command" "flakes" "pipe-operators"];
+    accept-flake-config = true; # Trust flake nixConfig settings (safe for own configurations)
     lazy-trees = true; # Enable lazy trees for faster evaluations and reduced disk usage
     auto-optimise-store = true;
     trusted-users = ["root" "@wheel"];
@@ -69,6 +70,9 @@
       # Primary cache - fastest and most reliable
       "https://cache.nixos.org?priority=1"
 
+      # Personal cache - high priority for custom builds
+      "https://nixpkgs-schausberger.cachix.org?priority=3"
+
       # Very commonly used packages - high priority
       "https://nix-community.cachix.org?priority=5"
 
@@ -90,6 +94,7 @@
 
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nixpkgs-schausberger.cachix.org-1:BdcD4tXljP3BQGhm9mUjmLkkPwl+7IFcl1JX5CsrIfE="
 
       "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="
       "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="

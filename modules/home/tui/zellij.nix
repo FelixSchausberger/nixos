@@ -5,6 +5,7 @@
     settings = {
       theme = "catppuccin-mocha";
       default_shell = "fish";
+      default_cwd = "/home/schausberger";
 
       # UI settings
       pane_frames = false;
@@ -65,10 +66,11 @@
           // Ghost floating terminal with Fish completion
           bind "Alt t" { LaunchOrFocusPlugin "file:ghost" { floating true; shell "fish"; shell_flag "-ic"; }; }
 
-          // Quick access to tools in dedicated panes - Fixed syntax
-          bind "Alt y" { NewPane "Down" "yazi"; }
-          bind "Alt l" { NewPane "Right" "lazygit"; }
-          bind "Alt e" { NewPane "Down" "hx"; }
+          // Quick access to tools in dedicated panes
+          bind "Alt y" { NewPane "Down"; Run "yazi"; }
+          bind "Alt g" { NewPane "Right"; Run "lazygit"; }
+          bind "Alt j" { NewPane "Right"; Run "lazyjj"; }
+          bind "Alt e" { NewPane "Down"; Run "hx"; }
         }
       }
     '';

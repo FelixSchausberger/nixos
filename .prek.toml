@@ -53,3 +53,15 @@ files = "^secrets/secrets\\.yaml$"
 entry = "namaka check"
 files = "\\.nix$"
 pass_filenames = false
+
+[hooks.conventional-commits]
+entry = "tools/scripts/validate-commit-msg.sh"
+stages = ["commit-msg"]
+
+[hooks.fish-syntax-check]
+entry = "fish --no-execute"
+files = "\\.fish$"
+
+[hooks.dangerous-shell-patterns]
+entry = "tools/scripts/check-dangerous-patterns.sh"
+files = "\\.nix$|\\.fish$"

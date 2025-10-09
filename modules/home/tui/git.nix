@@ -15,15 +15,8 @@ in {
           User git
           IdentityFile ~/.ssh/id_ed25519
 
-      # GitHub (primary - port 22)
+      # GitHub (using port 443 due to corporate firewall)
       Host github.com
-          HostName github.com
-          Port 22
-          User git
-          IdentityFile ~/.ssh/id_ed25519
-
-      # GitHub SSH over HTTPS (fallback when port 22 is blocked)
-      Host github.com-443
           HostName ssh.github.com
           Port 443
           User git

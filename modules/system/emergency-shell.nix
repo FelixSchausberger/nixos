@@ -47,6 +47,35 @@
           exit 1
         fi
       '')
+
+      # WSL Emergency Shell Wrapper - provides minimal shell when fish fails
+      (pkgs.writeShellScriptBin "wsl-emergency-shell" ''
+        #!/usr/bin/env bash
+        # NixOS-WSL Emergency Recovery Shell
+        # This script provides a minimal shell when the default shell fails
+
+        export PATH="/run/current-system/sw/bin:/usr/bin:/bin"
+
+        echo "╔════════════════════════════════════════════════════════════════╗"
+        echo "║        NixOS-WSL Emergency Recovery Shell                     ║"
+        echo "╚════════════════════════════════════════════════════════════════╝"
+        echo ""
+        echo "📍 Core tools available at: /run/current-system/sw/bin"
+        echo "📍 Recovery documentation: See GitHub Wiki - Emergency Recovery"
+        echo ""
+        echo "🔧 Common Recovery Tasks:"
+        echo "   • Fix fish config:     mv ~/.config/fish ~/.config/fish.backup"
+        echo "   • Disable auto-start:  touch ~/.config/fish/EMERGENCY_MODE_ENABLED"
+        echo "   • Fix PATH:            export PATH=/run/current-system/sw/bin:\$PATH"
+        echo "   • Rebuild system:      sudo nixos-rebuild switch --flake /per/etc/nixos"
+        echo "   • View emergency help: emergency-help"
+        echo ""
+        echo "🚀 To access this shell from Windows:"
+        echo "   wsl.exe --exec /run/current-system/sw/bin/wsl-emergency-shell"
+        echo ""
+
+        exec /run/current-system/sw/bin/bash --noprofile --norc
+      '')
     ];
 
     # Systemd service to monitor and log emergency mode transitions
@@ -60,24 +89,107 @@
 
     # Add emergency mode information to issue file
     environment.etc."emergency-help.txt".text = ''
-      NixOS Emergency Recovery Help
-      =============================
+      ╔══════════════════════════════════════════════════════════════════╗
+      ║             NixOS Emergency Recovery Guide                       ║
+      ╚══════════════════════════════════════════════════════════════════╝
 
-      System Emergency Mode:
-      - systemctl emergency         # Enter emergency mode
-      - systemctl default           # Exit emergency mode
-      - systemctl is-system-running # Check current mode
-      - journalctl --grep=emergency # View emergency logs
+      === IMMEDIATE RECOVERY (Shell Lockout) ===
 
-      Boot Recovery:
-      - Add 'systemd.unit=rescue.target' to kernel params for rescue mode
-      - Add 'systemd.unit=emergency.target' for emergency mode
-      - Add 'init=/bin/bash' for minimal shell (last resort)
+      From Windows PowerShell/CMD:
+        wsl.exe --exec /run/current-system/sw/bin/bash --noprofile --norc
+        wsl.exe --exec /run/current-system/sw/bin/wsl-emergency-shell
 
-      Shell Recovery:
-      - bash --noprofile --norc     # Clean bash session
-      - fish --no-config            # Clean fish session
-      - env -i bash                 # Minimal environment bash
+      From within broken fish shell:
+        exec /run/current-system/sw/bin/bash --noprofile --norc
+
+      === EMERGENCY ESCAPE HATCHES ===
+
+      Disable all auto-start features:
+        touch ~/.config/fish/EMERGENCY_MODE_ENABLED
+        (Remove file to re-enable)
+
+      Enable system-wide emergency mode:
+        touch /tmp/.nixos-emergency-mode
+        (Remove file to disable)
+
+      === FISH SHELL RECOVERY ===
+
+      Restore fish configuration:
+        mv ~/.config/fish/config.fish ~/.config/fish/config.fish.broken
+        mv ~/.config/fish/config.fish.backup ~/.config/fish/config.fish
+
+      Start fish without config:
+        fish --no-config
+
+      Reset fish to safe state:
+        rm -rf ~/.config/fish
+        mkdir -p ~/.config/fish
+        echo "set fish_greeting" > ~/.config/fish/config.fish
+
+      === ZELLIJ RECOVERY ===
+
+      Disable Zellij auto-start temporarily:
+        set -e ZELLIJ_AUTO_START
+
+      Fix Zellij configuration:
+        mv ~/.config/zellij/config.kdl ~/.config/zellij/config.kdl.backup
+        zellij setup --generate-config
+
+      === SYSTEM EMERGENCY MODE ===
+
+      Enter/exit systemd emergency mode:
+        systemctl emergency         # Enter emergency mode
+        systemctl default           # Exit emergency mode
+        systemctl is-system-running # Check current mode
+        journalctl --grep=emergency # View emergency logs
+
+      === BOOT RECOVERY ===
+
+      Kernel parameters for recovery:
+        systemd.unit=rescue.target    # Rescue mode
+        systemd.unit=emergency.target # Emergency mode
+        init=/bin/bash                # Minimal shell (last resort)
+
+      === PATH NOT SET ===
+
+      Export PATH manually:
+        export PATH="/run/current-system/sw/bin:/usr/bin:/bin"
+
+      Core tools location:
+        /run/current-system/sw/bin/   # All NixOS system tools
+
+      === NIXOS REBUILD ===
+
+      Test configuration safely:
+        sudo nixos-rebuild test --flake /per/etc/nixos
+
+      Apply configuration:
+        sudo nixos-rebuild switch --flake /per/etc/nixos
+
+      Rollback to previous generation:
+        sudo nixos-rebuild --rollback switch
+
+      === WSL-SPECIFIC RECOVERY ===
+
+      NixOS-WSL recovery shell:
+        wsl -d NixOS --system --user root -- /mnt/wslg/distro/bin/nixos-wsl-recovery
+
+      Restart WSL:
+        wsl -t NixOS    # Terminate specific distro
+        wsl --shutdown  # Shutdown all distros
+
+      === ADDITIONAL RESOURCES ===
+
+      NixOS-WSL Documentation:
+        https://nix-community.github.io/NixOS-WSL/troubleshooting/recovery-shell.html
+
+      Zellij Integration Guide:
+        https://zellij.dev/documentation/integration.html
+
+      Emergency Commands:
+        emergency-status         # Check emergency mode status
+        emergency-help           # Display this help
+        wsl-emergency-shell      # Launch emergency shell (WSL only)
     '';
 
     # Ensure proper emergency shell in initrd

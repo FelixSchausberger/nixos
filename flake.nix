@@ -1,6 +1,17 @@
 {
   description = "NixOS and Home-Manager flake";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.nixos.org"
+      "https://nixpkgs-schausberger.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nixpkgs-schausberger.cachix.org-1:BdcD4tXljP3BQGhm9mUjmLkkPwl+7IFcl1JX5CsrIfE="
+    ];
+  };
+
   inputs = {
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
@@ -230,7 +241,6 @@
           packages = with pkgs; [
             alejandra
             bashInteractive # Use interactive bash with full features
-            commitizen # Conventional commit message validation
             git
             prek
             inputs.namaka.packages.${pkgs.system}.default # Snapshot testing
