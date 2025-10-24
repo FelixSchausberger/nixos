@@ -7,7 +7,8 @@
   inherit (inputs.self.lib) personalInfo;
 in {
   home = {
-    file.".ssh/config".text = ''
+    # Base SSH config managed by Home Manager (declarative)
+    file.".ssh/config.d/base.conf".text = ''
       # Corporate Frequentis Git server
       Host git.frequentis.frq
           HostName git.frequentis.frq
@@ -15,15 +16,8 @@ in {
           User git
           IdentityFile ~/.ssh/id_ed25519
 
-      # GitHub (primary - port 22)
+      # GitHub (using port 443 due to corporate firewall)
       Host github.com
-          HostName github.com
-          Port 22
-          User git
-          IdentityFile ~/.ssh/id_ed25519
-
-      # GitHub SSH over HTTPS (fallback when port 22 is blocked)
-      Host github.com-443
           HostName ssh.github.com
           Port 443
           User git
@@ -36,12 +30,6 @@ in {
       serie # A rich git commit graph in your terminal, like magic
       # graphite-cli # CLI that makes creating stacked git changes fast & intuitive
     ];
-
-    # User-level nix configuration for GitHub access token
-    activation.nixConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
-      mkdir -p ~/.config/nix
-      echo "access-tokens = github.com=$(cat ${config.sops.secrets."github/token".path})" > ~/.config/nix/nix.conf
-    '';
 
     shellAliases = {
       amend = "git commit --amend";
@@ -96,14 +84,14 @@ in {
 
   programs.git = {
     enable = true;
-    userName = personalInfo.name;
-    userEmail = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
-    delta = {enable = true;};
-    extraConfig = {
+    settings = {
+      user = {
+        inherit (personalInfo) name;
+        email = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
+      };
       github.token = "${config.sops.secrets."github/token".path}";
       init.defaultBranch = "main";
       pull.rebase = true;
-      credential.helper = "libsecret";
       core.editor = "${pkgs.helix}/bin/hx";
       safe.directory = "*";
       # Commit message template
@@ -119,6 +107,62 @@ in {
       "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
     };
   };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+  };
+
+  # SSH config setup for hybrid declarative/imperative management
+  # Create main config with Include directive to base config, allowing lazyssh to add entries
+  home.activation.sshConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
+        ssh_config="$HOME/.ssh/config"
+        ssh_config_dir="$HOME/.ssh/config.d"
+
+        # Ensure config.d directory exists
+        $DRY_RUN_CMD mkdir -p "$ssh_config_dir"
+        $DRY_RUN_CMD chmod 700 "$ssh_config_dir"
+
+        # Create main SSH config with Include directive if it doesn't exist or is a symlink
+        # If it's a regular file, preserve it (lazyssh may have added entries)
+        if [[ ! -f "$ssh_config" ]] || [[ -L "$ssh_config" ]]; then
+          $DRY_RUN_CMD cat > "$ssh_config" <<'EOF'
+    # Base configuration (managed by Home Manager)
+    Include ~/.ssh/config.d/base.conf
+
+    # Lazyssh-managed servers will be added below this line
+    # All entries below are imperative and persisted via impermanence
+
+    EOF
+          $DRY_RUN_CMD chmod 600 "$ssh_config"
+        else
+          # Config exists as regular file - check if Include directive is present
+          if ! grep -q "Include ~/.ssh/config.d/base.conf" "$ssh_config"; then
+            # Prepend Include directive to existing config
+            $DRY_RUN_CMD cat > "$ssh_config.tmp" <<'EOF'
+    # Base configuration (managed by Home Manager)
+    Include ~/.ssh/config.d/base.conf
+
+    EOF
+            $DRY_RUN_CMD cat "$ssh_config" >> "$ssh_config.tmp"
+            $DRY_RUN_CMD mv "$ssh_config.tmp" "$ssh_config"
+            $DRY_RUN_CMD chmod 600 "$ssh_config"
+          fi
+        fi
+  '';
+
+  # User-level nix configuration for GitHub access token
+  # Note: Cannot use xdg.configFile with sops secrets as the file content is only available at activation time
+  # Using home.activation to read the secret file at runtime
+  home.activation.nixConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
+    $DRY_RUN_CMD mkdir -p $HOME/.config/nix
+    if [[ -f ${config.sops.secrets."github/token".path} ]]; then
+      token=$(cat ${config.sops.secrets."github/token".path})
+      echo "access-tokens = github.com=$token" > $HOME/.config/nix/nix.conf
+    else
+      echo "Warning: GitHub token file not found at ${config.sops.secrets."github/token".path}" >&2
+    fi
+  '';
 
   sops.secrets = {
     "github/token" = {};

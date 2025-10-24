@@ -144,6 +144,14 @@ Choose simple, readable solutions over complex, clever ones:
 When faced with complexity, ask: Does this problem require this solution, or
 does a simpler approach exist?
 
+### Output Guidelines
+
+Avoid unnecessary output in scripts and tools:
+
+- Successful operations should be quiet by default
+- Verbose output should be opt-in through flags like `-v` or `--verbose`
+- Errors must be clear and actionable, written to stderr
+
 ## Core Architecture
 
 The configuration uses flakes and flake-parts for modular organization. Each
@@ -159,6 +167,109 @@ host combines system configuration, home manager profiles, and shared modules.
 
 For detailed directory structure and module organization, see README.md
 Architecture section.
+
+## Development Workflow
+
+### Jujutsu Workflow
+
+The project uses Jujutsu (jj) for version control with a simple main-branch workflow:
+
+**Daily Workflow:**
+
+```bash
+# Work directly on main branch
+jj describe -m "feat: add new feature"
+
+# Or use AI-powered commit message
+jjdescribe
+
+# Push changes to remote main branch
+jj git push
+```
+
+**Creating Feature Branches (Optional):**
+
+For experimental features that need isolation before merging to main:
+
+```bash
+jjbranch  # or jjb
+# Interactive prompts:
+# 1. Select type: feat, fix, chore, docs, test, refactor, perf
+# 2. Enter description (lowercase, hyphens only)
+# Result: Creates branch from current revision, commits with conventional format
+
+# When ready, use jjpush to create PR back to main
+jjpush
+```
+
+**Key points:**
+
+- Work happens on `main` by default
+- Feature branches (via `jjbranch`) are optional for experimental work
+- Branch names follow: `type/description` (e.g., `feat/add-auto-merge`)
+- Commit messages follow conventional commits: `type: description`
+- Validation enforced via prek hook
+- CI (Garnix + GitHub Actions) validates all changes automatically
+
+### Conventional Commits Validation
+
+Commit messages are validated automatically via prek hook.
+
+**Valid format:**
+
+```
+type(scope?): description
+
+Types: feat, fix, docs, style, refactor, perf, test, chore
+```
+
+**Examples:**
+
+```
+feat: add auto-merge workflow
+fix: resolve jj bookmark creation issue
+docs: update jujutsu workflow guide
+feat(ci): optimize cachix push filter
+```
+
+### CI/CD Pipeline
+
+The project uses a hybrid CI/CD approach with Garnix and GitHub Actions.
+
+**Garnix CI (Primary Build System):**
+
+Garnix handles all heavy build operations with centralized signing for enhanced security:
+- NixOS system configurations for all hosts
+- Custom package builds (lumen, vigiland, ghost, mcp-language-server, etc.)
+- Namaka snapshot tests
+- Multi-architecture support ready (x86_64-linux configured)
+
+Configuration: `garnix.yaml` at repository root
+
+Setup: Install Garnix GitHub App at https://garnix.io (one-time manual setup required)
+
+**GitHub Actions (Validation & Security):**
+
+GitHub Actions handles lightweight validation and security scanning:
+- Security scans (Trivy vulnerability scanner, TruffleHog secret detection)
+- Pre-commit hooks validation (prek)
+- Fish shell syntax validation
+- Flake metadata validation
+- Automated dependency updates (scheduled monthly)
+- Auto-merge for PRs with `auto-merge` label
+
+Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
+
+**Binary Caches:**
+
+Multiple caches configured with priority-based fallback in `modules/system/nix.nix`:
+- cache.nixos.org (priority 1) - Official NixOS cache
+- nixpkgs-schausberger.cachix.org (priority 3) - Personal cache for custom builds
+- nix-community.cachix.org (priority 5) - Community packages
+- cache.garnix.io (priority 7) - Garnix CI builds with centralized signing
+- Project-specific caches (priority 10-25) - COSMIC, Hyprland, Helix, etc.
+
+Garnix cache uses centralized signing, reducing cache poisoning risks compared to traditional binary caches where multiple contributors have push access.
 
 ## Development Commands
 
@@ -218,13 +329,13 @@ nix develop .#packagename
 
 The project uses two complementary formatting systems:
 
-- **prek** (`.prek.toml`) - Git commit hooks for automatic validation
+- **prek** (`.pre-commit-config.yaml`) - Git commit hooks for automatic validation
 - **treefmt** (`treefmt.toml`) - Manual formatting via `nix fmt`
 
 ### Prek Hooks
 
 Prek (a drop-in replacement for pre-commit) runs automatically on git commits
-with hooks configured in `.prek.toml`:
+with hooks configured in `.pre-commit-config.yaml`:
 
 - **alejandra**: Nix code formatter
 - **deadnix**: Dead code detection
@@ -249,6 +360,9 @@ prek run --all-files
 
 # Run hooks on staged files only
 prek run
+
+# View prek cache directory location (for debugging or cleanup)
+prek cache dir
 ```
 
 ### Treefmt Formatters

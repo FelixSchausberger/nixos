@@ -25,6 +25,10 @@ in {
     system = "x86_64-linux";
   };
 
+  # Force stable LTS kernel (6.6.x) to avoid Rust compilation issues in newer kernels
+  # The nixos-hardware surface module may try to use a newer kernel
+  boot.kernelPackages = pkgs.lib.mkForce pkgs.linuxPackages_6_6;
+
   # Override vaapiIntel with enableHybridCodec
   nixpkgs.config.packageOverrides = pkgs: {
     vaapiIntel = pkgs.vaapiIntel.override {enableHybridCodec = true;};

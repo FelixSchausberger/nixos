@@ -1,0 +1,39 @@
+name: 'Setup SSL Certificates'
+description: 'Configure SSL certificates and environment for Nix builds'
+runs:
+  using: "composite"
+  steps:
+    - name: Setup SSL certificates and environment
+      shell: bash
+      run: |
+        echo "=== SSL Certificate and Network Setup ==="
+
+        # Skip package installation and connectivity tests in act to prevent hangs
+        if [ "$ACT" != "true" ]; then
+          # Update certificates (GitHub Actions only)
+          sudo apt-get update -qq
+          sudo apt-get install -y ca-certificates curl openssl
+          sudo update-ca-certificates
+
+          # Test basic connectivity (GitHub Actions only)
+          echo "Testing basic connectivity..."
+          curl -I --connect-timeout 5 --max-time 10 https://github.com/ || echo "⚠️ GitHub connectivity issue"
+        else
+          echo "Running in act - skipping apt-get and connectivity tests"
+        fi
+
+        # Set up SSL environment variables (always needed)
+        echo "CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
+        echo "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
+        echo "SSL_CERT_DIR=/etc/ssl/certs" >> $GITHUB_ENV
+        echo "REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
+        echo "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
+
+        # Configure curl globally
+        echo "cacert=/etc/ssl/certs/ca-certificates.crt" > ~/.curlrc
+
+        # Basic certificate verification
+        echo "Certificate file status:"
+        ls -la /etc/ssl/certs/ca-certificates.crt || echo "❌ Certificate file not found"
+
+        echo "=== SSL Setup Complete ==="

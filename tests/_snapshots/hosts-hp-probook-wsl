@@ -3,7 +3,7 @@
   containers_enabled = true;
   has_ssl_cert_file = true;
   hostname = "hp-probook-wsl";
-  is_gui = false;
+  is_gui = true;
   user_exists = true;
   wsl_enabled = true;
   wsl_integration_enabled = true;

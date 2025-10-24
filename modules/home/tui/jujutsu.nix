@@ -22,6 +22,17 @@ in {
         inherit (personalInfo) name;
         email = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
       };
+
+      # Git-style short aliases for frequently used commands
+      aliases = {
+        st = ["status"];
+        d = ["diff"];
+        l = ["log"];
+        n = ["new"];
+        e = ["edit"];
+        s = ["show"];
+        b = ["bookmark"];
+      };
     };
   };
 }

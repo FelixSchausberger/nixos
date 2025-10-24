@@ -5,10 +5,13 @@
   ...
 }: let
   # Use ZFS-compatible kernel
+  # Note: Using linuxPackages_latest can cause build failures with newer kernels
+  # Stick to LTS kernels for stability
   kernelPackages =
     if config.boot.zfs.forceLatestStableKernel
-    # https://discourse.nixos.org/t/zfs-latestcompatiblelinuxpackages-is-deprecated/52540
-    then pkgs.linuxPackages_6_6 # Use stable LTS kernel compatible with ZFS
+    # Use the latest stable LTS kernel that's known to work with ZFS
+    # 6.6.x is a stable LTS release with good ZFS support
+    then pkgs.linuxPackages_6_6
     else pkgs.linuxPackages;
 in {
   options.boot.zfs = {

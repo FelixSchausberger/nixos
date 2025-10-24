@@ -45,20 +45,11 @@ _: {
         cat /etc/emergency-help.txt
       end
 
-      # Emergency mode detection - simplified to use only systemd
+      # Emergency mode detection - simplified to file-based only for maximum reliability
+      # This avoids PATH dependencies and complex systemd checks
       function __emergency_check
-        # Check systemd emergency mode
-        if emergency-mode-check >/dev/null 2>&1
-          return 0
-        end
-
-        # Basic fish function test - if core functions missing, emergency mode
-        if not functions -q fish_prompt
-          echo "⚠️  Fish shell core functions not working - enabling emergency mode"
-          return 0
-        end
-
-        return 1
+        # Check for emergency flag files (simple, fast, no dependencies)
+        test -f ~/.config/fish/EMERGENCY_MODE_ENABLED -o -f /tmp/.nixos-emergency-mode
       end
     '';
   };

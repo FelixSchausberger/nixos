@@ -21,10 +21,11 @@
   };
 
   environment = {
-    cosmic.excludePackages = with pkgs; [
-      cosmic-wallpapers
-      kdePackages.xwaylandvideobridge # Utility to allow streaming Wayland windows to X applications (needed for MS Teams)
-    ];
+    cosmic.excludePackages = with pkgs;
+      [
+        cosmic-wallpapers
+      ]
+      ++ (pkgs.lib.optional (pkgs.kdePackages ? xwaylandvideobridge) pkgs.kdePackages.xwaylandvideobridge);
 
     # Allow auto-login
     # etc."greetd/cosmic-greeter.toml" = {

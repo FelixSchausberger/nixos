@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: {
   imports = [
     ./helix # Post-modern modal text editor
     ./neovim.nix # Neovim with basic configuration (replaces nixvim to avoid tree-sitter-ada issue)
@@ -52,7 +56,6 @@
     fclones # Efficient Duplicate File Finder and Remover
     lan-mouse # Software KVM switch for sharing mouse and keyboard over network
     lazyjournal # TUI for journalctl, file system logs, as well as Docker and Podman containers
-    lazyssh # Terminal-based SSH manager
     lstr # Fast, minimalist directory tree viewer written in Rust
     impala # WiFi TUI management tool
     iwd # Modern WiFi daemon (needed by impala)
@@ -81,4 +84,21 @@
     SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
     NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   };
+
+  # Shell health check activation script
+  # Runs after packages are linked to ensure they're available in PATH
+  home.activation.shellHealthCheck = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    run echo "🏥 Running shell configuration health check..."
+
+    # Set PATH to include new generation packages
+    export PATH="$newGenPath/home-path/bin:$PATH"
+
+    # Run health check with proper PATH - make it non-fatal (warnings only)
+    if run ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
+      run echo "✅ Shell health check passed"
+    else
+      run echo "⚠️  Shell health check found issues (non-fatal during activation)"
+      run echo "   Review warnings above - system will still activate"
+    fi
+  '';
 }

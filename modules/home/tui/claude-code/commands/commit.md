@@ -22,4 +22,3 @@ Based on the changes above, create a single atomic git commit with a descriptive
 - `refactor:` - Code restructuring
 - `test:` - Test changes
 - `ci:` - CI/CD changes
-

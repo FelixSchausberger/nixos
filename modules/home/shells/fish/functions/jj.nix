@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  inputs,
+  pkgs,
+  ...
+}: {
   programs.fish.functions = {
     # Jujutsu management commands
     jj = {
@@ -17,6 +21,17 @@
           echo "  jj sync            - Fetch and push"
           echo "  jj search          - Interactive file search"
           echo "  jj ui              - Open lazyjj TUI"
+          echo ""
+          echo "Workflow commands:"
+          echo "  jjbranch (jjb)     - Create feature branch (optional, for experimental work)"
+          echo "  jjdescribe         - Update description with AI suggestion"
+          echo "  jjpush             - Push and create PR"
+          echo ""
+          echo "Dev-Main Workflow:"
+          echo "  - Work on 'dev' branch by default"
+          echo "  - Use 'jj describe' or 'jjdescribe' to commit changes"
+          echo "  - Push with 'jj git push'"
+          echo "  - Create feature branches (jjbranch) only for experimental work"
           echo ""
           echo "Note: Use 'lazyjj' for visual TUI operations"
           echo ""
@@ -108,12 +123,221 @@
           --color 'footer:#ccbbaa,footer-border:#cc9966,footer-label:#cc9966'
       '';
     };
+
+    jjbranch = {
+      description = "Create a new branch with conventional commit format";
+      body = ''
+        # Interactive type selection with fzf
+        set -l type (echo -e "feat\nfix\nchore\ndocs\ntest\nrefactor\nperf" | \
+          ${pkgs.fzf}/bin/fzf \
+            --height=~40% \
+            --border \
+            --prompt="Select type: " \
+            --header="Choose conventional commit type" \
+            --preview="echo {}" \
+            --preview-window=up:1)
+
+        if test -z "$type"
+          echo "❌ No type selected, aborting"
+          return 1
+        end
+
+        # Prompt for description
+        echo ""
+        read -P "Enter description (lowercase, hyphens only): " description
+
+        if test -z "$description"
+          echo "❌ No description provided, aborting"
+          return 1
+        end
+
+        # Validate description format
+        if not string match -qr '^[a-z0-9-]+$' "$description"
+          echo "❌ Invalid description format"
+          echo "   Use lowercase letters, numbers, and hyphens only"
+          return 1
+        end
+
+        # Create branch name
+        set -l branch_name "$type/$description"
+        set -l commit_msg "$type: "(string replace -a '-' ' ' "$description")
+
+        echo ""
+        echo "📝 Creating branch: $branch_name"
+        echo "💬 Commit message: $commit_msg"
+        echo ""
+
+        # Create new change with description
+        if not command jj new -m "$commit_msg"
+          echo "❌ Failed to create new change"
+          return 1
+        end
+
+        # Create bookmark
+        if not command jj bookmark create "$branch_name"
+          echo "❌ Failed to create bookmark"
+          return 1
+        end
+
+        # Push to remote
+        echo ""
+        echo "🚀 Pushing to remote..."
+        if not command jj git push --branch "$branch_name"
+          echo "❌ Failed to push to remote"
+          return 1
+        end
+
+        echo ""
+        echo "✅ Branch created and pushed successfully!"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Make your changes"
+        echo "  2. Run 'jj describe' or 'jjdescribe' to update commit message"
+        echo "  3. Run 'jjpush' to push and create PR (typically back to dev)"
+        echo ""
+      '';
+    };
+
+    jjpush = {
+      description = "Push current branch and create PR with auto-merge";
+      body = ''
+        # Get current bookmark
+        set -l bookmark (command jj bookmark list 2>/dev/null | grep '^\*' | awk '{print $2}')
+
+        if test -z "$bookmark"
+          echo "❌ No active bookmark found"
+          echo "   Create a branch first with 'jjbranch'"
+          return 1
+        end
+
+        # Push changes
+        echo "🚀 Pushing changes..."
+        if not command jj git push
+          echo "❌ Failed to push changes"
+          return 1
+        end
+
+        # Create PR with auto-merge label
+        echo ""
+        echo "📋 Creating pull request with auto-merge..."
+        if not command gh pr create --fill --label auto-merge
+          echo "❌ Failed to create PR"
+          echo "   You may need to create it manually"
+          return 1
+        end
+
+        echo ""
+        echo "✅ Pull request created successfully!"
+        echo ""
+        echo "🔄 CI pipeline will run automatically"
+        echo "✨ PR will auto-merge when all checks pass"
+        echo ""
+        echo "View PR status:"
+        echo "  gh pr view --web"
+        echo ""
+      '';
+    };
+
+    jjb = {
+      description = "Alias for jjbranch";
+      body = ''
+        jjbranch $argv
+      '';
+    };
+
+    jjdescribe = {
+      description = "Update commit description with AI-powered suggestion";
+      body = ''
+        echo "🤖 Generating commit message suggestion with lumen..."
+        echo ""
+
+        # Generate suggestion using lumen
+        set -l suggestion (${inputs.self.packages.${pkgs.system}.lumen}/bin/lumen draft 2>/dev/null)
+
+        if test -z "$suggestion"
+          echo "❌ Failed to generate suggestion"
+          echo "   Falling back to manual describe"
+          command jj describe
+          return $status
+        end
+
+        # Display suggestion
+        echo "💡 Suggested commit message:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "$suggestion"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+
+        # Prompt user for action
+        echo "Options:"
+        echo "  [a] Accept suggestion"
+        echo "  [e] Edit suggestion"
+        echo "  [c] Write custom message"
+        echo "  [q] Cancel"
+        echo ""
+        read -P "Choose action: " -n 1 action
+        echo ""
+
+        switch $action
+          case a A
+            # Accept suggestion
+            command jj describe -m "$suggestion"
+            if test $status -eq 0
+              echo ""
+              echo "✅ Commit description updated"
+            else
+              echo "❌ Failed to update description"
+              return 1
+            end
+
+          case e E
+            # Edit suggestion - write to temp file and open in editor
+            set -l temp_file (mktemp)
+            echo "$suggestion" > $temp_file
+            ${pkgs.helix}/bin/hx $temp_file
+            set -l edited_msg (cat $temp_file)
+            rm $temp_file
+
+            if test -n "$edited_msg"
+              command jj describe -m "$edited_msg"
+              if test $status -eq 0
+                echo ""
+                echo "✅ Commit description updated"
+              else
+                echo "❌ Failed to update description"
+                return 1
+              end
+            else
+              echo "❌ Empty message, aborting"
+              return 1
+            end
+
+          case c C
+            # Write custom message
+            command jj describe
+
+          case q Q
+            echo "❌ Cancelled"
+            return 0
+
+          case '*'
+            echo "❌ Invalid option"
+            return 1
+        end
+      '';
+    };
   };
 
   programs.fish.interactiveShellInit = ''
     # Completions for jj command
     complete -c jj -f -a "log diff commit sync search ui" -d "Jujutsu VCS subcommands"
     complete -c jj -s h -l help -d "Show help message"
+
+    # Completions for workflow commands
+    complete -c jjbranch -d "Create branch with conventional commit"
+    complete -c jjb -d "Alias for jjbranch"
+    complete -c jjpush -d "Push and create PR with auto-merge"
+    complete -c jjdescribe -d "Update description with AI suggestion"
 
     # Add lazyjj alias for convenience
     alias jjui="lazyjj"
