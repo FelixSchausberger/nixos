@@ -2,12 +2,17 @@
   inputs,
   lib,
   ...
-}: {
-  imports = [
-    ../shared-tui.nix
-    ./hardware-configuration.nix
-    inputs.nixos-wsl.nixosModules.default
-  ];
+}: let
+  hostLib = import ../lib.nix;
+  wms = ["niri"];
+in {
+  imports =
+    [
+      ../shared-gui.nix
+      ./hardware-configuration.nix
+      inputs.nixos-wsl.nixosModules.default
+    ]
+    ++ hostLib.wmModules wms;
 
   config = {
     # Home Manager configuration
@@ -21,9 +26,24 @@
     hostConfig = {
       hostName = "hp-probook-wsl";
       user = "schausberger";
-      isGui = false; # TUI-only WSL system
-      wm = [];
+      isGui = true;
+      wm = wms;
       system = "x86_64-linux";
+    };
+
+    # WSL uses its own boot mechanism, disable systemd-boot from shared-gui.nix
+    boot.loader.systemd-boot.enable = lib.mkForce false;
+    boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
+
+    # Emergency recovery user - minimal shell, no customization
+    # Access with: wsl -u emergency
+    users.users.emergency = {
+      isNormalUser = true;
+      description = "Emergency recovery account";
+      shell = inputs.nixpkgs.legacyPackages.x86_64-linux.bash;
+      extraGroups = ["wheel"]; # sudo access for recovery
+      hashedPassword = "$6$rounds=656000$cUk4Xh8KRvx9lTkN$OyVJ7QXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQ"; # Password: emergency (change after first login)
+      home = "/home/emergency";
     };
 
     # Merged modules configuration

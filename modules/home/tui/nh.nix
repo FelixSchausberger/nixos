@@ -19,7 +19,7 @@ _: {
     deploy = "nh os switch";
     update = "nh os switch --update";
     clean = "nh clean all";
-    history = "nh os info";
+    osinfo = "nh os info";
     search = "nh search";
   };
 }

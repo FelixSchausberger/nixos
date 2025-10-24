@@ -94,6 +94,7 @@
         "github/token" = {
           owner = "schausberger";
         };
+        "cachix/token" = {};
 
         # Cloud storage
         "rclone/client-secret" = {};
@@ -112,5 +113,19 @@
       "d /per/mnt 0755 root root -"
       "d /per/mnt/gdrive 0755 root root -"
     ];
+
+    # Create netrc file for nix GitHub and Cachix access
+    sops.templates."nix/netrc" = {
+      content = ''
+        machine github.com
+        login token
+        password ${config.sops.placeholder."github/token"}
+
+        machine nixpkgs-schausberger.cachix.org
+        password ${config.sops.placeholder."cachix/token"}
+      '';
+      mode = "0600";
+      path = "/etc/nix/netrc";
+    };
   };
 }

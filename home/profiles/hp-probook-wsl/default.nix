@@ -1,4 +1,8 @@
-{lib, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   # WSL-specific profile - no GUI imports from shared.nix
   # This profile is designed for TUI-only workflow with selective GUI apps
   imports = [
@@ -41,6 +45,11 @@
 
   # WSL-specific home configuration
   home = {
+    # WSL work-specific packages
+    packages = with pkgs; [
+      lazyssh # Terminal-based SSH manager
+    ];
+
     # Environment variables
     sessionVariables = {
       # Help with WSL display issues if X11 forwarding is used

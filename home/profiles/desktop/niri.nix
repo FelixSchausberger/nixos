@@ -51,10 +51,10 @@
     # Game launchers
     prismlauncher # Minecraft
 
-    # Emulation
-    dolphin-emu
-    pcsx2
-    rpcs3
+    # Emulation (all temporarily disabled due to Qt 6.10 incompatibility)
+    # dolphin-emu # Temporarily disabled: Qt 6.10 incompatibility causing build failures
+    # pcsx2 # Temporarily disabled: Qt 6.10 incompatibility causing build failures
+    # rpcs3 # Temporarily disabled: strict-aliasing compilation errors
 
     # Communication
     discord

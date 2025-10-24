@@ -65,7 +65,35 @@ in {
       '';
   };
 
-  programs.gh.enable = true; # GitHub CLI tool.
+  programs.gh = {
+    enable = true;
+    gitCredentialHelper.enable = false; # Disable gh credential helper to avoid conflicts
+    settings = {
+      git_protocol = "https";
+    };
+  };
+
+  # Configure GitHub authentication using sops-managed token
+  # Note: Cannot use xdg.configFile with sops secrets as the file content is only available at activation time
+  # Using home.activation to read the secret file at runtime
+  home.activation.ghConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
+        $DRY_RUN_CMD mkdir -p $HOME/.config/gh
+        if [[ -f ${config.sops.secrets."github/token".path} ]]; then
+          token=$(cat ${config.sops.secrets."github/token".path})
+          cat > $HOME/.config/gh/hosts.yml <<EOF
+    github.com:
+        user: FelixSchausberger
+        oauth_token: $token
+        git_protocol: https
+    EOF
+        else
+          echo "Warning: GitHub token file not found at ${config.sops.secrets."github/token".path}" >&2
+        fi
+  '';
+
+  sops.secrets = {
+    "github/token" = {};
+  };
 
   # Write Claude Code configuration directly to file since Home Manager module doesn't support MCP servers
   xdg.configFile."claude-code/settings.json".text = let

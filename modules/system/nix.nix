@@ -19,12 +19,25 @@
       (_: prev: {
         zjstatus = inputs.zjstatus.packages.${prev.system}.default;
       })
+      # Override bat-extras to disable broken tests
+      # Tests fail due to color output changes in bat 0.24.0 → 0.25.0
+      # Fix exists in nixpkgs master (PR #373146) but not yet in nixos-unstable
+      # This can be removed once nixos-unstable includes the fix
+      (_: prev: {
+        bat-extras = prev.bat-extras.overrideScope (_: super: {
+          buildBatExtrasPkg = args:
+            (super.buildBatExtrasPkg args).overrideAttrs (_: {
+              doCheck = false;
+            });
+        });
+      })
     ];
   };
 
   nix.settings = {
     # Basic settings
     experimental-features = ["nix-command" "flakes" "pipe-operators"];
+    accept-flake-config = true; # Trust flake nixConfig settings (safe for own configurations)
     lazy-trees = true; # Enable lazy trees for faster evaluations and reduced disk usage
     auto-optimise-store = true;
     trusted-users = ["root" "@wheel"];
@@ -69,8 +82,14 @@
       # Primary cache - fastest and most reliable
       "https://cache.nixos.org?priority=1"
 
+      # Personal cache - high priority for custom builds
+      "https://nixpkgs-schausberger.cachix.org?priority=3"
+
       # Very commonly used packages - high priority
       "https://nix-community.cachix.org?priority=5"
+
+      # Garnix CI cache - shared community cache with centralized signing
+      "https://cache.garnix.io?priority=7"
 
       # Project-specific caches - medium priority
       "https://cosmic.cachix.org?priority=10"
@@ -90,13 +109,18 @@
 
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nixpkgs-schausberger.cachix.org-1:BdcD4tXljP3BQGhm9mUjmLkkPwl+7IFcl1JX5CsrIfE="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
 
+      # Garnix CI cache
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+
+      # Project-specific caches
       "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="
       "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
       "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
       "walker-git.cachix.org-1:vmC0ocfPWh0S/vRAQGtChuiZBTAe4wiKDeyyXM0/7pM="
       "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="
-      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "yazi.cachix.org-1:Dcdz63NZKfvUCbDGngQDAZq6kOroIrFoyO064uvLh8k="
       "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
       "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
