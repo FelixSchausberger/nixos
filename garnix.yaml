@@ -1,0 +1,11 @@
+builds:
+  include:
+    # NixOS system configurations
+    - nixosConfigurations.*
+    # Custom packages
+    - packages.x86_64-linux.*
+    # Namaka snapshot tests
+    - checks.x86_64-linux.*
+  exclude:
+    # Development shells are not always buildable as derivations
+    - devShells.*

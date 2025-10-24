@@ -36,53 +36,49 @@ in {
           "$mod SHIFT, F, fullscreen, 1" # Maximize
           "$mod, M, fullscreen, 2" # Fullscreen no bar
 
-          # Window focusing (arrow keys + vim-like)
+          # Window focusing (arrow keys + Colemak-DH N/E/I/O)
           "$mod, left, movefocus, l"
           "$mod, right, movefocus, r"
           "$mod, up, movefocus, u"
           "$mod, down, movefocus, d"
-          "$mod, h, movefocus, l"
-          "$mod, l, movefocus, r"
-          "$mod, k, movefocus, u"
-          "$mod, j, movefocus, d"
+          "$mod, n, movefocus, l"
+          "$mod, o, movefocus, r"
+          "$mod, i, movefocus, u"
+          "$mod, e, movefocus, d"
 
-          # Window movement (arrow keys + vim-like)
-          "$mod SHIFT, left, movewindow, l"
-          "$mod SHIFT, right, movewindow, r"
-          "$mod SHIFT, up, movewindow, u"
-          "$mod SHIFT, down, movewindow, d"
-          "$mod SHIFT, h, movewindow, l"
-          "$mod SHIFT, l, movewindow, r"
-          "$mod SHIFT, k, movewindow, u"
-          "$mod SHIFT, j, movewindow, d"
+          # Window movement (arrow keys + Colemak-DH N/E/I/O)
+          "$mod CTRL, left, movewindow, l"
+          "$mod CTRL, right, movewindow, r"
+          "$mod CTRL, up, movewindow, u"
+          "$mod CTRL, down, movewindow, d"
+          "$mod CTRL, n, movewindow, l"
+          "$mod CTRL, o, movewindow, r"
+          "$mod CTRL, i, movewindow, u"
+          "$mod CTRL, e, movewindow, d"
 
-          # Window resizing (arrow keys + vim-like)
+          # Window resizing (arrow keys + Colemak-DH N/E/I/O)
           "$mod ALT, left, resizeactive, -40 0"
           "$mod ALT, right, resizeactive, 40 0"
           "$mod ALT, up, resizeactive, 0 -40"
           "$mod ALT, down, resizeactive, 0 40"
-          "$mod ALT, h, resizeactive, -40 0"
-          "$mod ALT, l, resizeactive, 40 0"
-          "$mod ALT, k, resizeactive, 0 -40"
-          "$mod ALT, j, resizeactive, 0 40"
+          "$mod ALT, n, resizeactive, -40 0"
+          "$mod ALT, o, resizeactive, 40 0"
+          "$mod ALT, i, resizeactive, 0 -40"
+          "$mod ALT, e, resizeactive, 0 40"
 
-          # Workspace navigation
-          "$mod CTRL, right, workspace, e+1"
-          "$mod CTRL, left, workspace, e-1"
-          "$mod CTRL, l, workspace, e+1"
-          "$mod CTRL, h, workspace, e-1"
+          # Workspace navigation (U/I pattern + Page keys)
+          "$mod, u, workspace, e-1"
           "$mod, Prior, workspace, e-1" # Page Up
+          "$mod SHIFT, u, workspace, e+1"
           "$mod, Next, workspace, e+1" # Page Down
           "$mod, Tab, workspace, previous"
           "$mod SHIFT, Tab, workspace, previous"
 
           # Workspace movement
-          "$mod CTRL SHIFT, right, movetoworkspace, e+1"
-          "$mod CTRL SHIFT, left, movetoworkspace, e-1"
-          "$mod CTRL SHIFT, l, movetoworkspace, e+1"
-          "$mod CTRL SHIFT, h, movetoworkspace, e-1"
-          "$mod SHIFT, Prior, movetoworkspace, e-1"
-          "$mod SHIFT, Next, movetoworkspace, e+1"
+          "$mod CTRL, u, movetoworkspace, e-1"
+          "$mod CTRL, Prior, movetoworkspace, e-1"
+          "$mod CTRL SHIFT, u, movetoworkspace, e+1"
+          "$mod CTRL, Next, movetoworkspace, e+1"
 
           # Scratchpads using pyprland
           "$mod, T, exec, ${pkgs.pyprland}/bin/pypr toggle terminal"
@@ -125,20 +121,39 @@ in {
           # "$mod SHIFT, equal, exec, ${pkgs.avizo}/bin/lightctl up"
           # "$mod SHIFT, minus, exec, ${pkgs.avizo}/bin/lightctl down"
 
+          # Window management extras
+          "$mod, c, centerwindow"
+          "$mod, r, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch cyclenext"
+          "$mod SHIFT, r, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch cycleprev"
+          "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch togglesplit"
+          "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch pseudo"
+
+          # Monitor focus (Shift + N/E/I/O)
+          "$mod SHIFT, left, focusmonitor, l"
+          "$mod SHIFT, right, focusmonitor, r"
+          "$mod SHIFT, up, focusmonitor, u"
+          "$mod SHIFT, down, focusmonitor, d"
+          "$mod SHIFT, n, focusmonitor, l"
+          "$mod SHIFT, o, focusmonitor, r"
+          "$mod SHIFT, i, focusmonitor, u"
+          "$mod SHIFT, e, focusmonitor, d"
+
+          # Move to monitor (Ctrl+Shift + N/E/I/O)
+          "$mod CTRL SHIFT, left, movewindow, mon:l"
+          "$mod CTRL SHIFT, right, movewindow, mon:r"
+          "$mod CTRL SHIFT, up, movewindow, mon:u"
+          "$mod CTRL SHIFT, down, movewindow, mon:d"
+          "$mod CTRL SHIFT, n, movewindow, mon:l"
+          "$mod CTRL SHIFT, o, movewindow, mon:r"
+          "$mod CTRL SHIFT, i, movewindow, mon:u"
+          "$mod CTRL SHIFT, e, movewindow, mon:d"
+
           # Window grouping
           "$mod, G, togglegroup"
           "$mod SHIFT, G, lockactivegroup, toggle"
-          "$mod ALT, left, changegroupactive, b"
-          "$mod ALT, right, changegroupactive, f"
-          "$mod ALT, h, changegroupactive, b"
-          "$mod ALT, l, changegroupactive, f"
 
           # Special actions
-          "$mod, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch toggleopaque"
-          "$mod SHIFT, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch pin"
-          # "$mod CTRL, I, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch togglechromakey" # Toggle ChromaKey transparency - disabled due to plugin build issues
           "$mod SHIFT, P, pseudo"
-          "$mod SHIFT, U, togglesplit"
 
           # Layout switching
           "$mod CTRL, Space, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch layoutmsg orientationcycle"
@@ -235,31 +250,31 @@ in {
       binde = , up, resizeactive, 0 -40
       binde = , down, resizeactive, 0 40
 
-      # Vim keys
-      binde = , l, resizeactive, 40 0
-      binde = , h, resizeactive, -40 0
-      binde = , k, resizeactive, 0 -40
-      binde = , j, resizeactive, 0 40
+      # Colemak-DH N/E/I/O keys
+      binde = , o, resizeactive, 40 0
+      binde = , n, resizeactive, -40 0
+      binde = , i, resizeactive, 0 -40
+      binde = , e, resizeactive, 0 40
 
       # Fine adjustment (Shift for smaller steps)
       binde = SHIFT, right, resizeactive, 10 0
       binde = SHIFT, left, resizeactive, -10 0
       binde = SHIFT, up, resizeactive, 0 -10
       binde = SHIFT, down, resizeactive, 0 10
-      binde = SHIFT, l, resizeactive, 10 0
-      binde = SHIFT, h, resizeactive, -10 0
-      binde = SHIFT, k, resizeactive, 0 -10
-      binde = SHIFT, j, resizeactive, 0 10
+      binde = SHIFT, o, resizeactive, 10 0
+      binde = SHIFT, n, resizeactive, -10 0
+      binde = SHIFT, i, resizeactive, 0 -10
+      binde = SHIFT, e, resizeactive, 0 10
 
       # Big adjustment (Alt for larger steps)
       binde = ALT, right, resizeactive, 100 0
       binde = ALT, left, resizeactive, -100 0
       binde = ALT, up, resizeactive, 0 -100
       binde = ALT, down, resizeactive, 0 100
-      binde = ALT, l, resizeactive, 100 0
-      binde = ALT, h, resizeactive, -100 0
-      binde = ALT, k, resizeactive, 0 -100
-      binde = ALT, j, resizeactive, 0 100
+      binde = ALT, o, resizeactive, 100 0
+      binde = ALT, n, resizeactive, -100 0
+      binde = ALT, i, resizeactive, 0 -100
+      binde = ALT, e, resizeactive, 0 100
 
       # Presets
       bind = , 1, resizeactive, exact 25% 25%

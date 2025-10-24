@@ -10,10 +10,35 @@
     settings = {
       "org/gnome/desktop/interface".color-scheme = "prefer-dark";
       "org/gnome/desktop/wm/keybindings" = {
-        # Add GNOME-specific WM keybindings here
+        # Window management
         close = ["<Super>q"];
         toggle-fullscreen = ["<Super>f"];
-        show-desktop = ["<Super>d"];
+        toggle-maximized = ["<Super>space"];
+
+        # Window focus (Colemak-DH N/E/I/O pattern)
+        switch-to-workspace-left = ["<Super>n"];
+        switch-to-workspace-right = ["<Super>o"];
+        switch-to-workspace-up = ["<Super>i"];
+        switch-to-workspace-down = ["<Super>e"];
+
+        # Window movement
+        move-to-workspace-left = ["<Super><Ctrl>n"];
+        move-to-workspace-right = ["<Super><Ctrl>o"];
+        move-to-workspace-up = ["<Super><Ctrl>i"];
+        move-to-workspace-down = ["<Super><Ctrl>e"];
+
+        # Monitor focus
+        move-to-monitor-left = ["<Super><Shift>n"];
+        move-to-monitor-right = ["<Super><Shift>o"];
+        move-to-monitor-up = ["<Super><Shift>i"];
+        move-to-monitor-down = ["<Super><Shift>e"];
+
+        # Workspace navigation (U pattern)
+        switch-to-workspace-1 = ["<Super>u"];
+        switch-to-workspace-2 = ["<Super><Shift>u"];
+
+        # Applications
+        panel-main-menu = ["<Super>d"];
       };
       "org/gnome/shell" = {
         disable-user-extensions = false; # Enables user extensions

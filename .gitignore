@@ -4,8 +4,6 @@
 result
 result-*
 
-.pre-commit-config.yaml
-
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

@@ -1,7 +1,7 @@
 name: CI Pipeline
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -64,108 +64,62 @@ jobs:
           base: ${{ github.event.before }}
           head: ${{ github.sha }}
         continue-on-error: true
-  # Flake validation and testing
-  check:
-    name: Flake Check
+  # Quick validation and linting (heavy builds handled by Garnix CI)
+  validate:
+    name: Quick Validation
     runs-on: ubuntu-latest
-    needs: [security]
     if: github.event_name != 'schedule'
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        if: env.ACT != 'true'
-        with:
-          root-reserve-mb: 8192
-          temp-reserve-mb: 2048
-          swap-size-mb: 4096
-          remove-dotnet: "true"
-          remove-android: "true"
-          remove-haskell: "true"
-          remove-codeql: "true"
-          remove-docker-images: "true"
-          overprovision-lvm: "true"
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Check disk space
-        run: |
-          echo "=== Disk Space Report ==="
-          df -h
-          echo "=========================="
-      - name: Setup SSL certificates and environment
-        run: |
-          echo "=== SSL Certificate and Network Setup ==="
-
-          # Skip package installation and connectivity tests in act to prevent hangs
-          if [ "$ACT" != "true" ]; then
-            # Update certificates (GitHub Actions only)
-            sudo apt-get update -qq
-            sudo apt-get install -y ca-certificates curl openssl
-            sudo update-ca-certificates
-
-            # Test basic connectivity (GitHub Actions only)
-            echo "Testing basic connectivity..."
-            curl -I --connect-timeout 5 --max-time 10 https://github.com/ || echo "⚠️ GitHub connectivity issue"
-          else
-            echo "Running in act - skipping apt-get and connectivity tests"
-          fi
-
-          # Set up SSL environment variables (always needed)
-          echo "CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-          echo "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-          echo "SSL_CERT_DIR=/etc/ssl/certs" >> $GITHUB_ENV
-          echo "REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-          echo "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-
-          # Configure curl globally
-          echo "cacert=/etc/ssl/certs/ca-certificates.crt" > ~/.curlrc
-
-          # Basic certificate verification
-          echo "Certificate file status:"
-          ls -la /etc/ssl/certs/ca-certificates.crt || echo "❌ Certificate file not found"
-
-          echo "=== SSL Setup Complete ==="
-      - name: Verify checkout
-        run: |
-          echo "=== Repository Checkout Verification ==="
-          echo "Working directory: $(pwd)"
-          echo "Checking for flake.nix:"
-          if [ -f "flake.nix" ]; then
-            echo "✅ flake.nix found successfully"
-          else
-            echo "❌ flake.nix not found"
-            exit 1
-          fi
-          echo "=== End Verification ==="
+      - name: Setup SSL certificates
+        uses: ./.github/actions/setup-ssl
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v14
-        with:
-          name: felixschausberger
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          pushFilter: "(-source$|nixos-system-)"
-      - name: Run flake check (validates all hosts, modules, packages, and tests)
+      - name: Run prek hooks
         run: |
-          echo "Running comprehensive flake validation..."
-          echo "This will:"
-          echo "  - Evaluate all NixOS configurations"
-          echo "  - Run namaka snapshot tests"
-          echo "  - Validate all custom packages"
-          echo "  - Check flake structure and syntax"
-
-          nix flake check --all-systems --impure --max-jobs auto --cores 0 --show-trace
-
-          echo "✅ All checks passed"
-      - name: Cleanup
-        if: always()
+          echo "Running prek hooks on all files..."
+          nix develop --command prek run --all-files
+          echo "✅ All prek hooks passed"
+      - name: Validate Fish shell configuration syntax
         run: |
-          nix-collect-garbage -d || true
-          df -h
+          echo "🐟 Checking fish shell configuration syntax..."
+
+          # Find all .fish files
+          FISH_FILES=$(find . -name "*.fish" -not -path "./.git/*")
+
+          if [ -z "$FISH_FILES" ]; then
+            echo "No .fish files found to validate"
+            exit 0
+          fi
+
+          # Validate syntax for each fish file
+          ERRORS=0
+          for file in $FISH_FILES; do
+            echo "Checking: $file"
+            if ! nix run nixpkgs#fish -- --no-execute "$file"; then
+              echo "❌ Syntax error in $file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS fish syntax errors"
+            exit 1
+          fi
+
+          echo "✅ All fish configurations have valid syntax"
+      - name: Validate flake structure
+        run: |
+          echo "Validating flake metadata and structure..."
+          nix flake metadata
+          nix flake show
+          echo "✅ Flake structure is valid"
   # Dependency updates and maintenance
   maintenance:
     name: Maintenance
@@ -177,39 +131,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-      - name: Setup SSL certificates and environment
-        run: |
-          echo "=== SSL Certificate and Network Setup ==="
-
-          # Skip package installation and connectivity tests in act to prevent hangs
-          if [ "$ACT" != "true" ]; then
-            # Update certificates (GitHub Actions only)
-            sudo apt-get update -qq
-            sudo apt-get install -y ca-certificates curl openssl
-            sudo update-ca-certificates
-
-            # Test basic connectivity (GitHub Actions only)
-            echo "Testing basic connectivity..."
-            curl -I --connect-timeout 5 --max-time 10 https://github.com/ || echo "⚠️ GitHub connectivity issue"
-          else
-            echo "Running in act - skipping apt-get and connectivity tests"
-          fi
-
-          # Set up SSL environment variables (always needed)
-          echo "CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-          echo "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-          echo "SSL_CERT_DIR=/etc/ssl/certs" >> $GITHUB_ENV
-          echo "REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-          echo "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt" >> $GITHUB_ENV
-
-          # Configure curl globally
-          echo "cacert=/etc/ssl/certs/ca-certificates.crt" > ~/.curlrc
-
-          # Basic certificate verification
-          echo "Certificate file status:"
-          ls -la /etc/ssl/certs/ca-certificates.crt || echo "❌ Certificate file not found"
-
-          echo "=== SSL Setup Complete ==="
+      - name: Setup SSL certificates
+        uses: ./.github/actions/setup-ssl
       - name: Verify checkout
         run: |
           echo "=== Repository Checkout Verification ==="
@@ -259,10 +182,11 @@ jobs:
   deployment:
     name: Deployment Ready
     runs-on: ubuntu-latest
-    needs: [check]
+    needs: [validate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Deployment status
         run: |
           echo "✅ All checks passed - configurations are ready for deployment"
           echo "🚀 NixOS configurations can be deployed to target systems"
+          echo "Note: Full build validation is handled by Garnix CI"

@@ -1,0 +1,88 @@
+# Prek configuration - drop-in replacement for pre-commit hooks
+exclude: |
+  (?x)^(
+    flake\.lock|
+    home/default\.nix|
+    home/profiles/default\.nix|
+    hosts/default\.nix
+  )$
+repos:
+  # File format validation and formatting
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.13.0
+    hooks:
+      - id: yamlfmt
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+        types: [executable]
+      - id: end-of-file-fixer
+        exclude: ^tests/_snapshots/
+      - id: trailing-whitespace
+      - id: check-case-conflict
+  - repo: https://github.com/sirwart/ripsecrets
+    rev: v0.1.8
+    hooks:
+      - id: ripsecrets
+        args: [--strict-ignore]
+  # Nix tools (local hooks using system binaries from nix shell)
+  - repo: local
+    hooks:
+      - id: taplo-format
+        name: Taplo TOML formatter
+        entry: taplo format
+        language: system
+        files: \.toml$
+        pass_filenames: true
+      - id: alejandra
+        name: Alejandra Nix formatter
+        entry: alejandra
+        language: system
+        files: \.nix$
+      - id: deadnix
+        name: Deadnix - remove unused Nix code
+        entry: deadnix --fail --edit
+        language: system
+        files: \.nix$
+        pass_filenames: true
+      - id: statix
+        name: Statix - Nix linter
+        entry: statix fix
+        language: system
+        files: \.nix$
+        pass_filenames: false
+      - id: namaka-check
+        name: Namaka snapshot tests
+        entry: namaka check
+        language: system
+        files: \.nix$
+        pass_filenames: false
+  # Project-specific hooks
+  - repo: local
+    hooks:
+      - id: conventional-commits
+        name: Validate conventional commits
+        entry: tools/scripts/validate-commit-msg.sh
+        language: system
+        stages: [commit-msg]
+      - id: fish-syntax-check
+        name: Fish shell syntax check
+        entry: fish --no-execute
+        language: system
+        files: \.fish$
+      - id: dangerous-shell-patterns
+        name: Check for dangerous shell patterns
+        entry: tools/scripts/check-dangerous-patterns.sh
+        language: system
+        files: \.nix$|\.fish$
+      - id: pre-commit-hook-ensure-sops
+        name: Ensure SOPS secrets are encrypted
+        entry: pre-commit-hook-ensure-sops
+        language: system
+        files: ^secrets/secrets\.yaml$

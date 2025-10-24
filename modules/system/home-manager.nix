@@ -8,7 +8,8 @@
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    backupFileExtension = "backup";
+    # Use timestamped backups to prevent collisions
+    backupFileExtension = "backup-$(date +%Y%m%d-%H%M%S)";
     # Enable verbose output for better debugging
     verbose = true;
 

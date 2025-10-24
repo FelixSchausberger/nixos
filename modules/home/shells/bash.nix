@@ -134,7 +134,6 @@
                   # Safety check 4: Test fish configuration validity
                   if timeout 5s fish -c 'set -l test_var success; test "$test_var" = success' &> /dev/null; then
                     shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
-                    echo "🐟 Transitioning to fish shell..."
                     exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
                   else
                     echo "⚠️  fish configuration test failed - staying in bash"
@@ -156,7 +155,6 @@
               if fish --version &> /dev/null; then
                 if fish -c 'exit' &> /dev/null; then
                   shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
-                  echo "🐟 Transitioning to fish shell (no timeout safety available)..."
                   exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
                 else
                   echo "⚠️  fish basic test failed - staying in bash"

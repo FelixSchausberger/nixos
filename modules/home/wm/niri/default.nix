@@ -327,33 +327,79 @@ in {
           else cfg.browser
         }"; }
             "Mod+Q" { close-window; }
+            "Super+Alt+L" { spawn "${pkgs.swaylock}/bin/swaylock"; }
 
-            // Window management (unified with Hyprland/Cosmic)
+            // Hotkey overlay
+            "Mod+Shift+Slash" { show-hotkey-overlay; }
+
+            // Window management
             "Mod+Space" { toggle-window-floating; }
             "Mod+F" { fullscreen-window; }
-            "Mod+R" { spawn "sh" "-c" "pkill -x vigiland || vigiland &"; } // Toggle idle inhibitor
+            "Mod+C" { center-column; }
+            "Mod+R" { switch-preset-column-width; }
+            "Mod+Shift+R" { switch-preset-window-height; }
 
-            // Window focus (Colemak-DH neio pattern)
+            // Window focus (Colemak-DH N/E/I/O pattern)
             "Mod+N" { focus-column-left; }
+            "Mod+Left" { focus-column-left; }
             "Mod+E" { focus-window-down; }
+            "Mod+Down" { focus-window-down; }
             "Mod+I" { focus-window-up; }
+            "Mod+Up" { focus-window-up; }
             "Mod+O" { focus-column-right; }
+            "Mod+Right" { focus-column-right; }
 
-            // Window movement (Shift + neio)
-            "Mod+Shift+N" { move-column-left; }
-            "Mod+Shift+E" { move-window-down; }
-            "Mod+Shift+I" { move-window-up; }
-            "Mod+Shift+O" { move-column-right; }
+            // Window movement (Shift + N/E/I/O)
+            "Mod+Ctrl+N" { move-column-left; }
+            "Mod+Ctrl+Left" { move-column-left; }
+            "Mod+Ctrl+E" { move-window-down; }
+            "Mod+Ctrl+Down" { move-window-down; }
+            "Mod+Ctrl+I" { move-window-up; }
+            "Mod+Ctrl+Up" { move-window-up; }
+            "Mod+Ctrl+O" { move-column-right; }
+            "Mod+Ctrl+Right" { move-column-right; }
+
+            // Monitor focus
+            "Mod+Shift+N" { focus-monitor-left; }
+            "Mod+Shift+Left" { focus-monitor-left; }
+            "Mod+Shift+E" { focus-monitor-down; }
+            "Mod+Shift+Down" { focus-monitor-down; }
+            "Mod+Shift+I" { focus-monitor-up; }
+            "Mod+Shift+Up" { focus-monitor-up; }
+            "Mod+Shift+O" { focus-monitor-right; }
+            "Mod+Shift+Right" { focus-monitor-right; }
+
+            // Move to monitor
+            "Mod+Ctrl+Shift+N" { move-column-to-monitor-left; }
+            "Mod+Ctrl+Shift+Left" { move-column-to-monitor-left; }
+            "Mod+Ctrl+Shift+E" { move-column-to-monitor-down; }
+            "Mod+Ctrl+Shift+Down" { move-column-to-monitor-down; }
+            "Mod+Ctrl+Shift+I" { move-column-to-monitor-up; }
+            "Mod+Ctrl+Shift+Up" { move-column-to-monitor-up; }
+            "Mod+Ctrl+Shift+O" { move-column-to-monitor-right; }
+            "Mod+Ctrl+Shift+Right" { move-column-to-monitor-right; }
 
             // Window resizing
-            "Mod+Alt+N" { consume-window-into-column; }
-            "Mod+Alt+O" { expel-window-from-column; }
-            "Mod+Ctrl+N" { resize-column-left; }
-            "Mod+Ctrl+O" { resize-column-right; }
-            "Mod+Ctrl+E" { resize-window-down; }
-            "Mod+Ctrl+I" { resize-window-up; }
+            "Mod+Alt+N" { set-column-width "-10%"; }
+            "Mod+Alt+O" { set-column-width "+10%"; }
+            "Mod+Alt+E" { set-window-height "-10%"; }
+            "Mod+Alt+I" { set-window-height "+10%"; }
 
-            // Workspace navigation
+            // Consume and expel
+            "Mod+Comma" { consume-window-into-column; }
+            "Mod+Period" { expel-window-from-column; }
+            "Mod+BracketLeft" { consume-or-expel-window-left; }
+            "Mod+BracketRight" { consume-or-expel-window-right; }
+
+            // Workspace navigation (U/I + PageDown/PageUp)
+            "Mod+U" { focus-workspace-down; }
+            "Mod+PageDown" { focus-workspace-down; }
+            "Mod+Shift+U" { move-workspace-down; }
+            "Mod+Shift+PageDown" { move-workspace-down; }
+            "Mod+Ctrl+U" { move-column-to-workspace-down; }
+            "Mod+Ctrl+PageDown" { move-column-to-workspace-down; }
+
+            // Named workspaces
             "Mod+1" { focus-workspace "Terminal"; }
             "Mod+2" { focus-workspace "Browser"; }
             "Mod+3" { focus-workspace "Code"; }
@@ -362,12 +408,12 @@ in {
             "Mod+6" { focus-workspace "Games"; }
 
             // Move windows to workspaces
-            "Mod+Shift+1" { move-window-to-workspace "Terminal"; }
-            "Mod+Shift+2" { move-window-to-workspace "Browser"; }
-            "Mod+Shift+3" { move-window-to-workspace "Code"; }
-            "Mod+Shift+4" { move-window-to-workspace "Chat"; }
-            "Mod+Shift+5" { move-window-to-workspace "Music"; }
-            "Mod+Shift+6" { move-window-to-workspace "Games"; }
+            "Mod+Shift+1" { move-column-to-workspace "Terminal"; }
+            "Mod+Shift+2" { move-column-to-workspace "Browser"; }
+            "Mod+Shift+3" { move-column-to-workspace "Code"; }
+            "Mod+Shift+4" { move-column-to-workspace "Chat"; }
+            "Mod+Shift+5" { move-column-to-workspace "Music"; }
+            "Mod+Shift+6" { move-column-to-workspace "Games"; }
 
             // System controls
             "Mod+V" { spawn "${pkgs.avizo}/bin/volumectl toggle-mute"; }
@@ -380,6 +426,9 @@ in {
             "Print" { spawn "screenshot-region"; }
             "Shift+Print" { spawn "screenshot-full"; }
             "Mod+Print" { spawn "screenshot-region"; }
+
+            // Idle inhibitor (moved from Mod+R)
+            "Mod+Z" { spawn "sh" "-c" "pkill -x vigiland || vigiland &"; }
 
             "Mod+Shift+Q" { quit; }
         }

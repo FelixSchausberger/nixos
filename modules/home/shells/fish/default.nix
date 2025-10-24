@@ -21,6 +21,44 @@
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
 
+      # === CRITICAL SAFETY: Early PATH Guard ===
+      # Ensure PATH is set before loading plugins or initializing shell
+      # This prevents lockouts when PATH is not initialized by the system
+      if not test -n "$PATH"
+        set -gx PATH /run/current-system/sw/bin /usr/bin /bin
+      end
+
+      # WSL-specific PATH validation - ensure core utilities are accessible
+      # This addresses the root cause of the fish plugin failures
+      if not command -v ls >/dev/null 2>&1; or not command -v sort >/dev/null 2>&1
+        # PATH exists but is incomplete - prepend system paths
+        set -gx PATH /run/current-system/sw/bin $PATH
+      end
+
+      # Verify minimum viable environment - fall back to bash if fish is broken
+      if not command -v fish >/dev/null 2>&1
+        echo "🚨 CRITICAL: Fish shell environment broken, falling back to bash"
+        exec /run/current-system/sw/bin/bash --noprofile --norc
+      end
+
+      # === EMERGENCY ESCAPE HATCH ===
+      # Check for emergency mode bypass file BEFORE any other initialization
+      # Create this file to disable all auto-start and integrations:
+      #   touch ~/.config/fish/EMERGENCY_MODE_ENABLED
+      if test -f ~/.config/fish/EMERGENCY_MODE_ENABLED
+        echo "🚨 EMERGENCY MODE BYPASS ACTIVE"
+        echo "   All auto-start features disabled"
+        echo "   All shell integrations disabled"
+        echo "   To restore normal operation:"
+        echo "   rm ~/.config/fish/EMERGENCY_MODE_ENABLED"
+        echo ""
+        # Do NOT exit - continue with minimal shell to avoid WSL lockout
+        return 0
+      end
+
+      # Enable zellij auto-start by default (can be disabled with ZELLIJ_AUTO_START=0)
+      set -gx ZELLIJ_AUTO_START 1
+
       # Emergency shell functions - NixOS integrated
       ${(import ../emergency-functions.nix {inherit lib;}).emergencyShellFunctions.fish}
 
@@ -61,8 +99,13 @@
           set -l filtered_args
 
           for arg in $argv
-            if test "$arg" = "-f" -o "$arg" = "--force"
+            # Check for force flag
+            if test "$arg" = "-f"; or test "$arg" = "--force"
               set force_mode true
+            # Strip common rm flags that rip doesn't support
+            else if test "$arg" = "-r"; or test "$arg" = "-R"; or test "$arg" = "--recursive"
+              # Skip recursive flags - rip handles directories automatically
+              continue
             else
               set filtered_args $filtered_args $arg
             end
@@ -115,86 +158,56 @@
       end
 
 
-      # Optional auto-start zellij - now opt-in via environment variable
-      # Set ZELLIJ_AUTO_START=1 to enable automatic zellij startup
-      # Enhanced WSL compatibility with multiple detection methods
-      if status is-interactive; and not set -q ZELLIJ; and set -q ZELLIJ_AUTO_START; and not __emergency_check
-        # Check multiple conditions to prevent nested sessions
-        set -l is_nested false
-
-        # Check TERM_PROGRAM (works in most terminals)
-        if string match -q "*zellij*" "$TERM_PROGRAM"
-          set is_nested true
+      # === PRE-FLIGHT SAFETY CHECKS ===
+      # Comprehensive validation before enabling any auto-start features
+      function __zellij_preflight_check
+        # Check 1: PATH is set and functional
+        if not test -n "$PATH"
+          return 1
         end
 
-        # Check if we're in SSH (prevent auto-start in SSH sessions)
-        if set -q SSH_CLIENT; or set -q SSH_TTY; or set -q SSH_CONNECTION
-          set is_nested true
+        # Check 2: Core commands available (critical for WSL)
+        if not command -v fish >/dev/null 2>&1
+          return 1
+        end
+        if not command -v ls >/dev/null 2>&1
+          return 1
         end
 
-        # Check if we're being sourced by another script (prevent issues)
-        if string match -q "*source*" "$_"
-          set is_nested true
+        # Check 3: WSL root shell detection - skip auto-start for root
+        if test (id -u) -eq 0
+          return 1
         end
 
-        # Check if parent process is already zellij (backup method)
-        if command -v pgrep >/dev/null 2>&1
-          if pgrep -P (echo $fish_pid) zellij >/dev/null 2>&1
-            set is_nested true
-          end
+        # Check 4: Zellij binary exists and is executable
+        if not command -v zellij >/dev/null 2>&1
+          return 1
         end
 
-        # Special case: Skip auto-start in Claude Code terminal context to prevent TTY issues
-        if string match -q "*code*" "$TERM_PROGRAM"; or string match -q "*vscode*" "$TERM_PROGRAM"
-          set is_nested true
+        # Check 5: Zellij configuration is valid
+        if not zellij setup --check >/dev/null 2>&1
+          return 1
         end
 
-        # If no nested session detected, start zellij with fallback
-        if not test $is_nested = true
-          string pad --center --width 60 "🚀 Starting Zellij"
-          # Safety check: ensure zellij binary exists and configuration is valid
-          if command -v zellij >/dev/null 2>&1
-            # Validate zellij configuration before attempting to start
-            if zellij --help >/dev/null 2>&1; and zellij setup --check >/dev/null 2>&1
-              # Try to attach to existing session first, then create new with fallback
-              if not zellij attach dev 2>/dev/null
-                if not zellij attach -c dev 2>/dev/null
-                  # Final fallback: start with default layout
-                  # Add timeout safety mechanism to prevent hanging (if timeout available)
-                  if command -v timeout >/dev/null 2>&1
-                    if timeout 5s zellij --version >/dev/null 2>&1
-                      exec zellij
-                    else
-                      echo "⚠️  Zellij startup test failed - continuing with regular shell"
-                      echo "   Check zellij configuration: zellij setup --check"
-                      echo "   You can manually start zellij with: zellij"
-                    end
-                  else
-                    # No timeout command available, proceed carefully
-                    echo "🔄 Starting zellij (no timeout available for safety check)..."
-                    exec zellij
-                  end
-                end
-              end
-            else
-              echo "⚠️  Zellij configuration validation failed - continuing with regular shell"
-              echo "   Check zellij configuration: zellij setup --check"
-              echo "   You can manually start zellij with: zellij"
-            end
-          else
-            echo "⚠️  Zellij not found - continuing with regular Fish shell"
-            echo "   Install zellij if you want terminal multiplexing"
-          end
+        return 0
+      end
+
+      # === SAFE ZELLIJ AUTO-START ===
+      # Using official Zellij integration method - NEVER use 'exec' for multiplexers
+      # This prevents shell lockouts by providing automatic fallback on failure
+      #
+      # To enable: set -gx ZELLIJ_AUTO_START 1
+      # To disable: set -e ZELLIJ_AUTO_START
+      #
+      # Official documentation: https://zellij.dev/documentation/integration.html
+      if status is-interactive; and set -q ZELLIJ_AUTO_START; and not __emergency_check
+        # Run pre-flight checks before attempting auto-start
+        if __zellij_preflight_check
+          # Use official Zellij auto-start method (safe, with fallback)
+          eval (zellij setup --generate-auto-start fish | string collect)
         else
-          string pad --center --width 60 "ℹ️  Zellij auto-start skipped"
-          echo "   Nested session detected - to start manually: zellij"
-        end
-      else
-        # Auto-start is disabled - provide helpful information
-        if status is-interactive; and not set -q ZELLIJ; and not __emergency_check
-          string pad --center --width 60 "ℹ️  Zellij auto-start disabled"
-          echo "   To enable: export ZELLIJ_AUTO_START=1"
-          echo "   To start manually: zellij"
+          echo "⚠️  Zellij pre-flight checks failed - starting normal fish shell"
+          echo "   To enable auto-start, ensure zellij is properly configured"
         end
       end
     '';
