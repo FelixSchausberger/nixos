@@ -6,6 +6,8 @@
   ...
 }: let
   cfg = config.wm.hyprland;
+  safeNotifySend = import ../../../../home/lib/safe-notify-send.nix {inherit pkgs config lib;};
+  safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 in {
   config = lib.mkIf cfg.enable {
     wayland.windowManager.hyprland.settings = {
@@ -24,9 +26,9 @@ in {
           "$mod, c, exec, ${pkgs.helix}/bin/hx"
 
           # Application launcher
-          "$mod, D, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker"
-          # "$mod, R, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules runner"
-          # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules hyprland"
+          "$mod, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker"
+          # "$mod, R, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules runner"
+          # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules hyprland"
 
           # Window management
           "$mod, Space, togglefloating"
@@ -101,16 +103,16 @@ in {
           "$mod ALT, D, exec, ${pkgs.pyprland}/bin/pypr toggle_dpms" # Toggle displays (DPMS)
 
           # Screenshots
-          ", Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" - | ${pkgs.wl-clipboard}/bin/wl-copy && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Area copied to clipboard'"
-          "$mod, Print, exec, ${pkgs.grim}/bin/grim - | ${pkgs.wl-clipboard}/bin/wl-copy && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Screen copied to clipboard'"
-          "SHIFT, Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Saved to Pictures/Screenshots'"
-          "$mod SHIFT, Print, exec, ${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${pkgs.libnotify}/bin/notify-send 'Screenshot' 'Saved to Pictures/Screenshots'"
+          ", Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" - | ${pkgs.wl-clipboard}/bin/wl-copy && ${safeNotifyBin} 'Screenshot' 'Area copied to clipboard'"
+          "$mod, Print, exec, ${pkgs.grim}/bin/grim - | ${pkgs.wl-clipboard}/bin/wl-copy && ${safeNotifyBin} 'Screenshot' 'Screen copied to clipboard'"
+          "SHIFT, Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
+          "$mod SHIFT, Print, exec, ${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           # Utilities
-          "$mod, V, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules clipboard"
-          "$mod, period, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker --modules emoji" # Emoji picker
+          "$mod, V, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules clipboard"
+          "$mod, period, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules emoji" # Emoji picker
 
           # Color picker
-          "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${pkgs.libnotify}/bin/notify-send 'Color picked' 'Copied to clipboard'"
+          "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${safeNotifyBin} 'Color picked' 'Copied to clipboard'"
 
           # Audio controls
           # "$mod, equal, exec, ${pkgs.avizo}/bin/volumectl -u up"
@@ -123,10 +125,10 @@ in {
 
           # Window management extras
           "$mod, c, centerwindow"
-          "$mod, r, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch cyclenext"
-          "$mod SHIFT, r, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch cycleprev"
-          "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch togglesplit"
-          "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch pseudo"
+          "$mod, r, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cyclenext"
+          "$mod SHIFT, r, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cycleprev"
+          "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch togglesplit"
+          "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch pseudo"
 
           # Monitor focus (Shift + N/E/I/O)
           "$mod SHIFT, left, focusmonitor, l"
@@ -156,16 +158,16 @@ in {
           "$mod SHIFT, P, pseudo"
 
           # Layout switching
-          "$mod CTRL, Space, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch layoutmsg orientationcycle"
-          "$mod ALT, Space, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl dispatch layoutmsg swapwithmaster"
+          "$mod CTRL, Space, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg orientationcycle"
+          "$mod ALT, Space, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg swapwithmaster"
 
           # Notification controls (Wired)
-          "$mod, Escape, exec, ${pkgs.libnotify}/bin/notify-send 'Test' 'Wired notification system'" # Test notification
+          "$mod, Escape, exec, ${safeNotifyBin} 'Test' 'Wired notification system'" # Test notification
           "$mod SHIFT, Escape, exec, pkill -SIGUSR1 wired" # Close all notifications
           "$mod CTRL, Escape, exec, systemctl --user restart wired" # Restart wired
 
           # System controls
-          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.system}.hyprland}/bin/hyprctl reload && ${pkgs.libnotify}/bin/notify-send 'Hyprland' 'Configuration reloaded'"
+          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl reload && ${safeNotifyBin} 'Hyprland' 'Configuration reloaded'"
           "$mod CTRL, Q, exec, ${pkgs.systemd}/bin/systemctl --user restart hyprland"
 
           # Resize mode
@@ -217,7 +219,7 @@ in {
         ", XF86WLAN, exec, ${pkgs.networkmanagerapplet}/bin/nm-connection-editor"
         ", XF86Bluetooth, exec, hypr-scratchpad bluetui"
         ", XF86Tools, exec, ${pkgs.gnome-control-center}/bin/gnome-control-center"
-        ", XF86Search, exec, ${inputs.walker.packages.${pkgs.system}.default}/bin/walker"
+        ", XF86Search, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker"
         ", XF86LaunchA, exec, ${cfg.fileManager}"
         ", XF86Explorer, exec, ${cfg.fileManager}"
 
@@ -236,7 +238,7 @@ in {
 
       # Lid switch and power button
       bindr = [
-        "CAPS, Caps_Lock, exec, ${pkgs.libnotify}/bin/notify-send 'Caps Lock' 'is remapped to Escape'"
+        "CAPS, Caps_Lock, exec, ${safeNotifyBin} 'Caps Lock' 'is remapped to Escape'"
       ];
     };
 

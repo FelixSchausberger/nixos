@@ -5,7 +5,7 @@ sessionTarget: {
 }: {
   config = {
     # Add cthulock package to user environment
-    home.packages = [inputs.cthulock.packages.${pkgs.system}.default];
+    home.packages = [inputs.cthulock.packages.${pkgs.stdenv.hostPlatform.system}.default];
 
     # Create Slint style configuration
     home.file.".config/cthulock/style.slint".text = ''

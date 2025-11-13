@@ -17,7 +17,19 @@
     shellAliases = {
       # Fix Zed editor binary conflict with ZFS daemon
       zed = "zeditor";
+      yn = "yazi-notes";
     };
+
+    # Shell init that runs in conf.d (before plugins load)
+    # This is critical for done plugin configuration
+    shellInit = ''
+      # === FISH DONE PLUGIN PRE-CONFIGURATION ===
+      # These variables must be set BEFORE the done plugin loads (in conf.d)
+      set -gx __done_min_cmd_duration 5000  # Notify for commands >5 seconds
+      set -gx __done_exclude '^git (?!push|pull|fetch)'  # Exclude most git commands
+      set -gx __done_allow_nongraphical 1  # Enable done plugin in WSL without graphical window detection
+    '';
+
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
 
@@ -28,11 +40,16 @@
         set -gx PATH /run/current-system/sw/bin /usr/bin /bin
       end
 
-      # WSL-specific PATH validation - ensure core utilities are accessible
-      # This addresses the root cause of the fish plugin failures
+      # WSL-specific PATH validation - ensure core utilities and WSL binaries are accessible
+      # This addresses the root cause of the fish plugin failures and wslpath availability
       if not command -v ls >/dev/null 2>&1; or not command -v sort >/dev/null 2>&1
         # PATH exists but is incomplete - prepend system paths
         set -gx PATH /run/current-system/sw/bin $PATH
+      end
+
+      # Ensure /bin is in PATH for WSL built-in commands (wslpath, wslinfo, etc.)
+      if not contains /bin $PATH
+        set -gx PATH $PATH /bin
       end
 
       # Verify minimum viable environment - fall back to bash if fish is broken
@@ -210,6 +227,7 @@
           echo "   To enable auto-start, ensure zellij is properly configured"
         end
       end
+
     '';
   };
 }

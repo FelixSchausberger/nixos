@@ -51,7 +51,7 @@ in {
     lldb # LLDB debugger (includes lldb-dap)
 
     # Formatters
-    # nodePackages.prettier # Use development shell version to avoid conflicts
+    nodePackages.prettier # Use development shell version to avoid conflicts
     black # Python formatter
     taplo # TOML formatter
     shfmt # Shell script formatter

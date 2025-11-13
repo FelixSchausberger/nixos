@@ -72,10 +72,7 @@ tool list-configs  # prints "=== Configurations ===" header
 
 Each subdirectory contains a specific tool following these principles:
 
-- `image-builder`: ISO/VMDK image construction
 - `scripts`: Utility scripts for system operations
 - `templates`: Project and configuration templates
-- `vmdk-builder`: VMDK disk image builder
-- `zfs-nixos-setup`: ZFS filesystem setup utility
 
 See individual tool documentation for specific usage.

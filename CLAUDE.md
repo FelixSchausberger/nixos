@@ -104,10 +104,11 @@ Documentation describes the current state, never relative changes:
 
 ### Professional Style
 
-All documentation and inline comments:
+All documentation, inline comments, and code artifacts:
 
 - As long as necessary, as short as possible
-- No emojis or decorative elements
+- No emojis or decorative elements in code, comments, or documentation files
+- Claude may use emojis in conversational replies to the user
 - No business jargon or marketing language
 - Technical accuracy over friendliness
 - Clear and direct communication
@@ -157,173 +158,78 @@ Avoid unnecessary output in scripts and tools:
 The configuration uses flakes and flake-parts for modular organization. Each
 host combines system configuration, home manager profiles, and shared modules.
 
-### Design Approach
-
+**Design Approach:**
 - **Modularity**: Reusable modules in `modules/system/` and `modules/home/`
 - **Host isolation**: Each host in `hosts/` with corresponding home profile
 - **Opt-in state**: ZFS with impermanence for declarative reproducibility
 - **Secret management**: sops-nix with age encryption for declarative secrets
 - **Testing**: namaka snapshot tests for module and configuration validation
 
-For detailed directory structure and module organization, see README.md
-Architecture section.
+For complete details, see [README.md Architecture](README.md#architecture):
+- Directory structure and file organization
+- Module system details (system and home modules)
+- Custom packages
+- Host configuration patterns
 
 ## Development Workflow
 
-### Jujutsu Workflow
+### Version Control Strategy
 
-The project uses Jujutsu (jj) for version control with a simple main-branch workflow:
+The project uses Jujutsu (jj) for version control with a main-branch workflow.
 
-**Daily Workflow:**
-
-```bash
-# Work directly on main branch
-jj describe -m "feat: add new feature"
-
-# Or use AI-powered commit message
-jjdescribe
-
-# Push changes to remote main branch
-jj git push
-```
-
-**Creating Feature Branches (Optional):**
-
-For experimental features that need isolation before merging to main:
-
-```bash
-jjbranch  # or jjb
-# Interactive prompts:
-# 1. Select type: feat, fix, chore, docs, test, refactor, perf
-# 2. Enter description (lowercase, hyphens only)
-# Result: Creates branch from current revision, commits with conventional format
-
-# When ready, use jjpush to create PR back to main
-jjpush
-```
-
-**Key points:**
-
-- Work happens on `main` by default
-- Feature branches (via `jjbranch`) are optional for experimental work
-- Branch names follow: `type/description` (e.g., `feat/add-auto-merge`)
-- Commit messages follow conventional commits: `type: description`
+**Key Principles:**
+- Work happens on `main` by default for straightforward changes
+- Feature branches (via `jjbranch` helper) are optional for experimental work
+- Commit messages follow conventional commits format
 - Validation enforced via prek hook
-- CI (Garnix + GitHub Actions) validates all changes automatically
+- CI validates all changes automatically
 
-### Conventional Commits Validation
+For complete workflow details, see [README.md Development Workflow](README.md#development-workflow):
+- Jujutsu workflow (jjbranch, jjdescribe, jjpush helpers)
+- Traditional Git workflow alternative
+- Commit message conventions and validation
+- Branch naming patterns
 
-Commit messages are validated automatically via prek hook.
+### CI/CD Strategy
 
-**Valid format:**
+The project uses hybrid CI/CD with Garnix (primary builds) and GitHub Actions (validation/security).
 
-```
-type(scope?): description
-
-Types: feat, fix, docs, style, refactor, perf, test, chore
-```
-
-**Examples:**
-
-```
-feat: add auto-merge workflow
-fix: resolve jj bookmark creation issue
-docs: update jujutsu workflow guide
-feat(ci): optimize cachix push filter
-```
-
-### CI/CD Pipeline
-
-The project uses a hybrid CI/CD approach with Garnix and GitHub Actions.
-
-**Garnix CI (Primary Build System):**
-
-Garnix handles all heavy build operations with centralized signing for enhanced security:
-- NixOS system configurations for all hosts
-- Custom package builds (lumen, vigiland, ghost, mcp-language-server, etc.)
-- Namaka snapshot tests
-- Multi-architecture support ready (x86_64-linux configured)
-
-Configuration: `garnix.yaml` at repository root
-
-Setup: Install Garnix GitHub App at https://garnix.io (one-time manual setup required)
-
-**GitHub Actions (Validation & Security):**
-
-GitHub Actions handles lightweight validation and security scanning:
-- Security scans (Trivy vulnerability scanner, TruffleHog secret detection)
-- Pre-commit hooks validation (prek)
-- Fish shell syntax validation
-- Flake metadata validation
-- Automated dependency updates (scheduled monthly)
-- Auto-merge for PRs with `auto-merge` label
-
-Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
-
-**Binary Caches:**
-
-Multiple caches configured with priority-based fallback in `modules/system/nix.nix`:
-- cache.nixos.org (priority 1) - Official NixOS cache
-- nixpkgs-schausberger.cachix.org (priority 3) - Personal cache for custom builds
-- nix-community.cachix.org (priority 5) - Community packages
-- cache.garnix.io (priority 7) - Garnix CI builds with centralized signing
-- Project-specific caches (priority 10-25) - COSMIC, Hyprland, Helix, etc.
-
-Garnix cache uses centralized signing, reducing cache poisoning risks compared to traditional binary caches where multiple contributors have push access.
+For complete CI/CD details, see [README.md Build and Deploy](README.md#build-and-deploy) → CI/CD Pipeline section:
+- Garnix CI configuration and build scope
+- GitHub Actions workflows
+- Binary cache setup and priorities
+- Auto-merge configuration
 
 ## Development Commands
 
 ### Essential Build Commands
 
-Use for testing configuration changes:
+**For AI-assisted development, prefer safe testing:**
 
 ```bash
-# Test changes without making them permanent (recommended for AI development)
+# Test changes without making them permanent (RECOMMENDED)
 sudo nixos-rebuild test --flake .
 
 # Validate flake syntax and evaluate all configurations
 nix flake check
-
-# Enter development shell with tools available
-nix develop
 ```
 
-For complete build and deployment commands, see README.md Build and Deploy
-section.
+For complete build commands, deployment options, and remote deployment, see [README.md Build and Deploy](README.md#build-and-deploy).
 
 ### Testing and Validation
 
-Run these after making changes:
+**Post-change validation workflow:**
 
 ```bash
-# Format Nix code
-nix fmt
-
-# Run all pre-commit hooks
-prek run --all-files
-
-# Run snapshot tests
-namaka check
-
-# Review snapshot changes after module updates
-namaka review
+nix fmt                    # Format Nix code
+prek run --all-files      # Run all pre-commit hooks
+namaka check              # Run snapshot tests
+namaka review             # Review snapshot changes after module updates
 ```
 
-Tests are in `tests/` directory:
+Tests are organized in `tests/` directory (hosts, modules, packages).
 
-- `tests/hosts/` - Host configuration validation
-- `tests/modules/` - Module output validation
-- `tests/packages/` - Package build validation
-
-### Package Development
-
-```bash
-# Build custom package
-nix build .#packagename
-
-# Enter package development shell with dependencies
-nix develop .#packagename
-```
+For complete testing documentation including VM testing and local CI, see [README.md Testing](README.md#testing).
 
 ## Code Quality and Formatting
 
@@ -332,81 +238,50 @@ The project uses two complementary formatting systems:
 - **prek** (`.pre-commit-config.yaml`) - Git commit hooks for automatic validation
 - **treefmt** (`treefmt.toml`) - Manual formatting via `nix fmt`
 
-### Prek Hooks
+**Key formatters and linters:**
+- alejandra (Nix formatter)
+- deadnix, statix (Nix linting)
+- markdownlint, prettier (documentation)
+- ripsecrets (secret detection)
+- pre-commit-hook-ensure-sops (sops validation)
 
-Prek (a drop-in replacement for pre-commit) runs automatically on git commits
-with hooks configured in `.pre-commit-config.yaml`:
-
-- **alejandra**: Nix code formatter
-- **deadnix**: Dead code detection
-- **statix**: Lints and suggestions for Nix code
-- **flake-checker**: Flake health checks
-- **markdownlint**: Markdown linting
-- **prettier**: General formatting for JSON/YAML
-- **ripsecrets**: Detect secrets in code
-- **trim-trailing-whitespace**: Clean up whitespace
-- **yamlfmt**: YAML formatter
-- **taplo**: TOML formatter
-- **pre-commit-hook-ensure-sops**: Ensure sops secrets are encrypted
-
-Run hooks manually with:
-
+**Essential commands:**
 ```bash
-# Install hooks (done automatically in dev shell)
-prek install
-
-# Run all hooks on all files
-prek run --all-files
-
-# Run hooks on staged files only
-prek run
-
-# View prek cache directory location (for debugging or cleanup)
-prek cache dir
+prek run --all-files      # Run all hooks manually
+nix fmt                   # Format entire repository
 ```
 
-### Treefmt Formatters
-
-Treefmt (`treefmt.toml`) is used by `nix fmt` for manual formatting:
-
-- **alejandra**: Nix code formatter
-- **prettier**: JSON, TOML, YAML, and YML formatting
-- **markdownlint**: Markdown linting and formatting
-- **trailing-whitespace-fixer**: Remove trailing whitespace
-
-Use with `nix fmt` to format the entire repository.
+Hooks run automatically on git commits. Configuration in `.pre-commit-config.yaml` and `treefmt.toml`.
 
 ## Project Structure
 
-For detailed project architecture, module system, custom packages, and host
-configurations, see README.md Architecture section.
+**Key paths for AI development:**
+- `modules/system/` and `modules/home/` - Configuration modules
+- `pkgs/` - Custom packages
+- `hosts/` - Host configurations
+- `home/profiles/` - Home profiles
+- `tests/` - Tests (hosts, modules, packages)
 
-Key paths for AI development:
-
-- Configuration modules: `modules/system/` and `modules/home/`
-- Custom packages: `pkgs/`
-- Host configurations: `hosts/`
-- Home profiles: `home/profiles/`
-- Tests: `tests/`
+For complete project structure, see [README.md Architecture](README.md#architecture).
 
 ## Secrets Management
 
-Edit secrets: `sops edit secrets/secrets.yaml`
+**Quick command:**
+```bash
+sops edit secrets/secrets.yaml   # Edit secrets
+```
 
-For complete secret management documentation, see README.md Wiki: Secret
-Management.
+For complete documentation, see [README.md Additional Documentation](README.md#additional-documentation) → Wiki: Secret Management.
 
 ## Emergency Recovery
 
-For comprehensive emergency recovery procedures and troubleshooting, see
-README.md Wiki: Emergency Recovery.
-
-Quick emergency commands:
-
+**Quick commands:**
 ```bash
 emergency-status                 # Check current status
 sudo systemctl emergency         # Enter emergency mode
 ```
+
+For comprehensive procedures, see [README.md Additional Documentation](README.md#additional-documentation) → Wiki: Emergency Recovery.
 
 ## Claude Code Configuration
 
@@ -460,32 +335,20 @@ Custom statusline showing:
 - Git branch and status
 - Nix environment detection
 
-## Additional Features
-
-For deployment tools, templates, and project structure details, see README.md.
-
 ## Documentation and Wiki
 
-Detailed documentation is maintained in the GitHub Wiki. For the list of wiki
-pages and quick references, see README.md Additional Documentation section.
+Detailed documentation is maintained in the GitHub Wiki.
 
-### Updating Wiki
+For wiki pages and quick references, see [README.md Additional Documentation](README.md#additional-documentation).
 
-The wiki is a separate git repository:
+**Updating Wiki:**
+
+The wiki is a separate git repository at `/per/repos/nixos.wiki`.
 
 ```bash
-# Clone wiki repository (first time only)
-cd /per/repos
-git clone git@github.com:FelixSchausberger/nixos.wiki.git
-
-# Edit markdown files
-cd /per/repos/nixos.wiki
+cd /per/repos/nixos.wiki        # Navigate to wiki repo
 # Edit .md files as needed
-
-# Commit and push changes
-git add .
-git commit -m "docs: update wiki description"
-git push
+git add . && git commit -m "docs: update description" && git push
 ```
 
 Changes are immediately visible on GitHub after pushing.

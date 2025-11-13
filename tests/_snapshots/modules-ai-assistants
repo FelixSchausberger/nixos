@@ -1,0 +1,33 @@
+#pretty
+{
+  additional_context_enabled = true;
+  additional_context_exists = true;
+  avoid_agreement_enabled = true;
+  avoid_agreement_exists = true;
+  avoid_agreement_has_content = true;
+  behavior_count = 3;
+  behavior_names = [
+    "additional-context"
+    "avoid-agreement"
+    "prevent-rebuild"
+  ];
+  github_mcp_command = "github-mcp-server";
+  github_mcp_enabled = true;
+  github_mcp_exists = true;
+  has_behaviors = true;
+  has_mcp_servers = true;
+  mcp_server_count = 3;
+  mcp_server_names = [
+    "github"
+    "nix-language-server"
+    "nixos"
+  ];
+  nix_lang_mcp_enabled = true;
+  nix_lang_mcp_exists = true;
+  nix_lang_mcp_has_args = true;
+  nixos_mcp_enabled = true;
+  nixos_mcp_exists = true;
+  prevent_rebuild_enabled = true;
+  prevent_rebuild_exists = true;
+  prevent_rebuild_priority = 10;
+}
