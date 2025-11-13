@@ -10,13 +10,14 @@ in {
   config = lib.mkIf cfg.enable {
     # Add ironbar package
     home.packages = with pkgs; [
-      inputs.ironbar.packages.${pkgs.system}.default
+      inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
     # Ironbar configuration file
     xdg.configFile."ironbar/config.json".text = builtins.toJSON {
       anchor_to_edges = true;
       position = "top";
+      height = 28;
       start = [
         {
           type = "workspaces";
@@ -45,6 +46,12 @@ in {
       ];
       end = [
         {
+          type = "script";
+          cmd = "bash ${./sysinfo.sh}";
+          interval = 3000;
+          tooltip = "System Information";
+        }
+        {
           type = "tray";
           icon_size = 16;
         }
@@ -71,21 +78,6 @@ in {
               "50-75" = "󰤢";
               "75-100" = "󰤨";
             };
-          };
-        }
-        {
-          type = "sys_info";
-          format = [
-            " {cpu_percent}%"
-            " {memory_percent}%"
-            "󰋊 {disk_percent:/}%"
-          ];
-          interval = {
-            cpu = 1;
-            disks = 30;
-            memory = 5;
-            networks = 3;
-            temps = 5;
           };
         }
         {
@@ -184,6 +176,14 @@ in {
         margin: 0 4px;
       }
 
+      .script {
+        color: #f9e2af;
+        background: rgba(49, 50, 68, 0.6);
+        border-radius: 6px;
+        padding: 4px 8px;
+        margin: 0 4px;
+      }
+
       .clock {
         color: #fab387;
         background: rgba(49, 50, 68, 0.6);
@@ -231,7 +231,7 @@ in {
 
       Service = {
         Type = "simple";
-        ExecStart = "${inputs.ironbar.packages.${pkgs.system}.default}/bin/ironbar";
+        ExecStart = "${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar";
         Restart = "on-failure";
         RestartSec = 5;
       };

@@ -1,12 +1,12 @@
 #pretty
 {
   containers_enabled = true;
-  docker_curl_ca = "/nix/store/6jsh5hyyli9ddac6dqxx07a68jzllkqb-nss-cacert-3.115/etc/ssl/certs/ca-bundle.crt";
+  docker_curl_ca = "/nix/store/m65dckzfgr1lr90g5v6jx0iynnz38nsk-nss-cacert-3.115/etc/ssl/certs/ca-bundle.crt";
   docker_enabled = true;
   docker_on_boot = true;
-  docker_ssl_cert = "/nix/store/6jsh5hyyli9ddac6dqxx07a68jzllkqb-nss-cacert-3.115/etc/ssl/certs/ca-bundle.crt";
+  docker_ssl_cert = "/nix/store/m65dckzfgr1lr90g5v6jx0iynnz38nsk-nss-cacert-3.115/etc/ssl/certs/ca-bundle.crt";
   has_dns = true;
   has_log_driver = "json-file";
   has_storage_driver = "overlay2";
-  nix_ssl_cert = "/etc/ssl/certs/ca-bundle-enhanced.crt";
+  nix_ssl_cert = "/run/ca-bundle-plus-eset.pem";
 }

@@ -2,6 +2,7 @@
 {
   lib,
   pkgs,
+  inputs,
   ...
 }: let
   # Tool metadata
@@ -15,6 +16,8 @@
     types
     mkIf
     ;
+
+  inherit (inputs.self.lib) defaults;
 
   result = {
     # Main function - example: generate NixOS configuration
@@ -33,7 +36,7 @@
       };
 
       # Add more default configuration here
-      system.stateVersion = "25.11";
+      system.stateVersion = defaults.system.version;
     };
 
     # Configuration validation function
@@ -118,7 +121,7 @@
 
     # System information collector
     getSystemInfo = {
-      platform = pkgs.system;
+      platform = pkgs.stdenv.hostPlatform.system;
       nixVersion = lib.version;
       availablePackages = builtins.length (builtins.attrNames pkgs);
     };

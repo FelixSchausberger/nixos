@@ -5,7 +5,7 @@
     gnumake
 
     # Javascript
-    # nodejs
+    nodejs
     # nodejs_23
 
     # Python
@@ -15,15 +15,12 @@
     # GitHub Actions local runner
     act
 
-    # Nix utilities
-    comma # Run software without installing
-
     # Language Servers
     nodePackages.bash-language-server # Bash
     clang-tools # C/C++
     marksman # Markdown
     nixd # Nix
-    # python311Packages.python-lsp-server # Python
+    python311Packages.python-lsp-server # Python
     taplo # TOML
     yaml-language-server # YAML
   ];

@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: {
@@ -38,7 +39,7 @@
           wrap-indicator = "";
         };
       };
-      theme = "base16_transparent";
+      theme = lib.mkDefault "base16_transparent";
       keys = {
         insert = {
           esc = ["collapse_selection" "normal_mode"];

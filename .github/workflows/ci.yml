@@ -5,8 +5,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: "0 6 1 * *" # Monthly dependency check on the 1st
 # Permissions for security scanning
 permissions:
   actions: read
@@ -25,9 +23,13 @@ env:
     accept-flake-config = true
     # SSL/TLS Configuration
     ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    # Optimized substituters with faster mirrors first
-    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://cache.garnix.io https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc=
+    # Optimized substituters (prioritize speed: official → garnix → community)
+    extra-substituters = https://cache.nixos.org https://cache.garnix.io https://nix-community.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org https://yazi.cachix.org
+    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc= yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA=
+    # Cache robustness settings
+    narinfo-cache-positive-ttl = 3600
+    connect-timeout = 5
+    stalled-download-timeout = 30
     # Performance optimizations
     max-jobs = auto
     cores = 0
@@ -52,7 +54,7 @@ jobs:
           format: "sarif"
           output: "trivy-results.sarif"
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() && github.event_name != 'pull_request' && github.token != ''
         with:
           sarif_file: "trivy-results.sarif"
@@ -120,64 +122,6 @@ jobs:
           nix flake metadata
           nix flake show
           echo "✅ Flake structure is valid"
-  # Dependency updates and maintenance
-  maintenance:
-    name: Maintenance
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-      - name: Setup SSL certificates
-        uses: ./.github/actions/setup-ssl
-      - name: Verify checkout
-        run: |
-          echo "=== Repository Checkout Verification ==="
-          echo "Working directory: $(pwd)"
-          echo "Checking for flake.nix:"
-          if [ -f "flake.nix" ]; then
-            echo "✅ flake.nix found successfully"
-          else
-            echo "❌ flake.nix not found"
-            exit 1
-          fi
-          echo "=== End Verification ==="
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            ${{ env.NIX_CONFIG }}
-      - name: Update flake inputs
-        run: |
-          # Use --offline first to check current state, then update with retries
-          nix flake update --commit-lock-file --accept-flake-config || {
-            echo "Rate limited, waiting 60s..."
-            sleep 60
-            nix flake update --commit-lock-file --accept-flake-config
-          }
-      - name: Check for updates
-        run: |
-          git diff --exit-code || echo "Flake inputs updated"
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v5
-        if: github.event_name == 'schedule'
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update flake inputs"
-          title: "Automated dependency update"
-          body: |
-            ## Automated Dependency Update
-
-            This PR updates the flake inputs to their latest versions.
-
-            - Created by GitHub Actions
-            - Triggered by scheduled workflow
-            - Please review changes before merging
-          branch: automated-updates
-          delete-branch: true
   # Deployment readiness check
   deployment:
     name: Deployment Ready

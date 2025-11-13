@@ -9,9 +9,12 @@
   getTotalMemoryGB = 16;
 
   # Calculate ARC limits based on system memory
-  # Conservative approach: max 50% of RAM for ARC, min 1GB
-  arcMaxGB = lib.max 1 (getTotalMemoryGB * 0.5);
-  arcMinGB = lib.max 1 (getTotalMemoryGB * 0.125); # 12.5% minimum
+  # Desktop-optimized: 30% max for desktop/development systems (not storage servers)
+  # Reference: https://blog.thalheim.io/2025/10/17/zfs-ate-my-ram-understanding-the-arc-cache/
+  # - Storage servers can use 50%, desktops should use 25-30%
+  # - Settings balanced for future dedicated swap partition
+  arcMaxGB = lib.max 1 (getTotalMemoryGB * 0.3);
+  arcMinGB = lib.max 1 (getTotalMemoryGB * 0.125); # 12.5% minimum (2GB floor)
 
   # Convert to bytes for kernel parameter
   arcMaxBytes = toString (builtins.floor (arcMaxGB * 1024 * 1024 * 1024));
@@ -21,8 +24,8 @@ in {
   boot.kernelParams = [
     # ZFS ARC (Adaptive Replacement Cache) tuning
     # ARC is ZFS's intelligent cache that adapts between MRU and MFU algorithms
-    "zfs.zfs_arc_max=${arcMaxBytes}" # Maximum ARC size (50% of RAM)
-    "zfs.zfs_arc_min=${arcMinBytes}" # Minimum ARC size (12.5% of RAM)
+    "zfs.zfs_arc_max=${arcMaxBytes}" # Maximum ARC size (30% of RAM for desktop)
+    "zfs.zfs_arc_min=${arcMinBytes}" # Minimum ARC size (12.5% of RAM, 2GB floor)
 
     # ARC performance tuning
     "zfs.zfs_arc_meta_limit_percent=75" # Allow 75% of ARC for metadata (default 75%)

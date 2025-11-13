@@ -3,7 +3,7 @@
   console_keymap = "de";
   graphics_32bit_enabled = true;
   graphics_enabled = true;
-  has_cosmic = true;
+  has_cosmic = false;
   has_graphics_packages = true;
   hostname = "surface";
   is_gui = true;

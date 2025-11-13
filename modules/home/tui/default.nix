@@ -1,15 +1,19 @@
 {
   pkgs,
   lib,
+  config,
   ...
-}: {
+}: let
+  safeNotifySend = import ../../../home/lib/safe-notify-send.nix {inherit pkgs config;};
+  safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
+in {
   imports = [
     ./helix # Post-modern modal text editor
     ./neovim.nix # Neovim with basic configuration (replaces nixvim to avoid tree-sitter-ada issue)
     ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
     ./bat.nix # A cat clone with syntax highlighting and Git integration
     ./bluetui.nix # Bluetooth TUI management tool (kept separate due to config)
-    ./claude-code # An agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster
+    ./ai-assistants # AI coding assistants (Claude Code, OpenCode) with shared MCP servers and behaviors
     ./direnv.nix # A shell extension that manages your environment
     ./eza.nix # A modern, maintained replacement for ls
     ./fd.nix # A simple, fast and user-friendly alternative to find
@@ -44,9 +48,6 @@
       enableFishIntegration = true;
       options = ["--alias" "f"];
     };
-
-    # Replaced tealdeer with outfieldr - faster TLDR client without certificate issues
-    # tealdeer had TLS certificate issues due to rustls not using system certificates
   };
 
   home.packages = with pkgs; [
@@ -79,10 +80,14 @@
     lorri.enable = true; # Your project's nix-env
   };
 
-  # Environment variables for proper TLS certificate validation
-  home.sessionVariables = {
-    SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-    NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+  home.sessionPath = lib.mkBefore ["$HOME/.local/bin"];
+
+  home.file.".local/bin/notify-send" = {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      exec ${safeNotifyBin} "$@"
+    '';
   };
 
   # Shell health check activation script

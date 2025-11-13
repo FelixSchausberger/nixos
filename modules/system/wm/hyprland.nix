@@ -7,6 +7,9 @@
   imports = [
     inputs.hyprland.nixosModules.default
     ./shared-environment.nix
+    ./shared-pipewire.nix
+    ./shared-packages.nix
+    ./shared-security.nix
   ];
 
   # Enable Hyprland with optimal settings
@@ -16,125 +19,33 @@
     portalPackage = pkgs.xdg-desktop-portal-hyprland;
   };
 
-  # Session management and authentication
-  security = {
-    # PAM configuration for cthulock
-    pam.services = {
-      cthulock = {
-        text = ''
-          auth include login
-        '';
-      };
-      # Enable cthulock to work with login
-      login.enableGnomeKeyring = true;
-    };
-
-    # Polkit for privilege escalation
-    polkit.enable = true;
-    rtkit.enable = true;
+  # Hyprland-specific PAM configuration for cthulock
+  security.pam.services.cthulock = {
+    text = ''
+      auth include login
+    '';
   };
 
-  # Audio system (required for proper Wayland audio)
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    jack.enable = true;
+  # PipeWire, fonts, and common security configuration are provided by shared modules
 
-    # Low-latency configuration
-    extraConfig.pipewire."92-low-latency" = {
-      context.properties = {
-        default.clock = {
-          rate = 48000;
-          quantum = 32;
-          min-quantum = 32;
-          max-quantum = 32;
-        };
-      };
-    };
-  };
-
-  # System packages required for Hyprland
+  # Hyprland-specific system packages (common Wayland packages provided by shared-packages.nix)
   environment.systemPackages = with pkgs; [
-    # Core Wayland
-    wayland
-    wayland-protocols
-    wayland-utils
-    wlroots
+    # Core compositor dependency
+    wlroots # Wayland compositor library used by Hyprland
 
     # Hyprland ecosystem
     hyprland-protocols
     hyprpicker
 
-    # System utilities
-    wl-clipboard
-    wl-clip-persist
-    cliphist
-
-    # File managers
-    xdg-utils
-
-    # System monitoring and control
-    brightnessctl
-    playerctl
-    pavucontrol
-
-    # Screenshot tools
-    grim
-    slurp
-    swappy
-
-    # Development and utilities
-    jq # For Hyprland scripting
-    socat # For Hyprland IPC
-
-    # Theme support
-    libsForQt5.qt5.qtwayland
-    qt6.qtwayland
+    # Qt theme tools (Hyprland-specific)
     libsForQt5.qt5ct
-    qt6ct
+    qt6Packages.qt6ct
 
     # Portal dependencies (xdg-desktop-portal-hyprland provided by programs.hyprland)
     xdg-desktop-portal
     xdg-desktop-portal-gtk
     xdg-desktop-portal-wlr
   ];
-
-  # Fonts configuration
-  fonts = {
-    enableDefaultPackages = true;
-    packages = with pkgs; [
-      font-awesome
-      noto-fonts
-      noto-fonts-emoji
-      noto-fonts-cjk-sans
-      liberation_ttf
-      fira-code
-      fira-code-symbols
-      jetbrains-mono
-      nerd-fonts.jetbrains-mono
-      nerd-fonts.fira-code
-      nerd-fonts.hack
-      nerd-fonts.meslo-lg
-    ];
-
-    fontconfig = {
-      enable = true;
-      antialias = true;
-      cache32Bit = true;
-      hinting.enable = true;
-      hinting.style = "slight";
-      subpixel.rgba = "rgb";
-
-      defaultFonts = {
-        serif = ["Noto Serif" "Liberation Serif"];
-        sansSerif = ["Noto Sans" "Liberation Sans"];
-        monospace = ["JetBrainsMono Nerd Font" "Liberation Mono"];
-        emoji = ["Noto Color Emoji"];
-      };
-    };
-  };
 
   # Hyprland-specific environment variables
   environment.sessionVariables = {
@@ -191,50 +102,6 @@
     user.extraConfig = ''
       DefaultEnvironment="PATH=/run/current-system/sw/bin"
     '';
-  };
-
-  # Security configuration
-  security.pam.loginLimits = [
-    # Real-time scheduling for better audio/gaming performance
-    {
-      domain = "@users";
-      item = "rtprio";
-      type = "-";
-      value = "1";
-    }
-    {
-      domain = "@users";
-      item = "nice";
-      type = "-";
-      value = "-11";
-    }
-    {
-      domain = "@users";
-      item = "memlock";
-      type = "-";
-      value = "unlimited";
-    }
-  ];
-
-  # Gaming and performance optimizations (system-level)
-  programs = {
-    # GameMode for automatic game optimizations
-    gamemode = {
-      enable = true;
-      settings = {
-        general = {
-          renice = 10;
-          ioprio = 4;
-          inhibit_screensaver = 1;
-        };
-
-        gpu = {
-          apply_gpu_optimisations = "accept-responsibility";
-          gpu_device = 0;
-          amd_performance_level = "high";
-        };
-      };
-    };
   };
 
   # Virtual console configuration for better Wayland experience

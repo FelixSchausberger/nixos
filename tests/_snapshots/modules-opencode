@@ -1,0 +1,12 @@
+#pretty
+{
+  global_mcp_enabled = true;
+  has_mcp_servers = true;
+  has_opencode_package = false;
+  has_project_config_activation = true;
+  has_rules = true;
+  mcp_integration_enabled = true;
+  opencode_hm_enabled = true;
+  opencode_wrapper_enabled = true;
+  project_config_enabled = true;
+}

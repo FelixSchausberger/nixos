@@ -18,8 +18,8 @@
       }
       {
         on = ["f" "f"];
-        run = "plugin fg --args='fzf'";
-        desc = "Find file by filename";
+        run = "plugin fg --args='sk'";
+        desc = "Find file by filename (skim)";
       }
     ];
   };

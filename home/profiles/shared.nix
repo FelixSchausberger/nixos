@@ -1,10 +1,15 @@
-{hostName ? "", ...}: let
+{
+  hostName ? "",
+  lib,
+  ...
+}: let
   # Map hostname to window managers to avoid circular dependency
   wmForHost = {
     "desktop" = ["hyprland" "niri"];
     "surface" = ["hyprland"];
     "portable" = []; # TUI-only emergency/recovery system
-    "hp-probook-wsl" = []; # TUI-only WSL system
+    "hp-probook-wsl" = ["niri"]; # WSL with niri WM
+    "hp-probook-vmware" = ["niri"]; # VMware VM with niri WM
   };
 
   # Use provided hostname
@@ -20,4 +25,7 @@ in {
       ../../modules/home
     ]
     ++ wmModules;
+
+  # Enable OpenCode on hp-probook-wsl
+  ai-assistants.opencode.enable = lib.mkDefault (currentHost == "hp-probook-wsl");
 }

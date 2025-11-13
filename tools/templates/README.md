@@ -92,5 +92,4 @@ Both templates include:
 
 Existing tools using these patterns:
 
-- `tools/zfs-nixos-setup/` - Rust tool for ZFS system installation
-- `tools/scripts/` - Rust template base (web scraper example)
+- `tools/scripts/` - System operation scripts and utilities

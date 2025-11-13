@@ -1,9 +1,7 @@
 {pkgs, ...}: {
   imports = [
-    ../shared.nix
     ./hyprland.nix
     ./niri.nix
-    ../../../modules/home/profiles/features.nix
   ];
 
   # Feature-based configuration for desktop

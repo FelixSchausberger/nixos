@@ -1,7 +1,5 @@
 {pkgs, ...}: {
-  imports = [
-    ../shared.nix
-  ];
+  imports = [];
 
   home.packages = with pkgs; [
     libwacom # Libraries, configuration, and diagnostic tools for Wacom tablets running under Linux

@@ -2,12 +2,14 @@
 {
   imports = [
     ./containers.nix
+    ./deployment-validation.nix
     ./development.nix
     ./emergency-shell.nix
     ./fonts.nix
     ./home-manager.nix
     ./maintenance.nix
     ./nix.nix
+    ./ssl-config.nix
     ./wsl-integration.nix
   ];
 }

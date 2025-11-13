@@ -1,0 +1,81 @@
+name: Weekly Dependency Updates
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    # Run every Sunday at midnight UTC
+    - cron: "0 0 * * 0"
+permissions:
+  contents: write
+  pull-requests: write
+env:
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  NIX_CONFIG: |
+    experimental-features = nix-command flakes
+    accept-flake-config = true
+    ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
+    # Optimized substituters for update workflow
+    extra-substituters = https://cache.nixos.org https://cache.garnix.io
+    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=
+    # Cache robustness settings
+    narinfo-cache-positive-ttl = 3600
+    connect-timeout = 5
+    stalled-download-timeout = 30
+jobs:
+  update-flake:
+    name: Update Flake Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup SSL certificates
+        uses: ./.github/actions/setup-ssl
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            ${{ env.NIX_CONFIG }}
+      - name: Update flake lock
+        uses: DeterminateSystems/update-flake-lock@v24
+        with:
+          commit-msg: "chore: weekly dependency update"
+          pr-title: "chore: weekly dependency update"
+          pr-body: |
+            ## Weekly Dependency Update
+
+            Automated weekly update of all flake inputs to their latest versions.
+
+            **Validation:**
+            - Garnix CI builds all NixOS configurations
+            - Security scans check for vulnerabilities
+            - Pre-commit hooks validate code quality
+
+            **Auto-merge:**
+            - This PR will automatically merge when all checks pass
+            - Review the flake.lock changes for major version bumps
+            - Check Garnix build logs for any issues
+
+            ---
+            Triggered by: `${{ github.event_name }}`
+            Workflow: weekly-updates.yml
+          pr-labels: auto-merge
+          branch: weekly-updates
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Enable auto-merge for PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Wait briefly for PR to be created
+          sleep 5
+
+          # Find the PR number for our branch
+          PR_NUMBER=$(gh pr list --head weekly-updates --json number --jq '.[0].number')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Enabling auto-merge for PR #$PR_NUMBER"
+            gh pr merge --auto --rebase "$PR_NUMBER"
+            echo "Auto-merge enabled - PR will merge when all checks pass"
+          else
+            echo "No PR found (inputs may already be up to date)"
+          fi

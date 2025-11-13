@@ -1,10 +1,15 @@
 {
   config,
   pkgs,
+  lib,
   ...
-}: {
+}: let
+  safeNotifySend = import ../../lib/safe-notify-send.nix {inherit pkgs config lib;};
+  safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
+in {
   # Desktop-specific niri configuration
   wm.niri = {
+    enable = true;
     # Monitor configuration for desktop setup
     # Using auto-detection as default - can be overridden for specific multi-monitor setups
     outputs = [
@@ -141,8 +146,8 @@
       amd_performance_level=high
 
       [custom]
-      start=${pkgs.libnotify}/bin/notify-send "GameMode activated"
-      end=${pkgs.libnotify}/bin/notify-send "GameMode deactivated"
+      start=${safeNotifyBin} "GameMode activated"
+      end=${safeNotifyBin} "GameMode deactivated"
     '';
   };
 

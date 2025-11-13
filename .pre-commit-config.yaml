@@ -12,20 +12,22 @@ repos:
     rev: v0.13.0
     hooks:
       - id: yamlfmt
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-      - id: check-yaml
-        args: [--allow-multiple-documents]
-      - id: check-json
-      - id: check-toml
-      - id: check-merge-conflict
-      - id: check-executables-have-shebangs
-        types: [executable]
-      - id: end-of-file-fixer
-        exclude: ^tests/_snapshots/
-      - id: trailing-whitespace
-      - id: check-case-conflict
+  # Temporarily disabled: prek uses rustls with outdated certificate roots preventing PyPI access
+  # Re-enable once prek updates to use native-tls or updated webpki-roots
+  # - repo: https://github.com/pre-commit/pre-commit-hooks
+  #   rev: v5.0.0
+  #   hooks:
+  #     - id: check-yaml
+  #       args: [--allow-multiple-documents]
+  #     - id: check-json
+  #     - id: check-toml
+  #     - id: check-merge-conflict
+  #     - id: check-executables-have-shebangs
+  #       types: [executable]
+  #     - id: end-of-file-fixer
+  #       exclude: ^tests/_snapshots/
+  #     - id: trailing-whitespace
+  #     - id: check-case-conflict
   - repo: https://github.com/sirwart/ripsecrets
     rev: v0.1.8
     hooks:
@@ -71,6 +73,11 @@ repos:
         entry: tools/scripts/validate-commit-msg.sh
         language: system
         stages: [commit-msg]
+      - id: installer-authorized-keys
+        name: Validate installer authorized_keys
+        entry: tools/scripts/check-installer-keys.sh
+        language: system
+        pass_filenames: false
       - id: fish-syntax-check
         name: Fish shell syntax check
         entry: fish --no-execute

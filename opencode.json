@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "github": {
+      "command": [
+        "/nix/store/mzd32r5p9xg25y78r9sgqq4czjb3qq7l-github-mcp-server-0.20.2/bin/github-mcp-server"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "nix-language-server": {
+      "command": [
+        "/nix/store/xraaxsj9ma2vswpyg8d18m6fq1phw4lv-mcp-language-server-0.1.1/bin/mcp-language-server",
+        "--workspace",
+        "/per/etc/nixos",
+        "--lsp",
+        "nixd"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "nixos": {
+      "command": [
+        "/nix/store/bkc6adlc0ypvay8p5zq84h0y7z56hfpp-mcp-nixos-1.0.3/bin/mcp-nixos"
+      ],
+      "enabled": true,
+      "type": "local"
+    }
+  },
+  "theme": "stylix"
+}

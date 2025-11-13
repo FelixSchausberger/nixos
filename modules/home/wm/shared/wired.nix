@@ -1,17 +1,12 @@
 sessionTarget: {
   lib,
   pkgs,
-  inputs,
   ...
 }: {
-  imports = [
-    inputs.wired.homeManagerModules.default
-  ];
-
   config = {
     # Wired notification daemon configuration
     services.wired = {
-      enable = true;
+      enable = lib.mkDefault true;
       config = ./wired.ron;
     };
 

@@ -1,8 +1,9 @@
 {pkgs, ...}: {
   imports = [
-    ./sops.nix
     ./ssh.nix
   ];
+
+  # Sops configuration moved to modules/system/sops-common.nix for centralization
 
   security = {
     # Allow wayland lockers to unlock the screen
@@ -17,7 +18,10 @@
     rtkit.enable = true;
 
     # Don't ask for password for wheel group
-    sudo.wheelNeedsPassword = false;
+    sudo-rs = {
+      enable = true;
+      wheelNeedsPassword = false;
+    };
 
     # Ensure FUSE is configured system-wide
     wrappers.fusermount3 = {

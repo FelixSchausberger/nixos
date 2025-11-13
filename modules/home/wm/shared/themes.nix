@@ -1,31 +1,37 @@
 sessionTarget: {
   config,
   lib,
+  inputs,
   ...
-}: {
+}: let
+  catppuccin = inputs.self.lib.catppuccinColors.mocha;
+in {
+  imports = [
+    ./gtk-config.nix
+  ];
   config = let
     cfg = config.wm.shared.theme;
 
-    # Color schemes
+    # Color schemes using centralized Catppuccin definitions
     colors = {
       catppuccin-macchiato = {
-        active_border = "rgb(89b4fa) rgb(cba6f7) 45deg";
-        inactive_border = "rgb(45475a)";
-        group_active = "rgb(cba6f7)";
-        group_inactive = "rgb(45475a)";
-        group_locked_active = "rgb(f38ba8)";
-        group_locked_inactive = "rgb(45475a)";
-        shadow = "rgba(1e1e2eee)";
+        active_border = "rgb(${catppuccin.blue}) rgb(${catppuccin.mauve}) 45deg";
+        inactive_border = "rgb(${catppuccin.surface1})";
+        group_active = "rgb(${catppuccin.mauve})";
+        group_inactive = "rgb(${catppuccin.surface1})";
+        group_locked_active = "rgb(${catppuccin.red})";
+        group_locked_inactive = "rgb(${catppuccin.surface1})";
+        shadow = "rgba(${catppuccin.base}ee)";
       };
 
       custom = {
-        active_border = "rgb(89b4fa)";
-        inactive_border = "rgb(45475a)";
-        group_active = "rgb(cba6f7)";
-        group_inactive = "rgb(45475a)";
-        group_locked_active = "rgb(f38ba8)";
-        group_locked_inactive = "rgb(45475a)";
-        shadow = "rgba(1e1e2eee)";
+        active_border = "rgb(${catppuccin.blue})";
+        inactive_border = "rgb(${catppuccin.surface1})";
+        group_active = "rgb(${catppuccin.mauve})";
+        group_inactive = "rgb(${catppuccin.surface1})";
+        group_locked_active = "rgb(${catppuccin.red})";
+        group_locked_inactive = "rgb(${catppuccin.surface1})";
+        shadow = "rgba(${catppuccin.base}ee)";
       };
     };
 
@@ -39,8 +45,8 @@ sessionTarget: {
           gaps_in = cfg.gaps.inner;
           gaps_out = cfg.gaps.outer;
           border_size = 2;
-          "col.active_border" = currentColors.active_border;
-          "col.inactive_border" = currentColors.inactive_border;
+          "col.active_border" = lib.mkDefault currentColors.active_border;
+          "col.inactive_border" = lib.mkDefault currentColors.inactive_border;
           resize_on_border = true;
           extend_border_grab_area = 15;
         };
@@ -65,7 +71,7 @@ sessionTarget: {
             enabled = true;
             render_power = 3;
             ignore_window = true;
-            color = currentColors.shadow;
+            color = lib.mkDefault currentColors.shadow;
             offset = "0 8";
             scale = 1.0;
           };
@@ -76,43 +82,13 @@ sessionTarget: {
 
         # Group theming
         group = {
-          "col.border_active" = currentColors.group_active;
-          "col.border_inactive" = currentColors.group_inactive;
-          "col.border_locked_active" = currentColors.group_locked_active;
-          "col.border_locked_inactive" = currentColors.group_locked_inactive;
+          "col.border_active" = lib.mkDefault currentColors.group_active;
+          "col.border_inactive" = lib.mkDefault currentColors.group_inactive;
+          "col.border_locked_active" = lib.mkDefault currentColors.group_locked_active;
+          "col.border_locked_inactive" = lib.mkDefault currentColors.group_locked_inactive;
         };
       };
 
-      # GTK theme configuration for consistent theming
-      xdg.configFile = {
-        "gtk-3.0/settings.ini".text = ''
-          [Settings]
-          gtk-application-prefer-dark-theme=1
-          gtk-theme-name=Adwaita-dark
-          gtk-icon-theme-name=Adwaita
-          gtk-font-name=Inter 11
-          gtk-cursor-theme-name=Bibata-Modern-Classic
-          gtk-cursor-theme-size=24
-          gtk-toolbar-style=GTK_TOOLBAR_BOTH
-          gtk-toolbar-icon-size=GTK_ICON_SIZE_LARGE_TOOLBAR
-          gtk-button-images=1
-          gtk-menu-images=1
-          gtk-enable-event-sounds=1
-          gtk-enable-input-feedback-sounds=1
-          gtk-xft-antialias=1
-          gtk-xft-hinting=1
-          gtk-xft-hintstyle=hintfull
-        '';
-
-        "gtk-4.0/settings.ini".text = ''
-          [Settings]
-          gtk-application-prefer-dark-theme=1
-          gtk-theme-name=Adwaita-dark
-          gtk-icon-theme-name=Adwaita
-          gtk-font-name=Inter 11
-          gtk-cursor-theme-name=Bibata-Modern-Classic
-          gtk-cursor-theme-size=24
-        '';
-      };
+      # GTK theme configuration handled by gtk-config.nix import
     };
 }
