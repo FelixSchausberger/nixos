@@ -1,0 +1,68 @@
+diff --git a/templates/notify/notify.sh b/templates/notify/notify.sh
+index 2fdb327..b74733a 100644
+--- a/templates/notify/notify.sh
++++ b/templates/notify/notify.sh
+@@ -19,6 +19,38 @@ LOG_FILE="/tmp/claude-notify-debug.log"
+ # Enable logging for debugging
+ DEBUG=1
+ 
++# Resolve helper binaries when Windows PATH is not appended
++resolve_helper() {
++    local binary="$1"
++    shift
++
++    for candidate in "$@"; do
++        if [ -x "$candidate" ]; then
++            echo "$candidate"
++            return 0
++        fi
++    done
++
++    if command -v "$binary" >/dev/null 2>&1; then
++        command -v "$binary"
++        return 0
++    fi
++
++    return 1
++}
++
++if [ -z "$CLAUDE_WSL_POWERSHELL" ]; then
++    CLAUDE_WSL_POWERSHELL=$(resolve_helper powershell.exe \
++        /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \
++        /mnt/c/Windows/SysWOW64/WindowsPowerShell/v1.0/powershell.exe)
++fi
++
++if [ -z "$CLAUDE_WSL_WSLPATH" ]; then
++    CLAUDE_WSL_WSLPATH=$(resolve_helper wslpath \
++        /bin/wslpath /usr/bin/wslpath /sbin/wslpath /run/current-system/sw/bin/wslpath)
++fi
++
++
+ log() {
+     # Wrap logging in error handling - never fail
+     {
+@@ -336,11 +368,11 @@ if [ "$HOOK_EVENT" = "Stop" ] || [ "$HOOK_EVENT" = "Notification" ]; then
+         log "Calling send-notification.ps1 for $HOOK_EVENT event..."
+         # Pass the WT_SESSION we found from process tracing - with comprehensive error handling
+         {
+-            # Verify wslpath exists before using it
+-            if command -v wslpath >/dev/null 2>&1 && command -v powershell.exe >/dev/null 2>&1; then
+-                WINDOWS_SCRIPT=$(wslpath -w "$NOTIFICATION_SCRIPT" 2>/dev/null) || WINDOWS_SCRIPT=""
++            # Verify helper binaries exist before using them
++            if [ -n "$CLAUDE_WSL_WSLPATH" ] && [ -x "$CLAUDE_WSL_WSLPATH" ] && [ -n "$CLAUDE_WSL_POWERSHELL" ] && [ -x "$CLAUDE_WSL_POWERSHELL" ]; then
++                WINDOWS_SCRIPT=$("$CLAUDE_WSL_WSLPATH" -w "$NOTIFICATION_SCRIPT" 2>/dev/null) || WINDOWS_SCRIPT=""
+                 if [ -n "$WINDOWS_SCRIPT" ]; then
+-                    powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden \
++                    "$CLAUDE_WSL_POWERSHELL" -ExecutionPolicy Bypass -WindowStyle Hidden \
+                         -File "$WINDOWS_SCRIPT" \
+                         -Title "$FOLDER_NAME" \
+                         -Message "$NOTIFICATION_MESSAGE" \
+@@ -354,7 +386,7 @@ if [ "$HOOK_EVENT" = "Stop" ] || [ "$HOOK_EVENT" = "Notification" ]; then
+                     log "ERROR: Could not convert path to Windows format"
+                 fi
+             else
+-                log "ERROR: wslpath or powershell.exe not available"
++                log "ERROR: Helper binaries missing. WSLPATH: ${CLAUDE_WSL_WSLPATH:-unset}, POWERSHELL: ${CLAUDE_WSL_POWERSHELL:-unset}"
+             fi
+         } 2>/dev/null || log "ERROR: Failed to call notification script"
+     else

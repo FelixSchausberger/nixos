@@ -4,7 +4,7 @@
     "desktop" = ["hyprland" "niri"];
     "surface" = ["hyprland"];
     "portable" = []; # TUI-only emergency/recovery system
-    "hp-probook-wsl" = []; # TUI-only WSL system
+    "hp-probook-wsl" = ["niri"]; # WSL with niri WM
   };
 
   # Use provided hostname

@@ -35,10 +35,10 @@ in {
 
     # Language servers
     clang-tools # C/C++ tools (includes clangd)
-    nodePackages.typescript-language-server # TypeScript/JavaScript LSP
-    nodePackages.vscode-langservers-extracted # HTML/CSS/JSON LSPs
+    # nodePackages.typescript-language-server # TypeScript/JavaScript LSP
+    # nodePackages.vscode-langservers-extracted # HTML/CSS/JSON LSPs
     yaml-language-server # YAML LSP
-    nodePackages.bash-language-server # Bash LSP
+    # nodePackages.bash-language-server # Bash LSP
     python312Packages.python-lsp-server # Python LSP
     lua-language-server # Lua LSP
     tinymist # Typst LSP

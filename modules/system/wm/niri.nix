@@ -7,6 +7,9 @@
   imports = [
     inputs.niri.nixosModules.niri
     ./shared-environment.nix
+    ./shared-pipewire.nix
+    ./shared-packages.nix
+    ./shared-security.nix
   ];
 
   # Enable niri
@@ -16,86 +19,27 @@
     package = pkgs.niri;
   };
 
-  # Session management and authentication
-  security = {
-    # PAM configuration for screen locking
-    pam.services = {
-      login.enableGnomeKeyring = true;
-    };
+  # PipeWire and common security configuration are provided by shared modules
 
-    # Polkit for privilege escalation
-    polkit.enable = true;
-    rtkit.enable = true;
-  };
-
-  # Audio system (required for proper Wayland audio)
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    jack.enable = true;
-
-    # Low-latency configuration
-    extraConfig.pipewire."92-low-latency" = {
-      context.properties = {
-        default.clock = {
-          rate = 48000;
-          quantum = 32;
-          min-quantum = 32;
-          max-quantum = 32;
-        };
-      };
-    };
-  };
-
-  # System packages required for niri
+  # Niri-specific system packages (common Wayland packages provided by shared-packages.nix)
   environment.systemPackages = with pkgs; [
-    # Core Wayland
-    wayland
-    wayland-protocols
-    wayland-utils
-    wlroots
+    # Niri-specific Wayland components
     egl-wayland # EGL Wayland platform
 
-    # X11/Wayland compatibility
-    inputs.niri.packages.${pkgs.system}.xwayland-satellite-unstable
+    # X11/Wayland compatibility (Niri-specific)
+    inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable
 
-    # System utilities
-    wl-clipboard
-    wl-clip-persist
-    cliphist
-
-    # File managers
-    xdg-utils
-
-    # System monitoring and control
-    brightnessctl
-    playerctl
-    pavucontrol
-
-    # Screenshot tools
-    grim
-    slurp
-    swappy
-
-    # Development and utilities
-    jq # For scripting
-    socat # For IPC
-
-    # Theme support
-    libsForQt5.qt5.qtwayland
-    qt6.qtwayland
+    # Qt theme tools (Niri-specific)
     libsForQt5.qt5ct
-    qt6ct
+    qt6Packages.qt6ct
 
-    # Portal dependencies
+    # Portal dependencies (Niri-specific portals)
     xdg-desktop-portal
     xdg-desktop-portal-gtk
     xdg-desktop-portal-wlr
     xdg-desktop-portal-gnome
 
-    # Cursor themes
+    # Cursor and icon themes (Niri-specific)
     adwaita-icon-theme
     bibata-cursors
   ];
@@ -106,7 +50,7 @@
     packages = with pkgs; [
       font-awesome
       noto-fonts
-      noto-fonts-emoji
+      noto-fonts-color-emoji
       noto-fonts-cjk-sans
       liberation_ttf
       fira-code
@@ -185,6 +129,11 @@
     user.extraConfig = ''
       DefaultEnvironment="PATH=/run/current-system/sw/bin"
     '';
+
+    # X11 directory with sticky bit for xwayland-satellite
+    tmpfiles.rules = [
+      "d /tmp/.X11-unix 1777 root root -"
+    ];
   };
 
   # Security configuration
@@ -236,6 +185,6 @@
     earlySetup = true;
     font = "${pkgs.terminus_font}/share/consolefonts/ter-132n.psf.gz";
     packages = with pkgs; [terminus_font];
-    keyMap = "us";
+    keyMap = lib.mkDefault "us";
   };
 }

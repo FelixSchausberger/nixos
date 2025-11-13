@@ -6,8 +6,13 @@
   ...
 }: let
   # Reference the custom packages from the flake
-  inherit (inputs.self.packages.${pkgs.system}) mcp-language-server;
+  inherit (inputs.self.packages.${pkgs.stdenv.hostPlatform.system}) mcp-language-server;
+  cfg = config.programs.claude-code.wsl;
 in {
+  imports = [
+    ./claude-wsl.nix
+    ./good-morning.nix
+  ];
   home = {
     packages =
       (with pkgs; [
@@ -27,7 +32,7 @@ in {
       ])
       ++ [
         # Usage tracking for statusline (from ccusage-flake)
-        inputs.ccusage.packages.${pkgs.system}.default
+        inputs.ccusage.packages.${pkgs.stdenv.hostPlatform.system}.default
       ];
 
     # Create project-level .mcp.json for MCP servers at actual project root
@@ -98,8 +103,92 @@ in {
   # Write Claude Code configuration directly to file since Home Manager module doesn't support MCP servers
   xdg.configFile."claude-code/settings.json".text = let
     claudeStatusline = pkgs.writeShellScript "claude-statusline" (builtins.readFile ./statusline.sh);
-    avoidAgreementHook = pkgs.writeShellScript "avoid-agreement-hook" (builtins.readFile ./hooks/avoid-agreement.sh);
-    preventRebuildHook = pkgs.writeShellScript "prevent-rebuild-hook" (builtins.readFile ./hooks/prevent-rebuild.sh);
+
+    # Create individual hook scripts
+    avoidAgreementHook = pkgs.writeShellScript "avoid-agreement.sh" (builtins.readFile ./hooks/avoid-agreement.sh);
+    preventRebuildHook = pkgs.writeShellScript "prevent-rebuild.sh" (builtins.readFile ./hooks/prevent-rebuild.sh);
+    additionalContextHook = pkgs.writeShellScript "additional-context.sh" (builtins.readFile ./hooks/additional-context.sh);
+
+    # Create hooks directory with all individual hooks
+    hooksDir = pkgs.runCommand "claude-code-hooks" {} ''
+      mkdir -p $out
+      ln -s ${avoidAgreementHook} $out/avoid-agreement.sh
+      ln -s ${preventRebuildHook} $out/prevent-rebuild.sh
+      ln -s ${additionalContextHook} $out/additional-context.sh
+    '';
+
+    # Create orchestrator with hooks directory path substituted
+    orchestratorHook = pkgs.writeShellScript "orchestrator-hook" (
+      builtins.replaceStrings ["@hooksDir@"] ["${hooksDir}"] (builtins.readFile ./hooks/orchestrator.sh)
+    );
+
+    # claude-wsl notification wrapper script (when enabled)
+    notifyWrapperScript = "${config.home.homeDirectory}/.local/share/claude-wsl/notify-wrapper.sh";
+
+    # Build hooks configuration with conditional claude-wsl support
+    baseHooks = {
+      UserPromptSubmit = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = toString orchestratorHook;
+            }
+          ];
+        }
+      ];
+    };
+
+    # Add claude-wsl notification hooks when enabled
+    wslHooks = lib.optionalAttrs cfg.enable {
+      SessionStart = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+      Stop = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+      SessionEnd = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+      Notification = [
+        {
+          matcher = "idle_prompt";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+    };
+
+    hooksConfig = baseHooks // wslHooks;
   in
     builtins.toJSON {
       hasCompletedOnboarding = true;
@@ -125,23 +214,7 @@ in {
 
       environment.DISABLE_TELEMETRY = "1";
 
-      hooks = {
-        UserPromptSubmit = [
-          {
-            matcher = "*";
-            hooks = [
-              {
-                type = "command";
-                command = toString avoidAgreementHook;
-              }
-              {
-                type = "command";
-                command = toString preventRebuildHook;
-              }
-            ];
-          }
-        ];
-      };
+      hooks = hooksConfig;
 
       statusLine = {
         type = "command";

@@ -66,42 +66,45 @@ fi
 
 # If prohibited command detected, provide guidance
 if contains_prohibited_command "$input_content"; then
-    echo "🚫 REBUILD PREVENTION ACTIVATED"
-    echo
-    echo "Claude Code has detected that you're attempting to run a PERMANENT system rebuild command."
-    echo "According to your configuration guidelines, Claude should:"
-    echo
-    echo "1. ❌ NEVER automatically run PERMANENT rebuild commands (switch/boot/deploy)"
-    echo "2. ✅ ALLOW temporary test commands (nixos-rebuild test, nh os test)"
-    echo "3. ✅ INFORM the user when a rebuild is necessary"
-    echo "4. ✅ WAIT for explicit user confirmation"
-    echo "5. ✅ SUGGEST the appropriate rebuild command"
-    echo
-    echo "Detected prohibited command pattern in:"
-    echo "  $input_content"
-    echo
-    echo "ALLOWED TEST COMMANDS (temporary, no bootloader changes):"
-    echo "  - sudo nixos-rebuild test --flake ."
-    echo "  - nixos-rebuild test --flake ."
-    echo "  - nh os test"
-    echo
-    echo "PROHIBITED COMMANDS (permanent changes):"
-    echo "  - sudo nixos-rebuild switch (makes changes permanent)"
-    echo "  - nh os switch (makes changes permanent)"
-    echo "  - deploy (makes changes permanent)"
-    echo
-    echo "Instead of running permanent commands automatically, Claude should:"
-    echo "  - Explain what changes require a rebuild"
-    echo "  - Recommend testing first with 'nixos-rebuild test'"
-    echo "  - Ask the user to run permanent commands manually"
-    echo
-    echo "Example proper response:"
-    echo '  "I'"'"'ve made changes that require a system rebuild."'
-    echo '  "You can test them safely with: sudo nixos-rebuild test --flake ."'
-    echo '  "If everything works, apply permanently with: sudo nixos-rebuild switch --flake ."'
-    echo
+    {
+        echo "🚫 REBUILD PREVENTION ACTIVATED"
+        echo
+        echo "Claude Code has detected that you're attempting to run a PERMANENT system rebuild command."
+        echo "According to your configuration guidelines, Claude should:"
+        echo
+        echo "1. ❌ NEVER automatically run PERMANENT rebuild commands (switch/boot/deploy)"
+        echo "2. ✅ ALLOW temporary test commands (nixos-rebuild test, nh os test)"
+        echo "3. ✅ INFORM the user when a rebuild is necessary"
+        echo "4. ✅ WAIT for explicit user confirmation"
+        echo "5. ✅ SUGGEST the appropriate rebuild command"
+        echo
+        echo "Detected prohibited command pattern in:"
+        echo "  $input_content"
+        echo
+        echo "ALLOWED TEST COMMANDS (temporary, no bootloader changes):"
+        echo "  - sudo nixos-rebuild test --flake ."
+        echo "  - nixos-rebuild test --flake ."
+        echo "  - nh os test"
+        echo
+        echo "PROHIBITED COMMANDS (permanent changes):"
+        echo "  - sudo nixos-rebuild switch (makes changes permanent)"
+        echo "  - nh os switch (makes changes permanent)"
+        echo "  - deploy (makes changes permanent)"
+        echo
+        echo "Instead of running permanent commands automatically, Claude should:"
+        echo "  - Explain what changes require a rebuild"
+        echo "  - Recommend testing first with 'nixos-rebuild test'"
+        echo "  - Ask the user to run permanent commands manually"
+        echo
+        echo "Example proper response:"
+        echo '  "I'"'"'ve made changes that require a system rebuild."'
+        echo '  "You can test them safely with: sudo nixos-rebuild test --flake ."'
+        echo '  "If everything works, apply permanently with: sudo nixos-rebuild switch --flake ."'
+        echo
+    } >&2
     exit 1
 fi
 
 # If we get here, no prohibited commands were detected
+# Orchestrator handles execution notification
 exit 0

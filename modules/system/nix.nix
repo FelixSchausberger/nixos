@@ -1,6 +1,8 @@
 {
+  config,
   inputs,
   pkgs,
+  repoConfig,
   ...
 }: {
   # Determinate Nix configuration handled by nixosModules.default
@@ -12,12 +14,16 @@
         "electron-25.9.0"
       ];
       allowBroken = true;
+      # Keep aliases enabled - required for deprecated packages still using old names
+      # Note: Some aliases like wrapGAppsHook have been converted to throw errors
+      # and cannot be overridden via overlays due to evaluation order
+      allowAliases = true;
     };
     overlays = [
       inputs.nur.overlays.default
       # Custom overlay for TUI-specific packages
       (_: prev: {
-        zjstatus = inputs.zjstatus.packages.${prev.system}.default;
+        zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
       })
       # Override bat-extras to disable broken tests
       # Tests fail due to color output changes in bat 0.24.0 → 0.25.0
@@ -34,100 +40,112 @@
     ];
   };
 
-  nix.settings = {
-    # Basic settings
-    experimental-features = ["nix-command" "flakes" "pipe-operators"];
-    accept-flake-config = true; # Trust flake nixConfig settings (safe for own configurations)
-    lazy-trees = true; # Enable lazy trees for faster evaluations and reduced disk usage
-    auto-optimise-store = true;
-    trusted-users = ["root" "@wheel"];
-    warn-dirty = false;
+  nix = {
+    settings = {
+      # Basic settings
+      experimental-features = ["nix-command" "flakes" "pipe-operators"];
+      accept-flake-config = true; # Trust flake nixConfig settings (safe for own configurations)
+      auto-optimise-store = true;
+      trusted-users = ["root" "@wheel"];
+      warn-dirty = false;
 
-    # SSL/TLS configuration for secure downloads (allow override)
-    ssl-cert-file = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+      access-tokens = ["github.com=${config.sops.secrets."github/token".path}"];
 
-    # WSL-specific configuration for better performance
-    use-sqlite-wal = true; # Better database performance on WSL
+      # WSL-specific configuration for better performance
+      use-sqlite-wal = true; # Better database performance on WSL
 
-    # Network optimization for faster downloads
-    max-substitution-jobs = 4; # Parallel downloads
-    http-connections = 25; # More HTTP connections
-    connect-timeout = 5; # Faster timeout
+      # Network optimization for faster downloads
+      max-substitution-jobs = 4; # Parallel downloads
+      http-connections = 25; # More HTTP connections
+      connect-timeout = 15; # Allow more time for slow caches
+      stalled-download-timeout = 600; # 10 minutes for large/slow downloads
 
-    # Build optimization
-    cores = 0; # Use all CPU cores
-    max-jobs = "auto"; # Auto-detect job count
-    keep-going = true; # Continue building other derivations on failure
+      # Build optimization
+      cores = 0; # Use all CPU cores
+      max-jobs = "auto"; # Auto-detect job count
+      keep-going = true; # Continue building other derivations on failure
 
-    # Store optimization for better performance
-    keep-outputs = true; # Keep build dependencies for faster rebuilds
-    keep-derivations = true; # Keep derivations for faster evaluation
+      # Store optimization for better performance
+      keep-outputs = true; # Keep build dependencies for faster rebuilds
+      keep-derivations = true; # Keep derivations for faster evaluation
 
-    # Disk space management
-    min-free = 5368709120; # 5GB - trigger GC when less than 5GB free
-    max-free = 10737418240; # 10GB - stop GC when 10GB free
+      # Disk space management
+      min-free = 5368709120; # 5GB - trigger GC when less than 5GB free
+      max-free = 10737418240; # 10GB - stop GC when 10GB free
 
-    # Build performance improvements
-    builders-use-substitutes = true; # Allow builders to use substitutes
-    require-sigs = true; # Security: require signatures
+      # Build performance improvements
+      builders-use-substitutes = true; # Allow builders to use substitutes
+      require-sigs = true; # Security: require signatures
 
-    # Evaluation performance
-    eval-cache = true; # Cache evaluation results
+      # Evaluation performance
+      eval-cache = true; # Cache evaluation results
 
-    # GitHub access token from sops secrets
-    netrc-file = "/etc/nix/netrc";
+      # GitHub access token from sops secrets
+      netrc-file = "/etc/nix/netrc";
 
-    # Substituters and caches
-    substituters = [
-      # Primary cache - fastest and most reliable
-      "https://cache.nixos.org?priority=1"
+      # Substituters and caches
+      substituters = [
+        # Primary cache - fastest and most reliable
+        "https://cache.nixos.org?priority=1"
 
-      # Personal cache - high priority for custom builds
-      "https://nixpkgs-schausberger.cachix.org?priority=3"
+        # Garnix CI cache - high priority since our CI builds populate it
+        "https://cache.garnix.io?priority=3"
 
-      # Very commonly used packages - high priority
-      "https://nix-community.cachix.org?priority=5"
+        # Very commonly used packages - high priority
+        "https://nix-community.cachix.org?priority=5"
 
-      # Garnix CI cache - shared community cache with centralized signing
-      "https://cache.garnix.io?priority=7"
+        # Personal cache for custom builds
+        "https://felixschausberger.cachix.org?priority=7"
 
-      # Project-specific caches - medium priority
-      "https://cosmic.cachix.org?priority=10"
-      "https://hyprland.cachix.org?priority=12"
-      "https://walker.cachix.org?priority=13"
-      "https://walker-git.cachix.org?priority=14"
-      "https://helix.cachix.org?priority=15"
-      "https://yazi.cachix.org?priority=20"
-      "https://devenv.cachix.org?priority=25"
+        # Project-specific caches - medium priority
+        "https://cosmic.cachix.org?priority=10"
+        "https://hyprland.cachix.org?priority=12"
+        "https://walker.cachix.org?priority=13"
+        "https://walker-git.cachix.org?priority=14"
+        "https://helix.cachix.org?priority=15"
+        "https://yazi.cachix.org?priority=20"
+        "https://devenv.cachix.org?priority=25"
 
-      # Additional popular caches to reduce compilation
-      "https://nixpkgs-unfree.cachix.org?priority=30"
+        # Additional popular caches to reduce compilation
+        "https://nixpkgs-unfree.cachix.org?priority=30"
 
-      # Determinate Systems cache for Determinate Nix binaries
-      "https://install.determinate.systems?priority=35"
-    ];
+        # Determinate Systems cache for Determinate Nix binaries
+        "https://install.determinate.systems?priority=35"
+      ];
 
-    trusted-public-keys = [
-      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "nixpkgs-schausberger.cachix.org-1:BdcD4tXljP3BQGhm9mUjmLkkPwl+7IFcl1JX5CsrIfE="
-      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      trusted-public-keys = [
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
 
-      # Garnix CI cache
-      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+        # Garnix CI cache
+        "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
 
-      # Project-specific caches
-      "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="
-      "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-      "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
-      "walker-git.cachix.org-1:vmC0ocfPWh0S/vRAQGtChuiZBTAe4wiKDeyyXM0/7pM="
-      "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="
-      "yazi.cachix.org-1:Dcdz63NZKfvUCbDGngQDAZq6kOroIrFoyO064uvLh8k="
-      "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
-      "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
+        # Project-specific caches
+        "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="
+        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+        "walker.cachix.org-1:fG8q+uAaMqhsMxWjwvk0IMb4mFPFLqHjuvfwQxE4oJM="
+        "walker-git.cachix.org-1:vmC0ocfPWh0S/vRAQGtChuiZBTAe4wiKDeyyXM0/7pM="
+        "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="
+        "yazi.cachix.org-1:Dcdz63NZKfvUCbDGngQDAZq6kOroIrFoyO064uvLh8k="
+        "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
+        "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
 
-      # Determinate Systems / FlakeHub cache
-      "cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM="
-    ];
+        # Determinate Systems / FlakeHub cache
+        "cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM="
+      ];
+    };
+
+    # Use extraOptions for Determinate Nix-specific settings that may not be
+    # available in standard Nix (e.g., on Garnix CI). Unknown options in
+    # extraOptions are silently ignored rather than causing build failures.
+    extraOptions = ''
+      ${
+        if repoConfig.useDeterminateNix
+        then "lazy-trees = true"
+        else ""
+      }
+    '';
   };
 
   # Disable default nix gc service (we use custom maintenance service)
@@ -136,4 +154,8 @@
   environment.systemPackages = [
     pkgs.git # Flakes need git
   ];
+
+  sops.secrets = {
+    "github/token" = {};
+  };
 }

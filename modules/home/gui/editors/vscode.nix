@@ -174,17 +174,10 @@
                   "command" = ["alejandra"];
                   "timeout_ms" = 5000;
                 };
-                "options" = {
-                  "enable" = true;
-                  "target" = ["all"];
-                  "offline" = true;
-                  "nixos" = {
-                    "expr" = "(builtins.getFlake (\"git+file://\" + toString /home/${config.home.username}/.config/nixos)).nixosConfigurations.p620.options";
-                  };
-                  "home_manager" = {
-                    "expr" = "(builtins.getFlake (\"git+file://\" + toString /home/${config.home.username}/.config/nixos)).homeConfigurations.\"${config.home.username}@p620\".options";
-                  };
-                };
+                # Options configuration removed to fix builtins.toFile warnings
+                # These provide option completion in nixd but are optional
+                # The configuration referenced non-existent host "p620" and caused evaluation warnings
+                # Users can add host-specific options configuration if needed
                 "diagnostics" = {
                   "enable" = true;
                   "ignored" = [];

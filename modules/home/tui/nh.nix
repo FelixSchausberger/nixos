@@ -14,10 +14,19 @@ _: {
     NH_FLAKE = "/per/etc/nixos";
   };
 
-  # NH (Nix Helper) aliases - Modern NixOS management
-  home.shellAliases = {
-    deploy = "nh os switch";
-    update = "nh os switch --update";
+  # NH (Nix Helper) aliases for Fish shell
+  # Automatic deployment: test first, then switch if test succeeds
+  # Uses cached build results, so second step is nearly instant
+  programs.fish.shellAliases = {
+    # Test configuration, then auto-switch if successful
+    deploy = "nh os test; and nh os switch; and validate-system";
+    deploy-offline = "nh os test -- --option substitute false; and nh os switch -- --option substitute false; and validate-system";
+    deploy-verbose = "NH_LOG=nh=debug nh os test; and NH_LOG=nh=debug nh os switch; and validate-system";
+
+    # Update inputs, test configuration, then auto-switch if successful
+    update = "nh os test --update; and nh os switch";
+
+    # Utility aliases
     clean = "nh clean all";
     osinfo = "nh os info";
     search = "nh search";

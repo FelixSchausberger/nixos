@@ -1,8 +1,9 @@
 {pkgs, ...}: {
   imports = [
-    ./sops.nix
     ./ssh.nix
   ];
+
+  # Sops configuration moved to modules/system/sops-common.nix for centralization
 
   security = {
     # Allow wayland lockers to unlock the screen

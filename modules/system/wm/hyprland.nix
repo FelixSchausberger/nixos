@@ -7,6 +7,9 @@
   imports = [
     inputs.hyprland.nixosModules.default
     ./shared-environment.nix
+    ./shared-pipewire.nix
+    ./shared-packages.nix
+    ./shared-security.nix
   ];
 
   # Enable Hyprland with optimal settings
@@ -16,84 +19,27 @@
     portalPackage = pkgs.xdg-desktop-portal-hyprland;
   };
 
-  # Session management and authentication
-  security = {
-    # PAM configuration for cthulock
-    pam.services = {
-      cthulock = {
-        text = ''
-          auth include login
-        '';
-      };
-      # Enable cthulock to work with login
-      login.enableGnomeKeyring = true;
-    };
-
-    # Polkit for privilege escalation
-    polkit.enable = true;
-    rtkit.enable = true;
+  # Hyprland-specific PAM configuration for cthulock
+  security.pam.services.cthulock = {
+    text = ''
+      auth include login
+    '';
   };
 
-  # Audio system (required for proper Wayland audio)
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    jack.enable = true;
+  # PipeWire and common security configuration are provided by shared modules
 
-    # Low-latency configuration
-    extraConfig.pipewire."92-low-latency" = {
-      context.properties = {
-        default.clock = {
-          rate = 48000;
-          quantum = 32;
-          min-quantum = 32;
-          max-quantum = 32;
-        };
-      };
-    };
-  };
-
-  # System packages required for Hyprland
+  # Hyprland-specific system packages (common Wayland packages provided by shared-packages.nix)
   environment.systemPackages = with pkgs; [
-    # Core Wayland
-    wayland
-    wayland-protocols
-    wayland-utils
-    wlroots
+    # Core compositor dependency
+    wlroots # Wayland compositor library used by Hyprland
 
     # Hyprland ecosystem
     hyprland-protocols
     hyprpicker
 
-    # System utilities
-    wl-clipboard
-    wl-clip-persist
-    cliphist
-
-    # File managers
-    xdg-utils
-
-    # System monitoring and control
-    brightnessctl
-    playerctl
-    pavucontrol
-
-    # Screenshot tools
-    grim
-    slurp
-    swappy
-
-    # Development and utilities
-    jq # For Hyprland scripting
-    socat # For Hyprland IPC
-
-    # Theme support
-    libsForQt5.qt5.qtwayland
-    qt6.qtwayland
+    # Qt theme tools (Hyprland-specific)
     libsForQt5.qt5ct
-    qt6ct
+    qt6Packages.qt6ct
 
     # Portal dependencies (xdg-desktop-portal-hyprland provided by programs.hyprland)
     xdg-desktop-portal
@@ -107,7 +53,7 @@
     packages = with pkgs; [
       font-awesome
       noto-fonts
-      noto-fonts-emoji
+      noto-fonts-color-emoji
       noto-fonts-cjk-sans
       liberation_ttf
       fira-code

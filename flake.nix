@@ -4,25 +4,54 @@
   nixConfig = {
     extra-substituters = [
       "https://cache.nixos.org"
-      "https://nixpkgs-schausberger.cachix.org"
+      "https://cache.garnix.io"
+      "https://felixschausberger.cachix.org"
+      "https://nix-community.cachix.org"
+      "https://nixpkgs-unfree.cachix.org"
+      "https://pre-commit-hooks.cachix.org"
+      "https://yazi.cachix.org"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "nixpkgs-schausberger.cachix.org-1:BdcD4tXljP3BQGhm9mUjmLkkPwl+7IFcl1JX5CsrIfE="
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+      "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
+      "pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc="
+      "yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA="
     ];
+    # Cache robustness settings
+    narinfo-cache-positive-ttl = 3600; # 1 hour for R2 presigned URLs
+    connect-timeout = 5; # Fast fail on connection issues
+    stalled-download-timeout = 30; # Detect stalled downloads quickly
   };
 
   inputs = {
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # Nixpkgs sources - toggle via config.nix useDeterminateNix boolean
+    # Standard Nix (GitHub nixos-unstable)
+    # Pinned to commit before wrapGAppsHook throw (2025-10-26)
+    # Last commit with prek package before wrapGAppsHook was converted to throw
+    # TODO: Update once all upstream packages migrate to wrapGAppsHook3
+    nixpkgs.url = "github:NixOS/nixpkgs/a58e7f5991113709e34c5acea8a4fb010fe40d3a";
+    # Determinate Nix (FlakeHub with semver)
+    # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
+    nixpkgs-flakehub.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+
     flake-parts.url = "github:hercules-ci/flake-parts";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # System utilities (shared by TUI and GUI)
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     impermanence.url = "github:nix-community/impermanence";
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     nixos-wsl = {
@@ -85,6 +114,8 @@
     };
     nix-inspect.url = "github:bluskript/nix-inspect";
     nur.url = "github:nix-community/NUR";
+    # Determinate Nix modules (only used when useDeterminateNix = true)
+    # See: https://github.com/DeterminateSystems/determinate?tab=readme-ov-file#installing-using-our-nix-flake
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
 
     # TUI applications (used by both profiles)
@@ -103,6 +134,11 @@
     # Installation tools (useful for portable/recovery)
     nixos-wizard = {
       url = "github:km-clay/nixos-wizard";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -169,6 +205,10 @@
       url = "github:YashjitPal/Arc-2.0";
       flake = false;
     };
+    stylix = {
+      url = "github:danth/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: let
@@ -185,49 +225,50 @@
 
       flake = {
         # Utility functions
-        lib = {
+        lib = rec {
+          # Centralized defaults - single source of truth
+          defaults = import ./lib/defaults.nix;
+          fonts = import ./lib/fonts.nix;
+          catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix;
+          hosts = import ./lib/hosts.nix;
+
+          # Legacy compatibility - keep existing API
           mkHost = import ./lib/mkHost.nix;
           profiles = profileLib;
-          user = "schausberger"; # Default user
-
-          # Personal information variables
-          personalInfo = {
-            name = "Felix Schausberger";
-          };
-
-          # Common paths
-          paths = {
-            nixosConfig = "/per/etc/nixos";
-            obsidianVault = "/per/home/schausberger/Documents/Obsidian";
-            homeDir = "/home/schausberger";
-            repos = "/per/repos";
-          };
+          inherit (defaults.system) user;
+          inherit (defaults) personalInfo;
+          inherit (defaults) paths;
         };
       };
 
       perSystem = {pkgs, ...}: {
+        # Expose nixpkgs for easier local builds (e.g., nix build .#fishPlugins.autopair)
+        legacyPackages = pkgs;
+
         packages = {
           lumen = pkgs.callPackage ./pkgs/lumen {};
           vigiland = pkgs.callPackage ./pkgs/vigiland {};
           # wlsleephandler-rs = pkgs.callPackage ./pkgs/wlsleephandler-rs {}; # Disabled until proper hash is available
 
-          # Zellij plugins
-          zellij-ghost = pkgs.callPackage ./pkgs/ghost {};
+          # Claude Code integrations
+          claude-wsl = pkgs.callPackage ./pkgs/claude-wsl {};
 
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
 
-          # VMDK builder for portable workstation
-          vmdk-portable = pkgs.callPackage ./tools/vmdk-builder {inherit inputs;};
+          # MOTD
+          trotd = pkgs.callPackage ./pkgs/trotd {};
 
-          # ZFS setup tool
-          zfs-nixos-setup = pkgs.rustPlatform.buildRustPackage {
-            pname = "zfs-nixos-setup";
-            version = "0.1.0";
-            src = inputs.gitignore-nix.lib.gitignoreSource ./tools/zfs-nixos-setup;
-            cargoLock.lockFile = ./tools/zfs-nixos-setup/Cargo.lock;
-            nativeBuildInputs = with pkgs; [pkg-config];
-            buildInputs = [];
+          installer-iso = inputs.nixos-generators.nixosGenerate {
+            inherit (pkgs.stdenv.hostPlatform) system;
+            format = "install-iso";
+            modules = [
+              ./hosts/installer
+            ];
+            specialArgs = {
+              inherit inputs;
+              repoConfig = import ./config.nix;
+            };
           };
         };
 
@@ -250,9 +291,10 @@
             nodePackages.prettier
             pre-commit-hook-ensure-sops
             prek
+            ssh-to-age
             statix
             taplo
-            inputs.namaka.packages.${pkgs.system}.default # Snapshot testing
+            inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
           ];
 
           name = "nixos-config";

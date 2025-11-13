@@ -17,6 +17,7 @@
     shellAliases = {
       # Fix Zed editor binary conflict with ZFS daemon
       zed = "zeditor";
+      yn = "yazi-notes";
     };
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
@@ -28,11 +29,16 @@
         set -gx PATH /run/current-system/sw/bin /usr/bin /bin
       end
 
-      # WSL-specific PATH validation - ensure core utilities are accessible
-      # This addresses the root cause of the fish plugin failures
+      # WSL-specific PATH validation - ensure core utilities and WSL binaries are accessible
+      # This addresses the root cause of the fish plugin failures and wslpath availability
       if not command -v ls >/dev/null 2>&1; or not command -v sort >/dev/null 2>&1
         # PATH exists but is incomplete - prepend system paths
         set -gx PATH /run/current-system/sw/bin $PATH
+      end
+
+      # Ensure /bin is in PATH for WSL built-in commands (wslpath, wslinfo, etc.)
+      if not contains /bin $PATH
+        set -gx PATH $PATH /bin
       end
 
       # Verify minimum viable environment - fall back to bash if fish is broken
