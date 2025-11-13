@@ -1,0 +1,262 @@
+#!/usr/bin/env bash
+# NixOS Disko Installation Helper
+# Auto-detects host and installs using disko
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+info() { echo -e "${BLUE}ℹ${NC} $*"; }
+success() { echo -e "${GREEN}✓${NC} $*"; }
+warning() { echo -e "${YELLOW}⚠${NC} $*"; }
+error() { echo -e "${RED}✗${NC} $*"; }
+
+# Detect host based on hardware
+detect_host() {
+    info "Detecting hardware..."
+
+    # Check for WSL
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+        error "WSL detected - disko installation not supported in WSL"
+        error "WSL manages its own virtual disk automatically"
+        exit 1
+    fi
+
+    # Check if running in VM
+    local is_vm=false
+    if systemd-detect-virt -q; then
+        is_vm=true
+        local virt_type=$(systemd-detect-virt)
+        info "Virtualization detected: $virt_type"
+    fi
+
+    # Detect based on hardware characteristics
+    local cpu_model=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
+    local total_mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+
+    # Auto-detection logic
+    if [[ "$is_vm" == true ]]; then
+        if [[ "$virt_type" == "vmware" ]]; then
+            echo "hp-probook-vmware"
+            return
+        fi
+    fi
+
+    # Physical hardware detection
+    if lspci | grep -qi "AMD.*Radeon.*6700"; then
+        echo "desktop"
+        return
+    fi
+
+    if grep -qi "Surface" /sys/devices/virtual/dmi/id/product_name 2>/dev/null; then
+        echo "surface"
+        return
+    fi
+
+    # Fallback: ask user
+    echo ""
+}
+
+# Show available hosts
+show_hosts() {
+    echo
+    info "Available host configurations:"
+    echo
+    echo "  ${GREEN}desktop${NC}           - Desktop PC with AMD RX 6700XT"
+    echo "                      Disk: EFI + 16GB swap + ext4 root"
+    echo
+    echo "  ${GREEN}surface${NC}           - Surface tablet/laptop"
+    echo "                      Disk: EFI + 8GB swap + ext4 root"
+    echo
+    echo "  ${GREEN}portable${NC}          - Portable/recovery system"
+    echo "                      Disk: EFI + ZFS with impermanence"
+    echo
+    echo "  ${GREEN}hp-probook-vmware${NC} - VMware VM on HP ProBook"
+    echo "                      Disk: EFI + ext4 root (no swap, uses zramSwap)"
+    echo
+}
+
+# Show disk selection helper
+show_disks() {
+    echo
+    info "Available disks:"
+    echo
+    lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -E "disk|nvme" | nl -v 1 -w 3
+    echo
+}
+
+# Main installation function
+main() {
+    echo
+    echo "═══════════════════════════════════════════════════════"
+    echo "  NixOS Disko Installation Helper"
+    echo "═══════════════════════════════════════════════════════"
+    echo
+
+    # Parse arguments
+    local hostname=""
+    local disk=""
+    local auto_confirm=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --host)
+                hostname="$2"
+                shift 2
+                ;;
+            --disk)
+                disk="$2"
+                shift 2
+                ;;
+            --yes|-y)
+                auto_confirm=true
+                shift
+                ;;
+            --help|-h)
+                echo "Usage: install-nixos [OPTIONS]"
+                echo
+                echo "Options:"
+                echo "  --host HOSTNAME    Specify host configuration"
+                echo "  --disk DEVICE      Specify target disk (e.g., /dev/sda)"
+                echo "  --yes, -y          Skip confirmation prompts"
+                echo "  --help, -h         Show this help message"
+                echo
+                echo "Examples:"
+                echo "  install-nixos --host desktop --disk /dev/nvme0n1"
+                echo "  install-nixos --host hp-probook-vmware --disk /dev/sda -y"
+                echo "  install-nixos  # Interactive mode"
+                exit 0
+                ;;
+            *)
+                error "Unknown option: $1"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+
+    # Auto-detect host if not specified
+    if [[ -z "$hostname" ]]; then
+        local detected_host=$(detect_host)
+        if [[ -n "$detected_host" ]]; then
+            info "Auto-detected host: $detected_host"
+            hostname="$detected_host"
+        else
+            show_hosts
+            read -p "Enter host name: " hostname
+        fi
+    fi
+
+    # Validate hostname
+    case "$hostname" in
+        desktop|surface|portable|hp-probook-vmware)
+            success "Host: $hostname"
+            ;;
+        *)
+            error "Invalid host: $hostname"
+            show_hosts
+            exit 1
+            ;;
+    esac
+
+    # Select disk if not specified
+    if [[ -z "$disk" ]]; then
+        show_disks
+        read -p "Enter target disk (e.g., /dev/sda, /dev/nvme0n1): " disk
+    fi
+
+    # Validate disk
+    if [[ ! -b "$disk" ]]; then
+        error "Disk not found: $disk"
+        exit 1
+    fi
+
+    success "Disk: $disk"
+
+    # Show installation summary
+    echo
+    echo "═══════════════════════════════════════════════════════"
+    echo "  Installation Summary"
+    echo "═══════════════════════════════════════════════════════"
+    echo
+    echo "  Host:        $hostname"
+    echo "  Target Disk: $disk"
+    echo "  Method:      Disko automated partitioning"
+    echo
+
+    # Get disk info
+    local disk_size=$(lsblk -d -n -o SIZE "$disk" 2>/dev/null || echo "unknown")
+    local disk_model=$(lsblk -d -n -o MODEL "$disk" 2>/dev/null || echo "unknown")
+    echo "  Disk Size:   $disk_size"
+    echo "  Disk Model:  $disk_model"
+    echo
+
+    # Show what will happen
+    echo "This will:"
+    echo "  1. ERASE ALL DATA on $disk"
+    echo "  2. Partition and format according to disko config"
+    echo "  3. Install NixOS with flake configuration"
+    echo
+
+    # Confirmation
+    if [[ "$auto_confirm" != true ]]; then
+        warning "THIS WILL DESTROY ALL DATA ON $disk"
+        echo
+        read -p "Type 'YES' in capitals to continue: " confirm
+        if [[ "$confirm" != "YES" ]]; then
+            echo "Installation cancelled."
+            exit 0
+        fi
+    fi
+
+    # Check for configuration directory
+    local config_dir="/per/etc/nixos"
+    if [[ ! -d "$config_dir" ]]; then
+        # Try current directory
+        if [[ -f "./flake.nix" ]] && [[ -d "./hosts/$hostname" ]]; then
+            config_dir="."
+        else
+            error "NixOS configuration not found"
+            error "Expected: /per/etc/nixos or current directory with flake.nix"
+            exit 1
+        fi
+    fi
+
+    cd "$config_dir" || exit 1
+    success "Using configuration from: $config_dir"
+
+    # Run disko-install
+    echo
+    info "Starting disko installation..."
+    echo
+
+    set -x  # Show commands
+    nix run 'github:nix-community/disko#disko-install' -- \
+        --flake ".#$hostname" \
+        --disk main "$disk"
+    set +x
+
+    # Success message
+    echo
+    echo "═══════════════════════════════════════════════════════"
+    success "Installation complete!"
+    echo "═══════════════════════════════════════════════════════"
+    echo
+    echo "Next steps:"
+    echo "  1. Remove installation media"
+    echo "  2. Reboot: systemctl reboot"
+    echo "  3. After boot, set passwords:"
+    echo "     passwd        # Set root password"
+    echo "     passwd schausberger  # Set user password"
+    echo
+    echo "  4. Configure secrets (if needed):"
+    echo "     See /per/etc/nixos/README.md → Secret Management"
+    echo
+}
+
+main "$@"

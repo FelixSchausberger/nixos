@@ -4,6 +4,8 @@ in {
   imports =
     importLib.importHost "hp-probook-vmware"
     ++ [
+      # Disko config available at ./hp-probook-vmware/disko/disko.nix
+      # Only used during installation, not imported for running systems
       ./hp-probook-vmware/hardware/hardware-configuration.nix
     ];
 }
