@@ -3,25 +3,7 @@
   lib,
   pkgs,
   ...
-}: let
-  # Use ZFS-compatible kernel
-  # Note: Using linuxPackages_latest can cause build failures with newer kernels
-  # Stick to LTS kernels for stability
-  kernelPackages =
-    if config.boot.zfs.forceLatestStableKernel
-    # Use the latest stable LTS kernel that's known to work with ZFS
-    # 6.6.x is a stable LTS release with good ZFS support
-    then pkgs.linuxPackages_6_6
-    else pkgs.linuxPackages;
-in {
-  options.boot.zfs = {
-    forceLatestStableKernel = lib.mkOption {
-      type = lib.types.bool;
-      default = true; # Default to true for ZFS compatibility across all hosts
-      description = "Whether to force the latest stable kernel for ZFS compatibility";
-    };
-  };
-
+}: {
   config = {
     boot = {
       loader = {
@@ -55,13 +37,14 @@ in {
         timeout = 0;
       };
 
-      kernelPackages = lib.mkDefault kernelPackages;
+      # Use default LTS kernel (automatically compatible with ZFS stable)
+      kernelPackages = lib.mkDefault pkgs.linuxPackages;
 
       # Ensure ZFS kernel module matches userspace tools
       zfs = {
         package = pkgs.zfs.override {
           # Use the same kernel sources as our kernelPackages
-          inherit (kernelPackages) kernel;
+          inherit (config.boot.kernelPackages) kernel;
         };
         extraPools = ["rpool"];
       };

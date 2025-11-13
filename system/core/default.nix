@@ -1,12 +1,14 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
+# and in the NixOS manual (accessible by running 'nixos-help').
 {
   inputs,
   lib,
   pkgs,
   ...
-}: {
+}: let
+  inherit (inputs.self.lib) defaults;
+in {
   imports = [
     ./persistence.nix
     ./security
@@ -25,7 +27,7 @@
   };
 
   # Set your time zone.
-  time.timeZone = lib.mkDefault "Europe/Vienna";
+  time.timeZone = lib.mkDefault defaults.system.timeZone;
 
   programs.fuse.userAllowOther = true;
 
@@ -92,5 +94,5 @@
     "net.ipv4.conf.all.rp_filter" = 1;
   };
 
-  system.stateVersion = lib.mkDefault "25.11";
+  system.stateVersion = lib.mkDefault defaults.system.version;
 }

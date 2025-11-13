@@ -10,7 +10,7 @@ in {
   config = lib.mkIf cfg.enable {
     # Add walker package
     home.packages = with pkgs; [
-      inputs.walker.packages.${pkgs.system}.default
+      inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
     # Walker styling
@@ -98,7 +98,7 @@ in {
       hide_plugin_info = true;
       terminal = "${
         if cfg.terminal == "ghostty"
-        then inputs.ghostty.packages.${pkgs.system}.default
+        then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
         else pkgs.${cfg.terminal}
       }/bin/${cfg.terminal}";
       runner = {

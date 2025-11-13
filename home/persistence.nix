@@ -8,9 +8,13 @@
   home.persistence."/per/home/${config.home.username}" = {
     # Additional directories for GUI applications
     directories = [
-      # Browser data - essential for sessions/bookmarks
+      # Firefox XDG directories (Firefox 147+ supports XDG Base Directory)
       {
-        directory = ".mozilla";
+        directory = ".local/state/firefox";
+        method = "symlink";
+      }
+      {
+        directory = ".cache/firefox";
         method = "symlink";
       }
 

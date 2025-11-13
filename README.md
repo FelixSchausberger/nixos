@@ -56,6 +56,7 @@ Home modules in `modules/home/`:
 - lumen: AI Git commit message generator
 - mcp-nixos: NixOS MCP server for Claude Code
 - mcp-language-server: Language server MCP integration
+- trotd: Top repositories of the day (https://github.com/FelixSchausberger/trotd)
 - vigiland: System monitoring tool
 
 ### Host Configuration
@@ -159,7 +160,7 @@ docs/improve-installation-guide
 ```bash
 # System rebuild
 sudo nixos-rebuild switch --flake .#hostname
-sudo nixos-rebuild test --flake .              # Temporary, no bootloader changes
+sudo nixos-rebuild test --flake .                # Temporary, no bootloader changes
 
 # Using nh (recommended)
 nh os switch                                     # Build and activate (includes Home Manager)
@@ -168,11 +169,36 @@ nh os test                                       # Temporary testing
 nh os build                                      # Build without activating
 
 # Aliases available in shell
-deploy                                           # Equivalent to nh os switch
-update                                           # Update inputs and deploy
+deploy                                           # First nh os test, then switch
+update                                           # First nh update test, then switch
 clean                                            # Clean old generations
 history                                          # View generation history
 ```
+
+### Custom Installer ISO (ZFS-ready)
+
+This repo can build a self-contained installer ISO that already includes the repo checkout, ZFS tooling, and the interactive `install-nixos-zfs` helper.
+
+1. **Add SSH keys for remote installs**
+   ```bash
+   # append any number of public keys (file is gitignored)
+   install -Dm600 <(cat ~/.ssh/id_ed25519.pub) hosts/installer/authorized_keys
+   ```
+   Multiple keys can be appended with `cat >> hosts/installer/authorized_keys`.
+2. **Build the ISO**
+   ```bash
+   nix build .#installer-iso
+   ```
+   The artifact lands in `result/iso/` (exact filename includes the nixpkgs version).
+3. **Write it to a USB drive**
+   ```bash
+   sudo dd if=result/iso/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
+   ```
+   Replace `/dev/sdX` with your USB device. `cp` or `balu` also work if you prefer GUI tools.
+4. **Boot and install**
+   - The live system symlinks this repo to `/per/etc/nixos`.
+   - SSH is available immediately using the keys from step 1.
+   - Run `install-nixos-zfs` on the live system to launch the guided, Disko-powered installer (supports desktop/surface/portable hosts out of the box).
 
 ### Testing
 
@@ -197,15 +223,6 @@ nix run .#vm-hp-probook-wsl
 # Local CI testing (requires Docker)
 act pull_request                                 # Run full PR workflow
 act pull_request --job security --dryrun        # Dry run specific job
-```
-
-### Remote Deployment
-
-```bash
-# Deploy-rs
-deploy .#desktop                                 # Deploy to remote host
-deploy .#portable
-deploy --dry-run .#desktop                       # Preview changes
 ```
 
 ### CI/CD Pipeline
@@ -239,30 +256,17 @@ Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 #### Binary Caches
 
 - **Primary**: cache.nixos.org (official NixOS cache)
-- **Personal**: nixpkgs-schausberger.cachix.org (custom builds, see [Cachix Setup](../../wiki/Cachix-Setup))
+- **Personal**: felixschausberger.cachix.org (custom builds, see [Cachix Setup](../../wiki/Cachix-Setup))
 - **Garnix**: cache.garnix.io (shared CI builds with centralized signing)
 - **Community**: nix-community.cachix.org and project-specific caches
 
 All caches configured in `modules/system/nix.nix` with priority-based fallback.
 
-#### Required GitHub Settings for Auto-Merge
-
-To enable auto-merge functionality:
-
-1. **Repository Settings → General → Pull Requests:**
-   - ✅ Allow auto-merge
-
-2. **Repository Settings → Branches → Branch protection rules for `main`:**
-   - ✅ Require status checks to pass before merging
-   - Required checks: `security`, `validate`, `deployment`
-   - ✅ Require branches to be up to date before merging
-   - Optional: Require pull request reviews before merging
-
 ## Additional Documentation
 
 Detailed guides available in the [Wiki](../../wiki):
 
-- **[Installation Guide](../../wiki/Installation)** - VMDK installation, ZFS setup, post-installation configuration
+- **[Installation Guide](../../wiki/Installation)** - Disko automated installation, ZFS setup, post-installation configuration
 - **[Secret Management](../../wiki/Secret-Management)** - Detailed sops-nix usage and key management
 - **[Emergency Recovery](../../wiki/Emergency-Recovery)** - Complete recovery procedures and troubleshooting
 - **[Cachix Setup](../../wiki/Cachix-Setup)** - Setting up personal binary cache for faster builds
@@ -274,7 +278,7 @@ Installation quick start:
 ```bash
 git clone git@github.com:FelixSchausberger/nixos.git
 cd nixos
-nix build .#vmdk-portable                        # Build bootable VMDK
+# See wiki Installation.md for detailed setup
 ```
 
 Secret management:

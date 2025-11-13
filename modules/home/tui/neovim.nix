@@ -31,6 +31,31 @@
             ensure_installed = {},
           }
           EOF
+
+          " Markdown rendering setup (requires render-markdown.nvim)
+          lua << EOF
+          local ok, render = pcall(require, "render-markdown")
+          if ok then
+            render.setup({})
+          end
+          EOF
+
+          augroup MarkdownRender
+            autocmd!
+            autocmd FileType markdown if exists(":RenderMarkdown") | silent RenderMarkdown | endif
+          augroup END
+
+          " Launch Yazi inside Neovim from the current file directory
+          function! OpenYaziHere()
+            let l:startDir = expand('%:p:h')
+            if empty(l:startDir)
+              let l:startDir = getcwd()
+            endif
+            tabnew
+            execute 'terminal yazi ' . fnameescape(l:startDir)
+            startinsert
+          endfunction
+          nnoremap <leader>yy :call OpenYaziHere()<CR>
         '';
 
         packages.myVimPackage = with pkgs.vimPlugins; {
@@ -38,6 +63,7 @@
             # Core plugins
             vim-commentary
             vim-surround
+            render-markdown-nvim
 
             # Tree-sitter with specific grammars to avoid ada issue
             (nvim-treesitter.withPlugins (p:

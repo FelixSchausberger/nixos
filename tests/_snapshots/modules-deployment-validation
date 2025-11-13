@@ -1,0 +1,16 @@
+#pretty
+{
+  critical_services_configured = true;
+  critical_services_count = 3;
+  deployment_validation_enabled = true;
+  essential_paths_configured = true;
+  essential_paths_count = 4;
+  has_activation_script = true;
+  has_deployment_validation_option = true;
+  has_smoke_test_service = true;
+  has_validate_system_package = true;
+  post_activation_enabled = true;
+  pre_activation_enabled = true;
+  smoke_test_service_type = "oneshot";
+  smoke_test_timeout = 60;
+}

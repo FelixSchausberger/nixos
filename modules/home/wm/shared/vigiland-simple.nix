@@ -5,7 +5,7 @@
 }: {
   config = {
     home.packages = with pkgs; [
-      inputs.self.packages.${pkgs.system}.vigiland
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.vigiland
     ];
   };
 }
