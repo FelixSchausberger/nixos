@@ -3,12 +3,22 @@
   inputs,
   ...
 }: let
-  inherit (inputs.nixpkgs.lib) nixosSystem;
+  # Import configuration toggle
+  repoConfig = import ../config.nix;
+
+  # Select nixpkgs based on configuration
+  pkgs =
+    if repoConfig.useDeterminateNix
+    then inputs.nixpkgs-flakehub
+    else inputs.nixpkgs;
+
+  inherit (pkgs.lib) nixosSystem optional;
 
   inherit (import ../system) desktop laptop;
 
   specialArgs = {
     inherit inputs;
+    inherit repoConfig;
   };
 
   mkHostConfig = {
@@ -21,7 +31,6 @@
       modules =
         baseModules
         ++ [
-          inputs.determinate.nixosModules.default
           {
             networking.hostName = hostName;
             _module.args.hostName = hostName;
@@ -39,6 +48,8 @@
             }
           )
         ]
+        # Conditionally include Determinate Nix module based on config
+        ++ optional repoConfig.useDeterminateNix inputs.determinate.nixosModules.default
         ++ extraModules;
     };
 in {

@@ -5,8 +5,8 @@ _: {
     enable = true;
 
     # Enable automatic cleanup of build results
-    clean.enable = true;
-    clean.extraArgs = "--keep-since 4d --keep 3";
+    # clean.enable = true;
+    # clean.extraArgs = "--keep-since 4d --keep 3";
   };
 
   # Set NH_FLAKE environment variable to point to the NixOS configuration directory

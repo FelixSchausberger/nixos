@@ -53,6 +53,7 @@ Home modules in `modules/home/`:
 
 ### Custom Packages
 
+- claude-wsl: Visual notifications for Claude Code in WSL
 - lumen: AI Git commit message generator
 - mcp-nixos: NixOS MCP server for Claude Code
 - mcp-language-server: Language server MCP integration
@@ -239,7 +240,7 @@ Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 #### Binary Caches
 
 - **Primary**: cache.nixos.org (official NixOS cache)
-- **Personal**: nixpkgs-schausberger.cachix.org (custom builds, see [Cachix Setup](../../wiki/Cachix-Setup))
+- **Personal**: felixschausberger.cachix.org (custom builds, see [Cachix Setup](../../wiki/Cachix-Setup))
 - **Garnix**: cache.garnix.io (shared CI builds with centralized signing)
 - **Community**: nix-community.cachix.org and project-specific caches
 

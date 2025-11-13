@@ -3,13 +3,16 @@
   config,
   inputs,
   ...
-}: {
+}: let
+  inherit (inputs.self.lib) defaults;
+in {
   # Shared configuration for GUI hosts (desktop, surface, work machines)
   # This module provides common functionality for systems with desktop environments
 
   imports = [
     ./boot-zfs.nix
     ../modules/system/gui.nix
+    ../modules/system/sops-common.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -23,7 +26,7 @@
 
         user = lib.mkOption {
           type = lib.types.str;
-          default = "schausberger";
+          default = defaults.system.user;
           description = "Primary user for this system";
         };
 
@@ -36,7 +39,7 @@
 
         system = lib.mkOption {
           type = lib.types.str;
-          default = "x86_64-linux";
+          default = defaults.system.architecture;
           description = "System architecture";
         };
 
@@ -84,48 +87,6 @@
       enable32Bit = true;
     };
 
-    # Configure sops-nix for secrets management
-    sops = {
-      defaultSopsFile = ../secrets/secrets.yaml;
-      age.keyFile = "/per/system/sops-key.txt";
-      secrets = {
-        # API tokens
-        "claude/default" = {};
-        "github/token" = {
-          owner = "schausberger";
-        };
-        "cachix/token" = {};
-
-        # Cloud storage
-        "rclone/client-secret" = {};
-        "rclone/token" = {};
-
-        # Bitwarden master password
-        "bitwarden/master-password" = {};
-
-        # Personal information
-        "schausberger/email" = {};
-      };
-    };
-
-    # Create system mount directories for rclone
-    systemd.tmpfiles.rules = [
-      "d /per/mnt 0755 root root -"
-      "d /per/mnt/gdrive 0755 root root -"
-    ];
-
-    # Create netrc file for nix GitHub and Cachix access
-    sops.templates."nix/netrc" = {
-      content = ''
-        machine github.com
-        login token
-        password ${config.sops.placeholder."github/token"}
-
-        machine nixpkgs-schausberger.cachix.org
-        password ${config.sops.placeholder."cachix/token"}
-      '';
-      mode = "0600";
-      path = "/etc/nix/netrc";
-    };
+    # Sops configuration and tmpfiles are now centralized in sops-common.nix
   };
 }

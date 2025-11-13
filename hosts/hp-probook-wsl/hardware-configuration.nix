@@ -1,6 +1,10 @@
 # WSL hardware configuration
 # This file was generated for NixOS on WSL
-{modulesPath, ...}: {
+{
+  modulesPath,
+  config,
+  ...
+}: {
   imports = [
     (modulesPath + "/profiles/minimal.nix")
   ];
@@ -11,15 +15,19 @@
   # Enable WSL compatibility
   wsl = {
     enable = true;
-    wslConf = {
-      automount.root = "/mnt";
-      interop.appendWindowsPath = false;
-      # Let WSL handle networking to prevent connection loss
-      network.generateHosts = true;
-      network.generateResolvConf = true;
-    };
-    defaultUser = "schausberger";
+    wslConf.automount.root = "/mnt";
+    wslConf.interop.appendWindowsPath = false;
+    wslConf.interop.enabled = true;
+    wslConf.network.generateHosts = false; # Disable to prevent Windows hostname override
+    wslConf.network.generateResolvConf = true;
+    wslConf.network.hostname = "hp-probook-wsl"; # Set WSL hostname explicitly
+    wslConf.user.default = config.hostConfig.user; # Set default login user
+
+    defaultUser = config.hostConfig.user;
     startMenuLaunchers = true;
+
+    # Enable interop for Windows binary execution
+    interop.includePath = true;
 
     # Enable integration with Docker Desktop (if installed)
     docker-desktop.enable = false;

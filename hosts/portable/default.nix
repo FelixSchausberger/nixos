@@ -4,19 +4,22 @@
   lib,
   inputs,
   ...
-}: {
+}: let
+  hostName = "portable";
+  hostInfo = inputs.self.lib.hosts.${hostName};
+in {
   imports = [
     ../shared-tui.nix
     ../boot-zfs.nix # Portable needs ZFS support for recovery
     ./hardware-configuration.nix
   ];
 
+  # Host-specific configuration using centralized host mapping
   hostConfig = {
-    hostName = "portable";
-    user = "schausberger";
-    isGui = false; # TUI-only emergency/recovery system
-    wm = []; # TUI-only emergency/recovery system
-    system = "x86_64-linux";
+    inherit hostName;
+    inherit (hostInfo) isGui;
+    wm = hostInfo.wms;
+    # user and system use defaults from lib/defaults.nix
   };
 
   # Hardware compatibility enhancements for portable use
@@ -128,7 +131,7 @@
     unzip # ZIP support
 
     # Installation tools (optional for portable workstation)
-    inputs.nixos-wizard.packages.${pkgs.system}.default # NixOS installation wizard
+    inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default # NixOS installation wizard
   ];
 
   # Enable services for workstation + recovery
@@ -507,7 +510,7 @@
   };
 
   # Add main user to docker group for development
-  users.users.schausberger.extraGroups = ["docker"];
+  users.users.${config.hostConfig.user}.extraGroups = ["docker"];
 
   # Virtualization for development and testing
   virtualisation = {

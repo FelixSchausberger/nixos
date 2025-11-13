@@ -42,3 +42,6 @@ target/
 
 # Claude Code MCP configuration (auto-generated, contains nix store paths)
 .mcp.json
+
+# Claude Code local settings (machine-specific configuration)
+.claude/settings.local.json

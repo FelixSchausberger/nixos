@@ -17,6 +17,7 @@
   };
 
   username = inputs.self.lib.user;
+  inherit (inputs.self.lib) defaults;
 in {
   imports = [
     inputs.nix-index-db.homeModules.nix-index
@@ -45,6 +46,6 @@ in {
     };
 
     # Specify Home Manager release version
-    stateVersion = "25.11";
+    stateVersion = defaults.system.version;
   };
 }

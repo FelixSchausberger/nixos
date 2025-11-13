@@ -1,45 +1,45 @@
-{
+{lib, ...}: {
   programs.yazi.theme.status = {
     separator_open = "";
     separator_close = "";
     separator_style = {
-      fg = "darkgray";
-      bg = "darkgray";
+      fg = lib.mkDefault "darkgray";
+      bg = lib.mkDefault "darkgray";
     };
 
     # Mode;
     mode_normal = {
-      fg = "black";
-      bg = "lightblue";
+      fg = lib.mkDefault "black";
+      bg = lib.mkDefault "lightblue";
       bold = true;
     };
     mode_select = {
-      fg = "black";
-      bg = "lightgreen";
+      fg = lib.mkDefault "black";
+      bg = lib.mkDefault "lightgreen";
       bold = true;
     };
     mode_unset = {
-      fg = "black";
-      bg = "lightmagenta";
+      fg = lib.mkDefault "black";
+      bg = lib.mkDefault "lightmagenta";
       bold = true;
     };
 
     # Progress;
     progress_label = {bold = true;};
     progress_normal = {
-      fg = "blue";
-      bg = "black";
+      fg = lib.mkDefault "blue";
+      bg = lib.mkDefault "black";
     };
     progress_error = {
-      fg = "red";
-      bg = "black";
+      fg = lib.mkDefault "red";
+      bg = lib.mkDefault "black";
     };
 
     # Permissions;
-    permissions_t = {fg = "blue";};
-    permissions_r = {fg = "lightyellow";};
-    permissions_w = {fg = "lightred";};
-    permissions_x = {fg = "lightgreen";};
-    permissions_s = {fg = "darkgray";};
+    permissions_t = {fg = lib.mkDefault "blue";};
+    permissions_r = {fg = lib.mkDefault "lightyellow";};
+    permissions_w = {fg = lib.mkDefault "lightred";};
+    permissions_x = {fg = lib.mkDefault "lightgreen";};
+    permissions_s = {fg = lib.mkDefault "darkgray";};
   };
 }

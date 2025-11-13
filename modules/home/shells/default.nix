@@ -14,5 +14,7 @@
     repair = "sudo nix-store --verify --check-contents --repair";
     rip = "rip --graveyard /per/home/${config.home.username}/.local/share/graveyard";
     rsync = "rsync -avhP --no-inc-recursive";
+    # Trailing space enables alias expansion after sudo
+    sudo = "sudo ";
   };
 }

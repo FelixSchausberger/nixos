@@ -1,106 +1,55 @@
 {
   config,
   lib,
+  inputs,
   ...
-}: {
+}: let
+  catppuccin = inputs.self.lib.catppuccinColors.mocha;
+in {
+  imports = [
+    ../shared/gtk-config.nix
+  ];
+  # Aesthetic options (borderRadius, gaps, blur, shadows) centralized in wm.shared.theme
+  # This module only defines Hyprland-specific enable option
   options.wm.hyprland.theme = {
     enable = lib.mkEnableOption "Hyprland theme configuration" // {default = true;};
-
-    colorScheme = lib.mkOption {
-      type = lib.types.enum ["catppuccin-macchiato" "custom"];
-      default = "catppuccin-macchiato";
-      description = "Color scheme for Hyprland";
-    };
-
-    borderRadius = lib.mkOption {
-      type = lib.types.int;
-      default = 12;
-      description = "Border radius for windows";
-    };
-
-    gaps = {
-      inner = lib.mkOption {
-        type = lib.types.int;
-        default = 4;
-        description = "Inner gaps between windows";
-      };
-
-      outer = lib.mkOption {
-        type = lib.types.int;
-        default = 8;
-        description = "Outer gaps around workspace edges";
-      };
-    };
-
-    blur = {
-      enabled = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable blur effects";
-      };
-
-      size = lib.mkOption {
-        type = lib.types.int;
-        default = 6;
-        description = "Blur kernel size";
-      };
-
-      passes = lib.mkOption {
-        type = lib.types.int;
-        default = 3;
-        description = "Number of blur passes";
-      };
-    };
-
-    shadows = {
-      enabled = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable drop shadows";
-      };
-
-      range = lib.mkOption {
-        type = lib.types.int;
-        default = 20;
-        description = "Shadow range/size";
-      };
-    };
   };
 
   config = let
     cfg = config.wm.hyprland.theme;
+    sharedTheme = config.wm.shared.theme;
 
-    # Color schemes
+    # Color schemes using centralized Catppuccin definitions
     colors = {
       catppuccin-macchiato = {
-        active_border = "rgb(89b4fa) rgb(cba6f7) 45deg";
-        inactive_border = "rgb(45475a)";
-        group_active = "rgb(cba6f7)";
-        group_inactive = "rgb(45475a)";
-        group_locked_active = "rgb(f38ba8)";
-        group_locked_inactive = "rgb(45475a)";
-        shadow = "rgba(1e1e2eee)";
+        active_border = "rgb(${catppuccin.blue}) rgb(${catppuccin.mauve}) 45deg";
+        inactive_border = "rgb(${catppuccin.surface1})";
+        group_active = "rgb(${catppuccin.mauve})";
+        group_inactive = "rgb(${catppuccin.surface1})";
+        group_locked_active = "rgb(${catppuccin.red})";
+        group_locked_inactive = "rgb(${catppuccin.surface1})";
+        shadow = "rgba(${catppuccin.base}ee)";
       };
 
       custom = {
-        active_border = "rgb(89b4fa)";
-        inactive_border = "rgb(45475a)";
-        group_active = "rgb(cba6f7)";
-        group_inactive = "rgb(45475a)";
-        group_locked_active = "rgb(f38ba8)";
-        group_locked_inactive = "rgb(45475a)";
-        shadow = "rgba(1e1e2eee)";
+        active_border = "rgb(${catppuccin.blue})";
+        inactive_border = "rgb(${catppuccin.surface1})";
+        group_active = "rgb(${catppuccin.mauve})";
+        group_inactive = "rgb(${catppuccin.surface1})";
+        group_locked_active = "rgb(${catppuccin.red})";
+        group_locked_inactive = "rgb(${catppuccin.surface1})";
+        shadow = "rgba(${catppuccin.base}ee)";
       };
     };
 
-    currentColors = colors.${cfg.colorScheme};
+    currentColors = colors.${sharedTheme.colorScheme};
   in
     lib.mkIf (config.wm.hyprland.enable && cfg.enable) {
       wayland.windowManager.hyprland.settings = {
-        # General appearance
+        # General appearance using centralized shared theme
         general = {
-          gaps_in = cfg.gaps.inner;
-          gaps_out = cfg.gaps.outer;
+          gaps_in = sharedTheme.gaps.inner;
+          gaps_out = sharedTheme.gaps.outer;
           border_size = 2;
           "col.active_border" = currentColors.active_border;
           "col.inactive_border" = currentColors.inactive_border;
@@ -108,12 +57,13 @@
           extend_border_grab_area = 15;
         };
 
-        # Window decoration
+        # Window decoration using centralized shared theme
         decoration = {
-          rounding = cfg.borderRadius;
+          rounding = sharedTheme.borderRadius;
 
-          blur = lib.mkIf cfg.blur.enabled {
-            inherit (cfg.blur) size passes;
+          blur = lib.mkIf sharedTheme.blur.enabled {
+            inherit (sharedTheme.blur) size;
+            inherit (sharedTheme.blur) passes;
             enabled = true;
             new_optimizations = true;
             ignore_opacity = true;
@@ -123,8 +73,8 @@
             xray = false;
           };
 
-          shadow = lib.mkIf cfg.shadows.enabled {
-            inherit (cfg.shadows) range;
+          shadow = lib.mkIf sharedTheme.shadows.enabled {
+            inherit (sharedTheme.shadows) range;
             enabled = true;
             render_power = 3;
             ignore_window = true;
@@ -146,36 +96,6 @@
         };
       };
 
-      # GTK theme configuration for consistent theming
-      xdg.configFile = {
-        "gtk-3.0/settings.ini".text = ''
-          [Settings]
-          gtk-application-prefer-dark-theme=1
-          gtk-theme-name=Adwaita-dark
-          gtk-icon-theme-name=Adwaita
-          gtk-font-name=Inter 11
-          gtk-cursor-theme-name=Bibata-Modern-Classic
-          gtk-cursor-theme-size=24
-          gtk-toolbar-style=GTK_TOOLBAR_BOTH
-          gtk-toolbar-icon-size=GTK_ICON_SIZE_LARGE_TOOLBAR
-          gtk-button-images=1
-          gtk-menu-images=1
-          gtk-enable-event-sounds=1
-          gtk-enable-input-feedback-sounds=1
-          gtk-xft-antialias=1
-          gtk-xft-hinting=1
-          gtk-xft-hintstyle=hintfull
-        '';
-
-        "gtk-4.0/settings.ini".text = ''
-          [Settings]
-          gtk-application-prefer-dark-theme=1
-          gtk-theme-name=Adwaita-dark
-          gtk-icon-theme-name=Adwaita
-          gtk-font-name=Inter 11
-          gtk-cursor-theme-name=Bibata-Modern-Classic
-          gtk-cursor-theme-size=24
-        '';
-      };
+      # GTK theme configuration handled by gtk-config.nix import
     };
 }

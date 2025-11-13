@@ -1,5 +1,6 @@
 {
   imports = [
+    ./backup.nix
     ./containers.nix
     ./development.nix
     ./display-manager.nix
@@ -7,6 +8,7 @@
     ./fonts.nix
     ./home-manager.nix
     ./maintenance.nix
+    ./ssl-config.nix
     ./wsl-integration.nix
   ];
 }

@@ -6,8 +6,12 @@
   ...
 }: let
   # Reference the custom packages from the flake
-  inherit (inputs.self.packages.${pkgs.system}) mcp-language-server;
+  inherit (inputs.self.packages.${pkgs.stdenv.hostPlatform.system}) mcp-language-server;
+  cfg = config.programs.claude-code.wsl;
 in {
+  imports = [
+    ./claude-wsl.nix
+  ];
   home = {
     packages =
       (with pkgs; [
@@ -27,7 +31,7 @@ in {
       ])
       ++ [
         # Usage tracking for statusline (from ccusage-flake)
-        inputs.ccusage.packages.${pkgs.system}.default
+        inputs.ccusage.packages.${pkgs.stdenv.hostPlatform.system}.default
       ];
 
     # Create project-level .mcp.json for MCP servers at actual project root
@@ -100,6 +104,78 @@ in {
     claudeStatusline = pkgs.writeShellScript "claude-statusline" (builtins.readFile ./statusline.sh);
     avoidAgreementHook = pkgs.writeShellScript "avoid-agreement-hook" (builtins.readFile ./hooks/avoid-agreement.sh);
     preventRebuildHook = pkgs.writeShellScript "prevent-rebuild-hook" (builtins.readFile ./hooks/prevent-rebuild.sh);
+
+    # claude-wsl notification wrapper script (when enabled)
+    notifyWrapperScript = "${config.home.homeDirectory}/.local/share/claude-wsl/notify-wrapper.sh";
+
+    # Build hooks configuration with conditional claude-wsl support
+    baseHooks = {
+      UserPromptSubmit = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = toString avoidAgreementHook;
+            }
+            {
+              type = "command";
+              command = toString preventRebuildHook;
+            }
+          ];
+        }
+      ];
+    };
+
+    # Add claude-wsl notification hooks when enabled
+    wslHooks = lib.optionalAttrs cfg.enable {
+      SessionStart = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+      Stop = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+      SessionEnd = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+      Notification = [
+        {
+          matcher = "*";
+          hooks = [
+            {
+              type = "command";
+              command = notifyWrapperScript;
+            }
+          ];
+        }
+      ];
+    };
+
+    hooksConfig = baseHooks // wslHooks;
   in
     builtins.toJSON {
       hasCompletedOnboarding = true;
@@ -125,23 +201,7 @@ in {
 
       environment.DISABLE_TELEMETRY = "1";
 
-      hooks = {
-        UserPromptSubmit = [
-          {
-            matcher = "*";
-            hooks = [
-              {
-                type = "command";
-                command = toString avoidAgreementHook;
-              }
-              {
-                type = "command";
-                command = toString preventRebuildHook;
-              }
-            ];
-          }
-        ];
-      };
+      hooks = hooksConfig;
 
       statusLine = {
         type = "command";

@@ -1,13 +1,9 @@
-{
-  pkgs,
-  config,
-  ...
-}: {
+{pkgs, ...}: {
   # Custom ZFS-enabled image builder - imports handled by caller
 
   # ZFS support in installer
   boot.supportedFilesystems = ["zfs"];
-  boot.kernelPackages = config.boot.zfs.package.latestCompatibleLinuxPackages;
+  boot.kernelPackages = pkgs.linuxPackages;
 
   # Include our ZFS setup tool
   environment.systemPackages = with pkgs; [

@@ -44,9 +44,6 @@
       enableFishIntegration = true;
       options = ["--alias" "f"];
     };
-
-    # Replaced tealdeer with outfieldr - faster TLDR client without certificate issues
-    # tealdeer had TLS certificate issues due to rustls not using system certificates
   };
 
   home.packages = with pkgs; [
@@ -77,12 +74,6 @@
 
   services = {
     lorri.enable = true; # Your project's nix-env
-  };
-
-  # Environment variables for proper TLS certificate validation
-  home.sessionVariables = {
-    SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-    NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
   };
 
   # Shell health check activation script

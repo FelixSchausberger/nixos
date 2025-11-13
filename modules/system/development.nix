@@ -19,7 +19,7 @@
     comma # Run software without installing
 
     # Language Servers
-    nodePackages.bash-language-server # Bash
+    # nodePackages.bash-language-server # Bash
     clang-tools # C/C++
     marksman # Markdown
     nixd # Nix

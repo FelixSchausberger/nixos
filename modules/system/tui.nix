@@ -8,6 +8,7 @@
     ./home-manager.nix
     ./maintenance.nix
     ./nix.nix
+    ./ssl-config.nix
     ./wsl-integration.nix
   ];
 }

@@ -74,7 +74,7 @@
     # AMD GPU monitoring and debugging tools
     environment.systemPackages = with pkgs; [
       vulkan-tools
-      glxinfo
+      mesa-demos # Provides glxinfo (renamed from glxinfo package)
       radeontop
     ];
   };

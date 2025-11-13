@@ -10,12 +10,12 @@ sessionTarget: {
   config = {
     services.ala-lape = {
       enable = true;
-      package = inputs.ala-lape.packages.${pkgs.system}.default;
+      package = inputs.ala-lape.packages.${pkgs.stdenv.hostPlatform.system}.default;
       config = {
         inhibitors = {
           notifications = {
             # TODO: Configure based on notification daemon used
-            # swaync.enable = true;
+            # wired.enable = true;
           };
         };
 

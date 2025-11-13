@@ -1,4 +1,10 @@
-{lib, ...}: {
+{
+  lib,
+  inputs,
+  ...
+}: let
+  inherit (inputs.self.lib) defaults;
+in {
   # Base home configuration - only TUI essentials
   # GUI hosts should explicitly import ./gui, ./themes, ./wallpapers
   imports = [
@@ -15,13 +21,13 @@
 
   # Basic home configuration
   home = {
-    username = lib.mkDefault "schausberger";
-    homeDirectory = lib.mkDefault "/home/schausberger";
+    username = lib.mkDefault defaults.system.user;
+    homeDirectory = lib.mkDefault defaults.paths.homeDir;
 
     # This value determines the Home Manager release that your
     # configuration is compatible with. This helps avoid breakage
     # when a new Home Manager release introduces backwards
     # incompatible changes.
-    stateVersion = "25.11";
+    stateVersion = defaults.system.version;
   };
 }

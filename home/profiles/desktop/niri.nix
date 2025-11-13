@@ -5,6 +5,7 @@
 }: {
   # Desktop-specific niri configuration
   wm.niri = {
+    enable = true;
     # Monitor configuration for desktop setup
     # Using auto-detection as default - can be overridden for specific multi-monitor setups
     outputs = [

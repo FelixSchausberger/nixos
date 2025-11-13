@@ -1,12 +1,18 @@
 # Common utility functions for the NixOS configuration
-{lib, ...}: rec {
+{
+  lib,
+  inputs,
+  ...
+}: let
+  inherit (inputs.self.lib) defaults;
+in rec {
   # Helper to generate user@host format
   getUserHost = user: host: "${user}@${host}";
 
   # Create consistent profile imports with automatic host detection
   mkProfileImports = hosts: let
     mkProfileForHost = host: {
-      name = getUserHost "schausberger" host; # Default user
+      name = getUserHost defaults.system.user host;
       value = [
         ../home/profiles/shared.nix # Shared config with dynamic WM
         ../home/profiles/${host} # Host-specific config

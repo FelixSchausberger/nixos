@@ -4,19 +4,30 @@
   nixConfig = {
     extra-substituters = [
       "https://cache.nixos.org"
-      "https://nixpkgs-schausberger.cachix.org"
+      "https://felixschausberger.cachix.org"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "nixpkgs-schausberger.cachix.org-1:BdcD4tXljP3BQGhm9mUjmLkkPwl+7IFcl1JX5CsrIfE="
+      "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
     ];
   };
 
   inputs = {
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # Nixpkgs sources - toggle via config.nix useDeterminateNix boolean
+    # Standard Nix (GitHub nixos-unstable)
+    # Pinned to commit before wrapGAppsHook throw (2025-10-26)
+    # Last commit with prek package before wrapGAppsHook was converted to throw
+    # TODO: Update once all upstream packages migrate to wrapGAppsHook3
+    nixpkgs.url = "github:NixOS/nixpkgs/a58e7f5991113709e34c5acea8a4fb010fe40d3a";
+    # Determinate Nix (FlakeHub with semver)
+    # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
+    nixpkgs-flakehub.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+
     flake-parts.url = "github:hercules-ci/flake-parts";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -85,6 +96,8 @@
     };
     nix-inspect.url = "github:bluskript/nix-inspect";
     nur.url = "github:nix-community/NUR";
+    # Determinate Nix modules (only used when useDeterminateNix = true)
+    # See: https://github.com/DeterminateSystems/determinate?tab=readme-ov-file#installing-using-our-nix-flake
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
 
     # TUI applications (used by both profiles)
@@ -169,6 +182,10 @@
       url = "github:YashjitPal/Arc-2.0";
       flake = false;
     };
+    stylix = {
+      url = "github:danth/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: let
@@ -185,23 +202,19 @@
 
       flake = {
         # Utility functions
-        lib = {
+        lib = rec {
+          # Centralized defaults - single source of truth
+          defaults = import ./lib/defaults.nix;
+          fonts = import ./lib/fonts.nix;
+          catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix;
+          hosts = import ./lib/hosts.nix;
+
+          # Legacy compatibility - keep existing API
           mkHost = import ./lib/mkHost.nix;
           profiles = profileLib;
-          user = "schausberger"; # Default user
-
-          # Personal information variables
-          personalInfo = {
-            name = "Felix Schausberger";
-          };
-
-          # Common paths
-          paths = {
-            nixosConfig = "/per/etc/nixos";
-            obsidianVault = "/per/home/schausberger/Documents/Obsidian";
-            homeDir = "/home/schausberger";
-            repos = "/per/repos";
-          };
+          inherit (defaults.system) user;
+          inherit (defaults) personalInfo;
+          inherit (defaults) paths;
         };
       };
 
@@ -211,8 +224,8 @@
           vigiland = pkgs.callPackage ./pkgs/vigiland {};
           # wlsleephandler-rs = pkgs.callPackage ./pkgs/wlsleephandler-rs {}; # Disabled until proper hash is available
 
-          # Zellij plugins
-          zellij-ghost = pkgs.callPackage ./pkgs/ghost {};
+          # Claude Code integrations
+          claude-wsl = pkgs.callPackage ./pkgs/claude-wsl {};
 
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
@@ -250,9 +263,10 @@
             nodePackages.prettier
             pre-commit-hook-ensure-sops
             prek
+            ssh-to-age
             statix
             taplo
-            inputs.namaka.packages.${pkgs.system}.default # Snapshot testing
+            inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
           ];
 
           name = "nixos-config";

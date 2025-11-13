@@ -8,7 +8,7 @@
   sops.templates."rbw-config.json" = {
     content = builtins.toJSON {
       base_url = null;
-      email = "${config.sops.placeholder."schausberger/email"}";
+      email = "${config.sops.placeholder."private/email"}";
       identity_url = null;
       lock_timeout = 3600;
       pinentry = "${pkgs.pinentry-curses}/bin/pinentry";
@@ -80,7 +80,7 @@
     "bitwarden/master-password" = {
       mode = "0400";
     };
-    "schausberger/email" = {
+    "private/email" = {
       mode = "0400";
     };
   };

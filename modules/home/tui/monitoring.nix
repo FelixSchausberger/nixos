@@ -26,6 +26,7 @@
       # Modern disk usage analyzer
       dua # Disk Usage Analyzer - fast du alternative with TUI
       dust # du alternative with tree view
+      dysk # Get information on your mounted disks
 
       # ZFS-specific monitoring
       zfs-prune-snapshots # Clean up old ZFS snapshots

@@ -8,5 +8,5 @@
   has_dns = true;
   has_log_driver = "json-file";
   has_storage_driver = "overlay2";
-  nix_ssl_cert = "/etc/ssl/certs/ca-bundle-enhanced.crt";
+  nix_ssl_cert = "/run/ca-bundle-plus-eset.pem";
 }
