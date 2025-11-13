@@ -4,6 +4,8 @@ in {
   imports =
     importLib.importHost "surface"
     ++ [
+      # Disko config available at ./surface/disko/disko.nix
+      # Only used during installation, not imported for running systems
       ./surface/hardware/hardware-configuration.nix
     ];
 }
