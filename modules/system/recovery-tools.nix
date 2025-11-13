@@ -83,6 +83,7 @@ in {
     ])
     ++ [
       inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.install-nixos
     ];
 
   services.openssh = {
@@ -235,154 +236,25 @@ in {
     echo
     echo "This system uses disko for declarative disk management."
     echo
-    echo "Installation options:"
-    echo "  1. Automated: Use 'install-nixos-zfs' command"
-    echo "  2. Manual: See /per/etc/nixos/hosts/<hostname>/disko/disko.nix"
+    echo "Installation command:"
+    echo "  install-nixos              # Interactive mode with auto-detection"
+    echo "  install-nixos --help       # Show all options"
+    echo
+    echo "Available hosts:"
+    echo "  • desktop           - Desktop PC with AMD RX 6700XT"
+    echo "  • surface           - Surface tablet/laptop"
+    echo "  • portable          - Portable/recovery with ZFS"
+    echo "  • hp-probook-vmware - VMware VM"
+    echo
+    echo "Examples:"
+    echo "  install-nixos --host desktop --disk /dev/nvme0n1"
+    echo "  install-nixos --host portable --disk /dev/sda --yes"
     echo
     echo "Documentation:"
     echo "  https://github.com/FelixSchausberger/nixos/wiki/Installation"
-    echo "  (See 'Disko Configuration Guide' section)"
     EOF
 
     chmod +x /usr/local/bin/nixos-install-info
-
-    # Create ZFS installation helper script
-    cat > /usr/local/bin/install-nixos-zfs << 'EOF'
-    #!/usr/bin/env bash
-    set -e
-
-    echo "NixOS ZFS Installation Helper"
-    echo "============================"
-    echo
-    echo "This tool helps you install new ZFS-based NixOS systems."
-    echo
-
-    # Check if we're running from recovery system
-    if [[ ! -f /usr/local/bin/nixos-recover ]]; then
-        echo "❌ This script should be run from the NixOS recovery system"
-        exit 1
-    fi
-
-    echo "Available installation methods:"
-    echo
-    echo "1. 🚀 Disko Automated Installation (Recommended)"
-    echo "   - Declarative disk management with reproducible layouts"
-    echo "   - Automated partitioning, formatting, and installation"
-    echo "   - Best for most users"
-    echo
-    echo "2. 🛠️ Manual Disko Configuration (Advanced)"
-    echo "   - Edit disko config for custom ZFS settings"
-    echo "   - Full control over pool options and datasets"
-    echo
-
-    read -p "Choose installation method [1/2]: " choice
-
-    case $choice in
-        1)
-            echo
-            echo "📦 Disko Automated Installation Selected"
-            echo "========================================"
-            echo
-            echo "This will install NixOS with declarative disk management:"
-            echo "• Automated partitioning using disko configuration"
-            echo "• ZFS with impermanence (for portable host)"
-            echo "• Reproducible disk layout from Nix configuration"
-            echo "• Full system installation in one command"
-            echo
-            echo "Installation process:"
-            echo "1. Identify target disk"
-            echo "2. Run disko-install with your host configuration"
-            echo "3. Automatic partitioning, formatting, and NixOS installation"
-            echo
-
-            # List available disks
-            echo "Available disks:"
-            lsblk -d -o NAME,SIZE,MODEL | grep -v loop
-            echo
-
-            read -p "Enter target disk (e.g., /dev/sdb or /dev/nvme0n1): " target_disk
-
-            if [[ ! -b "$target_disk" ]]; then
-                echo "❌ Disk $target_disk not found"
-                exit 1
-            fi
-
-            echo
-            echo "Available host configurations:"
-            echo "  • desktop  - Standard desktop with ext4 and swap"
-            echo "  • surface  - Surface laptop with ext4 and 8GB swap"
-            echo "  • portable - ZFS with impermanence and optional swap"
-            echo
-            read -p "Enter host name [portable]: " hostname
-            hostname=''${hostname:-portable}
-
-            echo
-            echo "⚠️  WARNING: This will ERASE ALL DATA on $target_disk"
-            echo "Installing host: $hostname"
-            read -p "Type 'YES' to continue: " confirm
-
-            if [[ "$confirm" != "YES" ]]; then
-                echo "Installation cancelled."
-                exit 0
-            fi
-
-            echo
-            echo "🔨 Running disko-install..."
-            echo "This will partition, format, and install NixOS..."
-            echo
-
-            cd /per/etc/nixos || {
-                echo "❌ Could not find NixOS configuration directory"
-                exit 1
-            }
-
-            nix run 'github:nix-community/disko#disko-install' -- \
-              --flake ".#$hostname" \
-              --disk main "$target_disk"
-
-            echo
-            echo "✅ Installation complete!"
-            echo "You can now boot from $target_disk"
-            echo
-            echo "After first boot:"
-            echo "  1. Set user password: passwd schausberger"
-            echo "  2. Configure secrets (see Wiki: Secret Management)"
-            ;;
-
-        2)
-            echo
-            echo "🛠️ Manual Disko Configuration Selected"
-            echo "======================================="
-            echo
-            echo "For advanced users who need custom ZFS configurations:"
-            echo
-            echo "Steps:"
-            echo "1. Edit the disko configuration for your needs:"
-            echo "   nano /per/etc/nixos/hosts/portable/disko/disko.nix"
-            echo
-            echo "2. Customize ZFS settings:"
-            echo "   • Pool options (compression, encryption, etc.)"
-            echo "   • Dataset hierarchy"
-            echo "   • Swap partition (uncomment if needed)"
-            echo
-            echo "3. Run disko-install with your customized config:"
-            echo "   nix run 'github:nix-community/disko#disko-install' -- \\"
-            echo "     --flake '.#portable' \\"
-            echo "     --disk main /dev/nvme0n1"
-            echo
-            echo "See the Wiki for full customization guide:"
-            echo "  https://github.com/FelixSchausberger/nixos/wiki/Installation"
-            echo "  (Disko Configuration Guide section)"
-            ;;
-
-        *)
-            echo "Invalid choice. Exiting."
-            exit 1
-            ;;
-    esac
-    EOF
-
-    chmod +x /usr/local/bin/install-nixos-zfs
   '';
 
   networking = {

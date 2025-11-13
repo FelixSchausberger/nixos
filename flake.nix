@@ -250,6 +250,9 @@
           vigiland = pkgs.callPackage ./pkgs/vigiland {};
           # wlsleephandler-rs = pkgs.callPackage ./pkgs/wlsleephandler-rs {}; # Disabled until proper hash is available
 
+          # Installation tools
+          install-nixos = pkgs.callPackage ./pkgs/install-nixos {};
+
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
 
