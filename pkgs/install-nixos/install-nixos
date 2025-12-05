@@ -18,12 +18,12 @@ error() { echo -e "${RED}✗${NC} $*"; }
 
 # Detect host based on hardware
 detect_host() {
-    info "Detecting hardware..."
+    info "Detecting hardware..." >&2
 
     # Check for WSL
     if grep -qi microsoft /proc/version 2>/dev/null; then
-        error "WSL detected - disko installation not supported in WSL"
-        error "WSL manages its own virtual disk automatically"
+        error "WSL detected - disko installation not supported in WSL" >&2
+        error "WSL manages its own virtual disk automatically" >&2
         exit 1
     fi
 
@@ -32,7 +32,7 @@ detect_host() {
     if systemd-detect-virt -q; then
         is_vm=true
         local virt_type=$(systemd-detect-virt)
-        info "Virtualization detected: $virt_type"
+        info "Virtualization detected: $virt_type" >&2
     fi
 
     # Detect based on hardware characteristics
@@ -68,13 +68,13 @@ show_hosts() {
     info "Available host configurations:"
     echo
     echo "  ${GREEN}desktop${NC}           - Desktop PC with AMD RX 6700XT"
-    echo "                      Disk: EFI + 16GB swap + ext4 root"
+    echo "                      Disk: EFI + 16GB swap + ZFS with impermanence"
     echo
     echo "  ${GREEN}surface${NC}           - Surface tablet/laptop"
-    echo "                      Disk: EFI + 8GB swap + ext4 root"
+    echo "                      Disk: EFI + 8GB swap + ZFS with impermanence"
     echo
     echo "  ${GREEN}portable${NC}          - Portable/recovery system"
-    echo "                      Disk: EFI + ZFS with impermanence"
+    echo "                      Disk: EFI + ZFS with impermanence (no swap)"
     echo
     echo "  ${GREEN}hp-probook-vmware${NC} - VMware VM on HP ProBook"
     echo "                      Disk: EFI + ext4 root (no swap, uses zramSwap)"

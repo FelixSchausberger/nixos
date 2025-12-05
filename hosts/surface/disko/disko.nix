@@ -1,9 +1,9 @@
-# Disko configuration for surface host
+# Disko configuration for surface host with ZFS and impermanence
 #
-# Simple ext4-based system with:
+# This configuration defines the disk layout for a ZFS-based system with:
 # - EFI System Partition (512MB) at /boot
-# - Optional swap partition (smaller for mobile device)
-# - ext4 root partition
+# - Optional swap partition (8GB for tablet/laptop)
+# - ZFS pool with impermanence (ephemeral root)
 #
 # Usage:
 #   sudo nix run 'github:nix-community/disko#disko-install' -- \
@@ -46,18 +46,83 @@
               };
             };
 
-            # Root partition (uses remaining space)
-            root = {
+            # ZFS root partition (uses remaining space)
+            zfs = {
               size = "100%";
               content = {
-                type = "filesystem";
-                format = "ext4";
-                mountpoint = "/";
-                mountOptions = [
-                  "defaults"
-                  "noatime"
-                ];
+                type = "zfs";
+                pool = "rpool";
               };
+            };
+          };
+        };
+      };
+    };
+
+    zpool = {
+      rpool = {
+        type = "zpool";
+        # ZFS pool options matching existing boot-zfs.nix configuration
+        rootFsOptions = {
+          compression = "zstd";
+          acltype = "posixacl";
+          xattr = "sa";
+          atime = "off";
+          "com.sun:auto-snapshot" = "false";
+        };
+
+        datasets = {
+          # Parent dataset (not mounted)
+          "eyd" = {
+            type = "zfs_fs";
+            options = {
+              canmount = "off";
+              mountpoint = "none";
+            };
+          };
+
+          # Ephemeral root (blank snapshot for impermanence)
+          # Rolled back to @blank on every boot via boot-zfs.nix
+          "eyd/root" = {
+            type = "zfs_fs";
+            mountpoint = "/";
+            options = {
+              mountpoint = "/";
+              "com.sun:auto-snapshot" = "false";
+            };
+            postCreateHook = ''
+              zfs snapshot rpool/eyd/root@blank
+            '';
+          };
+
+          # Nix store (persistent, no snapshots)
+          "eyd/nix" = {
+            type = "zfs_fs";
+            mountpoint = "/nix";
+            options = {
+              mountpoint = "/nix";
+              atime = "off";
+              "com.sun:auto-snapshot" = "false";
+            };
+          };
+
+          # Persistence dataset (snapshots enabled)
+          "eyd/per" = {
+            type = "zfs_fs";
+            mountpoint = "/per";
+            options = {
+              mountpoint = "/per";
+              "com.sun:auto-snapshot" = "true";
+            };
+          };
+
+          # Home directory (snapshots enabled)
+          "eyd/home" = {
+            type = "zfs_fs";
+            mountpoint = "/home";
+            options = {
+              mountpoint = "/home";
+              "com.sun:auto-snapshot" = "true";
             };
           };
         };
