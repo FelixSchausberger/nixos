@@ -1,5 +1,6 @@
 {
   lib,
+  pkgs,
   inputs,
   modulesPath,
   ...
@@ -54,8 +55,80 @@ in {
     ln -sfn ${repoPath} /per/etc/nixos
   '';
 
+  # Pre-configure installation environment
+  system.activationScripts.installerWelcome = ''
+    cat > /etc/issue << 'EOF'
+
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║                                                               ║
+    ║  NixOS Installation Environment                               ║
+    ║  Ready to install your system                                 ║
+    ║                                                               ║
+    ╚═══════════════════════════════════════════════════════════════╝
+
+    Configuration: /per/etc/nixos
+
+    Quick Start:
+      1. Run: install-nixos
+      2. Follow interactive prompts
+      3. Reboot into your new system
+
+    Documentation:
+      • nixos-install-info    - Show installation options
+      • install-nixos --help  - Show all installation flags
+
+    Network:
+      • SSH enabled (if authorized_keys configured)
+      • NetworkManager available: nmtui
+
+    EOF
+  '';
+
   # Ensure the portable scripts know where the configuration lives
-  environment.sessionVariables.NIXOS_CONFIG_ROOT = "/per/etc/nixos";
+  environment.sessionVariables = {
+    NIXOS_CONFIG_ROOT = "/per/etc/nixos";
+    # Pre-configure git for potential operations
+    GIT_AUTHOR_NAME = "NixOS Installer";
+    GIT_AUTHOR_EMAIL = "installer@nixos.local";
+    GIT_COMMITTER_NAME = "NixOS Installer";
+    GIT_COMMITTER_EMAIL = "installer@nixos.local";
+  };
+
+  # Additional packages for installation convenience
+  environment.systemPackages = with pkgs; [
+    # Network diagnostics
+    dnsutils
+    inetutils
+    whois
+
+    # Text editors (in case user needs to edit configs)
+    vim
+    nano
+
+    # Git for repo operations
+    git
+
+    # Disk utilities beyond basic recovery tools
+    parted
+    gptfdisk
+
+    # Convenience
+    tmux
+    screen
+  ];
+
+  # Enable SSH for remote installation
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      PasswordAuthentication = false;
+    };
+  };
+
+  # Enable NetworkManager for easier network setup
+  networking.networkmanager.enable = true;
+  networking.wireless.enable = lib.mkForce false; # Disable wpa_supplicant in favor of NetworkManager
 
   # Fix sudo conflict between installation-device.nix and sudo-rs.nix
   # Keep security.sudo (from installation-device) and disable sudo-rs
@@ -63,4 +136,14 @@ in {
 
   # Fix stateVersion conflict - use installer version
   system.stateVersion = lib.mkForce "26.05";
+
+  # ISO customization
+  image.fileName = "nixos-installer-${hostName}.iso";
+  isoImage = {
+    volumeID = "NIXOS_INSTALLER";
+
+    # Make ISO bootable in UEFI and BIOS modes
+    makeEfiBootable = true;
+    makeUsbBootable = true;
+  };
 }
