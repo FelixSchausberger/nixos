@@ -1,24 +1,72 @@
 # NixOS Installer ISO
 
-Custom NixOS installation ISO with all necessary tools and configuration pre-loaded.
+Custom NixOS installation ISOs with all necessary tools and configuration pre-loaded.
 
-## Features
+## ISO Variants
+
+This repository provides **two installer ISO variants** optimized for different use cases:
+
+### Minimal ISO (Fast Rebuilds)
+
+**Build command:**
+```bash
+nix build .#installer-iso-minimal
+```
+
+**Characteristics:**
+- **Size**: ~1.5GB (65% smaller than full)
+- **Build time**: 10-15 minutes with cache
+- **Use for**: Testing installation scripts, development iteration
+- **Includes**: Essential installation tools only
+  - Core editors (vim, nano)
+  - Disk utilities (parted, gptfdisk)
+  - Network tools (curl, wget)
+  - Installation scripts (install-nixos, nixos-wizard)
+  - Git for repository operations
+
+### Full ISO (Comprehensive)
+
+**Build command:**
+```bash
+nix build .#installer-iso-full
+# OR (backwards compatible alias)
+nix build .#installer-iso
+```
+
+**Characteristics:**
+- **Size**: ~4.2GB
+- **Build time**: 20-30 minutes with cache
+- **Use for**: Actual system installations, recovery operations
+- **Includes**: Complete recovery environment
+  - All minimal ISO tools
+  - GUI applications (Firefox, VS Code, Discord)
+  - Development toolchains (Docker, Node.js, Python, Rust, Go)
+  - Office suite (LibreOffice)
+  - Media tools (VLC, GIMP)
+  - Full system diagnostic suite
+
+### Which Should I Use?
+
+| Scenario | Recommended ISO |
+|----------|----------------|
+| Testing disko configurations | Minimal |
+| Developing install-nixos script | Minimal |
+| Quick VM installation testing | Minimal |
+| Fresh system installation | Full |
+| System recovery/rescue | Full |
+| Need development tools during install | Full |
+
+## Common Features (Both Variants)
 
 - **Pre-loaded Configuration**: Full NixOS configuration available at `/per/etc/nixos`
 - **SSH Access**: Root SSH access with pre-configured authorized keys
 - **Installation Tools**: Unified `install-nixos` script with hardware auto-detection
-- **Recovery Tools**: Complete set of recovery and diagnostic tools
 - **Network Tools**: NetworkManager (nmtui) for easy network setup
 - **All Filesystems**: Support for ZFS, ext4, btrfs, xfs, and NTFS
 
 ## Building the ISO
 
-```bash
-cd /per/etc/nixos
-nix build .#installer-iso
-```
-
-The ISO will be available at `result/iso/nixos-minimal-*.iso` (approximately 4.2GB).
+The ISO will be available at `result/iso/*.iso` after building.
 
 ## Preparing Installation Media
 

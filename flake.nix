@@ -259,7 +259,21 @@
           # MOTD
           trotd = pkgs.callPackage ./pkgs/trotd {};
 
-          installer-iso = inputs.nixos-generators.nixosGenerate {
+          # Minimal installer ISO (fast rebuilds for testing)
+          installer-iso-minimal = inputs.nixos-generators.nixosGenerate {
+            inherit (pkgs.stdenv.hostPlatform) system;
+            format = "install-iso";
+            modules = [
+              ./hosts/installer-minimal
+            ];
+            specialArgs = {
+              inherit inputs;
+              repoConfig = import ./config.nix;
+            };
+          };
+
+          # Full installer ISO (comprehensive recovery environment)
+          installer-iso-full = inputs.nixos-generators.nixosGenerate {
             inherit (pkgs.stdenv.hostPlatform) system;
             format = "install-iso";
             modules = [
@@ -270,6 +284,9 @@
               repoConfig = import ./config.nix;
             };
           };
+
+          # Alias for backwards compatibility
+          installer-iso = self.packages.${pkgs.stdenv.hostPlatform.system}.installer-iso-full;
         };
 
         # Snapshot tests using namaka
