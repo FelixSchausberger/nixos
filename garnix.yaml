@@ -4,6 +4,9 @@ builds:
     - nixosConfigurations.*
     # Custom packages
     - packages.x86_64-linux.*
+    # Installer ISOs (explicit for CI priority)
+    - packages.x86_64-linux.installer-iso-minimal
+    - packages.x86_64-linux.installer-iso-full
     # Namaka snapshot tests
     - checks.x86_64-linux.*
   exclude:
