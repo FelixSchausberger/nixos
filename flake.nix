@@ -252,6 +252,7 @@
 
           # Installation tools
           install-nixos = pkgs.callPackage ./pkgs/install-nixos {};
+          inherit (inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}) disko-install;
 
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};

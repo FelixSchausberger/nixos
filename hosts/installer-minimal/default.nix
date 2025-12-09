@@ -119,6 +119,17 @@ in {
     GIT_COMMITTER_EMAIL = "installer@nixos.local";
   };
 
+  # Configure GitHub token for flake evaluation during installation
+  # This avoids rate limit issues when disko-install evaluates the flake
+  sops.secrets."github/token" = {
+    sopsFile = ../../secrets/secrets.yaml;
+    mode = "0444"; # World-readable since it's in a temporary installer environment
+  };
+
+  nix.settings.access-tokens = lib.mkForce [
+    "github.com=/run/secrets/github/token"
+  ];
+
   services.openssh = {
     enable = true;
     settings = {
