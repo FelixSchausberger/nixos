@@ -253,8 +253,30 @@ main() {
     info "Starting disko installation..."
     echo
 
+    # Build disko-install from nixpkgs (always available, no GitHub needed)
+    info "Building disko-install from nixpkgs..."
+    local disko_bin="/tmp/disko-install-$$"
+
+    if ! nix build 'nixpkgs#disko' -o "$disko_bin" 2>/dev/null; then
+        error "Failed to build disko from nixpkgs"
+        error "Please ensure the system has network access"
+        exit 1
+    fi
+
+    # Check if disko-install binary exists
+    if [[ ! -x "$disko_bin/bin/disko-install" ]]; then
+        error "disko-install binary not found in built package"
+        error "Expected: $disko_bin/bin/disko-install"
+        exit 1
+    fi
+
+    success "disko-install ready"
+
     set -x  # Show commands
-    nix run 'github:nix-community/disko#disko-install' -- \
+    # Run disko-install with format mode (will partition, format, and install)
+    # GitHub authentication is configured via nix.settings.access-tokens in the installer
+    "$disko_bin/bin/disko-install" \
+        --mode format \
         --flake ".#$hostname" \
         --disk main "$disk"
     set +x
