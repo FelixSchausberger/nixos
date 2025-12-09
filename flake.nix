@@ -284,9 +284,6 @@
               repoConfig = import ./config.nix;
             };
           };
-
-          # Alias for backwards compatibility
-          installer-iso = self.packages.${pkgs.stdenv.hostPlatform.system}.installer-iso-full;
         };
 
         # Snapshot tests using namaka
