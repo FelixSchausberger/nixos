@@ -1,5 +1,6 @@
 .direnv/
 hosts/installer/authorized_keys
+secrets/sops-key.txt
 
 # Nix build artifacts
 result

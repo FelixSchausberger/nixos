@@ -9,6 +9,9 @@
   repoPath = inputs.self;
   authorizedKeysFile = ./authorized_keys;
   hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
+  # Embed age key for sops decryption in installer
+  sopsKeyFile = ../../secrets/sops-key.txt;
+  hasSopsKey = builtins.pathExists sopsKeyFile;
 in {
   imports = [
     (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
@@ -48,11 +51,19 @@ in {
   systemd.tmpfiles.rules = [
     "d /per 0755 root root -"
     "d /per/etc 0755 root root -"
+    "d /per/system 0755 root root -"
   ];
 
   system.activationScripts.installRepo = ''
     mkdir -p /per/etc
     ln -sfn ${repoPath} /per/etc/nixos
+  '';
+
+  # Embed age key for sops-nix to decrypt secrets during installation
+  system.activationScripts.installSopsKey = lib.mkIf hasSopsKey ''
+    mkdir -p /per/system
+    cp ${sopsKeyFile} /per/system/sops-key.txt
+    chmod 600 /per/system/sops-key.txt
   '';
 
   # Pre-configure installation environment
