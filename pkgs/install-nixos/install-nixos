@@ -91,6 +91,69 @@ show_disks() {
     echo
 }
 
+# Preflight checks before installation
+preflight_checks() {
+    local all_checks_passed=true
+
+    echo
+    info "Running preflight checks..."
+    echo
+
+    # Check 1: Running as root
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root"
+        error "Please run: sudo install-nixos"
+        all_checks_passed=false
+    else
+        success "Running as root"
+    fi
+
+    # Check 2: GitHub token configured
+    if nix show-config | grep -q "access-tokens.*github.com"; then
+        success "GitHub access token configured"
+
+        # Test GitHub API access
+        info "Testing GitHub API access..."
+        if timeout 10 nix flake metadata github:nixos/nixpkgs --no-write-lock-file &>/dev/null; then
+            success "GitHub API access working"
+        else
+            warning "GitHub API test failed (might be transient)"
+        fi
+    else
+        error "GitHub access token not configured"
+        error "The ISO needs to be rebuilt with sops configuration"
+        all_checks_passed=false
+    fi
+
+    # Check 3: Network connectivity
+    if timeout 5 ping -c 1 1.1.1.1 &>/dev/null; then
+        success "Network connectivity working"
+    else
+        error "No network connectivity"
+        error "Please configure network (try: nmtui)"
+        all_checks_passed=false
+    fi
+
+    # Check 4: Nix daemon running
+    if systemctl is-active --quiet nix-daemon; then
+        success "Nix daemon running"
+    else
+        error "Nix daemon not running"
+        error "Please start it: sudo systemctl start nix-daemon"
+        all_checks_passed=false
+    fi
+
+    echo
+
+    if [[ "$all_checks_passed" != true ]]; then
+        error "Preflight checks failed. Please fix the issues above before continuing."
+        exit 1
+    fi
+
+    success "All preflight checks passed"
+    echo
+}
+
 # Main installation function
 main() {
     echo
@@ -98,6 +161,9 @@ main() {
     echo "  NixOS Disko Installation Helper"
     echo "═══════════════════════════════════════════════════════"
     echo
+
+    # Run preflight checks
+    preflight_checks
 
     # Parse arguments
     local hostname=""
