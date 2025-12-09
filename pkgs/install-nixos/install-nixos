@@ -254,7 +254,7 @@ main() {
     echo
 
     set -x  # Show commands
-    nix run github:nix-community/disko#disko-install -- \
+    nix run 'github:nix-community/disko#disko-install' -- \
         --flake ".#$hostname" \
         --disk main "$disk"
     set +x
