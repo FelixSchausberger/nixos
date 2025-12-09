@@ -138,8 +138,8 @@ in {
   system.stateVersion = lib.mkForce "26.05";
 
   # ISO customization
-  image.fileName = "nixos-installer-full.iso";
   isoImage = {
+    isoName = "nixos-installer-full.iso";
     volumeID = "NIXOS_FULL";
 
     # Make ISO bootable in UEFI and BIOS modes
