@@ -86,7 +86,8 @@ show_disks() {
     echo
     info "Available disks:"
     echo
-    lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -E "disk|nvme" | nl -v 1 -w 3
+    # Exclude zram, loop, and other virtual devices - only show real disks
+    lsblk -d -o NAME,SIZE,TYPE,MODEL -p | grep -vE "zram|loop|ram|sr" | grep -E "disk|nvme" | nl -v 1 -w 3 -s ". "
     echo
 }
 
@@ -167,7 +168,24 @@ main() {
     # Select disk if not specified
     if [[ -z "$disk" ]]; then
         show_disks
-        read -p "Enter target disk (e.g., /dev/sda, /dev/nvme0n1): " disk
+
+        # Build array of available disks
+        mapfile -t available_disks < <(lsblk -d -o NAME -p -n | grep -vE "zram|loop|ram|sr")
+
+        read -p "Enter disk number or full path (e.g., 1 or /dev/sda): " disk_input
+
+        # Check if input is a number
+        if [[ "$disk_input" =~ ^[0-9]+$ ]]; then
+            local index=$((disk_input - 1))
+            if [[ $index -ge 0 && $index -lt ${#available_disks[@]} ]]; then
+                disk="${available_disks[$index]}"
+            else
+                error "Invalid disk number: $disk_input"
+                exit 1
+            fi
+        else
+            disk="$disk_input"
+        fi
     fi
 
     # Validate disk
@@ -236,7 +254,7 @@ main() {
     echo
 
     set -x  # Show commands
-    nix run 'github:nix-community/disko#disko-install' -- \
+    nix run github:nix-community/disko#disko-install -- \
         --flake ".#$hostname" \
         --disk main "$disk"
     set +x
