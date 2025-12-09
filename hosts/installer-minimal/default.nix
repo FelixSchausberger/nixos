@@ -133,8 +133,8 @@ in {
   security.sudo-rs.enable = lib.mkForce false;
   system.stateVersion = lib.mkForce "26.05";
 
+  image.fileName = "nixos-installer-minimal.iso";
   isoImage = {
-    isoName = "nixos-installer-minimal.iso";
     volumeID = "NIXOS_MIN";
     makeEfiBootable = true;
     makeUsbBootable = true;
