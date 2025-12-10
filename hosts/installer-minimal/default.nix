@@ -69,11 +69,13 @@ in {
 
     Installation Steps:
       1. Configure network (if needed): nmtui
-      2. SSH from your dev machine: ssh root@<this-ip>
-      3. Export GitHub token:
+      2. Export GitHub token:
          export NIX_CONFIG="access-tokens = github.com=YOUR_TOKEN"
-      4. Install: cd /per/etc/nixos && nh os switch --ask
-      5. Reboot into your new system
+      3. Install: cd /per/etc/nixos && nh os switch
+      4. Reboot into your new system
+
+    Alternative: Install via SSH from dev machine
+      ssh root@<this-ip> and run the same commands
 
     Note: This is the minimal ISO - essential tools only.
     For full recovery environment, use installer-iso-full.
