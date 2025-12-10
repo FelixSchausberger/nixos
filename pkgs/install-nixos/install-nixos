@@ -108,19 +108,26 @@ preflight_checks() {
         success "Running as root"
     fi
 
-    # Check 2: GitHub token configured
-    if nix show-config | grep -q "access-tokens.*github.com"; then
-        success "GitHub access token configured"
+    # Check 2: GitHub authentication configured
+    if nix config show | grep -q "netrc-file"; then
+        local netrc_file=$(nix config show | grep "netrc-file" | cut -d= -f2 | xargs)
+        if [[ -f "$netrc_file" ]]; then
+            success "GitHub authentication configured (netrc: $netrc_file)"
 
-        # Test GitHub API access
-        info "Testing GitHub API access..."
-        if timeout 10 nix flake metadata github:nixos/nixpkgs --no-write-lock-file &>/dev/null; then
-            success "GitHub API access working"
+            # Test GitHub API access
+            info "Testing GitHub API access..."
+            if timeout 10 nix flake metadata github:nixos/nixpkgs --refresh &>/dev/null; then
+                success "GitHub API access working"
+            else
+                warning "GitHub API test failed (might be transient)"
+            fi
         else
-            warning "GitHub API test failed (might be transient)"
+            error "netrc-file configured but file doesn't exist: $netrc_file"
+            error "The ISO needs to be rebuilt with sops configuration"
+            all_checks_passed=false
         fi
     else
-        error "GitHub access token not configured"
+        error "GitHub authentication not configured"
         error "The ISO needs to be rebuilt with sops configuration"
         all_checks_passed=false
     fi

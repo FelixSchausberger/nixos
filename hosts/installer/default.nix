@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  config,
   inputs,
   modulesPath,
   ...
@@ -112,9 +113,22 @@ in {
     mode = "0444"; # World-readable since it's in a temporary installer environment
   };
 
-  nix.settings.access-tokens = lib.mkForce [
-    "github.com=/run/secrets/github/token"
-  ];
+  # Create netrc file for GitHub API authentication
+  sops.templates."nix/netrc" = {
+    content = ''
+      machine github.com
+      login token
+      password ${config.sops.placeholder."github/token"}
+
+      machine api.github.com
+      login token
+      password ${config.sops.placeholder."github/token"}
+    '';
+    path = "/etc/nix/netrc";
+    mode = lib.mkForce "0444"; # World-readable in installer environment
+  };
+
+  nix.settings.netrc-file = config.sops.templates."nix/netrc".path;
 
   # Additional packages for installation convenience
   environment.systemPackages = with pkgs; [
