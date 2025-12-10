@@ -67,21 +67,21 @@ in {
 
     Configuration: /per/etc/nixos
 
-    Quick Start:
-      1. Run: install-nixos
-      2. Follow interactive prompts
-      3. Reboot into your new system
+    Installation Steps:
+      1. Configure network (if needed): nmtui
+      2. SSH from your dev machine: ssh root@<this-ip>
+      3. Export GitHub token:
+         export NIX_CONFIG="access-tokens = github.com=YOUR_TOKEN"
+      4. Install: cd /per/etc/nixos && nh os switch --ask
+      5. Reboot into your new system
 
     Note: This is the minimal ISO - essential tools only.
     For full recovery environment, use installer-iso-full.
 
-    Documentation:
-      • nixos-install-info    - Show installation options
-      • install-nixos --help  - Show all installation flags
-
     Network:
       • SSH enabled (if authorized_keys configured)
       • NetworkManager available: nmtui
+      • Find IP: ip addr show
 
     EOF
   '';
@@ -103,13 +103,13 @@ in {
 
       # Installation tools
       git
+      nh
 
       # Terminal multiplexers
       tmux
     ])
     ++ [
       inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default
-      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.install-nixos
     ];
 
   environment.sessionVariables = {
@@ -120,8 +120,8 @@ in {
     GIT_COMMITTER_EMAIL = "installer@nixos.local";
   };
 
-  # GitHub authentication is handled interactively by install-nixos script
-  # No secrets embedded in ISO - user provides token at runtime
+  # GitHub authentication handled via environment variable at runtime
+  # No secrets embedded in ISO - user provides token via NIX_CONFIG
 
   services.openssh = {
     enable = true;
