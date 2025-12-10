@@ -242,7 +242,9 @@ in {
     echo "  1. Configure network (if needed): nmtui"
     echo "  2. Export GitHub token:"
     echo "     export NIX_CONFIG=\"access-tokens = github.com=YOUR_TOKEN\""
-    echo "  3. Install: cd /per/etc/nixos && nh os switch"
+    echo "  3. Install (specify your hostname):"
+    echo "     sudo nixos-rebuild switch --flake .#hp-probook-vmware"
+    echo "     (or: nh os switch .#hp-probook-vmware)"
     echo "  4. Reboot into your new system"
     echo
     echo "Alternative: Install via SSH from dev machine"
