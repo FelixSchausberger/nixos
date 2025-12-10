@@ -224,12 +224,80 @@
 
     # Privacy and security
     "datareporting.policy.dataSubmissionEnable" = false;
+    "datareporting.healthreport.uploadEnabled" = false;
+    "toolkit.telemetry.enabled" = false;
+    "toolkit.telemetry.unified" = false;
+    "toolkit.telemetry.archive.enabled" = false;
+    "toolkit.telemetry.newProfilePing.enabled" = false;
+    "toolkit.telemetry.shutdownPingSender.enabled" = false;
+    "toolkit.telemetry.updatePing.enabled" = false;
+    "toolkit.telemetry.bhrPing.enabled" = false;
+    "toolkit.telemetry.firstShutdownPing.enabled" = false;
+    "toolkit.coverage.opt-out" = true;
+    "toolkit.coverage.endpoint.base" = "";
+    "browser.ping-centre.telemetry" = false;
+    "browser.newtabpage.activity-stream.feeds.telemetry" = false;
+    "browser.newtabpage.activity-stream.telemetry" = false;
+
+    # HTTPS-Only Mode
     "dom.security.https_only_mode" = true;
     "dom.security.https_only_mode_ever_enabled" = true;
+    "dom.security.https_only_mode_send_http_background_request" = false;
+
+    # Tracking Protection
     "privacy.donottrackheader.enabled" = true;
     "privacy.trackingprotection.enabled" = true;
+    "privacy.trackingprotection.pbmode.enabled" = true;
     "privacy.trackingprotection.socialtracking.enabled" = true;
+    "privacy.trackingprotection.cryptomining.enabled" = true;
+    "privacy.trackingprotection.fingerprinting.enabled" = true;
+
+    # Cookie behavior (0 = Accept all, 1 = Block third-party, 2 = Block all, 4 = Block known trackers)
+    "network.cookie.cookieBehavior" = 4;
+    "network.cookie.lifetimePolicy" = 2; # Accept for session only
+
+    # Disable WebRTC leaks
+    "media.peerconnection.enabled" = false;
+    "media.peerconnection.ice.default_address_only" = true;
+    "media.peerconnection.ice.no_host" = true;
+    "media.peerconnection.ice.proxy_only_if_behind_proxy" = true;
     "privacy.webrtc.legacyGlobalIndicator" = false;
+
+    # Search suggestions
+    "browser.search.suggest.enabled" = false;
+    "browser.urlbar.suggest.searches" = false;
+    "browser.fixup.alternate.enabled" = false;
+
+    # Disable prefetching
+    "network.dns.disablePrefetch" = true;
+    "network.prefetch-next" = false;
+    "network.predictor.enabled" = false;
+    "network.http.speculative-parallel-limit" = 0;
+
+    # Disable geolocation
+    "geo.enabled" = false;
+    "geo.provider.network.url" = "";
+    "browser.region.network.url" = "";
+    "browser.region.update.enabled" = false;
+
+    # Disable crash reports
+    "breakpad.reportURL" = "";
+    "browser.tabs.crashReporting.sendReport" = false;
+    "browser.crashReports.unsubmittedCheck.enabled" = false;
+    "browser.crashReports.unsubmittedCheck.autoSubmit2" = false;
+
+    # Disable beacon
+    "beacon.enabled" = false;
+
+    # Disable battery API
+    "dom.battery.enabled" = false;
+
+    # Disable network API
+    "dom.network.enabled" = false;
+
+    # Referrer policy
+    "network.http.referer.XOriginPolicy" = 2; # Send only when host matches
+    "network.http.referer.XOriginTrimmingPolicy" = 2; # Trim to scheme, host, port
 
     # Password and autofill settings
     "signon.rememberSignons" = false;

@@ -24,6 +24,8 @@
     then "${pkgs.gnome-session}/bin/gnome-session --session=gnome"
     else if wm == "cosmic"
     then "cosmic-session"
+    else if wm == "niri"
+    then "${pkgs.niri}/bin/niri-session"
     else "${pkgs.hyprland}/bin/Hyprland";
 
   # Auto-login command based on WM

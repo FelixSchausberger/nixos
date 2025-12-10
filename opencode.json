@@ -3,7 +3,7 @@
   "mcp": {
     "github": {
       "command": [
-        "/nix/store/mzd32r5p9xg25y78r9sgqq4czjb3qq7l-github-mcp-server-0.20.2/bin/github-mcp-server"
+        "/nix/store/j40kswmhshbfr1vs39cfb5jpc08b8f4f-github-mcp-server-0.25.0/bin/github-mcp-server"
       ],
       "enabled": true,
       "type": "local"
@@ -21,7 +21,7 @@
     },
     "nixos": {
       "command": [
-        "/nix/store/bkc6adlc0ypvay8p5zq84h0y7z56hfpp-mcp-nixos-1.0.3/bin/mcp-nixos"
+        "/nix/store/qypikw22jxnpnfik4m1z489d7anqw1sr-mcp-nixos-1.0.3/bin/mcp-nixos"
       ],
       "enabled": true,
       "type": "local"

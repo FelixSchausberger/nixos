@@ -122,6 +122,29 @@ jobs:
           nix flake metadata
           nix flake show
           echo "✅ Flake structure is valid"
+  # Flake input health monitoring
+  flake-health:
+    name: Flake Input Health Check
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Check flake inputs
+        uses: DeterminateSystems/flake-checker-action@v9
+        with:
+          fail-mode: false
+          nixpkgs-keys: nixpkgs
+          send-statistics: false
+        continue-on-error: true
+      - name: Flake health summary
+        if: always()
+        run: |
+          echo "📊 Flake input health check completed"
+          echo "Review warnings above for outdated or non-standard inputs"
+          echo ""
+          echo "Note: This check is advisory only and will not block CI"
+          echo "To run locally: nix run github:DeterminateSystems/flake-checker"
   # Deployment readiness check
   deployment:
     name: Deployment Ready

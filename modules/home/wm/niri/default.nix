@@ -12,7 +12,7 @@
   # Package mappings for applications
   browserPkg =
     if cfg.browser == "zen"
-    then inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then inputs.zen-browser.packages.${pkgs.hostPlatform.system}.default
     else if cfg.browser == "firefox"
     then pkgs.firefox
     else if cfg.browser == "chromium"
@@ -21,12 +21,12 @@
 
   terminalPkg =
     if cfg.terminal == "ghostty"
-    then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then inputs.ghostty.packages.${pkgs.hostPlatform.system}.default
     else if cfg.terminal == "cosmic-term"
     then pkgs.cosmic-term
     else if cfg.terminal == "wezterm"
     then pkgs.wezterm
-    else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    else inputs.ghostty.packages.${pkgs.hostPlatform.system}.default;
 
   fileManagerPkg = pkgs.cosmic-files;
 in {
@@ -167,7 +167,7 @@ in {
         swappy # Screenshot annotation
         cliphist # Clipboard history
         avizo # OSD for volume/brightness
-        inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
+        inputs.walker.packages.${pkgs.hostPlatform.system}.default # Wayland-native application launcher with plugins
         udiskie # Auto-mount
         cosmic-files # File manager
         # Cursor themes
@@ -268,7 +268,7 @@ in {
       # Startup applications
       # spawn-at-startup = [
       # {command = ["${pkgs.avizo}/bin/avizo-service"];}
-      # {command = ["${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"];}
+      # {command = ["${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar"];}
       # {command = ["${pkgs.udiskie}/bin/udiskie" "--tray"];}
       # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
       # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
@@ -336,7 +336,7 @@ in {
       binds = with config.lib.niri.actions; {
         # Application shortcuts
         "Mod+T".action = spawn "${terminalPkg}/bin/${cfg.terminal}";
-        "Mod+D".action = spawn "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker";
+        "Mod+D".action = spawn "${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker";
         "Mod+Return".action = spawn "${browserPkg}/bin/${
           if cfg.browser == "zen"
           then "zen"
@@ -465,7 +465,7 @@ in {
       Service = {
         Type = "notify";
         NotifyAccess = "all";
-        ExecStart = "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
+        ExecStart = "${inputs.niri.packages.${pkgs.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
         StandardOutput = "journal";
         Restart = "on-failure";
       };

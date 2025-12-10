@@ -23,10 +23,6 @@ in {
         # Claude Code itself
         claude-code
       ])
-      ++ [
-        # Usage tracking for statusline (from ccusage-flake)
-        inputs.ccusage.packages.${pkgs.stdenv.hostPlatform.system}.default
-      ]
       # MCP server packages from shared definitions
       ++ (lib.attrValues (lib.mapAttrs (_n: v: v.package) (lib.filterAttrs (_n: v: v.enabled) sharedMcp)));
 

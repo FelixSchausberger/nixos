@@ -71,24 +71,9 @@ in {
   ];
 
   # Gaming-specific systemd services
-  systemd.user.services = {
-    # Auto-start Steam in background
-    steam-background = {
-      Unit = {
-        Description = "Steam Background Service";
-        After = ["niri-session.target"];
-      };
-
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.steam}/bin/steam -silent";
-        Restart = "no";
-        RemainAfterExit = "yes";
-      };
-
-      Install.WantedBy = ["niri-session.target"];
-    };
-  };
+  # Note: Steam auto-start disabled for boot performance
+  # Launch Steam manually via application menu or `steam` command
+  systemd.user.services = {};
 
   # Gaming configuration files
   xdg.configFile = {

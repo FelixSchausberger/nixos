@@ -47,6 +47,9 @@
           mode = "0700";
         }
 
+        # Git configuration (includes GitHub SSH rewrite rules)
+        ".config/git"
+
         # Shell history and fish data
         ".local/share/fish"
 

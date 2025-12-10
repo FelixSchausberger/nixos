@@ -4,7 +4,7 @@
   lib,
   ...
 }: let
-  inherit (inputs.self.packages.${pkgs.stdenv.hostPlatform.system}) mcp-language-server;
+  inherit (inputs.self.packages.${pkgs.hostPlatform.system}) mcp-language-server;
 in {
   # Legacy: Keep ai-assistants.mcpServers.definitions for Claude Code compatibility
   # Claude Code doesn't integrate with programs.mcp, so it needs its own format

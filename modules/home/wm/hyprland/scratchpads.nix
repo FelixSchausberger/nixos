@@ -96,7 +96,7 @@ in {
       lazy = true
       unfocus = "hide"
 
-      ${lib.optionalString (pkgs.stdenv.hostPlatform.system == "x86_64-linux") ''
+      ${lib.optionalString (pkgs.hostPlatform.system == "x86_64-linux") ''
         [scratchpads.teams]
         command = "teams-for-linux"
         class = "teams-for-linux"

@@ -31,7 +31,7 @@ in {
         interop.enabled = true;
 
         network.generateHosts = false; # Do not let WSL overwrite /etc/hosts
-        network.generateResolvConf = true;
+        network.generateResolvConf = false;
         network.hostname = hostName;
 
         user.default = config.hostConfig.user;
@@ -155,6 +155,15 @@ in {
     boot.loader.systemd-boot.enable = lib.mkForce false;
     boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
 
+    # Disable ZFS configuration from boot-zfs.nix (WSL kernel doesn't support ZFS)
+    boot.supportedFilesystems = lib.mkForce ["ntfs"];
+    boot.zfs.extraPools = lib.mkForce [];
+    services.zfs.autoScrub.enable = lib.mkForce false;
+    services.zfs.autoSnapshot.enable = lib.mkForce false;
+
+    # WSL uses ext4, not ZFS - disable persistence from system/core
+    environment.persistence = lib.mkForce {};
+
     # Override minimal profile settings for GUI support
     xdg.mime.enable = lib.mkForce true;
     xdg.icons.enable = lib.mkForce true;
@@ -170,6 +179,14 @@ in {
       hashedPassword = "$6$rounds=656000$cUk4Xh8KRvx9lTkN$OyVJ7QXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQ";
       home = "/home/emergency";
     };
+
+    # Enable systemd user session lingering
+    systemd.user.services.auto-start = {
+      enable = true;
+    };
+
+    # Enable linger for default user
+    users.users.schausberger.linger = true;
 
     # Merged modules configuration
     modules.system = {
@@ -194,11 +211,20 @@ in {
           alerts = false; # Disable alerts in WSL
         };
       };
+      deploymentValidation = {
+        essentialPaths = [
+          "/run/current-system/sw/bin/bash"
+          "/run/current-system/sw/bin/systemctl"
+          "/nix/store"
+          # /etc/nixos removed - not applicable in WSL (config is at /per/etc/nixos)
+        ];
+      };
     };
 
     # Network configuration optimized for WSL (high level)
     networking = {
       inherit hostName;
+      nameservers = ["8.8.8.8" "1.1.1.1" "8.8.4.4"];
       # Disable NetworkManager in WSL
       networkmanager.enable = lib.mkForce false;
     };
@@ -247,9 +273,12 @@ in {
       # WSL-specific system directories (override shared-tui paths)
       tmpfiles.rules = let
         inherit (inputs.self.lib.defaults.system) user;
+        uid = "1000"; # schausberger user ID
       in [
         "d /home/${user}/mnt 0755 ${user} users -"
         "d /home/${user}/mnt/gdrive 0755 ${user} users -"
+        # Create XDG_RUNTIME_DIR for user session
+        "d /run/user/${uid} 0700 ${user} users -"
         # Create /dev/dri directory and set permissions
         "d /dev/dri 0755 root root -"
         "c /dev/dri/renderD128 0666 root root - 226:128"
