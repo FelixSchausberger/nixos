@@ -240,11 +240,13 @@ in {
     echo
     echo "Installation workflow:"
     echo "  1. Configure network (if needed): nmtui"
-    echo "  2. SSH from your dev machine: ssh root@<this-ip>"
-    echo "  3. Export GitHub token:"
+    echo "  2. Export GitHub token:"
     echo "     export NIX_CONFIG=\"access-tokens = github.com=YOUR_TOKEN\""
-    echo "  4. Install: cd /per/etc/nixos && nh os switch --ask"
-    echo "  5. Reboot into your new system"
+    echo "  3. Install: cd /per/etc/nixos && nh os switch"
+    echo "  4. Reboot into your new system"
+    echo
+    echo "Alternative: Install via SSH from dev machine"
+    echo "  ssh root@<this-ip> and run the same commands"
     echo
     echo "Available hosts:"
     echo "  • desktop           - Desktop PC with AMD RX 6700XT"
