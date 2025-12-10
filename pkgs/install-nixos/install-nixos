@@ -105,18 +105,10 @@ setup_github_auth() {
     echo
 
     if [[ -n "$github_token" ]]; then
-        info "Creating netrc file with GitHub token..."
-        mkdir -p /etc/nix
-        cat > /etc/nix/netrc << EOF
-machine github.com
-login token
-password $github_token
+        info "Configuring GitHub access token..."
 
-machine api.github.com
-login token
-password $github_token
-EOF
-        chmod 644 /etc/nix/netrc
+        # Export NIX_CONFIG to set access-tokens (works with read-only filesystem)
+        export NIX_CONFIG="access-tokens = github.com=$github_token"
 
         # Test the token
         if timeout 10 nix flake metadata github:nixos/nixpkgs --refresh &>/dev/null 2>&1; then
@@ -150,7 +142,7 @@ preflight_checks() {
     fi
 
     # Check 2: GitHub authentication (optional now)
-    if [[ -f "/etc/nix/netrc" ]]; then
+    if [[ -n "${NIX_CONFIG:-}" ]] && [[ "$NIX_CONFIG" == *"access-tokens"* ]]; then
         success "GitHub authentication configured"
     else
         info "No GitHub authentication (may hit rate limits)"
