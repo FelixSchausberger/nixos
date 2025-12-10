@@ -71,8 +71,12 @@ in {
       1. Configure network (if needed): nmtui
       2. Export GitHub token:
          export NIX_CONFIG="access-tokens = github.com=YOUR_TOKEN"
-      3. Install: cd /per/etc/nixos && nh os switch
+      3. Install (specify your hostname):
+         sudo nixos-rebuild switch --flake .#hp-probook-vmware
+         (or: nh os switch .#hp-probook-vmware)
       4. Reboot into your new system
+
+    Available hosts: desktop, surface, portable, hp-probook-vmware
 
     Alternative: Install via SSH from dev machine
       ssh root@<this-ip> and run the same commands
