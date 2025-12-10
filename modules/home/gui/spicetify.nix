@@ -3,7 +3,7 @@
   pkgs,
   ...
 }: let
-  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.hostPlatform.system};
 in {
   imports = [
     inputs.spicetify-nix.homeManagerModules.default
@@ -12,9 +12,9 @@ in {
   systemd.user.services.spotify = {
     serviceConfig.Environment = let
       libs = with pkgs; [
-        xorg.libX11
-        xorg.libXScrnSaver
-        xorg.libXtst
+        libx11
+        libxscrnsaver
+        libxtst
         libxkbcommon
         libdbusmenu-gtk3
         libayatana-indicator

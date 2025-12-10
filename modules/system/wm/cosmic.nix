@@ -6,7 +6,8 @@
 }: {
   imports = [
     inputs.nixos-cosmic.nixosModules.default
-    # Impermanence import moved to system/core/persistence.nix for consolidation
+    ../session/default.nix
+    ../session/cosmic.nix
   ];
 
   services = {

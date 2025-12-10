@@ -46,10 +46,11 @@ in {
     # Game launchers
     prismlauncher # Minecraft
 
-    # Emulation (all temporarily disabled due to Qt 6.10 incompatibility)
-    # dolphin-emu # Temporarily disabled: Qt 6.10 incompatibility causing build failures
-    # pcsx2 # Temporarily disabled: Qt 6.10 incompatibility causing build failures
-    # rpcs3 # Temporarily disabled: strict-aliasing compilation errors
+    # Emulation (temporarily disabled)
+    # Track upstream fixes:
+    # - dolphin-emu: Qt 6.10 incompatibility
+    # - pcsx2: Qt 6.10 incompatibility
+    # - rpcs3: strict-aliasing compilation errors
 
     # Communication
     discord
@@ -166,24 +167,9 @@ in {
   };
 
   # Gaming-specific systemd services
-  systemd.user.services = {
-    # Auto-start Steam in background
-    steam-background = {
-      Unit = {
-        Description = "Steam Background Service";
-        After = ["hyprland-session.target"];
-      };
-
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.steam}/bin/steam -silent";
-        Restart = "no";
-        RemainAfterExit = "yes";
-      };
-
-      Install.WantedBy = ["hyprland-session.target"];
-    };
-  };
+  # Note: Steam auto-start disabled for boot performance
+  # Launch Steam manually via application menu or `steam` command
+  systemd.user.services = {};
 
   # Gaming configuration files
   xdg.configFile = {

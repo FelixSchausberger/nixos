@@ -10,7 +10,7 @@
   # Package mappings for applications
   browserPkg =
     if cfg.browser == "zen"
-    then inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then inputs.zen-browser.packages.${pkgs.hostPlatform.system}.default
     else if cfg.browser == "firefox"
     then pkgs.firefox
     else if cfg.browser == "chromium"
@@ -19,37 +19,31 @@
 
   terminalPkg =
     if cfg.terminal == "ghostty"
-    then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then inputs.ghostty.packages.${pkgs.hostPlatform.system}.default
     else if cfg.terminal == "cosmic-term"
     then pkgs.cosmic-term
     else if cfg.terminal == "wezterm"
     then pkgs.wezterm
-    else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    else inputs.ghostty.packages.${pkgs.hostPlatform.system}.default;
 
   fileManagerPkg = pkgs.cosmic-files;
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
-    inputs.wayland-pipewire-idle-inhibit.homeModules.default
     ./animations.nix
     ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
     ./keybinds.nix
     ./scratchpads.nix
-    ./walker.nix # Wayland-native application launcher
     ./workspaces.nix
     # Shared options and imports (imported once)
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
-    ../shared/wayland-pipewire-idle-inhibit.nix
-    # Use shared compositor-agnostic modules with hyprland session target
-    (import ../shared/wired.nix "hyprland-session.target") # Modern notification daemon configuration
-    # (import ../shared/cthulock.nix "hyprland-session.target") # Screen locker - disabled until package is fixed
-    (import ../shared/wl-gammarelay.nix "hyprland-session.target") # Gamma control
-    (import ../shared/wpaperd.nix "hyprland-session.target") # Wallpaper daemon
     ../shared/satty.nix # Screenshot tool
-    ../shared/vigiland-simple.nix # Wayland idle inhibitor
-    # (import ../shared/ala-lape.nix "hyprland-session.target") # Idle inhibitor - disabled until package is fixed
-    # (import ../shared/wlsleephandler-rs.nix "hyprland-session.target") # Sleep handler - disabled until package is fixed
+    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
+    # Use shared compositor-agnostic modules with hyprland session target
+    ../shared/swww-coordinated.nix # Coordinated wallpaper system with blurred backgrounds
+    (import ../shared/wired.nix "hyprland-session.target") # Modern notification daemon configuration
+    (import ../shared/wl-gammarelay.nix "hyprland-session.target") # Gamma control
     (import ../shared/themes.nix "hyprland-session.target") # Theme and appearance configuration
     (import ../shared/wallpaper.nix "hyprland-session.target") # Wallpaper management
   ];
@@ -110,7 +104,7 @@ in {
       swappy # Screenshot annotation
       cliphist # Clipboard history
       avizo # OSD for volume/brightness
-      inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
+      inputs.walker.packages.${pkgs.hostPlatform.system}.default # Wayland-native application launcher with plugins
       udiskie # Auto-mount
       cosmic-files # File manager
       # Cursor themes
@@ -122,10 +116,10 @@ in {
 
     wayland.windowManager.hyprland = {
       enable = true;
-      package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-      portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+      package = inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland;
+      portalPackage = inputs.hyprland.packages.${pkgs.hostPlatform.system}.xdg-desktop-portal-hyprland;
       plugins = [
-        inputs.hyprland-plugins.packages.${pkgs.stdenv.hostPlatform.system}.hyprexpo
+        inputs.hyprland-plugins.packages.${pkgs.hostPlatform.system}.hyprexpo
       ];
 
       settings = {
@@ -353,7 +347,7 @@ in {
         exec-once = [
           "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
           "${pkgs.avizo}/bin/avizo-service"
-          "${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"
+          "${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar"
           "${pkgs.udiskie}/bin/udiskie --tray"
           "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store"
           "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store"

@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }: {
   options.features = {
@@ -29,7 +30,7 @@
     gaming = {
       enable = lib.mkEnableOption "gaming applications and tools";
       platforms = lib.mkOption {
-        type = lib.types.listOf (lib.types.enum ["steam" "lutris" "emulation"]);
+        type = lib.types.listOf (lib.types.enum ["steam" "lutris" "emulation" "minecraft"]);
         default = ["steam"];
         description = "Gaming platforms to support";
       };
@@ -94,6 +95,9 @@
           ++ lib.optionals (lib.elem "emulation" config.features.gaming.platforms) [
             retroarch
             dolphin-emu
+          ]
+          ++ lib.optionals (lib.elem "minecraft" config.features.gaming.platforms) [
+            inputs.self.packages.${pkgs.hostPlatform.system}.quantumlauncher
           ]
       ))
     ];

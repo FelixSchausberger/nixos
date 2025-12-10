@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NixOS Configuration Quality Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .status-pass {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .status-warn {
+            background: #f39c12;
+            color: white;
+        }
+
+        .status-fail {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric-card {
+            background: #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+
+        .metric-title {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0.5rem 0;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: #95a5a6;
+        }
+
+        ul {
+            margin-left: 2rem;
+            margin-top: 0.5rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        code {
+            background: #ecf0f1;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #ecf0f1;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 NixOS Configuration Quality Dashboard</h1>
+        <p class="timestamp">Last updated: <span id="timestamp">Loading...</span></p>
+
+        <div class="status-badge status-pass" id="overall-status">
+            ✅ PASS
+        </div>
+
+        <h2>📊 Test Coverage</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">Aggregate Coverage</div>
+                <div class="metric-value" id="aggregate-coverage">--</div>
+                <div class="metric-label">Overall test coverage</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Critical Paths</div>
+                <div class="metric-value" id="critical-coverage">--</div>
+                <div class="metric-label">boot, network, users, security</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Test Suites</div>
+                <div class="metric-value" id="test-suites">--</div>
+                <div class="metric-label">Total snapshot test suites</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Snapshot Assertions</div>
+                <div class="metric-value" id="snapshot-assertions">--</div>
+                <div class="metric-label">Total test assertions</div>
+            </div>
+        </div>
+
+        <h2>⚙️ Code Quality</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">Dead Code</div>
+                <div class="metric-value" id="dead-code">--</div>
+                <div class="metric-label">Unused bindings (deadnix)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Unused Modules</div>
+                <div class="metric-value" id="unused-modules">--</div>
+                <div class="metric-label">Orphaned module files</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Linting Issues</div>
+                <div class="metric-value" id="statix-issues">--</div>
+                <div class="metric-label">Statix findings</div>
+            </div>
+        </div>
+
+        <h2>⚡ Performance</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">Evaluation Time</div>
+                <div class="metric-value" id="eval-time">--</div>
+                <div class="metric-label">Target: <10s</div>
+            </div>
+        </div>
+
+        <h2>📖 Documentation</h2>
+        <ul>
+            <li><a href="https://github.com/FelixSchausberger/nixos">Repository</a></li>
+            <li><a href="https://github.com/FelixSchausberger/nixos/blob/main/docs/QUALITY_DASHBOARD.md">Detailed Quality Report</a></li>
+            <li><a href="https://github.com/FelixSchausberger/nixos/wiki">Wiki</a></li>
+        </ul>
+
+        <div class="footer">
+            <p>Dashboard automatically updated on every commit to main</p>
+            <p>Generated with ❤️ using GitHub Pages</p>
+        </div>
+    </div>
+
+    <script>
+        // Load metrics from JSON file
+        async function loadMetrics() {
+            try {
+                const response = await fetch('metrics.json');
+                const metrics = await response.json();
+
+                document.getElementById('timestamp').textContent = new Date(metrics.timestamp).toLocaleString();
+                document.getElementById('aggregate-coverage').textContent = metrics.aggregate_coverage + '%';
+                document.getElementById('critical-coverage').textContent = metrics.critical_path_coverage + '%';
+                document.getElementById('test-suites').textContent = metrics.test_suites;
+                document.getElementById('snapshot-assertions').textContent = metrics.snapshot_assertions;
+                document.getElementById('dead-code').textContent = metrics.dead_code || '0';
+                document.getElementById('unused-modules').textContent = metrics.unused_modules || '0';
+                document.getElementById('statix-issues').textContent = metrics.statix_issues || '0';
+                document.getElementById('eval-time').textContent = metrics.eval_time + 's';
+
+                // Update overall status
+                const overallStatus = document.getElementById('overall-status');
+                if (metrics.critical_path_coverage === 100 && metrics.dead_code === 0 && metrics.unused_modules === 0) {
+                    overallStatus.className = 'status-badge status-pass';
+                    overallStatus.textContent = '✅ PASS';
+                } else {
+                    overallStatus.className = 'status-badge status-warn';
+                    overallStatus.textContent = '⚠️ NEEDS IMPROVEMENT';
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                document.getElementById('timestamp').textContent = 'Metrics not available';
+            }
+        }
+
+        loadMetrics();
+    </script>
+</body>
+</html>

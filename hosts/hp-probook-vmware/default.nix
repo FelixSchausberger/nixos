@@ -1,12 +1,19 @@
-{inputs, ...}: let
+{
+  inputs,
+  lib,
+  ...
+}: let
   hostLib = import ../lib.nix;
   hostName = "hp-probook-vmware";
   hostInfo = inputs.self.lib.hosts.${hostName};
 in {
   imports =
     [
+      ./disko.nix
       ../shared-gui.nix
       inputs.stylix.nixosModules.stylix
+      ../../modules/system/stylix-catppuccin.nix
+      ../../modules/system/nixpkgs-overlays.nix # Build fixes for package dependencies
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
@@ -14,8 +21,14 @@ in {
   hostConfig = {
     inherit hostName;
     inherit (hostInfo) isGui;
-    wm = hostInfo.wms;
+    inherit (hostInfo) wms;
     # user and system use defaults from lib/defaults.nix
+
+    # Enable auto-login for VM convenience
+    autoLogin = {
+      enable = true;
+      user = "schausberger";
+    };
   };
 
   # Stylix theme management using Catppuccin Mocha
@@ -88,13 +101,23 @@ in {
   };
 
   # Hardware configuration
-  hardware = {
-    # AMD Radeon iGPU configuration for laptop
-    profiles.amdGpu = {
-      enable = true;
-      variant = "laptop";
-    };
+  # Disable AMD GPU profile for VM (uses VMware graphics)
+  hardware.profiles.amdGpu.enable = lib.mkForce false;
+
+  # Override video drivers for VMware
+  services.xserver.videoDrivers = lib.mkForce ["vmware" "modesetting"];
+
+  # Disable smartd for VM (VMware virtual disks don't support SMART)
+  services.smartd.enable = lib.mkForce false;
+
+  # Keyboard layout configuration
+  services.xserver.xkb = {
+    layout = "de";
+    variant = "";
   };
+
+  # Sync console keyboard layout with X11 configuration
+  console.useXkbConfig = true;
 
   # System modules configuration
   modules.system = {
@@ -108,4 +131,17 @@ in {
       };
     };
   };
+
+  # ZFS with impermanence (matching physical hosts)
+  # The VM now uses the same ZFS structure as desktop/surface for consistency
+  # Disko creates the filesystems, but we need to set neededForBoot for impermanence
+
+  # Required for impermanence: filesystems must be mounted early in boot
+  fileSystems."/per".neededForBoot = true;
+  fileSystems."/home".neededForBoot = true;
+
+  # Disable systemd-initrd for VM compatibility with ZFS
+  # The systemd-initrd has a known issue with ZFS path resolution (assertion error)
+  # Use traditional dracut-based initrd instead for reliable ZFS import
+  boot.initrd.systemd.enable = lib.mkForce false;
 }

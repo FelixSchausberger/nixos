@@ -1,4 +1,4 @@
-sessionTarget: {
+{
   pkgs,
   inputs,
   ...
@@ -9,12 +9,13 @@ sessionTarget: {
 
   config = {
     services.ala-lape = {
-      enable = true;
-      package = inputs.ala-lape.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      enable = false; # Disabled by default, enable per-host
+      package = inputs.ala-lape.packages.${pkgs.hostPlatform.system}.default;
       config = {
         inhibitors = {
           notifications = {
-            # TODO: Configure based on notification daemon used
+            # Uses mako/wired for notifications
+            # Manual configuration required based on notification daemon
             # wired.enable = true;
           };
         };
@@ -42,12 +43,6 @@ sessionTarget: {
           when = "WhilePluggedIn"; # Options: Always, WhilePluggedIn, Never
         };
       };
-    };
-
-    # Ensure the service starts with the session
-    systemd.user.services.ala-lape = {
-      Unit.After = [sessionTarget];
-      Install.WantedBy = [sessionTarget];
     };
   };
 }

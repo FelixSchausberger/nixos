@@ -4,7 +4,7 @@ in {
   imports =
     importLib.importHost "hp-probook-wsl"
     ++ [
-      # Disko config available at ./hp-probook-wsl/disko/disko.nix
+      # Disko config available at ./hp-probook-wsl/disko.nix
       # Only used during installation, not imported for running systems
       ./hp-probook-wsl/hardware/hardware-configuration.nix
     ];

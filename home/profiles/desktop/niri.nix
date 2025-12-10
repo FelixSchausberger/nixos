@@ -11,21 +11,20 @@ in {
   wm.niri = {
     enable = true;
     # Monitor configuration for desktop setup
-    # Using auto-detection as default - can be overridden for specific multi-monitor setups
     outputs = [
-      # Add specific monitor configs here if needed, e.g.:
-      # {
-      #   name = "DP-1";
-      #   mode = { width = 2560; height = 1440; refresh = 144.0; };
-      #   scale = 1.0;
-      #   position = { x = 0; y = 0; };
-      # }
-      # {
-      #   name = "HDMI-A-1";
-      #   mode = { width = 1920; height = 1080; refresh = 60.0; };
-      #   scale = 1.0;
-      #   position = { x = 2560; y = 0; };
-      # }
+      {
+        name = "Virtual-1";
+        mode = {
+          width = 1920;
+          height = 1200;
+          refresh = 60.0;
+        };
+        scale = 1.0;
+        position = {
+          x = 0;
+          y = 0;
+        };
+      }
     ];
 
     # Desktop-specific application preferences
@@ -56,10 +55,11 @@ in {
     # Game launchers
     prismlauncher # Minecraft
 
-    # Emulation (all temporarily disabled due to Qt 6.10 incompatibility)
-    # dolphin-emu # Temporarily disabled: Qt 6.10 incompatibility causing build failures
-    # pcsx2 # Temporarily disabled: Qt 6.10 incompatibility causing build failures
-    # rpcs3 # Temporarily disabled: strict-aliasing compilation errors
+    # Emulation (temporarily disabled)
+    # Track upstream fixes:
+    # - dolphin-emu: Qt 6.10 incompatibility
+    # - pcsx2: Qt 6.10 incompatibility
+    # - rpcs3: strict-aliasing compilation errors
 
     # Communication
     discord
@@ -71,24 +71,9 @@ in {
   ];
 
   # Gaming-specific systemd services
-  systemd.user.services = {
-    # Auto-start Steam in background
-    steam-background = {
-      Unit = {
-        Description = "Steam Background Service";
-        After = ["niri-session.target"];
-      };
-
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.steam}/bin/steam -silent";
-        Restart = "no";
-        RemainAfterExit = "yes";
-      };
-
-      Install.WantedBy = ["niri-session.target"];
-    };
-  };
+  # Note: Steam auto-start disabled for boot performance
+  # Launch Steam manually via application menu or `steam` command
+  systemd.user.services = {};
 
   # Gaming configuration files
   xdg.configFile = {

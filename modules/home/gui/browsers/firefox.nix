@@ -11,7 +11,7 @@ in {
 
   programs.firefox = {
     enable = true;
-    package = inputs.firefox-nightly.packages.${pkgs.stdenv.hostPlatform.system}.firefox-nightly-bin;
+    package = inputs.firefox-nightly.packages.${pkgs.hostPlatform.system}.firefox-nightly-bin;
     inherit (browserCommon) languagePacks;
 
     policies =
@@ -167,17 +167,17 @@ in {
   };
 
   # home.file = {
-  #   ".mozilla/firefox/default/chrome/theme" = {
+  #   ".local/state/firefox/default/chrome/theme" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/theme";
   #     recursive = true;
   #   };
-  #   ".mozilla/firefox/default/chrome/userChrome.css" = {
+  #   ".local/state/firefox/default/chrome/userChrome.css" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/userChrome.css";
   #   };
-  #   ".mozilla/firefox/default/chrome/userContent.css" = {
+  #   ".local/state/firefox/default/chrome/userContent.css" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/userContent.css";
   #   };
-  #   ".mozilla/firefox/default/user.js" = {
+  #   ".local/state/firefox/default/user.js" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/user.js";
   #   };
   # };

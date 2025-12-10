@@ -13,8 +13,8 @@ in {
   is_gui = config.hostConfig.isGui;
 
   # Test: COSMIC window manager configured
-  wm_count = builtins.length config.hostConfig.wm;
-  has_cosmic = builtins.elem "cosmic" config.hostConfig.wm;
+  wm_count = builtins.length config.hostConfig.wms;
+  has_cosmic = builtins.elem "cosmic" config.hostConfig.wms;
 
   # Test: Intel graphics drivers configured
   graphics_enabled = config.hardware.graphics.enable;

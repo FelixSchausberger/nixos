@@ -1,6 +1,7 @@
 {
   config,
   inputs,
+  lib,
   pkgs,
   ...
 }: {
@@ -25,21 +26,12 @@
     overlays = [
       inputs.nur.overlays.default
       # Custom overlay for TUI-specific packages
-      (_: prev: {
+      (final: prev: {
         zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
+        helix-steel = final.callPackage ../../pkgs/helix-steel {};
+        helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
+        scooter-hx = final.callPackage ../../pkgs/scooter-hx {};
       })
-      # Override bat-extras to disable broken tests
-      # Tests fail due to color output changes in bat 0.24.0 → 0.25.0
-      # Fix exists in nixpkgs master (PR #373146) but not yet in nixos-unstable
-      # This can be removed once nixos-unstable includes the fix
-      # (_: prev: {
-      #   bat-extras = prev.bat-extras.overrideScope (_: super: {
-      #     buildBatExtrasPkg = args:
-      #       (super.buildBatExtrasPkg args).overrideAttrs (_: {
-      #         doCheck = false;
-      #       });
-      #   });
-      # })
     ];
   };
 
@@ -52,7 +44,9 @@
       trusted-users = ["root" "@wheel"];
       warn-dirty = false;
 
-      access-tokens = ["github.com=${config.sops.secrets."github/token".path}"];
+      # GitHub token authentication (using sops secret)
+      # Note: This is set via extraOptions since it needs runtime secret path
+      # access-tokens config is handled below in extraOptions
 
       # WSL-specific configuration for better performance
       use-sqlite-wal = true; # Better database performance on WSL
@@ -149,7 +143,24 @@
 
   programs.nix-index-database.comma.enable = true;
 
-  sops.secrets = {
-    "github/token" = {};
+  # GitHub token configuration (optional - only when sops is available)
+  sops.secrets."github/token" = lib.mkIf (config.sops.age.keyFile != null) {
+    mode = "0440";
+    group = "wheel";
   };
+
+  # Use sops template to generate nix.conf with GitHub token (only when sops available)
+  sops.templates."nix-access-tokens.conf" = lib.mkIf (config.sops.age.keyFile != null) {
+    content = ''
+      access-tokens = github.com=${config.sops.placeholder."github/token"}
+    '';
+    owner = "root";
+    group = "wheel";
+    mode = "0440";
+  };
+
+  # Include the generated config in Nix's extraOptions (only when template exists)
+  nix.extraOptions = lib.mkIf (config.sops.age.keyFile != null) ''
+    !include ${config.sops.templates."nix-access-tokens.conf".path}
+  '';
 }

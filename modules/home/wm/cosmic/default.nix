@@ -9,13 +9,10 @@
     ./cosmic-term.nix
     ./cosmic-wallpapers.nix
     # Use shared compositor-agnostic modules with cosmic session target
+    ../shared/swww-coordinated.nix # Coordinated wallpaper system with blurred backgrounds
     (import ../shared/wl-gammarelay.nix "cosmic-session.target") # Screen color temperature manager
-    # (import ../shared/cthulock.nix "cosmic-session.target") # Screen locker - disabled until package is fixed
-    (import ../shared/wpaperd.nix "cosmic-session.target") # Wallpaper daemon
     ../shared/satty.nix # Screenshot tool
-    ../shared/vigiland-simple.nix # Wayland idle inhibitor
-    # (import ../shared/ala-lape.nix "cosmic-session.target") # Idle inhibitor - disabled until package is fixed
-    # (import ../shared/wlsleephandler-rs.nix "cosmic-session.target") # Sleep handler - disabled until package is fixed
+    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
   ];
 
   programs.bash = {

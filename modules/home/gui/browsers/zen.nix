@@ -4,12 +4,17 @@
   pkgs,
   ...
 }: let
-  browserCommon = import ./firefox-common.nix {inherit lib pkgs;};
+  browserCommon = import ./firefox-common.nix {
+    inherit lib pkgs;
+    inherit (inputs) firefox-addons;
+  };
 in {
   imports = [
     inputs.zen-browser.homeModules.beta # More stable, less frequent updates
     # inputs.zen-browser.homeModules.twilight-official # Experimental build with direct official artifacts
   ];
+
+  # Stylix theming for zen-browser is configured in stylix-catppuccin.nix
 
   programs.zen-browser = {
     enable = true;
@@ -37,13 +42,27 @@ in {
           engines = browserCommon.searchEngines;
         };
 
-      # Extensions configuration
+      # Extensions configuration - use flake source for compatibility
       extensions = {
-        packages = browserCommon.extensions;
+        packages = browserCommon.getExtensions "flake";
       };
 
-      # Custom theme from Arc-2.0 (loaded at build time)
-      userChrome = inputs.arc-2-theme + "/userChrome.css";
+      # Containers and spaces are managed manually by the user in the browser
+      # Declarative configuration removed to preserve user customizations
+
+      # Custom theme from Arc-2.0 with local overrides
+      userChrome = ''
+        /* Hide new tab button in vertical sidebar */
+        #new-tab-button,
+        #tabs-newtab-button,
+        .zen-sidebar-action-button[data-action="new-tab"] {
+          display: none !important;
+        }
+
+        /* Arc-2.0 theme imports */
+        @import "Arc 2.0/arc.css";
+        @import "./CONFIG.css";
+      '';
       userContent = inputs.arc-2-theme + "/userContent.css";
 
       # Browser settings

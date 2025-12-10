@@ -28,6 +28,6 @@
   hp-probook-vmware = {
     wms = ["niri"];
     isGui = true;
-    description = "VMware VM with Niri WM on HP ProBook 465 G11";
+    description = "VMware VM with Niri on HP ProBook 465 G11";
   };
 }

@@ -4,6 +4,7 @@
   lib,
   config,
   pkgs,
+  hostConfig,
   ...
 }: {
   # Common Wayland environment variables that all WMs can share
@@ -35,14 +36,14 @@
     XDG_STATE_HOME = "$HOME/.local/state";
   };
 
-  # XDG Portal configuration - conditional based on which WM is enabled
+  # XDG Portal configuration - conditional based on which WM is active
   xdg.portal = {
     enable = true;
     wlr.enable = true;
 
     config = lib.mkMerge [
-      # Hyprland configuration (higher priority)
-      (lib.mkIf config.programs.hyprland.enable {
+      # Hyprland configuration (highest priority)
+      (lib.mkIf (builtins.elem "hyprland" hostConfig.wms && config.programs.hyprland.enable) {
         common.default = lib.mkForce ["hyprland" "gtk"];
         hyprland = {
           default = ["hyprland" "gtk"];
@@ -56,8 +57,8 @@
         };
       })
 
-      # Niri configuration (lower priority, only if Hyprland is not enabled)
-      (lib.mkIf (config.programs.niri.enable && !config.programs.hyprland.enable) {
+      # Niri configuration (medium priority, only if Hyprland is not active)
+      (lib.mkIf (builtins.elem "niri" hostConfig.wms && config.programs.niri.enable && !config.programs.hyprland.enable) {
         common.default = ["gnome" "wlr" "gtk"];
         niri = {
           default = ["gnome" "wlr" "gtk"];
@@ -69,6 +70,11 @@
           "org.freedesktop.impl.portal.ScreenCast" = ["wlr"];
           "org.freedesktop.impl.portal.Inhibit" = ["gnome"];
         };
+      })
+
+      # GNOME configuration (lowest priority, only if no other WM is active)
+      (lib.mkIf (builtins.elem "gnome" hostConfig.wms && !config.programs.hyprland.enable && !config.programs.niri.enable) {
+        common.default = ["gnome" "gtk"];
       })
     ];
 

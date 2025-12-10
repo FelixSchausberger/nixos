@@ -13,12 +13,12 @@
 
     creative = {
       enable = true;
-      tools = ["image" "3d" "video" "writing"];
+      tools = ["image" "3d" "video"];
     };
 
     gaming = {
       enable = true;
-      platforms = ["steam" "lutris"];
+      platforms = ["steam" "lutris" "minecraft"];
     };
   };
 

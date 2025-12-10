@@ -13,6 +13,11 @@
     (lib.filterAttrs (_n: v: v.enabled) sharedBehaviors)
   );
 in {
+  imports = [
+    ./openchamber-service.nix
+    ./notifier.nix
+  ];
+
   options.ai-assistants.opencode = {
     enable = lib.mkEnableOption "OpenCode AI coding assistant with shared MCP servers and behaviors";
 

@@ -1,0 +1,57 @@
+warning: Using 'builtins.toFile' to create a file named 'options.json' that references the store path '/nix/store/0lc6kbmhkqk8vmgflpn2n1d1qb3vl2f5-source' without a proper context. The resulting file will not have a correct store reference, so this is unreliable and may stop working in the future.
+"nixos-system-desktop-26.05.20251225.3e2499d"
+{
+  "cpuTime": 57.3353157043457,
+  "envs": {
+    "bytes": 546778448,
+    "elements": 40375902,
+    "number": 27971404
+  },
+  "gc": {
+    "cycles": 2,
+    "heapSize": 2308935680,
+    "totalBytes": 3198566528
+  },
+  "list": {
+    "bytes": 74190928,
+    "concats": 1360189,
+    "elements": 9273866
+  },
+  "maxWaiting": 0,
+  "nrAvoided": 32253119,
+  "nrExprs": 4443620,
+  "nrFunctionCalls": 24745289,
+  "nrLookups": 14270212,
+  "nrOpUpdateValuesCopied": 44230265,
+  "nrOpUpdates": 2303151,
+  "nrPrimOpCalls": 12748211,
+  "nrSpuriousWakeups": 0,
+  "nrThunks": 36455206,
+  "nrThunksAwaited": 0,
+  "nrThunksAwaitedSlow": 0,
+  "sets": {
+    "bytes": 1380289160,
+    "elements": 75735767,
+    "number": 7021537
+  },
+  "sizes": {
+    "Attr": 16,
+    "Bindings": 24,
+    "Env": 8,
+    "Value": 16
+  },
+  "symbols": {
+    "bytes": 6357664,
+    "number": 137307
+  },
+  "time": {
+    "cpu": 57.3353157043457,
+    "gc": 0.562,
+    "gcFraction": 0.009801986665565766
+  },
+  "values": {
+    "bytes": 826054176,
+    "number": 51628386
+  },
+  "waitingTime": 0.0
+}

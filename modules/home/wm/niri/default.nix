@@ -6,13 +6,11 @@
   ...
 }: let
   cfg = config.wm.niri;
-  safeNotifySend = import ../../../../home/lib/safe-notify-send.nix {inherit pkgs config lib;};
-  safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 
   # Package mappings for applications
   browserPkg =
     if cfg.browser == "zen"
-    then inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then inputs.zen-browser.packages.${pkgs.hostPlatform.system}.default
     else if cfg.browser == "firefox"
     then pkgs.firefox
     else if cfg.browser == "chromium"
@@ -21,29 +19,27 @@
 
   terminalPkg =
     if cfg.terminal == "ghostty"
-    then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then inputs.ghostty.packages.${pkgs.hostPlatform.system}.default
     else if cfg.terminal == "cosmic-term"
     then pkgs.cosmic-term
     else if cfg.terminal == "wezterm"
     then pkgs.wezterm
-    else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    else inputs.ghostty.packages.${pkgs.hostPlatform.system}.default;
 
   fileManagerPkg = pkgs.cosmic-files;
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
-    inputs.wayland-pipewire-idle-inhibit.homeModules.default
-    ./walker.nix
+    ./keybinds.nix
     ./ironbar.nix
     # Shared options and imports (imported once)
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
-    ../shared/wayland-pipewire-idle-inhibit.nix
     ../shared/satty.nix
-    ../shared/vigiland-simple.nix
-    (import ../shared/wpaperd.nix "niri-session.target") # Wallpaper daemon
+    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
+    ../shared/swww-coordinated.nix # Coordinated wallpaper system with blurred backgrounds
     (import ../shared/wired.nix "niri-session.target") # Modern notification daemon configuration
-    # (import ../shared/cthulock.nix "niri-session.target") # Screen locker - disabled until package is fixed
+    (import ../shared/cthulock.nix "niri-session.target") # Screen locker
   ];
 
   options.wm.niri = {
@@ -167,7 +163,7 @@ in {
         swappy # Screenshot annotation
         cliphist # Clipboard history
         avizo # OSD for volume/brightness
-        inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
+        inputs.walker.packages.${pkgs.hostPlatform.system}.default # Wayland-native application launcher with plugins
         udiskie # Auto-mount
         cosmic-files # File manager
         # Cursor themes
@@ -192,9 +188,9 @@ in {
       # Input configuration
       input = {
         keyboard.xkb = {
-          layout = "eu,de";
-          variant = ",";
-          options = "grp:alt_shift_toggle,terminate:ctrl_alt_bksp";
+          layout = "de";
+          variant = "";
+          options = "terminate:ctrl_alt_bksp";
           model = "pc104";
         };
 
@@ -248,7 +244,8 @@ in {
       hotkey-overlay.skip-at-startup = true;
 
       # Debug configuration for honoring XDG activation requests with invalid serial
-      # TODO: Cannot be set via programs.niri.settings due to KDL generation issue
+      # Cannot be set via programs.niri.settings due to KDL generation limitation
+      # See: https://github.com/sodiboo/niri-flake/issues
       # Add manually to ~/.config/niri/config.kdl if needed:
       # debug { honor-xdg-activation-with-invalid-serial; }
 
@@ -268,7 +265,7 @@ in {
       # Startup applications
       # spawn-at-startup = [
       # {command = ["${pkgs.avizo}/bin/avizo-service"];}
-      # {command = ["${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"];}
+      # {command = ["${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar"];}
       # {command = ["${pkgs.udiskie}/bin/udiskie" "--tray"];}
       # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
       # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
@@ -282,6 +279,16 @@ in {
 
       # Window rules
       window-rules = [
+        # Default rounded corners for all windows
+        {
+          geometry-corner-radius = {
+            top-left = 12.0;
+            top-right = 12.0;
+            bottom-right = 12.0;
+            bottom-left = 12.0;
+          };
+          clip-to-geometry = true;
+        }
         {
           matches = [{app-id = "^scratchpad-.*";}];
           default-column-width = {proportion = 0.8;};
@@ -332,126 +339,7 @@ in {
         "Games" = {};
       };
 
-      # Keybindings using helper functions from config.lib.niri.actions
-      binds = with config.lib.niri.actions; {
-        # Application shortcuts
-        "Mod+T".action = spawn "${terminalPkg}/bin/${cfg.terminal}";
-        "Mod+D".action = spawn "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker";
-        "Mod+Return".action = spawn "${browserPkg}/bin/${
-          if cfg.browser == "zen"
-          then "zen"
-          else cfg.browser
-        }";
-        "Mod+Q".action = close-window;
-        "Mod+L".action = spawn "loginctl" "lock-session";
-
-        # Hotkey overlay
-        "Mod+Shift+Slash".action = show-hotkey-overlay;
-
-        # Notifications
-        "Mod+Escape".action = spawn "${safeNotifyBin}" "Test" "Wired notification system";
-        "Mod+Shift+Escape".action = spawn "pkill" "-SIGUSR1" "wired";
-
-        # Window management
-        "Mod+Space".action = toggle-window-floating;
-        "Mod+F".action = fullscreen-window;
-        "Mod+C".action = center-column;
-        "Mod+R".action = switch-preset-column-width;
-        "Mod+Shift+R".action = switch-preset-window-height;
-
-        # Window focus (Colemak-DH N/E/I/O pattern)
-        "Mod+N".action = focus-column-left;
-        "Mod+Left".action = focus-column-left;
-        "Mod+E".action = focus-window-down;
-        "Mod+Down".action = focus-window-down;
-        "Mod+I".action = focus-window-up;
-        "Mod+Up".action = focus-window-up;
-        "Mod+O".action = focus-column-right;
-        "Mod+Right".action = focus-column-right;
-
-        # Window movement
-        "Mod+Ctrl+N".action = move-column-left;
-        "Mod+Ctrl+Left".action = move-column-left;
-        "Mod+Ctrl+E".action = move-window-down;
-        "Mod+Ctrl+Down".action = move-window-down;
-        "Mod+Ctrl+I".action = move-window-up;
-        "Mod+Ctrl+Up".action = move-window-up;
-        "Mod+Ctrl+O".action = move-column-right;
-        "Mod+Ctrl+Right".action = move-column-right;
-
-        # Monitor focus
-        "Mod+Shift+N".action = focus-monitor-left;
-        "Mod+Shift+Left".action = focus-monitor-left;
-        "Mod+Shift+E".action = focus-monitor-down;
-        "Mod+Shift+Down".action = focus-monitor-down;
-        "Mod+Shift+I".action = focus-monitor-up;
-        "Mod+Shift+Up".action = focus-monitor-up;
-        "Mod+Shift+O".action = focus-monitor-right;
-        "Mod+Shift+Right".action = focus-monitor-right;
-
-        # Move to monitor
-        "Mod+Ctrl+Shift+N".action = move-column-to-monitor-left;
-        "Mod+Ctrl+Shift+Left".action = move-column-to-monitor-left;
-        "Mod+Ctrl+Shift+E".action = move-column-to-monitor-down;
-        "Mod+Ctrl+Shift+Down".action = move-column-to-monitor-down;
-        "Mod+Ctrl+Shift+I".action = move-column-to-monitor-up;
-        "Mod+Ctrl+Shift+Up".action = move-column-to-monitor-up;
-        "Mod+Ctrl+Shift+O".action = move-column-to-monitor-right;
-        "Mod+Ctrl+Shift+Right".action = move-column-to-monitor-right;
-
-        # Window resizing
-        "Mod+Alt+N".action = set-column-width "-10%";
-        "Mod+Alt+O".action = set-column-width "+10%";
-        "Mod+Alt+E".action = set-window-height "-10%";
-        "Mod+Alt+I".action = set-window-height "+10%";
-
-        # Consume and expel
-        "Mod+Comma".action = consume-window-into-column;
-        "Mod+Period".action = expel-window-from-column;
-        "Mod+BracketLeft".action = consume-or-expel-window-left;
-        "Mod+BracketRight".action = consume-or-expel-window-right;
-
-        # Workspace navigation
-        "Mod+U".action = focus-workspace-down;
-        "Mod+Page_Down".action = focus-workspace-down;
-        "Mod+Shift+U".action = move-workspace-down;
-        "Mod+Shift+Page_Down".action = move-workspace-down;
-        "Mod+Ctrl+U".action = move-column-to-workspace-down;
-        "Mod+Ctrl+Page_Down".action = move-column-to-workspace-down;
-
-        # Named workspaces
-        "Mod+1".action.focus-workspace = "Terminal";
-        "Mod+2".action.focus-workspace = "Browser";
-        "Mod+3".action.focus-workspace = "Code";
-        "Mod+4".action.focus-workspace = "Chat";
-        "Mod+5".action.focus-workspace = "Music";
-        "Mod+6".action.focus-workspace = "Games";
-
-        # Move windows to workspaces
-        "Mod+Shift+1".action.move-column-to-workspace = "Terminal";
-        "Mod+Shift+2".action.move-column-to-workspace = "Browser";
-        "Mod+Shift+3".action.move-column-to-workspace = "Code";
-        "Mod+Shift+4".action.move-column-to-workspace = "Chat";
-        "Mod+Shift+5".action.move-column-to-workspace = "Music";
-        "Mod+Shift+6".action.move-column-to-workspace = "Games";
-
-        # System controls
-        "Mod+V".action = spawn "${pkgs.avizo}/bin/volumectl" "toggle-mute";
-        "Mod+Equal".action = spawn "${pkgs.avizo}/bin/volumectl" "up";
-        "Mod+Minus".action = spawn "${pkgs.avizo}/bin/volumectl" "down";
-        "Mod+Shift+Equal".action = spawn "${pkgs.avizo}/bin/lightctl" "up";
-        "Mod+Shift+Minus".action = spawn "${pkgs.avizo}/bin/lightctl" "down";
-
-        # Screenshots
-        "Print".action = spawn "screenshot-region";
-        "Shift+Print".action = spawn "screenshot-full";
-        "Mod+Print".action = spawn "screenshot-region";
-
-        # Idle inhibitor
-        "Mod+Z".action = spawn "sh" "-c" "pkill -x vigiland || vigiland &";
-
-        "Mod+Shift+Q".action = quit;
-      };
+      # Keybindings imported from keybinds.nix
     };
 
     # Enable xwayland-satellite for X11 app compatibility
@@ -465,7 +353,7 @@ in {
       Service = {
         Type = "notify";
         NotifyAccess = "all";
-        ExecStart = "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
+        ExecStart = "${inputs.niri.packages.${pkgs.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
         StandardOutput = "journal";
         Restart = "on-failure";
       };

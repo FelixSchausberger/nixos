@@ -295,15 +295,5 @@
       };
       key = "XF86AudioMute";
     }
-
-    # Idle inhibitor
-    {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = ["sh" "-c" "pkill -x vigiland || vigiland &"];
-        variant = "Spawn";
-      };
-      description = cosmicLib.cosmic.mkRON "optional" "Toggle idle inhibitor";
-      key = "Super+Z";
-    }
   ];
 }

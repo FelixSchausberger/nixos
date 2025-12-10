@@ -75,7 +75,7 @@
     };
 
     "/boot" = {
-      device = "/dev/disk/by-label/boot";
+      device = lib.mkDefault "/dev/disk/by-label/boot";
       fsType = "vfat";
       options = [
         "fmask=0022"
@@ -105,7 +105,7 @@
   };
 
   # Dedicated encrypted swap partition (best practice for performance)
-  # TODO: Replace with actual PARTUUID when hardware is available
+  # Placeholder for VM testing - replace with actual PARTUUID when portable hardware is configured
   # swapDevices = [
   #   {
   #     device = "/dev/disk/by-partuuid/swap-uuid-here";
