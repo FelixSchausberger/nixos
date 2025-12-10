@@ -91,6 +91,47 @@ show_disks() {
     echo
 }
 
+# Setup GitHub authentication
+setup_github_auth() {
+    echo
+    info "GitHub authentication setup"
+    echo
+    echo "To avoid rate limits during installation, you can provide a GitHub personal access token."
+    echo "This is optional but recommended for reliable installations."
+    echo
+    echo "To create a token: https://github.com/settings/tokens (needs 'public_repo' scope)"
+    echo
+    read -p "Enter GitHub token (or press Enter to skip): " github_token
+    echo
+
+    if [[ -n "$github_token" ]]; then
+        info "Creating netrc file with GitHub token..."
+        mkdir -p /etc/nix
+        cat > /etc/nix/netrc << EOF
+machine github.com
+login token
+password $github_token
+
+machine api.github.com
+login token
+password $github_token
+EOF
+        chmod 644 /etc/nix/netrc
+
+        # Test the token
+        if timeout 10 nix flake metadata github:nixos/nixpkgs --refresh &>/dev/null 2>&1; then
+            success "GitHub authentication working"
+        else
+            warning "GitHub API test failed - token may be invalid"
+            warning "Continuing anyway, installation may hit rate limits"
+        fi
+    else
+        info "Skipping GitHub authentication - using unauthenticated access"
+        warning "May encounter rate limits during installation"
+    fi
+    echo
+}
+
 # Preflight checks before installation
 preflight_checks() {
     local all_checks_passed=true
@@ -108,28 +149,11 @@ preflight_checks() {
         success "Running as root"
     fi
 
-    # Check 2: GitHub authentication configured
-    if nix config show | grep -q "netrc-file"; then
-        local netrc_file=$(nix config show | grep "netrc-file" | cut -d= -f2 | xargs)
-        if [[ -f "$netrc_file" ]]; then
-            success "GitHub authentication configured (netrc: $netrc_file)"
-
-            # Test GitHub API access
-            info "Testing GitHub API access..."
-            if timeout 10 nix flake metadata github:nixos/nixpkgs --refresh &>/dev/null; then
-                success "GitHub API access working"
-            else
-                warning "GitHub API test failed (might be transient)"
-            fi
-        else
-            error "netrc-file configured but file doesn't exist: $netrc_file"
-            error "The ISO needs to be rebuilt with sops configuration"
-            all_checks_passed=false
-        fi
+    # Check 2: GitHub authentication (optional now)
+    if [[ -f "/etc/nix/netrc" ]]; then
+        success "GitHub authentication configured"
     else
-        error "GitHub authentication not configured"
-        error "The ISO needs to be rebuilt with sops configuration"
-        all_checks_passed=false
+        info "No GitHub authentication (may hit rate limits)"
     fi
 
     # Check 3: Network connectivity
@@ -169,6 +193,9 @@ main() {
     echo "  NixOS Disko Installation Helper"
     echo "═══════════════════════════════════════════════════════"
     echo
+
+    # Setup GitHub authentication first
+    setup_github_auth
 
     # Run preflight checks
     preflight_checks
