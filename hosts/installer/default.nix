@@ -1,7 +1,6 @@
 {
   lib,
   pkgs,
-  config,
   inputs,
   modulesPath,
   ...
@@ -10,9 +9,6 @@
   repoPath = inputs.self;
   authorizedKeysFile = ./authorized_keys;
   hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
-  # Embed age key for sops decryption in installer
-  sopsKeyFile = ../../secrets/sops-key.txt;
-  hasSopsKey = builtins.pathExists sopsKeyFile;
 in {
   imports = [
     (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
@@ -60,13 +56,6 @@ in {
     ln -sfn ${repoPath} /per/etc/nixos
   '';
 
-  # Embed age key for sops-nix to decrypt secrets during installation
-  system.activationScripts.installSopsKey = lib.mkIf hasSopsKey ''
-    mkdir -p /per/system
-    cp ${sopsKeyFile} /per/system/sops-key.txt
-    chmod 600 /per/system/sops-key.txt
-  '';
-
   # Pre-configure installation environment
   system.activationScripts.installerWelcome = ''
     cat > /etc/issue << 'EOF'
@@ -106,29 +95,8 @@ in {
     GIT_COMMITTER_EMAIL = "installer@nixos.local";
   };
 
-  # Configure GitHub token for flake evaluation during installation
-  # This avoids rate limit issues when disko-install evaluates the flake
-  sops.secrets."github/token" = {
-    sopsFile = ../../secrets/secrets.yaml;
-    mode = "0444"; # World-readable since it's in a temporary installer environment
-  };
-
-  # Create netrc file for GitHub API authentication
-  sops.templates."nix/netrc" = {
-    content = ''
-      machine github.com
-      login token
-      password ${config.sops.placeholder."github/token"}
-
-      machine api.github.com
-      login token
-      password ${config.sops.placeholder."github/token"}
-    '';
-    path = "/etc/nix/netrc";
-    mode = lib.mkForce "0444"; # World-readable in installer environment
-  };
-
-  nix.settings.netrc-file = config.sops.templates."nix/netrc".path;
+  # GitHub authentication is handled interactively by install-nixos script
+  # No secrets embedded in ISO - user provides token at runtime
 
   # Additional packages for installation convenience
   environment.systemPackages = with pkgs; [
