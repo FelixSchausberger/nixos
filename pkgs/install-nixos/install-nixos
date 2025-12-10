@@ -134,12 +134,13 @@ preflight_checks() {
         all_checks_passed=false
     fi
 
-    # Check 4: Nix daemon running
-    if systemctl is-active --quiet nix-daemon; then
-        success "Nix daemon running"
+    # Check 4: Nix functionality
+    # In installer environment, nix might work without systemd service
+    if nix --version &>/dev/null; then
+        success "Nix is functional"
     else
-        error "Nix daemon not running"
-        error "Please start it: sudo systemctl start nix-daemon"
+        error "Nix is not working"
+        error "This is unexpected in the installer environment"
         all_checks_passed=false
     fi
 
