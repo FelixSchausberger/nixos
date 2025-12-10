@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }: {
   options.features = {
@@ -66,6 +67,7 @@
             alejandra
             deadnix
             statix
+            inputs.self.packages.${pkgs.hostPlatform.system}.repl
           ]
       ))
 

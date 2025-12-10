@@ -4,8 +4,23 @@
 # Optimized for performance and simplicity
 # Focus on: Nix env, git status, directory, model
 
+# Debug logging (enabled by default for debugging)
+DEBUG_LOG="/tmp/claude-statusline-debug.log"
+DEBUG_ENABLED="${CLAUDE_STATUSLINE_DEBUG:-true}"
+
 # Read JSON input from stdin
 input=$(cat)
+
+# Log to debug file if enabled
+if [[ "$DEBUG_ENABLED" == "true" ]]; then
+    {
+        echo "=== $(date '+%Y-%m-%d %H:%M:%S.%N') ==="
+        echo "Statusline called!"
+        echo "Input JSON:"
+        echo "$input" | jq '.' 2>/dev/null || echo "$input"
+        echo ""
+    } >> "$DEBUG_LOG"
+fi
 
 # Extract essential values from JSON with defaults
 model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"' 2>/dev/null || echo "Claude")
@@ -80,18 +95,42 @@ get_context_info() {
     echo "${color}${turns}t\033[0m"
 }
 
-# Usage Tracking via ccusage (optional)
-get_usage_info() {
-    # Check if ccusage is available
-    command -v ccusage >/dev/null 2>&1 || return
+# Context Window Usage (using current_usage field from Claude Code 2.0.70+)
+get_context_usage() {
+    # Extract context window data from input JSON
+    local context_size=$(echo "$input" | jq -r '.context_window.context_window_size // 0' 2>/dev/null || echo "0")
+    local usage=$(echo "$input" | jq '.context_window.current_usage' 2>/dev/null)
 
-    # Run ccusage statusline command (offline mode by default, fast)
-    # This provides formatted usage info: session cost, today's cost, block info, burn rate
-    local usage_output=$(ccusage statusline 2>/dev/null || echo "")
+    # Return if no context window data or current_usage is null
+    [[ "$context_size" -eq 0 || "$usage" == "null" || -z "$usage" ]] && return
 
-    # Return the formatted output from ccusage (already has color codes)
-    if [[ -n "$usage_output" ]]; then
-        echo "$usage_output"
+    # Calculate total tokens in context window
+    # Sum: input_tokens + cache_creation_input_tokens + cache_read_input_tokens
+    # Note: output_tokens not included (they don't consume context window)
+    local input_tokens=$(echo "$usage" | jq -r '.input_tokens // 0')
+    local cache_creation=$(echo "$usage" | jq -r '.cache_creation_input_tokens // 0')
+    local cache_read=$(echo "$usage" | jq -r '.cache_read_input_tokens // 0')
+
+    local current_tokens=$((input_tokens + cache_creation + cache_read))
+    [[ $current_tokens -eq 0 ]] && return
+
+    # Calculate percentage
+    local percent_used=$((current_tokens * 100 / context_size))
+
+    # Color code based on usage level
+    local color="\033[1;92m"  # green (0-70%)
+    [[ $percent_used -gt 70 ]] && color="\033[1;93m"  # yellow (70-90%)
+    [[ $percent_used -gt 90 ]] && color="\033[1;91m"  # red (90-100%)
+
+    # Format: "XX%" or "XX.X%" for values < 10%
+    if [[ $percent_used -lt 10 ]]; then
+        # Show decimal for low percentages
+        local precise=$((current_tokens * 1000 / context_size))
+        local whole=$((precise / 10))
+        local decimal=$((precise % 10))
+        echo "${color}${whole}.${decimal}%\033[0m"
+    else
+        echo "${color}${percent_used}%\033[0m"
     fi
 }
 
@@ -99,7 +138,7 @@ get_usage_info() {
 nix_env=$(get_nix_env_info)
 git_info=$(get_git_status)
 context_info=$(get_context_info)
-usage_info=$(get_usage_info)
+context_usage=$(get_context_usage)
 dir_name=$(basename "$current_dir" 2>/dev/null || echo "~")
 
 # Build compact status line
@@ -114,14 +153,24 @@ status_line+="\033[1;94m$dir_name\033[0m"
 # Git info
 [[ -n "$git_info" ]] && status_line+=" $git_info"
 
+# Context window percentage
+[[ -n "$context_usage" ]] && status_line+=" $context_usage"
+
 # Context info (turns)
 [[ -n "$context_info" ]] && status_line+=" $context_info"
 
-# Usage tracking (tokens/cost) - only if available
-[[ -n "$usage_info" ]] && status_line+=" $usage_info"
-
 # Model
 status_line+=" \033[1;96m$model_name\033[0m"
+
+# Log output if debug enabled
+if [[ "$DEBUG_ENABLED" == "true" ]]; then
+    {
+        echo "Output:"
+        echo "$status_line"
+        echo "---"
+        echo ""
+    } >> "$DEBUG_LOG"
+fi
 
 # Output single line with proper color handling
 printf "%b\n" "$status_line"

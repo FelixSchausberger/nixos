@@ -3,7 +3,7 @@
   containers_enabled = true;
   docker_curl_ca = "/nix/store/m65dckzfgr1lr90g5v6jx0iynnz38nsk-nss-cacert-3.115/etc/ssl/certs/ca-bundle.crt";
   docker_enabled = true;
-  docker_on_boot = true;
+  docker_on_boot = false;
   docker_ssl_cert = "/nix/store/m65dckzfgr1lr90g5v6jx0iynnz38nsk-nss-cacert-3.115/etc/ssl/certs/ca-bundle.crt";
   has_dns = true;
   has_log_driver = "json-file";

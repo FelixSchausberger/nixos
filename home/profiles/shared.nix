@@ -9,7 +9,7 @@
     "surface" = ["hyprland"];
     "portable" = []; # TUI-only emergency/recovery system
     "hp-probook-wsl" = ["niri"]; # WSL with niri WM
-    "hp-probook-vmware" = ["niri"]; # VMware VM with niri WM
+    "hp-probook-vmware" = ["niri"]; # VMware VM with Niri
   };
 
   # Use provided hostname

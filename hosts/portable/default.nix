@@ -7,9 +7,12 @@
   hostInfo = inputs.self.lib.hosts.${hostName};
 in {
   imports = [
+    ./disko/disko.nix
     ../shared-tui.nix
     ../boot-zfs.nix # Portable needs ZFS support for recovery
     ../../modules/system/recovery-tools.nix
+    ../../modules/system/specialisations.nix
+    ../../modules/system/performance-profiles.nix
   ];
 
   # Host-specific configuration using centralized host mapping
@@ -18,6 +21,28 @@ in {
     inherit (hostInfo) isGui;
     wm = hostInfo.wms;
     # user and system use defaults from lib/defaults.nix
+
+    # Portable-specific specialisations for recovery scenarios
+    specialisations = {
+      # Enhanced recovery mode with additional tools
+      recovery = {
+        wm = null; # Inherit from parent (TUI-only)
+        profile = "default";
+        extraConfig = {pkgs, ...}: {
+          # Additional recovery and diagnostic tools
+          environment.systemPackages = with pkgs; [
+            testdisk # Data recovery
+            photorec # Photo recovery
+            ddrescue # Disk rescue
+            gpart # Partition recovery
+            hdparm # Hard disk parameters
+            smartmontools # SMART monitoring
+            ntfs3g # NTFS support
+            exfatprogs # exFAT support
+          ];
+        };
+      };
+    };
   };
 
   # Hardware compatibility enhancements for portable use

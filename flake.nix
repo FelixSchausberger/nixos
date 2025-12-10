@@ -80,7 +80,6 @@
       url = "github:nix-community/namaka";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    ccusage.url = "github:tnmt/ccusage-flake";
 
     # Editors (used by both TUI and GUI hosts)
     nixvim = {
@@ -229,7 +228,7 @@
           # Centralized defaults - single source of truth
           defaults = import ./lib/defaults.nix;
           fonts = import ./lib/fonts.nix;
-          catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix;
+          catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix {inherit (inputs.nixpkgs) lib;};
           hosts = import ./lib/hosts.nix;
 
           # Legacy compatibility - keep existing API
@@ -250,15 +249,26 @@
           vigiland = pkgs.callPackage ./pkgs/vigiland {};
           # wlsleephandler-rs = pkgs.callPackage ./pkgs/wlsleephandler-rs {}; # Disabled until proper hash is available
 
+          # Shell tools
+          starship-jj = pkgs.callPackage ./pkgs/starship-jj {};
+
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
 
           # MOTD
           trotd = pkgs.callPackage ./pkgs/trotd {};
 
+          # Development tools
+          repl = pkgs.callPackage ./pkgs/repl {};
+
+          # Editor with Steel plugin support
+          helix-steel = pkgs.callPackage ./pkgs/helix-steel {};
+          helix-steel-modules = pkgs.callPackage ./pkgs/helix-steel-modules {};
+          scooter-hx = pkgs.callPackage ./pkgs/scooter-hx {};
+
           # Minimal installer ISO (fast rebuilds for testing)
           installer-iso-minimal = inputs.nixos-generators.nixosGenerate {
-            inherit (pkgs.stdenv.hostPlatform) system;
+            inherit (pkgs.hostPlatform) system;
             format = "install-iso";
             modules = [
               ./hosts/installer-minimal
@@ -271,7 +281,7 @@
 
           # Full installer ISO (comprehensive recovery environment)
           installer-iso-full = inputs.nixos-generators.nixosGenerate {
-            inherit (pkgs.stdenv.hostPlatform) system;
+            inherit (pkgs.hostPlatform) system;
             format = "install-iso";
             modules = [
               ./hosts/installer
@@ -280,6 +290,270 @@
               inherit inputs;
               repoConfig = import ./config.nix;
             };
+          };
+        };
+
+        # Helper apps
+        apps = {
+          nixos-anywhere = {
+            type = "app";
+            program = "${pkgs.writeShellScript "nixos-anywhere-helper" ''
+              echo "Usage: nix run github:nix-community/nixos-anywhere -- --flake .#HOSTNAME root@IP"
+              echo ""
+              echo "Available hosts:"
+              echo "  - desktop"
+              echo "  - surface"
+              echo "  - portable"
+              echo "  - hp-probook-vmware"
+              echo ""
+              echo "Example:"
+              echo "  nix run github:nix-community/nixos-anywhere -- \\"
+              echo "    --flake .#hp-probook-vmware \\"
+              echo "    root@192.168.1.100"
+              echo ""
+              echo "Note: Disk device is configured in hosts/HOSTNAME/disko/disko.nix"
+              echo "      Default is /dev/sda - update if your system uses a different device"
+              echo ""
+              echo "For automated installation with sops key and repo cloning:"
+              echo "  nix run .#install-vm hp-probook-vmware 192.168.1.100"
+            ''}";
+            meta.description = "Helper for deploying NixOS hosts with nixos-anywhere";
+          };
+
+          install-vm = {
+            type = "app";
+            program = "${pkgs.writeShellScript "install-vm" ''
+                            set -euo pipefail
+
+                            # Parse arguments
+                            if [[ $# -lt 2 ]]; then
+                              echo "Usage: nix run .#install-vm HOSTNAME TARGET_IP" >&2
+                              echo "" >&2
+                              echo "Available hosts: desktop, surface, portable, hp-probook-vmware" >&2
+                              echo "" >&2
+                              echo "Example:" >&2
+                              echo "  nix run .#install-vm hp-probook-vmware 192.168.1.100" >&2
+                              echo "" >&2
+                              echo "Prerequisites:" >&2
+                              echo "  - VM booted with custom NixOS ISO (installer-iso-minimal)" >&2
+                              echo "  - SSH access to VM as root (uses authorized_keys from ISO)" >&2
+                              echo "  - Sops key at /per/system/sops-key.txt on executing host" >&2
+                              echo "  - SSH keys at ~/.ssh/id_ed25519 on executing host" >&2
+                              echo "" >&2
+                              echo "The script will:" >&2
+                              echo "  1. Copy sops key and SSH keys to target" >&2
+                              echo "  2. Set up GitHub authentication" >&2
+                              echo "  3. Run disko partitioning" >&2
+                              echo "  4. Install NixOS" >&2
+                              echo "  5. Clone config to /per/etc/nixos" >&2
+                              echo "  6. Rebuild from persistent location" >&2
+                              exit 1
+                            fi
+
+                            HOSTNAME="$1"
+                            TARGET_IP="$2"
+                            SOPS_KEY="/per/system/sops-key.txt"
+                            REPO_URL="https://github.com/FelixSchausberger/nixos.git"
+
+                            # Decrypt GitHub token from sops secrets
+                            echo "Decrypting GitHub token from sops secrets..."
+                            if [[ ! -f "$SOPS_KEY" ]]; then
+                              echo "Error: Sops key not found at $SOPS_KEY" >&2
+                              exit 1
+                            fi
+
+                            export SOPS_AGE_KEY_FILE="$SOPS_KEY"
+                            GITHUB_TOKEN=$(${pkgs.sops}/bin/sops -d secrets/secrets.yaml | ${pkgs.yq}/bin/yq -r '.github.token')
+
+                            if [[ -z "$GITHUB_TOKEN" || "$GITHUB_TOKEN" == "null" ]]; then
+                              echo "Error: Failed to decrypt GitHub token from secrets/secrets.yaml" >&2
+                              echo "Please ensure the sops key is correct and secrets.yaml contains github.token" >&2
+                              exit 1
+                            fi
+
+                            echo "GitHub token decrypted successfully"
+
+                            # Validate hostname
+                            case "$HOSTNAME" in
+                              desktop|surface|portable|hp-probook-vmware) ;;
+                              *)
+                                echo "Error: Invalid hostname '$HOSTNAME'" >&2
+                                echo "Valid options: desktop, surface, portable, hp-probook-vmware" >&2
+                                exit 1
+                                ;;
+                            esac
+
+                            # Check sops key exists
+                            if [[ ! -f "$SOPS_KEY" ]]; then
+                              echo "Error: Sops key not found at $SOPS_KEY" >&2
+                              echo "" >&2
+                              echo "The sops key is required to decrypt secrets during installation." >&2
+                              echo "Ensure the key exists on this host before running install-vm." >&2
+                              exit 1
+                            fi
+
+                            # Remove old host key (VM gets new host key each install)
+                            echo "Removing old SSH host key for $TARGET_IP..."
+                            ssh-keygen -R "$TARGET_IP" &>/dev/null || true
+
+                            # Check SSH connectivity (should work with keys from custom ISO)
+                            echo "Testing SSH connectivity..."
+                            if ! ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "echo SSH_OK" &>/dev/null; then
+                              echo "Error: Cannot connect to root@$TARGET_IP via SSH with keys" >&2
+                              echo "" >&2
+                              echo "Ensure:" >&2
+                              echo "  1. VM is booted with custom installer ISO (installer-iso-minimal)" >&2
+                              echo "  2. ISO was built with your SSH keys in hosts/installer/authorized_keys" >&2
+                              echo "  3. Network connectivity: ping $TARGET_IP" >&2
+                              echo "  4. Rebuild ISO if needed: nix build .#installer-iso-minimal" >&2
+                              exit 1
+                            fi
+                            echo "SSH connection successful"
+
+                            # Create temporary directory for extra files
+                            TMPDIR=$(mktemp -d)
+                            trap "rm -rf '$TMPDIR'" EXIT
+
+                            echo "Preparing installation files..."
+                            mkdir -p "$TMPDIR/per/system"
+                            cp "$SOPS_KEY" "$TMPDIR/per/system/sops-key.txt"
+                            chmod 400 "$TMPDIR/per/system/sops-key.txt"
+
+                            # Copy SSH keys if they exist (for sops age key derivation and GitHub auth)
+                            if [[ -f ~/.ssh/id_ed25519 ]]; then
+                              echo "Copying SSH keys for sops age key derivation and GitHub authentication..."
+
+                              # Copy to user's persistent home directory
+                              mkdir -p "$TMPDIR/per/home/schausberger/.ssh"
+                              cp ~/.ssh/id_ed25519 "$TMPDIR/per/home/schausberger/.ssh/"
+                              cp ~/.ssh/id_ed25519.pub "$TMPDIR/per/home/schausberger/.ssh/"
+                              chmod 700 "$TMPDIR/per/home/schausberger/.ssh"
+                              chmod 600 "$TMPDIR/per/home/schausberger/.ssh/id_ed25519"
+                              chmod 644 "$TMPDIR/per/home/schausberger/.ssh/id_ed25519.pub"
+
+                              # Also copy to root for initial setup
+                              mkdir -p "$TMPDIR/root/.ssh"
+                              cp ~/.ssh/id_ed25519 "$TMPDIR/root/.ssh/"
+                              cp ~/.ssh/id_ed25519.pub "$TMPDIR/root/.ssh/"
+                              chmod 600 "$TMPDIR/root/.ssh/id_ed25519"
+                              chmod 644 "$TMPDIR/root/.ssh/id_ed25519.pub"
+
+                              # Set up git config to use SSH for GitHub
+                              mkdir -p "$TMPDIR/per/home/schausberger/.config/git"
+                              cat > "$TMPDIR/per/home/schausberger/.config/git/config" <<'EOF'
+              [url "ssh://git@github.com/"]
+                insteadOf = https://github.com/
+              EOF
+                              chmod 644 "$TMPDIR/per/home/schausberger/.config/git/config"
+                            fi
+
+                            # Copy files to target
+                            echo "Copying sops key and SSH keys to target..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "mkdir -p /per/system /per/home/schausberger/.ssh /per/home/schausberger/.config/git"
+                            scp -o StrictHostKeyChecking=accept-new "$TMPDIR/per/system/sops-key.txt" "root@$TARGET_IP:/per/system/"
+                            scp -o StrictHostKeyChecking=accept-new "$TMPDIR/per/home/schausberger/.ssh/"* "root@$TARGET_IP:/per/home/schausberger/.ssh/"
+                            scp -o StrictHostKeyChecking=accept-new "$TMPDIR/per/home/schausberger/.config/git/config" "root@$TARGET_IP:/per/home/schausberger/.config/git/"
+                            scp -o StrictHostKeyChecking=accept-new -r "$TMPDIR/root/.ssh" "root@$TARGET_IP:/root/"
+
+                            # Set up SSH directory (git config already handles GitHub SSH via insteadOf)
+                            echo "Setting up SSH for GitHub..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "mkdir -p /root/.ssh"
+
+                            # Add GitHub to known_hosts for SSH git operations
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null"
+
+                            # Copy local repo to temporary location (includes .git for clean flake)
+                            echo "Copying repository to target..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "rm -rf /tmp/nixos-config && mkdir -p /tmp/nixos-config"
+                            rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new" \
+                              --exclude='result*' \
+                              --exclude='.direnv' \
+                              ./ "root@$TARGET_IP:/tmp/nixos-config/"
+
+                            # Run disko partitioning (use file directly to avoid flake input fetching)
+                            echo "Running disko partitioning..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "cd /tmp/nixos-config && nix --extra-experimental-features 'nix-command flakes' run --no-update-lock-file git+ssh://git@github.com/nix-community/disko -- --mode disko ./hosts/$HOSTNAME/disko/disko.nix"
+
+                            # Fix git ownership for nixos-install
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "git config --global --add safe.directory /tmp/nixos-config"
+
+                            # Install NixOS with GitHub authentication via environment variable
+                            # Memory optimization: use existing lock file, limit parallelism, enable eval cache
+                            echo "Installing NixOS with GitHub authentication (memory-optimized)..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "cd /tmp/nixos-config && NIX_CONFIG='access-tokens = github.com=$GITHUB_TOKEN max-jobs = 1 cores = 1 eval-cache = true' nixos-install --flake .#$HOSTNAME --no-root-password --option extra-experimental-features 'nix-command flakes' --no-write-lock-file"
+
+                            # Wait for reboot and remove old host key again
+                            echo "Waiting for system to reboot..."
+                            sleep 10
+                            ssh-keygen -R "$TARGET_IP" &>/dev/null || true
+
+                            for i in {1..30}; do
+                              if timeout 5 ssh -o ConnectTimeout=2 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "echo READY" &>/dev/null; then
+                                echo "System is online"
+                                break
+                              fi
+                              if [[ $i -eq 30 ]]; then
+                                echo "Warning: Timeout waiting for system to come online" >&2
+                                echo "Manual reboot may be needed" >&2
+                                exit 1
+                              fi
+                              sleep 2
+                            done
+
+                            # Clone repository with retries
+                            echo "Cloning configuration repository to /per/etc/nixos..."
+                            clone_success=false
+                            for attempt in {1..3}; do
+                              if ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "git clone $REPO_URL /per/etc/nixos" 2>&1; then
+                                echo "Repository cloned successfully"
+                                clone_success=true
+                                break
+                              else
+                                echo "Attempt $attempt failed, retrying..." >&2
+                                sleep 2
+                              fi
+                            done
+
+                            if [[ "$clone_success" != true ]]; then
+                              echo "ERROR: Failed to clone repository after 3 attempts" >&2
+                              echo "" >&2
+                              echo "Manual steps required:" >&2
+                              echo "  ssh root@$TARGET_IP" >&2
+                              echo "  git clone $REPO_URL /per/etc/nixos" >&2
+                              echo "  cd /per/etc/nixos" >&2
+                              echo "  sudo nixos-rebuild switch --flake .#$HOSTNAME" >&2
+                              exit 1
+                            fi
+
+                            # Fix ownership of user files in persistent storage
+                            echo "Fixing ownership of persistent user files..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "chown -R schausberger:schausberger /per/home/schausberger"
+
+                            # Rebuild from persistent location with GitHub authentication (memory-optimized)
+                            echo "Rebuilding from /per/etc/nixos to finalize installation..."
+                            if ! ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "cd /per/etc/nixos && NIX_CONFIG='access-tokens = github.com=$GITHUB_TOKEN max-jobs = 1 cores = 1' nixos-rebuild switch --flake .#$HOSTNAME --option extra-experimental-features 'nix-command flakes' --no-write-lock-file"; then
+                              echo ""
+                              echo "WARNING: Final rebuild failed."
+                              echo "The system is installed and bootable, but may need a manual rebuild."
+                              echo ""
+                              echo "After logging in as schausberger:"
+                              echo "  cd /per/etc/nixos"
+                              echo "  sudo nixos-rebuild switch --flake .#$HOSTNAME"
+                              echo ""
+                              echo "Note: The system will use sops-managed GitHub authentication after first boot."
+                            fi
+
+                            echo ""
+                            echo "Installation complete!"
+                            echo ""
+                            echo "SSH keys have been installed to /per/home/schausberger/.ssh/"
+                            echo "GitHub authentication configured to use SSH"
+                            echo ""
+                            echo "You can now:"
+                            echo "  ssh schausberger@$TARGET_IP"
+                            echo "  cd /per/etc/nixos && sudo nixos-rebuild switch --flake .#$HOSTNAME"
+            ''}";
+            meta.description = "Automated VM installation with sops key and repo cloning";
           };
         };
 
@@ -298,14 +572,17 @@
             bashInteractive # Use interactive bash with full features
             deadnix
             fish
+            flake-checker # Flake input health monitoring
             git
+            inotify-tools # File system watching for niri-watch
+            just # Task runner for development workflows
             nodePackages.prettier
             pre-commit-hook-ensure-sops
             prek
             ssh-to-age
             statix
             taplo
-            inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
+            inputs.namaka.packages.${pkgs.hostPlatform.system}.default # Snapshot testing
           ];
 
           name = "nixos-config";

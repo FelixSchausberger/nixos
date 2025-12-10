@@ -9,10 +9,14 @@ if [[ ! -f "$key_file" ]]; then
 fi
 
 # Ensure restrictive permissions
+# Note: Git cannot track fine-grained permissions (only executable bit)
+# so we automatically fix the permissions before validating
+chmod 600 "$key_file"
+
 perm=$(stat -c "%a" "$key_file")
 if [[ "$perm" != "600" ]]; then
   echo "ERROR: $key_file must have permissions 600 (current: $perm)" >&2
-  echo "Fix with: chmod 600 $key_file" >&2
+  echo "This should not happen after chmod. Check file system permissions." >&2
   exit 1
 fi
 

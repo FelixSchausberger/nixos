@@ -9,7 +9,7 @@
 in {
   config = lib.mkIf cfg.enable {
     home.packages = [
-      inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default
+      inputs.ironbar.packages.${pkgs.hostPlatform.system}.default
     ];
 
     xdg.configFile = {

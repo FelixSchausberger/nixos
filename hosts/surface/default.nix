@@ -2,6 +2,7 @@
 {
   inputs,
   pkgs,
+  lib,
   ...
 }: let
   hostLib = import ../lib.nix;
@@ -10,8 +11,11 @@
 in {
   imports =
     [
+      ./disko/disko.nix
       ../shared-gui.nix
       inputs.stylix.nixosModules.stylix
+      ../../modules/system/specialisations.nix
+      ../../modules/system/performance-profiles.nix
 
       # Surface-specific hardware module
       inputs.nixos-hardware.nixosModules.microsoft-surface-pro-intel
@@ -24,7 +28,25 @@ in {
     inherit (hostInfo) isGui;
     wm = hostInfo.wms;
     # user and system use defaults from lib/defaults.nix
+
+    # Surface-specific specialisations focused on performance profiles
+    specialisations = {
+      # Power-saving mode for battery life
+      power-saving = {
+        wm = null; # Inherit from parent (niri)
+        profile = "power-saving";
+      };
+
+      # Performance mode when docked/charging
+      performance = {
+        wm = null; # Inherit from parent (niri)
+        profile = "productivity";
+      };
+    };
   };
+
+  # Surface uses ext4, not ZFS - disable persistence from system/core
+  environment.persistence = lib.mkForce {};
 
   # Stylix theme management using Catppuccin Mocha
   stylix = let

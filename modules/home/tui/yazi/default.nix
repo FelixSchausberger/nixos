@@ -5,7 +5,7 @@
   ...
 }: let
   defaults = import ../../../../lib/defaults.nix;
-  yaziPackage = inputs.yazi.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  yaziPackage = inputs.yazi.packages.${pkgs.hostPlatform.system}.default;
   noteLauncher = pkgs.writeShellApplication {
     name = "yazi-notes";
     runtimeInputs = [pkgs.coreutils yaziPackage];

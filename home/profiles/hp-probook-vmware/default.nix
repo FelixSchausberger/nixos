@@ -3,34 +3,24 @@
   pkgs,
   ...
 }: {
-  # VMware VM profile with niri window manager support
+  # VMware VM profile with Niri window manager
   imports = [
-    ../../../modules/home/tui-only.nix
     ../../../modules/home/work/git.nix # Add work Git config
   ];
 
-  # Enable GUI theming for niri
-  theme.gui.enable = lib.mkForce true;
+  # Enable Niri window manager
+  wm.niri = {
+    enable = true;
+    browser = "firefox";
+    terminal = "ghostty";
+    fileManager = "cosmic-files";
+  };
 
   # Feature-based configuration for development environment
   features = {
     development = {
       enable = true;
       languages = ["nix" "python" "go" "rust" "javascript"];
-    };
-  };
-
-  # Niri configuration for VMware VM
-  wm.niri = {
-    enable = true;
-    terminal = "ghostty";
-    browser = "zen";
-    fileManager = "cosmic-files";
-
-    # Scratchpad applications
-    scratchpad = {
-      musicApp = "spotify";
-      notesApp = "obsidian";
     };
   };
 
@@ -68,14 +58,10 @@
       lazyssh # Terminal-based SSH manager
     ];
 
-    # Environment variables for native Wayland
+    # Environment variables for Wayland
     sessionVariables = {
-      # Wayland backend preferences
       GDK_BACKEND = lib.mkDefault "wayland,x11";
       QT_QPA_PLATFORM = lib.mkDefault "wayland;xcb";
-
-      # Native niri will use DRM/KMS backend automatically
-      # No need for NIRI_BACKEND=winit (that's WSL-specific)
     };
   };
 }

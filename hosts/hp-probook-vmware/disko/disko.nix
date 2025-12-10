@@ -1,20 +1,22 @@
-# Disko configuration for hp-probook-vmware host
+# Disko configuration for hp-probook-vmware host with ZFS and impermanence
 #
-# VMware VM with simple ext4-based system:
+# VMware VM with ZFS-based system (matching physical hosts):
 # - EFI System Partition (512MB) at /boot
-# - No disk swap (using zramSwap instead)
-# - ext4 root partition with noatime for VM performance
+# - Optional swap partition (8GB for VM)
+# - ZFS pool with impermanence (ephemeral root)
 #
-# Usage:
-#   sudo nix run 'github:nix-community/disko#disko-install' -- \
-#     --flake '.#hp-probook-vmware' \
-#     --disk main /dev/sda
-{
+# Usage with nixos-anywhere:
+#   nix run github:nix-community/nixos-anywhere -- \
+#     --flake .#hp-probook-vmware \
+#     root@<vm-ip>
+#
+# Note: Disk device defaults to /dev/sda (common in VMs)
+_: {
   disko.devices = {
     disk = {
       main = {
         type = "disk";
-        device = "/dev/disk/by-id/changeme";
+        device = "/dev/sda";
         content = {
           type = "gpt";
           partitions = {
@@ -36,19 +38,93 @@
               };
             };
 
-            # Root partition (uses remaining space)
-            # No swap partition - using zramSwap for better VM performance
-            root = {
+            # Swap partition (8GB for VM)
+            swap = {
+              priority = 2;
+              size = "8G";
+              content = {
+                type = "swap";
+                randomEncryption = true;
+              };
+            };
+
+            # ZFS root partition (uses remaining space)
+            zfs = {
               size = "100%";
               content = {
-                type = "filesystem";
-                format = "ext4";
-                mountpoint = "/";
-                mountOptions = [
-                  "defaults"
-                  "noatime" # Better performance in VMs
-                ];
+                type = "zfs";
+                pool = "rpool";
               };
+            };
+          };
+        };
+      };
+    };
+
+    zpool = {
+      rpool = {
+        type = "zpool";
+        # ZFS pool options matching existing boot-zfs.nix configuration
+        rootFsOptions = {
+          compression = "zstd";
+          acltype = "posixacl";
+          xattr = "sa";
+          atime = "off";
+          "com.sun:auto-snapshot" = "false";
+        };
+
+        datasets = {
+          # Parent dataset (not mounted)
+          "eyd" = {
+            type = "zfs_fs";
+            options = {
+              canmount = "off";
+              mountpoint = "none";
+            };
+          };
+
+          # Ephemeral root (blank snapshot for impermanence)
+          # Rolled back to @blank on every boot via boot-zfs.nix
+          "eyd/root" = {
+            type = "zfs_fs";
+            mountpoint = "/";
+            options = {
+              mountpoint = "/";
+              "com.sun:auto-snapshot" = "false";
+            };
+            postCreateHook = ''
+              zfs snapshot rpool/eyd/root@blank
+            '';
+          };
+
+          # Nix store (persistent, no snapshots)
+          "eyd/nix" = {
+            type = "zfs_fs";
+            mountpoint = "/nix";
+            options = {
+              mountpoint = "/nix";
+              atime = "off";
+              "com.sun:auto-snapshot" = "false";
+            };
+          };
+
+          # Persistence dataset (snapshots enabled)
+          "eyd/per" = {
+            type = "zfs_fs";
+            mountpoint = "/per";
+            options = {
+              mountpoint = "/per";
+              "com.sun:auto-snapshot" = "true";
+            };
+          };
+
+          # Home directory (snapshots enabled)
+          "eyd/home" = {
+            type = "zfs_fs";
+            mountpoint = "/home";
+            options = {
+              mountpoint = "/home";
+              "com.sun:auto-snapshot" = "true";
             };
           };
         };

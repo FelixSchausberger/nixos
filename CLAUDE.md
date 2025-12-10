@@ -216,6 +216,70 @@ nix flake check
 
 For complete build commands, deployment options, and remote deployment, see [README.md Build and Deploy](README.md#build-and-deploy).
 
+### Just Task Runner
+
+The project includes a justfile for common development workflows, especially useful for rapid Niri iteration.
+
+**Quick reference:**
+
+```bash
+just                    # List all available recipes
+just niri-validate      # Build and validate Niri config (fast, no system rebuild)
+just niri-reload        # Build, validate, and hot-reload Niri config
+just niri-watch         # Watch for changes and auto-validate
+just fmt                # Format Nix files
+just check              # Run all pre-commit hooks
+just test               # Run snapshot tests
+just validate           # Full validation: format, hooks, and tests
+just system-test        # Test system changes (nixos-rebuild test)
+```
+
+**Development shell:**
+
+All just recipes require the development shell:
+
+```bash
+nix develop             # Enter dev shell
+just niri-validate      # Run recipe in dev shell
+
+# Or run directly
+nix develop -c just niri-validate
+```
+
+The dev shell includes just, inotify-tools, and all development dependencies.
+
+**Niri hot-reload workflow:**
+
+When iterating on Niri configuration:
+
+1. Edit Niri config in `modules/home/wm/niri/`
+2. Run `just niri-validate` to check syntax (seconds, not minutes)
+3. Run `just niri-reload` to apply changes to running Niri instance
+4. Or use `just niri-watch` for automatic validation on file changes
+
+This workflow avoids full system rebuilds during Niri development.
+
+### VM Installation with nixos-anywhere
+
+For VM installations (VMware, VirtualBox, Proxmox), use nixos-anywhere:
+
+```bash
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#hostname \
+  root@<vm-ip-address>
+```
+
+This is the recommended approach because:
+- Builds on dev machine (no FlakeHub resolution issues)
+- Uses existing disko configurations
+- Simpler than custom ISO workflow
+- Community-maintained standard
+
+Custom ISOs are still useful for:
+- Physical hardware installations
+- Recovery scenarios
+- Air-gapped environments
+
 ### Testing and Validation
 
 **Post-change validation workflow:**
@@ -230,6 +294,40 @@ namaka review             # Review snapshot changes after module updates
 Tests are organized in `tests/` directory (hosts, modules, packages).
 
 For complete testing documentation including VM testing and local CI, see [README.md Testing](README.md#testing).
+
+## Modern CLI Tools
+
+This system uses modern CLI replacements for standard Unix tools. Claude Code's built-in tools already leverage these where appropriate.
+
+### Tool Awareness
+
+**Search and navigation:**
+- `rg` (ripgrep): Claude's Grep tool uses this internally
+- `fd`: Fast file finding; use via Bash for complex patterns
+- `fzf`: Fuzzy finder; use via Bash for interactive selection
+- `bat`: Syntax-highlighted cat; use via Bash when highlighting aids understanding
+
+**File operations:**
+- `eza`: Modern ls with git integration; use via Bash for detailed listings
+- `yazi`: Terminal file manager; use via Bash or `Alt+y` in Zellij
+
+**Development:**
+- `hx` (Helix): Primary editor (Colemak-DH keybindings, Steel plugins)
+- `jj` (Jujutsu): Primary VCS (helpers: jjbranch, jjdescribe, jjpush)
+
+### Tool Selection
+
+**Prefer built-in tools:**
+- Use Grep tool for content search (already uses ripgrep)
+- Use Glob tool for file pattern matching
+- Use Read tool for file contents
+
+**Use Bash when:**
+- Built-in tools are insufficient for the task
+- Modern tool features provide significant value (syntax highlighting, interactive selection, git integration)
+- Complex search/find patterns require custom flags
+
+Complete tool documentation: `modules/home/shells/` and `modules/home/tui/`
 
 ## Code Quality and Formatting
 

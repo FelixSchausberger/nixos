@@ -10,7 +10,6 @@ in {
   # This module provides common functionality used across all host configurations
 
   imports = [
-    ./boot-zfs.nix
     ../modules/system
     ../modules/system/sops-common.nix
     inputs.sops-nix.nixosModules.sops
@@ -37,6 +36,12 @@ in {
           example = ["gnome" "hyprland"];
         };
 
+        isGui = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether this host enables a graphical session";
+        };
+
         system = lib.mkOption {
           type = lib.types.str;
           default = defaults.system.architecture;
@@ -61,6 +66,38 @@ in {
           default = null;
           description = "Auto-login configuration";
         };
+
+        performanceProfile = lib.mkOption {
+          type = lib.types.enum ["default" "gaming" "productivity" "power-saving"];
+          default = "default";
+          description = "Performance profile for this system";
+        };
+
+        specialisations = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.submodule (_: {
+            options = {
+              wm = lib.mkOption {
+                type = lib.types.nullOr (lib.types.listOf lib.types.str);
+                default = null;
+                description = "Window managers for this specialisation (null = inherit from parent)";
+              };
+
+              profile = lib.mkOption {
+                type = lib.types.enum ["default" "gaming" "productivity" "power-saving"];
+                default = "default";
+                description = "Performance profile for this specialisation";
+              };
+
+              extraConfig = lib.mkOption {
+                type = lib.types.deferredModule;
+                default = {};
+                description = "Additional NixOS configuration for this specialisation";
+              };
+            };
+          }));
+          default = {};
+          description = "Specialisation definitions for this host";
+        };
       };
     };
     description = "Host-specific configuration options";
@@ -79,6 +116,23 @@ in {
     hardware.graphics = lib.mkDefault {
       enable = true;
       enable32Bit = true;
+    };
+
+    # Ensure configuration repo is in persistent location for ZFS impermanence
+    system.activationScripts.checkConfigLocation = lib.mkIf (lib.hasAttr "persistence" config.environment) {
+      text = ''
+        EXPECTED_PATH="${defaults.paths.nixosConfig}"
+        if [ ! -d "$EXPECTED_PATH" ]; then
+          echo "WARNING: NixOS configuration not found at $EXPECTED_PATH" >&2
+          echo "With ZFS impermanence, the config should be in the persistent /per directory." >&2
+          echo "Current config will be lost on reboot!" >&2
+          echo "" >&2
+          echo "To fix this, run:" >&2
+          echo "  git clone https://github.com/FelixSchausberger/nixos.git $EXPECTED_PATH" >&2
+          echo "  cd $EXPECTED_PATH" >&2
+          echo "  sudo nixos-rebuild switch --flake .#${cfg.hostName}" >&2
+        fi
+      '';
     };
 
     # Sops configuration and tmpfiles are now centralized in sops-common.nix

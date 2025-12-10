@@ -10,7 +10,7 @@ in {
   config = lib.mkIf cfg.enable {
     # Add ironbar package
     home.packages = with pkgs; [
-      inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default
+      inputs.ironbar.packages.${pkgs.hostPlatform.system}.default
     ];
 
     # Ironbar configuration file
@@ -231,7 +231,7 @@ in {
 
       Service = {
         Type = "simple";
-        ExecStart = "${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar";
+        ExecStart = "${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar";
         Restart = "on-failure";
         RestartSec = 5;
       };

@@ -30,6 +30,15 @@
       ];
       # Load AMD GPU driver early for graphical boot
       kernelModules = ["amdgpu"];
+      # Support ZFS in initrd for early boot
+      supportedFilesystems = ["zfs"];
+    };
+
+    # ZFS configuration for traditional (non-systemd) initrd
+    zfs = {
+      devNodes = "/dev/disk/by-uuid"; # https://discourse.nixos.org/t/zfs-with-disko-faluire-to-import-zfs-pool/61988
+      forceImportRoot = lib.mkForce true; # Force import during boot (needed for traditional initrd)
+      forceImportAll = lib.mkForce false; # Don't import all pools, just root
     };
 
     # Kernel modules for running system
@@ -46,31 +55,24 @@
     extraModulePackages = [];
 
     # Bootloader configuration
+    # Using GRUB for better compatibility with nixos-anywhere/VMs
     loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
+      systemd-boot.enable = lib.mkForce false; # Disable systemd-boot (from shared-gui.nix)
+      grub = {
+        enable = true;
+        device = "nodev"; # Don't install to MBR
+        efiSupport = true;
+        efiInstallAsRemovable = true; # Install to default EFI location (works without EFI vars)
+      };
+      efi.canTouchEfiVariables = lib.mkForce false; # Required when using efiInstallAsRemovable
       timeout = lib.mkDefault 3; # Quick boot timeout for VM
     };
   };
 
-  # File systems - to be configured after VM installation
-  # These are placeholders and should be updated after running nixos-generate-config
-  fileSystems = {
-    "/" = {
-      device = "/dev/disk/by-label/nixos";
-      fsType = "ext4";
-      options = ["defaults" "noatime"]; # noatime for better VM performance
-    };
+  # Filesystems are managed entirely by disko (./disko/disko.nix)
+  # Disko creates and configures all ZFS datasets and boot partition
 
-    "/boot" = {
-      device = "/dev/disk/by-label/boot";
-      fsType = "vfat";
-      options = ["fmask=0022" "dmask=0022"];
-    };
-  };
-
-  # Use zramSwap instead of disk swap for better VM performance
-  # This is configured system-wide in modules/system/core/swap.nix
+  # Swap is configured in disko (8GB encrypted swap partition)
   swapDevices = [];
 
   # Hardware configuration

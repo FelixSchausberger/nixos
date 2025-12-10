@@ -24,13 +24,13 @@
 
   fileSystems = {
     "/" = {
-      device = "/dev/disk/by-uuid/98f1f5a7-c3fc-4a38-b8b4-c8bb0d2cd25c";
-      fsType = "ext4";
+      device = lib.mkDefault "/dev/disk/by-uuid/98f1f5a7-c3fc-4a38-b8b4-c8bb0d2cd25c";
+      fsType = lib.mkDefault "ext4";
     };
 
     "/boot" = {
-      device = "/dev/disk/by-uuid/D657-821F";
-      fsType = "vfat";
+      device = lib.mkDefault "/dev/disk/by-uuid/D657-821F";
+      fsType = lib.mkDefault "vfat";
     };
   };
 
