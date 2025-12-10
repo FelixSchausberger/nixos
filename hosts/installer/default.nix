@@ -62,25 +62,28 @@ in {
 
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
-    ║  NixOS Installation Environment                               ║
-    ║  Ready to install your system                                 ║
+    ║  NixOS Installation Environment (Full)                        ║
+    ║  Complete recovery and installation tools                     ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
 
     Configuration: /per/etc/nixos
 
-    Quick Start:
-      1. Run: install-nixos
-      2. Follow interactive prompts
-      3. Reboot into your new system
+    Installation Steps:
+      1. Configure network (if needed): nmtui
+      2. SSH from your dev machine: ssh root@<this-ip>
+      3. Export GitHub token:
+         export NIX_CONFIG="access-tokens = github.com=YOUR_TOKEN"
+      4. Install: cd /per/etc/nixos && nh os switch --ask
+      5. Reboot into your new system
 
-    Documentation:
-      • nixos-install-info    - Show installation options
-      • install-nixos --help  - Show all installation flags
+    Note: This is the full ISO with GUI and comprehensive recovery tools.
+    For lightweight testing, use installer-iso-minimal.
 
     Network:
       • SSH enabled (if authorized_keys configured)
       • NetworkManager available: nmtui
+      • Find IP: ip addr show
 
     EOF
   '';
@@ -95,8 +98,8 @@ in {
     GIT_COMMITTER_EMAIL = "installer@nixos.local";
   };
 
-  # GitHub authentication is handled interactively by install-nixos script
-  # No secrets embedded in ISO - user provides token at runtime
+  # GitHub authentication handled via environment variable at runtime
+  # No secrets embedded in ISO - user provides token via NIX_CONFIG
 
   # Additional packages for installation convenience
   environment.systemPackages = with pkgs; [
@@ -109,8 +112,9 @@ in {
     vim
     nano
 
-    # Git for repo operations
+    # Installation tools
     git
+    nh
 
     # Disk utilities beyond basic recovery tools
     parted
