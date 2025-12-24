@@ -12,7 +12,7 @@ in {
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = inputs.self.packages.${pkgs.hostPlatform.system}.trotd;
+      default = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.trotd;
       description = "The git-trending package to use for MOTD";
     };
 

@@ -588,7 +588,7 @@
             ssh-to-age
             statix
             taplo
-            inputs.namaka.packages.${pkgs.hostPlatform.system}.default # Snapshot testing
+            inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
           ];
 
           name = "nixos-config";

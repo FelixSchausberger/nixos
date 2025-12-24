@@ -25,7 +25,7 @@ in {
     '';
 
     packages = with pkgs; [
-      inputs.self.packages.${pkgs.hostPlatform.system}.lumen # Instant AI Git Commit message, Git changes summary from the CLI
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen # Instant AI Git Commit message, Git changes summary from the CLI
       lazygit # A simple terminal UI for git commands
       serie # A rich git commit graph in your terminal, like magic
       # graphite-cli # CLI that makes creating stacked git changes fast & intuitive

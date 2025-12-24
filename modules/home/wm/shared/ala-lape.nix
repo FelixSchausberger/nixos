@@ -10,7 +10,7 @@ sessionTarget: {
   config = {
     services.ala-lape = {
       enable = true;
-      package = inputs.ala-lape.packages.${pkgs.hostPlatform.system}.default;
+      package = inputs.ala-lape.packages.${pkgs.stdenv.hostPlatform.system}.default;
       config = {
         inhibitors = {
           notifications = {

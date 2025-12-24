@@ -67,7 +67,7 @@
             alejandra
             deadnix
             statix
-            inputs.self.packages.${pkgs.hostPlatform.system}.repl
+            inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.repl
           ]
       ))
 

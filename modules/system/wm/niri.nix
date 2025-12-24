@@ -29,7 +29,7 @@
       egl-wayland # EGL Wayland platform
 
       # X11/Wayland compatibility (Niri-specific)
-      inputs.niri.packages.${pkgs.hostPlatform.system}.xwayland-satellite-unstable
+      inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable
 
       # Qt theme tools (Niri-specific)
       libsForQt5.qt5ct
