@@ -330,124 +330,124 @@ in {
       # };
 
       # Default niri keybindings (based on niri's default-config.kdl)
-      binds = with config.lib.niri.actions; {
+      binds = {
         # Application shortcuts
-        "Mod+T".action = spawn "${terminalPkg}/bin/${cfg.terminal}";
-        "Mod+D".action = spawn "walker";
+        "Mod+T".action.spawn = "${terminalPkg}/bin/${cfg.terminal}";
+        "Mod+D".action.spawn = "walker";
 
         # Window management
-        "Mod+Q".action = close-window;
-        "Mod+V".action = toggle-window-floating;
-        "Mod+Shift+V".action = switch-focus-between-floating-and-tiling;
-        "Mod+W".action = toggle-tabbed-column-display;
+        "Mod+Q".action.close-window = {};
+        "Mod+V".action.toggle-window-floating = {};
+        "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = {};
+        "Mod+W".action.toggle-tabbed-column-display = {};
 
         # Fullscreen and maximize
-        "Mod+F".action = maximize-column;
-        "Mod+Shift+F".action = fullscreen-window;
-        "Mod+Ctrl+F".action = maximize-window-to-edges;
+        "Mod+F".action.maximize-column = {};
+        "Mod+Shift+F".action.fullscreen-window = {};
+        "Mod+Ctrl+F".action.maximize-window-to-edges = {};
 
         # Center column
-        "Mod+C".action = center-column;
-        "Mod+Ctrl+C".action = center-visible-columns;
+        "Mod+C".action.center-column = {};
+        "Mod+Ctrl+C".action.center-visible-columns = {};
 
         # Column width and window height
-        "Mod+R".action = switch-preset-column-width;
-        "Mod+Shift+R".action = switch-preset-window-height;
-        "Mod+Ctrl+R".action = reset-window-height;
-        "Mod+Minus".action = set-column-width "-10%";
-        "Mod+Equal".action = set-column-width "+10%";
-        "Mod+Shift+Minus".action = set-window-height "-10%";
-        "Mod+Shift+Equal".action = set-window-height "+10%";
+        "Mod+R".action.switch-preset-column-width = {};
+        "Mod+Shift+R".action.switch-preset-window-height = {};
+        "Mod+Ctrl+R".action.reset-window-height = {};
+        "Mod+Minus".action.set-column-width = "-10%";
+        "Mod+Equal".action.set-column-width = "+10%";
+        "Mod+Shift+Minus".action.set-window-height = "-10%";
+        "Mod+Shift+Equal".action.set-window-height = "+10%";
 
         # Column width and window height (Colemak-DH)
-        "Mod+Alt+N".action = set-column-width "-10%";
-        "Mod+Alt+O".action = set-column-width "+10%";
-        "Mod+Alt+E".action = set-window-height "-10%";
-        "Mod+Alt+I".action = set-window-height "+10%";
+        "Mod+Alt+N".action.set-column-width = "-10%";
+        "Mod+Alt+O".action.set-column-width = "+10%";
+        "Mod+Alt+E".action.set-window-height = "-10%";
+        "Mod+Alt+I".action.set-window-height = "+10%";
 
         # Window focus (vim keys)
-        "Mod+H".action = focus-column-left;
-        "Mod+J".action = focus-window-down;
-        "Mod+K".action = focus-window-up;
-        "Mod+L".action = focus-column-right;
+        "Mod+H".action.focus-column-left = {};
+        "Mod+J".action.focus-window-down = {};
+        "Mod+K".action.focus-window-up = {};
+        "Mod+L".action.focus-column-right = {};
 
         # Window focus (Colemak-DH)
-        "Mod+N".action = focus-column-left;
-        "Mod+E".action = focus-window-down;
-        "Mod+I".action = focus-window-up;
-        "Mod+O".action = focus-column-right;
+        "Mod+N".action.focus-column-left = {};
+        "Mod+E".action.focus-window-down = {};
+        "Mod+I".action.focus-window-up = {};
+        "Mod+O".action.focus-column-right = {};
 
         # Window focus (arrow keys)
-        "Mod+Left".action = focus-column-left;
-        "Mod+Down".action = focus-window-down;
-        "Mod+Up".action = focus-window-up;
-        "Mod+Right".action = focus-column-right;
+        "Mod+Left".action.focus-column-left = {};
+        "Mod+Down".action.focus-window-down = {};
+        "Mod+Up".action.focus-window-up = {};
+        "Mod+Right".action.focus-column-right = {};
 
         # Focus first/last column
-        "Mod+Home".action = focus-column-first;
-        "Mod+End".action = focus-column-last;
+        "Mod+Home".action.focus-column-first = {};
+        "Mod+End".action.focus-column-last = {};
 
         # Window movement (vim keys)
-        "Mod+Ctrl+H".action = move-column-left;
-        "Mod+Ctrl+J".action = move-window-down;
-        "Mod+Ctrl+K".action = move-window-up;
-        "Mod+Ctrl+L".action = move-column-right;
+        "Mod+Ctrl+H".action.move-column-left = {};
+        "Mod+Ctrl+J".action.move-window-down = {};
+        "Mod+Ctrl+K".action.move-window-up = {};
+        "Mod+Ctrl+L".action.move-column-right = {};
 
         # Window movement (Colemak-DH)
-        "Mod+Ctrl+N".action = move-column-left;
-        "Mod+Ctrl+E".action = move-window-down;
-        "Mod+Ctrl+I".action = move-window-up;
-        "Mod+Ctrl+O".action = move-column-right;
+        "Mod+Ctrl+N".action.move-column-left = {};
+        "Mod+Ctrl+E".action.move-window-down = {};
+        "Mod+Ctrl+I".action.move-window-up = {};
+        "Mod+Ctrl+O".action.move-column-right = {};
 
         # Window movement (arrow keys)
-        "Mod+Ctrl+Left".action = move-column-left;
-        "Mod+Ctrl+Down".action = move-window-down;
-        "Mod+Ctrl+Up".action = move-window-up;
-        "Mod+Ctrl+Right".action = move-column-right;
+        "Mod+Ctrl+Left".action.move-column-left = {};
+        "Mod+Ctrl+Down".action.move-window-down = {};
+        "Mod+Ctrl+Up".action.move-window-up = {};
+        "Mod+Ctrl+Right".action.move-column-right = {};
 
         # Move to first/last column
-        "Mod+Ctrl+Home".action = move-column-to-first;
-        "Mod+Ctrl+End".action = move-column-to-last;
+        "Mod+Ctrl+Home".action.move-column-to-first = {};
+        "Mod+Ctrl+End".action.move-column-to-last = {};
 
         # Monitor focus (vim keys)
-        "Mod+Shift+H".action = focus-monitor-left;
-        "Mod+Shift+J".action = focus-monitor-down;
-        "Mod+Shift+K".action = focus-monitor-up;
-        "Mod+Shift+L".action = focus-monitor-right;
+        "Mod+Shift+H".action.focus-monitor-left = {};
+        "Mod+Shift+J".action.focus-monitor-down = {};
+        "Mod+Shift+K".action.focus-monitor-up = {};
+        "Mod+Shift+L".action.focus-monitor-right = {};
 
         # Monitor focus (Colemak-DH)
-        "Mod+Shift+N".action = focus-monitor-left;
-        "Mod+Shift+E".action = focus-monitor-down;
-        "Mod+Shift+I".action = focus-monitor-up;
-        "Mod+Shift+O".action = focus-monitor-right;
+        "Mod+Shift+N".action.focus-monitor-left = {};
+        "Mod+Shift+E".action.focus-monitor-down = {};
+        "Mod+Shift+I".action.focus-monitor-up = {};
+        "Mod+Shift+O".action.focus-monitor-right = {};
 
         # Monitor focus (arrow keys)
-        "Mod+Shift+Left".action = focus-monitor-left;
-        "Mod+Shift+Down".action = focus-monitor-down;
-        "Mod+Shift+Up".action = focus-monitor-up;
-        "Mod+Shift+Right".action = focus-monitor-right;
+        "Mod+Shift+Left".action.focus-monitor-left = {};
+        "Mod+Shift+Down".action.focus-monitor-down = {};
+        "Mod+Shift+Up".action.focus-monitor-up = {};
+        "Mod+Shift+Right".action.focus-monitor-right = {};
 
         # Move to monitor (vim keys)
-        "Mod+Shift+Ctrl+H".action = move-column-to-monitor-left;
-        "Mod+Shift+Ctrl+J".action = move-column-to-monitor-down;
-        "Mod+Shift+Ctrl+K".action = move-column-to-monitor-up;
-        "Mod+Shift+Ctrl+L".action = move-column-to-monitor-right;
+        "Mod+Shift+Ctrl+H".action.move-column-to-monitor-left = {};
+        "Mod+Shift+Ctrl+J".action.move-column-to-monitor-down = {};
+        "Mod+Shift+Ctrl+K".action.move-column-to-monitor-up = {};
+        "Mod+Shift+Ctrl+L".action.move-column-to-monitor-right = {};
 
         # Move to monitor (Colemak-DH)
-        "Mod+Shift+Ctrl+N".action = move-column-to-monitor-left;
-        "Mod+Shift+Ctrl+E".action = move-column-to-monitor-down;
-        "Mod+Shift+Ctrl+I".action = move-column-to-monitor-up;
-        "Mod+Shift+Ctrl+O".action = move-column-to-monitor-right;
+        "Mod+Shift+Ctrl+N".action.move-column-to-monitor-left = {};
+        "Mod+Shift+Ctrl+E".action.move-column-to-monitor-down = {};
+        "Mod+Shift+Ctrl+I".action.move-column-to-monitor-up = {};
+        "Mod+Shift+Ctrl+O".action.move-column-to-monitor-right = {};
 
         # Move to monitor (arrow keys)
-        "Mod+Shift+Ctrl+Left".action = move-column-to-monitor-left;
-        "Mod+Shift+Ctrl+Down".action = move-column-to-monitor-down;
-        "Mod+Shift+Ctrl+Up".action = move-column-to-monitor-up;
-        "Mod+Shift+Ctrl+Right".action = move-column-to-monitor-right;
+        "Mod+Shift+Ctrl+Left".action.move-column-to-monitor-left = {};
+        "Mod+Shift+Ctrl+Down".action.move-column-to-monitor-down = {};
+        "Mod+Shift+Ctrl+Up".action.move-column-to-monitor-up = {};
+        "Mod+Shift+Ctrl+Right".action.move-column-to-monitor-right = {};
 
         # Workspace navigation
-        "Mod+Page_Down".action = focus-workspace-down;
-        "Mod+Page_Up".action = focus-workspace-up;
+        "Mod+Page_Down".action.focus-workspace-down = {};
+        "Mod+Page_Up".action.focus-workspace-up = {};
 
         # Workspace navigation (numeric)
         "Mod+1".action.focus-workspace = 1;
@@ -461,8 +461,8 @@ in {
         "Mod+9".action.focus-workspace = 9;
 
         # Move window to workspace
-        "Mod+Ctrl+Page_Down".action = move-column-to-workspace-down;
-        "Mod+Ctrl+Page_Up".action = move-column-to-workspace-up;
+        "Mod+Ctrl+Page_Down".action.move-column-to-workspace-down = {};
+        "Mod+Ctrl+Page_Up".action.move-column-to-workspace-up = {};
 
         # Move window to workspace (numeric)
         "Mod+Ctrl+1".action.move-column-to-workspace = 1;
@@ -476,14 +476,14 @@ in {
         "Mod+Ctrl+9".action.move-column-to-workspace = 9;
 
         # Move workspace
-        "Mod+Shift+Page_Down".action = move-workspace-down;
-        "Mod+Shift+Page_Up".action = move-workspace-up;
+        "Mod+Shift+Page_Down".action.move-workspace-down = {};
+        "Mod+Shift+Page_Up".action.move-workspace-up = {};
 
         # Consume and expel windows
-        "Mod+BracketLeft".action = consume-or-expel-window-left;
-        "Mod+BracketRight".action = consume-or-expel-window-right;
-        "Mod+Comma".action = consume-window-into-column;
-        "Mod+Period".action = expel-window-from-column;
+        "Mod+BracketLeft".action.consume-or-expel-window-left = {};
+        "Mod+BracketRight".action.consume-or-expel-window-right = {};
+        "Mod+Comma".action.consume-window-into-column = {};
+        "Mod+Period".action.expel-window-from-column = {};
 
         # Screenshots
         "Print".action.screenshot = {};
@@ -491,14 +491,14 @@ in {
         "Alt+Print".action.screenshot-window = {};
 
         # System
-        "Mod+Shift+Slash".action = show-hotkey-overlay;
-        "Mod+Escape".action = toggle-debug-tint;
-        "Mod+Shift+Q".action = quit;
-        "Ctrl+Alt+Delete".action = quit;
-        "Mod+Shift+P".action = power-off-monitors;
+        "Mod+Shift+Slash".action.show-hotkey-overlay = {};
+        "Mod+Escape".action.toggle-debug-tint = {};
+        "Mod+Shift+Q".action.quit = {};
+        "Ctrl+Alt+Delete".action.quit = {};
+        "Mod+Shift+P".action.power-off-monitors = {};
 
         # Custom: Lock screen
-        "Super+Alt+L".action = spawn "loginctl" "lock-session";
+        "Super+Alt+L".action.spawn = ["loginctl" "lock-session"];
       };
     };
 
