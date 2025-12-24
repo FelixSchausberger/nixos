@@ -470,7 +470,7 @@ in {
         "Mod+Ctrl+3".action.move-column-to-workspace = 3;
         "Mod+Ctrl+4".action.move-column-to-workspace = 4;
         "Mod+Ctrl+5".action.move-column-to-workspace = 5;
-        "Mod+Ctrl+6".action.move-column-to-workspace 6;
+        "Mod+Ctrl+6".action.move-column-to-workspace = 6;
         "Mod+Ctrl+7".action.move-column-to-workspace = 7;
         "Mod+Ctrl+8".action.move-column-to-workspace = 8;
         "Mod+Ctrl+9".action.move-column-to-workspace = 9;
