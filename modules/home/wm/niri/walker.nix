@@ -129,10 +129,12 @@ in {
         finder = {
           max_entries = 30;
         };
+        # Theme selection
+        theme = "nixos";
       };
 
       # Custom CSS styling
-      theme = {
+      themes."nixos" = {
         style = ''
           * {
             font-family: "JetBrainsMono Nerd Font";
