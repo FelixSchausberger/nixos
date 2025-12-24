@@ -486,9 +486,9 @@ in {
         "Mod+Period".action = expel-window-from-column;
 
         # Screenshots
-        "Print".action = screenshot;
-        "Ctrl+Print".action = screenshot-screen;
-        "Alt+Print".action = screenshot-window;
+        "Print".action.screenshot = {};
+        "Ctrl+Print".action.screenshot-screen = {};
+        "Alt+Print".action.screenshot-window = {};
 
         # System
         "Mod+Shift+Slash".action = show-hotkey-overlay;
