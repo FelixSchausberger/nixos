@@ -129,7 +129,7 @@
 
     wallpaper = lib.mkOption {
       type = lib.types.str;
-      default = "${../wallpapers/the-whale.jpg}";
+      default = "${../../wallpapers/the-whale.jpg}";
       description = "Default wallpaper path for GUI environments";
     };
   };
