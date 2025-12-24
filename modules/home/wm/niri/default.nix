@@ -339,7 +339,6 @@ in {
         "Mod+Q".action.close-window = {};
         "Mod+V".action.toggle-window-floating = {};
         "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = {};
-        "Mod+W".action.toggle-tabbed-column-display = {};
 
         # Fullscreen and maximize
         "Mod+F".action.maximize-column = {};
