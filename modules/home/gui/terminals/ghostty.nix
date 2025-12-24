@@ -30,8 +30,8 @@
       cursor-style = "block";
       cursor-style-blink = false;
 
-      # Shell integration
-      shell-integration = "fish";
+      # Shell integration - auto-detect from running shell
+      # Bash will auto-exec into fish via bashrc
       shell-integration-features = "cursor,sudo,title";
 
       # Performance

@@ -25,29 +25,20 @@
 
     wallpaperPath = lib.mkOption {
       type = lib.types.str;
-      default = "${config.home.homeDirectory}/.config/wallpapers";
+      # default = "${config.home.homeDirectory}/.config/wallpapers";
+      default = "/per/etc/nixos/modules/home/wallpapers";
       description = "Path where wallpapers are stored";
     };
   };
 
   config = let
     cfg = config.wallpapers;
-    wallpaperDir = ../wallpapers;
     currentWallpaperFile = cfg.available.${cfg.defaultWallpaper};
     currentWallpaperPath = "${cfg.wallpaperPath}/${currentWallpaperFile}";
   in
     lib.mkIf cfg.enable {
-      # Create wallpaper directory structure
-      xdg.configFile."wallpapers/.keep".text = "";
-
       home = {
-        # Copy all available wallpapers to user config directory
-        file = builtins.listToAttrs (map (wallpaperName: {
-          name = "${cfg.wallpaperPath}/${cfg.available.${wallpaperName}}";
-          value = {
-            source = wallpaperDir + "/${cfg.available.${wallpaperName}}";
-          };
-        }) (builtins.attrNames cfg.available));
+        # No copying needed - wallpapers are accessed directly from repo at /per/etc/nixos/modules/home/wallpapers
 
         # Export wallpaper information for other modules to use
         # This creates a way for other modules to access wallpaper paths consistently

@@ -43,7 +43,7 @@ in {
     ../shared/vigiland-simple.nix
     (import ../shared/wpaperd.nix "niri-session.target") # Wallpaper daemon
     (import ../shared/wired.nix "niri-session.target") # Modern notification daemon configuration
-    # (import ../shared/cthulock.nix "niri-session.target") # Screen locker - disabled until package is fixed
+    (import ../shared/cthulock.nix "niri-session.target") # Screen locker
   ];
 
   options.wm.niri = {
@@ -145,19 +145,19 @@ in {
       ];
     };
 
-    scratchpad = {
-      notesApp = lib.mkOption {
-        type = lib.types.enum ["obsidian" "basalt"];
-        default = "obsidian";
-        description = "Notes application for scratchpad";
-      };
+    # scratchpad = {
+    #   notesApp = lib.mkOption {
+    #     type = lib.types.enum ["obsidian" "basalt"];
+    #     default = "obsidian";
+    #     description = "Notes application for scratchpad";
+    #   };
 
-      musicApp = lib.mkOption {
-        type = lib.types.enum ["spotify" "spotify-player"];
-        default = "spotify";
-        description = "Music application for scratchpad";
-      };
-    };
+    #   musicApp = lib.mkOption {
+    #     type = lib.types.enum ["spotify" "spotify-player"];
+    #     default = "spotify";
+    #     description = "Music application for scratchpad";
+    #   };
+    # };
   };
 
   config = lib.mkIf cfg.enable {
@@ -167,7 +167,6 @@ in {
         swappy # Screenshot annotation
         cliphist # Clipboard history
         avizo # OSD for volume/brightness
-        inputs.walker.packages.${pkgs.hostPlatform.system}.default # Wayland-native application launcher with plugins
         udiskie # Auto-mount
         cosmic-files # File manager
         # Cursor themes
@@ -175,8 +174,6 @@ in {
         bibata-cursors # Better cursor theme
         gnome-themes-extra # Additional cursor themes
         hicolor-icon-theme # Base icon theme
-
-        # Screenshot tools provided by shared/satty.nix
       ];
 
       # Home environment variables for proper cursor theme support
@@ -242,7 +239,7 @@ in {
         };
       };
 
-      prefer-no-csd = true;
+      prefer-no-csd = true; # omit client-side decorations
 
       # Hotkey overlay configuration
       hotkey-overlay.skip-at-startup = true;
@@ -255,24 +252,24 @@ in {
       # Environment variables
       environment = {
         TERMINAL = "${terminalPkg}/bin/${cfg.terminal}";
-        BROWSER = "${browserPkg}/bin/${
-          if cfg.browser == "zen"
-          then "zen"
-          else cfg.browser
-        }";
+        BROWSER = "${browserPkg}/bin/${cfg.browser}";
+        #   if cfg.browser == "zen"
+        #   then "zen"
+        #   else cfg.browser
+        # }";
         FILEMANAGER = "${fileManagerPkg}/bin/${cfg.fileManager}";
         XCURSOR_THEME = "Bibata-Modern-Classic";
         XCURSOR_SIZE = "24";
       };
 
       # Startup applications
-      # spawn-at-startup = [
-      # {command = ["${pkgs.avizo}/bin/avizo-service"];}
-      # {command = ["${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar"];}
-      # {command = ["${pkgs.udiskie}/bin/udiskie" "--tray"];}
-      # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
-      # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
-      # ];
+      spawn-at-startup = [
+        {command = ["${pkgs.avizo}/bin/avizo-service"];}
+        {command = ["${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar"];}
+        {command = ["${pkgs.udiskie}/bin/udiskie" "--tray"];}
+        {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
+        {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
+      ];
 
       # Cursor configuration
       cursor = {
@@ -281,176 +278,227 @@ in {
       };
 
       # Window rules
-      window-rules = [
-        {
-          matches = [{app-id = "^scratchpad-.*";}];
-          default-column-width = {proportion = 0.8;};
-          open-on-output = "eDP-1";
-        }
-        {
-          matches = [{app-id = "^${cfg.browser}$";}];
-          open-on-workspace = "Browser";
-        }
-        {
-          matches = [{app-id = "^(code-url-handler|Code)$";}];
-          open-on-workspace = "Code";
-        }
-        {
-          matches = [{app-id = "^pavucontrol$";}];
-          default-column-width = {fixed = 400;};
-          open-on-output = "focused";
-        }
-        {
-          matches = [{app-id = "^it\\.mijorus\\.smile$";}];
-          default-column-width = {fixed = 400;};
-          open-on-output = "focused";
-        }
-        {
-          matches = [{app-id = "^org\\.gnome\\.Calculator$";}];
-          default-column-width = {fixed = 400;};
-          open-on-output = "focused";
-        }
-        {
-          matches = [{app-id = "^nm-connection-editor$";}];
-          default-column-width = {fixed = 400;};
-          open-on-output = "focused";
-        }
-        {
-          matches = [{title = "^Picture-in-Picture$";}];
-          default-column-width = {fixed = 480;};
-          open-on-output = "focused";
-        }
-      ];
+      # window-rules = [
+      #   {
+      #     matches = [{app-id = "^scratchpad-.*";}];
+      #     default-column-width = {proportion = 0.8;};
+      #     open-on-output = "eDP-1";
+      #   }
+      #   {
+      #     matches = [{app-id = "^${cfg.browser}$";}];
+      #     open-on-workspace = "Browser";
+      #   }
+      #   {
+      #     matches = [{app-id = "^(code-url-handler|Code)$";}];
+      #     open-on-workspace = "Code";
+      #   }
+      #   {
+      #     matches = [{app-id = "^pavucontrol$";}];
+      #     default-column-width = {fixed = 400;};
+      #     open-on-output = "focused";
+      #   }
+      #   {
+      #     matches = [{app-id = "^it\\.mijorus\\.smile$";}];
+      #     default-column-width = {fixed = 400;};
+      #     open-on-output = "focused";
+      #   }
+      #   {
+      #     matches = [{app-id = "^org\\.gnome\\.Calculator$";}];
+      #     default-column-width = {fixed = 400;};
+      #     open-on-output = "focused";
+      #   }
+      #   {
+      #     matches = [{app-id = "^nm-connection-editor$";}];
+      #     default-column-width = {fixed = 400;};
+      #     open-on-output = "focused";
+      #   }
+      #   {
+      #     matches = [{title = "^Picture-in-Picture$";}];
+      #     default-column-width = {fixed = 480;};
+      #     open-on-output = "focused";
+      #   }
+      # ];
 
       # Named workspaces
-      workspaces = {
-        "Terminal" = {};
-        "Browser" = {};
-        "Code" = {};
-        "Chat" = {};
-        "Music" = {};
-        "Games" = {};
-      };
+      # workspaces = {
+      #   "Terminal" = {};
+      #   "Browser" = {};
+      #   "Code" = {};
+      #   "Chat" = {};
+      #   "Music" = {};
+      #   "Games" = {};
+      # };
 
-      # Keybindings using helper functions from config.lib.niri.actions
+      # Default niri keybindings (based on niri's default-config.kdl)
       binds = with config.lib.niri.actions; {
         # Application shortcuts
         "Mod+T".action = spawn "${terminalPkg}/bin/${cfg.terminal}";
-        "Mod+D".action = spawn "${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker";
-        "Mod+Return".action = spawn "${browserPkg}/bin/${
-          if cfg.browser == "zen"
-          then "zen"
-          else cfg.browser
-        }";
-        "Mod+Q".action = close-window;
-        "Mod+L".action = spawn "loginctl" "lock-session";
-
-        # Hotkey overlay
-        "Mod+Shift+Slash".action = show-hotkey-overlay;
-
-        # Notifications
-        "Mod+Escape".action = spawn "${safeNotifyBin}" "Test" "Wired notification system";
-        "Mod+Shift+Escape".action = spawn "pkill" "-SIGUSR1" "wired";
+        "Mod+D".action = spawn "walker";
 
         # Window management
-        "Mod+Space".action = toggle-window-floating;
-        "Mod+F".action = fullscreen-window;
+        "Mod+Q".action = close-window;
+        "Mod+V".action = toggle-window-floating;
+        "Mod+Shift+V".action = switch-focus-between-floating-and-tiling;
+        "Mod+W".action = toggle-tabbed-column-display;
+
+        # Fullscreen and maximize
+        "Mod+F".action = maximize-column;
+        "Mod+Shift+F".action = fullscreen-window;
+        "Mod+Ctrl+F".action = maximize-window-to-edges;
+
+        # Center column
         "Mod+C".action = center-column;
+        "Mod+Ctrl+C".action = center-visible-columns;
+
+        # Column width and window height
         "Mod+R".action = switch-preset-column-width;
         "Mod+Shift+R".action = switch-preset-window-height;
+        "Mod+Ctrl+R".action = reset-window-height;
+        "Mod+Minus".action = set-column-width "-10%";
+        "Mod+Equal".action = set-column-width "+10%";
+        "Mod+Shift+Minus".action = set-window-height "-10%";
+        "Mod+Shift+Equal".action = set-window-height "+10%";
 
-        # Window focus (Colemak-DH N/E/I/O pattern)
-        "Mod+N".action = focus-column-left;
-        "Mod+Left".action = focus-column-left;
-        "Mod+E".action = focus-window-down;
-        "Mod+Down".action = focus-window-down;
-        "Mod+I".action = focus-window-up;
-        "Mod+Up".action = focus-window-up;
-        "Mod+O".action = focus-column-right;
-        "Mod+Right".action = focus-column-right;
-
-        # Window movement
-        "Mod+Ctrl+N".action = move-column-left;
-        "Mod+Ctrl+Left".action = move-column-left;
-        "Mod+Ctrl+E".action = move-window-down;
-        "Mod+Ctrl+Down".action = move-window-down;
-        "Mod+Ctrl+I".action = move-window-up;
-        "Mod+Ctrl+Up".action = move-window-up;
-        "Mod+Ctrl+O".action = move-column-right;
-        "Mod+Ctrl+Right".action = move-column-right;
-
-        # Monitor focus
-        "Mod+Shift+N".action = focus-monitor-left;
-        "Mod+Shift+Left".action = focus-monitor-left;
-        "Mod+Shift+E".action = focus-monitor-down;
-        "Mod+Shift+Down".action = focus-monitor-down;
-        "Mod+Shift+I".action = focus-monitor-up;
-        "Mod+Shift+Up".action = focus-monitor-up;
-        "Mod+Shift+O".action = focus-monitor-right;
-        "Mod+Shift+Right".action = focus-monitor-right;
-
-        # Move to monitor
-        "Mod+Ctrl+Shift+N".action = move-column-to-monitor-left;
-        "Mod+Ctrl+Shift+Left".action = move-column-to-monitor-left;
-        "Mod+Ctrl+Shift+E".action = move-column-to-monitor-down;
-        "Mod+Ctrl+Shift+Down".action = move-column-to-monitor-down;
-        "Mod+Ctrl+Shift+I".action = move-column-to-monitor-up;
-        "Mod+Ctrl+Shift+Up".action = move-column-to-monitor-up;
-        "Mod+Ctrl+Shift+O".action = move-column-to-monitor-right;
-        "Mod+Ctrl+Shift+Right".action = move-column-to-monitor-right;
-
-        # Window resizing
+        # Column width and window height (Colemak-DH)
         "Mod+Alt+N".action = set-column-width "-10%";
         "Mod+Alt+O".action = set-column-width "+10%";
         "Mod+Alt+E".action = set-window-height "-10%";
         "Mod+Alt+I".action = set-window-height "+10%";
 
-        # Consume and expel
-        "Mod+Comma".action = consume-window-into-column;
-        "Mod+Period".action = expel-window-from-column;
-        "Mod+BracketLeft".action = consume-or-expel-window-left;
-        "Mod+BracketRight".action = consume-or-expel-window-right;
+        # Window focus (vim keys)
+        "Mod+H".action = focus-column-left;
+        "Mod+J".action = focus-window-down;
+        "Mod+K".action = focus-window-up;
+        "Mod+L".action = focus-column-right;
+
+        # Window focus (Colemak-DH)
+        "Mod+N".action = focus-column-left;
+        "Mod+E".action = focus-window-down;
+        "Mod+I".action = focus-window-up;
+        "Mod+O".action = focus-column-right;
+
+        # Window focus (arrow keys)
+        "Mod+Left".action = focus-column-left;
+        "Mod+Down".action = focus-window-down;
+        "Mod+Up".action = focus-window-up;
+        "Mod+Right".action = focus-column-right;
+
+        # Focus first/last column
+        "Mod+Home".action = focus-column-first;
+        "Mod+End".action = focus-column-last;
+
+        # Window movement (vim keys)
+        "Mod+Ctrl+H".action = move-column-left;
+        "Mod+Ctrl+J".action = move-window-down;
+        "Mod+Ctrl+K".action = move-window-up;
+        "Mod+Ctrl+L".action = move-column-right;
+
+        # Window movement (Colemak-DH)
+        "Mod+Ctrl+N".action = move-column-left;
+        "Mod+Ctrl+E".action = move-window-down;
+        "Mod+Ctrl+I".action = move-window-up;
+        "Mod+Ctrl+O".action = move-column-right;
+
+        # Window movement (arrow keys)
+        "Mod+Ctrl+Left".action = move-column-left;
+        "Mod+Ctrl+Down".action = move-window-down;
+        "Mod+Ctrl+Up".action = move-window-up;
+        "Mod+Ctrl+Right".action = move-column-right;
+
+        # Move to first/last column
+        "Mod+Ctrl+Home".action = move-column-to-first;
+        "Mod+Ctrl+End".action = move-column-to-last;
+
+        # Monitor focus (vim keys)
+        "Mod+Shift+H".action = focus-monitor-left;
+        "Mod+Shift+J".action = focus-monitor-down;
+        "Mod+Shift+K".action = focus-monitor-up;
+        "Mod+Shift+L".action = focus-monitor-right;
+
+        # Monitor focus (Colemak-DH)
+        "Mod+Shift+N".action = focus-monitor-left;
+        "Mod+Shift+E".action = focus-monitor-down;
+        "Mod+Shift+I".action = focus-monitor-up;
+        "Mod+Shift+O".action = focus-monitor-right;
+
+        # Monitor focus (arrow keys)
+        "Mod+Shift+Left".action = focus-monitor-left;
+        "Mod+Shift+Down".action = focus-monitor-down;
+        "Mod+Shift+Up".action = focus-monitor-up;
+        "Mod+Shift+Right".action = focus-monitor-right;
+
+        # Move to monitor (vim keys)
+        "Mod+Shift+Ctrl+H".action = move-column-to-monitor-left;
+        "Mod+Shift+Ctrl+J".action = move-column-to-monitor-down;
+        "Mod+Shift+Ctrl+K".action = move-column-to-monitor-up;
+        "Mod+Shift+Ctrl+L".action = move-column-to-monitor-right;
+
+        # Move to monitor (Colemak-DH)
+        "Mod+Shift+Ctrl+N".action = move-column-to-monitor-left;
+        "Mod+Shift+Ctrl+E".action = move-column-to-monitor-down;
+        "Mod+Shift+Ctrl+I".action = move-column-to-monitor-up;
+        "Mod+Shift+Ctrl+O".action = move-column-to-monitor-right;
+
+        # Move to monitor (arrow keys)
+        "Mod+Shift+Ctrl+Left".action = move-column-to-monitor-left;
+        "Mod+Shift+Ctrl+Down".action = move-column-to-monitor-down;
+        "Mod+Shift+Ctrl+Up".action = move-column-to-monitor-up;
+        "Mod+Shift+Ctrl+Right".action = move-column-to-monitor-right;
 
         # Workspace navigation
-        "Mod+U".action = focus-workspace-down;
         "Mod+Page_Down".action = focus-workspace-down;
-        "Mod+Shift+U".action = move-workspace-down;
-        "Mod+Shift+Page_Down".action = move-workspace-down;
-        "Mod+Ctrl+U".action = move-column-to-workspace-down;
+        "Mod+Page_Up".action = focus-workspace-up;
+
+        # Workspace navigation (numeric)
+        "Mod+1".action = focus-workspace 1;
+        "Mod+2".action = focus-workspace 2;
+        "Mod+3".action = focus-workspace 3;
+        "Mod+4".action = focus-workspace 4;
+        "Mod+5".action = focus-workspace 5;
+        "Mod+6".action = focus-workspace 6;
+        "Mod+7".action = focus-workspace 7;
+        "Mod+8".action = focus-workspace 8;
+        "Mod+9".action = focus-workspace 9;
+
+        # Move window to workspace
         "Mod+Ctrl+Page_Down".action = move-column-to-workspace-down;
+        "Mod+Ctrl+Page_Up".action = move-column-to-workspace-up;
 
-        # Named workspaces
-        "Mod+1".action.focus-workspace = "Terminal";
-        "Mod+2".action.focus-workspace = "Browser";
-        "Mod+3".action.focus-workspace = "Code";
-        "Mod+4".action.focus-workspace = "Chat";
-        "Mod+5".action.focus-workspace = "Music";
-        "Mod+6".action.focus-workspace = "Games";
+        # Move window to workspace (numeric)
+        "Mod+Ctrl+1".action = move-column-to-workspace 1;
+        "Mod+Ctrl+2".action = move-column-to-workspace 2;
+        "Mod+Ctrl+3".action = move-column-to-workspace 3;
+        "Mod+Ctrl+4".action = move-column-to-workspace 4;
+        "Mod+Ctrl+5".action = move-column-to-workspace 5;
+        "Mod+Ctrl+6".action = move-column-to-workspace 6;
+        "Mod+Ctrl+7".action = move-column-to-workspace 7;
+        "Mod+Ctrl+8".action = move-column-to-workspace 8;
+        "Mod+Ctrl+9".action = move-column-to-workspace 9;
 
-        # Move windows to workspaces
-        "Mod+Shift+1".action.move-column-to-workspace = "Terminal";
-        "Mod+Shift+2".action.move-column-to-workspace = "Browser";
-        "Mod+Shift+3".action.move-column-to-workspace = "Code";
-        "Mod+Shift+4".action.move-column-to-workspace = "Chat";
-        "Mod+Shift+5".action.move-column-to-workspace = "Music";
-        "Mod+Shift+6".action.move-column-to-workspace = "Games";
+        # Move workspace
+        "Mod+Shift+Page_Down".action = move-workspace-down;
+        "Mod+Shift+Page_Up".action = move-workspace-up;
 
-        # System controls
-        "Mod+V".action = spawn "${pkgs.avizo}/bin/volumectl" "toggle-mute";
-        "Mod+Equal".action = spawn "${pkgs.avizo}/bin/volumectl" "up";
-        "Mod+Minus".action = spawn "${pkgs.avizo}/bin/volumectl" "down";
-        "Mod+Shift+Equal".action = spawn "${pkgs.avizo}/bin/lightctl" "up";
-        "Mod+Shift+Minus".action = spawn "${pkgs.avizo}/bin/lightctl" "down";
+        # Consume and expel windows
+        "Mod+BracketLeft".action = consume-or-expel-window-left;
+        "Mod+BracketRight".action = consume-or-expel-window-right;
+        "Mod+Comma".action = consume-window-into-column;
+        "Mod+Period".action = expel-window-from-column;
 
         # Screenshots
-        "Print".action = spawn "screenshot-region";
-        "Shift+Print".action = spawn "screenshot-full";
-        "Mod+Print".action = spawn "screenshot-region";
+        "Print".action = screenshot;
+        "Ctrl+Print".action = screenshot-screen;
+        "Alt+Print".action = screenshot-window;
 
-        # Idle inhibitor
-        "Mod+Z".action = spawn "sh" "-c" "pkill -x vigiland || vigiland &";
-
+        # System
+        "Mod+Shift+Slash".action = show-hotkey-overlay;
+        "Mod+Escape".action = toggle-debug-tint;
         "Mod+Shift+Q".action = quit;
+        "Ctrl+Alt+Delete".action = quit;
+        "Mod+Shift+P".action = power-off-monitors;
+
+        # Custom: Lock screen
+        "Super+Alt+L".action = spawn "loginctl" "lock-session";
       };
     };
 
