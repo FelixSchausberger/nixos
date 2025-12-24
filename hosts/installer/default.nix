@@ -9,6 +9,11 @@
   repoPath = inputs.self;
   authorizedKeysFile = ./authorized_keys;
   hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
+
+  # Optional SSH key files for baking into ISO
+  # Place your keys in hosts/installer/ssh_keys/ (gitignored for security)
+  sshKeyDir = ./ssh_keys;
+  hasSshKeys = builtins.pathExists sshKeyDir;
 in {
   imports = [
     (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
@@ -54,11 +59,28 @@ in {
     "d /per 0755 root root -"
     "d /per/etc 0755 root root -"
     "d /per/system 0755 root root -"
+    "d /per/home 0755 root root -"
+    "d /per/home/schausberger 0755 schausberger users -"
+    "d /per/home/schausberger/.ssh 0700 schausberger users -"
   ];
 
   system.activationScripts.installRepo = ''
     mkdir -p /per/etc
     ln -sfn ${repoPath} /per/etc/nixos
+  '';
+
+  # Copy SSH keys to persistent location if they exist in the ISO
+  system.activationScripts.installSshKeys = lib.mkIf hasSshKeys ''
+    mkdir -p /per/home/schausberger/.ssh
+    ${lib.optionalString (builtins.pathExists (sshKeyDir + "/id_ed25519")) ''
+      cp ${sshKeyDir}/id_ed25519 /per/home/schausberger/.ssh/id_ed25519
+      chmod 600 /per/home/schausberger/.ssh/id_ed25519
+    ''}
+    ${lib.optionalString (builtins.pathExists (sshKeyDir + "/id_ed25519.pub")) ''
+      cp ${sshKeyDir}/id_ed25519.pub /per/home/schausberger/.ssh/id_ed25519.pub
+      chmod 644 /per/home/schausberger/.ssh/id_ed25519.pub
+    ''}
+    chown -R schausberger:users /per/home/schausberger/.ssh
   '';
 
   # Pre-configure installation environment

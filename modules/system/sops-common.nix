@@ -12,11 +12,9 @@ in {
     # Default secrets file location
     defaultSopsFile = ../../secrets/secrets.yaml;
 
-    # Age key file location (from centralized defaults)
-    age.keyFile = defaults.paths.sopsKeyFile;
-
-    # Disable SSH key fallback - only use the age key file
-    age.sshKeyPaths = [];
+    # Derive age key from SSH key automatically (same as .envrc)
+    # This eliminates the need for /per/system/sops-key.txt
+    age.sshKeyPaths = [ "/per/home/${defaults.system.user}/.ssh/id_ed25519" ];
     gnupg.sshKeyPaths = [];
 
     # Common secrets used across all hosts

@@ -107,8 +107,8 @@ in {
 
   # Keyboard layout configuration
   services.xserver.xkb = {
-    layout = "us";
-    variant = "euro";
+    layout = "eu";
+    variant = "";
   };
 
   # Sync console keyboard layout with X11 configuration
@@ -126,6 +126,9 @@ in {
       };
     };
   };
+
+  # Disable smartd for VM (VMware virtual disks don't support SMART)
+  services.smartd.enable = lib.mkForce false;
 
   # ZFS with impermanence (matching physical hosts)
   # The VM now uses the same ZFS structure as desktop/surface for consistency

@@ -40,8 +40,9 @@ rec {
     # Repositories directory
     repos = "/per/repos";
 
-    # Sops age key location
-    sopsKeyFile = "/per/system/sops-key.txt";
+    # Sops age key location (deprecated - now using SSH key derivation)
+    # Kept for backward compatibility but no longer used
+    # sopsKeyFile = "/per/system/sops-key.txt";
 
     # System mount directories
     mountDirs = {

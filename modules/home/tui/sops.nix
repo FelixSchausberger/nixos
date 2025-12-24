@@ -18,9 +18,10 @@
     SOPS_EDITOR = "nvim";
   };
 
-  # Minimal sops config - use same key as system
+  # Minimal sops config - derive age key from SSH key
   sops = {
-    age.keyFile = "/per/system/sops-key.txt";
+    # Use SSH key to derive age key automatically (same as .envrc)
+    age.sshKeyPaths = [ "/per/home/schausberger/.ssh/id_ed25519" ];
     defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
     defaultSopsFormat = "yaml";
   };

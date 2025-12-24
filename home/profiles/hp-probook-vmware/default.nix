@@ -11,7 +11,7 @@
   # Enable Niri window manager
   wm.niri = {
     enable = true;
-    browser = "firefox";
+    browser = "zen";
     terminal = "ghostty";
     fileManager = "cosmic-files";
   };

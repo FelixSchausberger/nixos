@@ -47,3 +47,6 @@ target/
 
 # Claude Code local settings (machine-specific configuration)
 .claude/settings.local.json
+
+# SSH keys for installer ISO (security sensitive)
+hosts/installer/ssh_keys/

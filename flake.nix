@@ -337,37 +337,51 @@
                               echo "Prerequisites:" >&2
                               echo "  - VM booted with custom NixOS ISO (installer-iso-minimal)" >&2
                               echo "  - SSH access to VM as root (uses authorized_keys from ISO)" >&2
-                              echo "  - Sops key at /per/system/sops-key.txt on executing host" >&2
                               echo "  - SSH keys at ~/.ssh/id_ed25519 on executing host" >&2
+                              echo "  - Repository cloned locally with .envrc configured" >&2
                               echo "" >&2
                               echo "The script will:" >&2
-                              echo "  1. Copy sops key and SSH keys to target" >&2
-                              echo "  2. Set up GitHub authentication" >&2
-                              echo "  3. Run disko partitioning" >&2
-                              echo "  4. Install NixOS" >&2
-                              echo "  5. Clone config to /per/etc/nixos" >&2
-                              echo "  6. Rebuild from persistent location" >&2
+                              echo "  1. Derive age key from SSH key using ssh-to-age" >&2
+                              echo "  2. Copy SSH keys to target" >&2
+                              echo "  3. Set up GitHub authentication" >&2
+                              echo "  4. Run disko partitioning" >&2
+                              echo "  5. Install NixOS" >&2
+                              echo "  6. Clone config to /per/etc/nixos" >&2
+                              echo "  7. Rebuild from persistent location" >&2
+                              echo "" >&2
+                              echo "Note: sops-nix will automatically derive age key from SSH key" >&2
                               exit 1
                             fi
 
                             HOSTNAME="$1"
                             TARGET_IP="$2"
-                            SOPS_KEY="/per/system/sops-key.txt"
                             REPO_URL="https://github.com/FelixSchausberger/nixos.git"
 
-                            # Decrypt GitHub token from sops secrets
-                            echo "Decrypting GitHub token from sops secrets..."
-                            if [[ ! -f "$SOPS_KEY" ]]; then
-                              echo "Error: Sops key not found at $SOPS_KEY" >&2
+                            # Check SSH key exists (required for ssh-to-age)
+                            if [[ ! -f ~/.ssh/id_ed25519 ]]; then
+                              echo "Error: SSH key not found at ~/.ssh/id_ed25519" >&2
+                              echo "" >&2
+                              echo "The SSH key is required to derive the age key for sops." >&2
+                              echo "Generate one with: ssh-keygen -t ed25519" >&2
                               exit 1
                             fi
 
-                            export SOPS_AGE_KEY_FILE="$SOPS_KEY"
+                            # Derive age key from SSH key (same as .envrc)
+                            echo "Deriving age key from SSH key..."
+                            export SOPS_AGE_KEY=$(${pkgs.ssh-to-age}/bin/ssh-to-age -i ~/.ssh/id_ed25519 -private-key)
+
+                            if [[ -z "$SOPS_AGE_KEY" ]]; then
+                              echo "Error: Failed to derive age key from SSH key" >&2
+                              exit 1
+                            fi
+
+                            # Decrypt GitHub token from sops secrets
+                            echo "Decrypting GitHub token from sops secrets..."
                             GITHUB_TOKEN=$(${pkgs.sops}/bin/sops -d secrets/secrets.yaml | ${pkgs.yq}/bin/yq -r '.github.token')
 
                             if [[ -z "$GITHUB_TOKEN" || "$GITHUB_TOKEN" == "null" ]]; then
                               echo "Error: Failed to decrypt GitHub token from secrets/secrets.yaml" >&2
-                              echo "Please ensure the sops key is correct and secrets.yaml contains github.token" >&2
+                              echo "Please ensure secrets.yaml contains github.token" >&2
                               exit 1
                             fi
 
@@ -382,15 +396,6 @@
                                 exit 1
                                 ;;
                             esac
-
-                            # Check sops key exists
-                            if [[ ! -f "$SOPS_KEY" ]]; then
-                              echo "Error: Sops key not found at $SOPS_KEY" >&2
-                              echo "" >&2
-                              echo "The sops key is required to decrypt secrets during installation." >&2
-                              echo "Ensure the key exists on this host before running install-vm." >&2
-                              exit 1
-                            fi
 
                             # Remove old host key (VM gets new host key each install)
                             echo "Removing old SSH host key for $TARGET_IP..."
@@ -415,45 +420,42 @@
                             trap "rm -rf '$TMPDIR'" EXIT
 
                             echo "Preparing installation files..."
-                            mkdir -p "$TMPDIR/per/system"
-                            cp "$SOPS_KEY" "$TMPDIR/per/system/sops-key.txt"
-                            chmod 400 "$TMPDIR/per/system/sops-key.txt"
 
-                            # Copy SSH keys if they exist (for sops age key derivation and GitHub auth)
-                            if [[ -f ~/.ssh/id_ed25519 ]]; then
-                              echo "Copying SSH keys for sops age key derivation and GitHub authentication..."
+                            # Copy SSH keys (for GitHub auth and sops age key derivation)
+                            echo "Copying SSH keys for GitHub authentication and sops..."
 
-                              # Copy to user's persistent home directory
-                              mkdir -p "$TMPDIR/per/home/schausberger/.ssh"
-                              cp ~/.ssh/id_ed25519 "$TMPDIR/per/home/schausberger/.ssh/"
-                              cp ~/.ssh/id_ed25519.pub "$TMPDIR/per/home/schausberger/.ssh/"
-                              chmod 700 "$TMPDIR/per/home/schausberger/.ssh"
-                              chmod 600 "$TMPDIR/per/home/schausberger/.ssh/id_ed25519"
-                              chmod 644 "$TMPDIR/per/home/schausberger/.ssh/id_ed25519.pub"
+                            # Copy to user's persistent home directory
+                            mkdir -p "$TMPDIR/per/home/schausberger/.ssh"
+                            cp ~/.ssh/id_ed25519 "$TMPDIR/per/home/schausberger/.ssh/"
+                            cp ~/.ssh/id_ed25519.pub "$TMPDIR/per/home/schausberger/.ssh/"
+                            chmod 700 "$TMPDIR/per/home/schausberger/.ssh"
+                            chmod 600 "$TMPDIR/per/home/schausberger/.ssh/id_ed25519"
+                            chmod 644 "$TMPDIR/per/home/schausberger/.ssh/id_ed25519.pub"
 
-                              # Also copy to root for initial setup
-                              mkdir -p "$TMPDIR/root/.ssh"
-                              cp ~/.ssh/id_ed25519 "$TMPDIR/root/.ssh/"
-                              cp ~/.ssh/id_ed25519.pub "$TMPDIR/root/.ssh/"
-                              chmod 600 "$TMPDIR/root/.ssh/id_ed25519"
-                              chmod 644 "$TMPDIR/root/.ssh/id_ed25519.pub"
+                            # Also copy to root for initial setup
+                            mkdir -p "$TMPDIR/root/.ssh"
+                            cp ~/.ssh/id_ed25519 "$TMPDIR/root/.ssh/"
+                            cp ~/.ssh/id_ed25519.pub "$TMPDIR/root/.ssh/"
+                            chmod 600 "$TMPDIR/root/.ssh/id_ed25519"
+                            chmod 644 "$TMPDIR/root/.ssh/id_ed25519.pub"
 
-                              # Set up git config to use SSH for GitHub
-                              mkdir -p "$TMPDIR/per/home/schausberger/.config/git"
-                              cat > "$TMPDIR/per/home/schausberger/.config/git/config" <<'EOF'
+                            # Set up git config to use SSH for GitHub
+                            mkdir -p "$TMPDIR/per/home/schausberger/.config/git"
+                            cat > "$TMPDIR/per/home/schausberger/.config/git/config" <<'EOF'
               [url "ssh://git@github.com/"]
                 insteadOf = https://github.com/
               EOF
-                              chmod 644 "$TMPDIR/per/home/schausberger/.config/git/config"
-                            fi
+                            chmod 644 "$TMPDIR/per/home/schausberger/.config/git/config"
 
                             # Copy files to target
-                            echo "Copying sops key and SSH keys to target..."
-                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "mkdir -p /per/system /per/home/schausberger/.ssh /per/home/schausberger/.config/git"
-                            scp -o StrictHostKeyChecking=accept-new "$TMPDIR/per/system/sops-key.txt" "root@$TARGET_IP:/per/system/"
+                            echo "Copying SSH keys to target..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "mkdir -p /per/home/schausberger/.ssh /per/home/schausberger/.config/git"
                             scp -o StrictHostKeyChecking=accept-new "$TMPDIR/per/home/schausberger/.ssh/"* "root@$TARGET_IP:/per/home/schausberger/.ssh/"
                             scp -o StrictHostKeyChecking=accept-new "$TMPDIR/per/home/schausberger/.config/git/config" "root@$TARGET_IP:/per/home/schausberger/.config/git/"
                             scp -o StrictHostKeyChecking=accept-new -r "$TMPDIR/root/.ssh" "root@$TARGET_IP:/root/"
+
+                            echo "Note: sops-nix will derive age key from SSH key automatically"
+                            echo "Both .envrc and sops-nix use ssh-to-age for key derivation"
 
                             # Set up SSH directory (git config already handles GitHub SSH via insteadOf)
                             echo "Setting up SSH for GitHub..."
@@ -525,9 +527,10 @@
                               exit 1
                             fi
 
-                            # Fix ownership of user files in persistent storage
-                            echo "Fixing ownership of persistent user files..."
+                            # Fix ownership and permissions of user files in persistent storage
+                            echo "Fixing ownership and permissions of persistent user files..."
                             ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "chown -R schausberger:schausberger /per/home/schausberger"
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "chmod 700 /per/home/schausberger/.ssh && chmod 600 /per/home/schausberger/.ssh/id_ed25519 && chmod 644 /per/home/schausberger/.ssh/id_ed25519.pub"
 
                             # Rebuild from persistent location with GitHub authentication (memory-optimized)
                             echo "Rebuilding from /per/etc/nixos to finalize installation..."
@@ -546,12 +549,15 @@
                             echo ""
                             echo "Installation complete!"
                             echo ""
-                            echo "SSH keys have been installed to /per/home/schausberger/.ssh/"
-                            echo "GitHub authentication configured to use SSH"
+                            echo "Configuration cloned to: /per/etc/nixos"
+                            echo "SSH keys installed to: /per/home/schausberger/.ssh/"
+                            echo "GitHub authentication: Configured to use SSH"
+                            echo "Sops secrets: Will use SSH key for age key derivation"
                             echo ""
                             echo "You can now:"
                             echo "  ssh schausberger@$TARGET_IP"
-                            echo "  cd /per/etc/nixos && sudo nixos-rebuild switch --flake .#$HOSTNAME"
+                            echo "  cd /per/etc/nixos && direnv allow"
+                            echo "  sudo nixos-rebuild switch --flake .#$HOSTNAME"
             ''}";
             meta.description = "Automated VM installation with sops key and repo cloning";
           };

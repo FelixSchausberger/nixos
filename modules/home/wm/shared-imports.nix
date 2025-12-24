@@ -4,5 +4,6 @@
 {inputs, ...}: {
   imports = [
     inputs.wired.homeManagerModules.default # Wired notification daemon
+    ../../wallpapers # Wallpaper management module
   ];
 }
