@@ -6,8 +6,6 @@
   ...
 }: let
   cfg = config.wm.niri;
-  safeNotifySend = import ../../../../home/lib/safe-notify-send.nix {inherit pkgs config lib;};
-  safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 
   # Package mappings for applications
   browserPkg =
@@ -29,10 +27,14 @@
     else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   fileManagerPkg = pkgs.cosmic-files;
+  # Toggle script for synchronized overview + ironbar visibility
+  # Note: Niri doesn't natively support multiple actions per keybind yet (issue #965)
+  # Workaround: Use shell script to execute both commands
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
     inputs.wayland-pipewire-idle-inhibit.homeModules.default
+    ./keybinds.nix
     ./walker.nix
     ./ironbar.nix
     # Shared options and imports (imported once)
@@ -41,7 +43,7 @@ in {
     ../shared/wayland-pipewire-idle-inhibit.nix
     ../shared/satty.nix
     ../shared/vigiland-simple.nix
-    (import ../shared/wpaperd.nix "niri-session.target") # Wallpaper daemon
+    (import ../shared/swww-coordinated.nix "niri-session.target") # Coordinated workspace and backdrop wallpapers
     (import ../shared/wired.nix "niri-session.target") # Modern notification daemon configuration
     (import ../shared/cthulock.nix "niri-session.target") # Screen locker
   ];
@@ -161,6 +163,9 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    # Enable stylix theming for niri
+    stylix.targets.niri.enable = true;
+
     home = {
       packages = with pkgs; [
         # Niri-specific utilities
@@ -175,12 +180,6 @@ in {
         gnome-themes-extra # Additional cursor themes
         hicolor-icon-theme # Base icon theme
       ];
-
-      # Home environment variables for proper cursor theme support
-      sessionVariables = {
-        XCURSOR_THEME = "Bibata-Modern-Classic";
-        XCURSOR_SIZE = "24";
-      };
     };
 
     # Niri declarative configuration using programs.niri.settings
@@ -189,9 +188,9 @@ in {
       # Input configuration
       input = {
         keyboard.xkb = {
-          layout = "eu,de";
-          variant = ",";
-          options = "grp:alt_shift_toggle,terminate:ctrl_alt_bksp";
+          layout = "de";
+          variant = "";
+          options = "terminate:ctrl_alt_bksp";
           model = "pc104";
         };
 
@@ -241,8 +240,41 @@ in {
 
       prefer-no-csd = true; # omit client-side decorations
 
+      # Window rules for rounded corners
+      window-rules = [
+        {
+          geometry-corner-radius = {
+            top-left = 12.0;
+            top-right = 12.0;
+            bottom-right = 12.0;
+            bottom-left = 12.0;
+          };
+          clip-to-geometry = true;
+        }
+      ];
+
       # Hotkey overlay configuration
       hotkey-overlay.skip-at-startup = true;
+
+      # Overview configuration
+      overview = {
+        backdrop-color = "transparent"; # Allow blurred wallpaper to show through
+        zoom = 0.25;
+      };
+
+      # Layer rules for wallpaper
+      layer-rules = [
+        # swww workspace wallpapers (not in backdrop)
+        {
+          matches = [{namespace = "^swww-daemon$";}];
+        }
+
+        # swww backdrop: blurred wallpapers for overview
+        {
+          matches = [{namespace = "^swww-daemonbackdrop$";}];
+          place-within-backdrop = true;
+        }
+      ];
 
       # Debug configuration for honoring XDG activation requests with invalid serial
       # TODO: Cannot be set via programs.niri.settings due to KDL generation issue
@@ -253,13 +285,7 @@ in {
       environment = {
         TERMINAL = "${terminalPkg}/bin/${cfg.terminal}";
         BROWSER = "${browserPkg}/bin/${cfg.browser}";
-        #   if cfg.browser == "zen"
-        #   then "zen"
-        #   else cfg.browser
-        # }";
         FILEMANAGER = "${fileManagerPkg}/bin/${cfg.fileManager}";
-        XCURSOR_THEME = "Bibata-Modern-Classic";
-        XCURSOR_SIZE = "24";
       };
 
       # Startup applications
@@ -270,12 +296,6 @@ in {
         {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
         {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
       ];
-
-      # Cursor configuration
-      cursor = {
-        theme = "Bibata-Modern-Classic";
-        size = 24;
-      };
 
       # Window rules
       # window-rules = [
@@ -329,176 +349,7 @@ in {
       #   "Games" = {};
       # };
 
-      # Default niri keybindings (based on niri's default-config.kdl)
-      binds = {
-        # Application shortcuts
-        "Mod+T".action.spawn = "${terminalPkg}/bin/${cfg.terminal}";
-        "Mod+D".action.spawn = "walker";
-
-        # Window management
-        "Mod+Q".action.close-window = {};
-        "Mod+V".action.toggle-window-floating = {};
-        "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = {};
-
-        # Fullscreen and maximize
-        "Mod+F".action.maximize-column = {};
-        "Mod+Shift+F".action.fullscreen-window = {};
-        "Mod+Ctrl+F".action.maximize-window-to-edges = {};
-
-        # Center column
-        "Mod+C".action.center-column = {};
-        "Mod+Ctrl+C".action.center-visible-columns = {};
-
-        # Column width and window height
-        "Mod+R".action.switch-preset-column-width = {};
-        "Mod+Shift+R".action.switch-preset-window-height = {};
-        "Mod+Ctrl+R".action.reset-window-height = {};
-        "Mod+Minus".action.set-column-width = "-10%";
-        "Mod+Equal".action.set-column-width = "+10%";
-        "Mod+Shift+Minus".action.set-window-height = "-10%";
-        "Mod+Shift+Equal".action.set-window-height = "+10%";
-
-        # Column width and window height (Colemak-DH)
-        "Mod+Alt+N".action.set-column-width = "-10%";
-        "Mod+Alt+O".action.set-column-width = "+10%";
-        "Mod+Alt+E".action.set-window-height = "-10%";
-        "Mod+Alt+I".action.set-window-height = "+10%";
-
-        # Window focus (vim keys)
-        "Mod+H".action.focus-column-left = {};
-        "Mod+J".action.focus-window-down = {};
-        "Mod+K".action.focus-window-up = {};
-        "Mod+L".action.focus-column-right = {};
-
-        # Window focus (Colemak-DH)
-        "Mod+N".action.focus-column-left = {};
-        "Mod+E".action.focus-window-down = {};
-        "Mod+I".action.focus-window-up = {};
-        "Mod+O".action.focus-column-right = {};
-
-        # Window focus (arrow keys)
-        "Mod+Left".action.focus-column-left = {};
-        "Mod+Down".action.focus-window-down = {};
-        "Mod+Up".action.focus-window-up = {};
-        "Mod+Right".action.focus-column-right = {};
-
-        # Focus first/last column
-        "Mod+Home".action.focus-column-first = {};
-        "Mod+End".action.focus-column-last = {};
-
-        # Window movement (vim keys)
-        "Mod+Ctrl+H".action.move-column-left = {};
-        "Mod+Ctrl+J".action.move-window-down = {};
-        "Mod+Ctrl+K".action.move-window-up = {};
-        "Mod+Ctrl+L".action.move-column-right = {};
-
-        # Window movement (Colemak-DH)
-        "Mod+Ctrl+N".action.move-column-left = {};
-        "Mod+Ctrl+E".action.move-window-down = {};
-        "Mod+Ctrl+I".action.move-window-up = {};
-        "Mod+Ctrl+O".action.move-column-right = {};
-
-        # Window movement (arrow keys)
-        "Mod+Ctrl+Left".action.move-column-left = {};
-        "Mod+Ctrl+Down".action.move-window-down = {};
-        "Mod+Ctrl+Up".action.move-window-up = {};
-        "Mod+Ctrl+Right".action.move-column-right = {};
-
-        # Move to first/last column
-        "Mod+Ctrl+Home".action.move-column-to-first = {};
-        "Mod+Ctrl+End".action.move-column-to-last = {};
-
-        # Monitor focus (vim keys)
-        "Mod+Shift+H".action.focus-monitor-left = {};
-        "Mod+Shift+J".action.focus-monitor-down = {};
-        "Mod+Shift+K".action.focus-monitor-up = {};
-        "Mod+Shift+L".action.focus-monitor-right = {};
-
-        # Monitor focus (Colemak-DH)
-        "Mod+Shift+N".action.focus-monitor-left = {};
-        "Mod+Shift+E".action.focus-monitor-down = {};
-        "Mod+Shift+I".action.focus-monitor-up = {};
-        "Mod+Shift+O".action.focus-monitor-right = {};
-
-        # Monitor focus (arrow keys)
-        "Mod+Shift+Left".action.focus-monitor-left = {};
-        "Mod+Shift+Down".action.focus-monitor-down = {};
-        "Mod+Shift+Up".action.focus-monitor-up = {};
-        "Mod+Shift+Right".action.focus-monitor-right = {};
-
-        # Move to monitor (vim keys)
-        "Mod+Shift+Ctrl+H".action.move-column-to-monitor-left = {};
-        "Mod+Shift+Ctrl+J".action.move-column-to-monitor-down = {};
-        "Mod+Shift+Ctrl+K".action.move-column-to-monitor-up = {};
-        "Mod+Shift+Ctrl+L".action.move-column-to-monitor-right = {};
-
-        # Move to monitor (Colemak-DH)
-        "Mod+Shift+Ctrl+N".action.move-column-to-monitor-left = {};
-        "Mod+Shift+Ctrl+E".action.move-column-to-monitor-down = {};
-        "Mod+Shift+Ctrl+I".action.move-column-to-monitor-up = {};
-        "Mod+Shift+Ctrl+O".action.move-column-to-monitor-right = {};
-
-        # Move to monitor (arrow keys)
-        "Mod+Shift+Ctrl+Left".action.move-column-to-monitor-left = {};
-        "Mod+Shift+Ctrl+Down".action.move-column-to-monitor-down = {};
-        "Mod+Shift+Ctrl+Up".action.move-column-to-monitor-up = {};
-        "Mod+Shift+Ctrl+Right".action.move-column-to-monitor-right = {};
-
-        # Workspace navigation
-        "Mod+Page_Down".action.focus-workspace-down = {};
-        "Mod+Page_Up".action.focus-workspace-up = {};
-
-        # Workspace navigation (numeric)
-        "Mod+1".action.focus-workspace = 1;
-        "Mod+2".action.focus-workspace = 2;
-        "Mod+3".action.focus-workspace = 3;
-        "Mod+4".action.focus-workspace = 4;
-        "Mod+5".action.focus-workspace = 5;
-        "Mod+6".action.focus-workspace = 6;
-        "Mod+7".action.focus-workspace = 7;
-        "Mod+8".action.focus-workspace = 8;
-        "Mod+9".action.focus-workspace = 9;
-
-        # Move window to workspace
-        "Mod+Ctrl+Page_Down".action.move-column-to-workspace-down = {};
-        "Mod+Ctrl+Page_Up".action.move-column-to-workspace-up = {};
-
-        # Move window to workspace (numeric)
-        "Mod+Ctrl+1".action.move-column-to-workspace = 1;
-        "Mod+Ctrl+2".action.move-column-to-workspace = 2;
-        "Mod+Ctrl+3".action.move-column-to-workspace = 3;
-        "Mod+Ctrl+4".action.move-column-to-workspace = 4;
-        "Mod+Ctrl+5".action.move-column-to-workspace = 5;
-        "Mod+Ctrl+6".action.move-column-to-workspace = 6;
-        "Mod+Ctrl+7".action.move-column-to-workspace = 7;
-        "Mod+Ctrl+8".action.move-column-to-workspace = 8;
-        "Mod+Ctrl+9".action.move-column-to-workspace = 9;
-
-        # Move workspace
-        "Mod+Shift+Page_Down".action.move-workspace-down = {};
-        "Mod+Shift+Page_Up".action.move-workspace-up = {};
-
-        # Consume and expel windows
-        "Mod+BracketLeft".action.consume-or-expel-window-left = {};
-        "Mod+BracketRight".action.consume-or-expel-window-right = {};
-        "Mod+Comma".action.consume-window-into-column = {};
-        "Mod+Period".action.expel-window-from-column = {};
-
-        # Screenshots
-        "Print".action.screenshot = {};
-        "Ctrl+Print".action.screenshot-screen = {};
-        "Alt+Print".action.screenshot-window = {};
-
-        # System
-        "Mod+Shift+Slash".action.show-hotkey-overlay = {};
-        "Mod+Escape".action.toggle-debug-tint = {};
-        "Mod+Shift+Q".action.quit = {};
-        "Ctrl+Alt+Delete".action.quit = {};
-        "Mod+Shift+P".action.power-off-monitors = {};
-
-        # Custom: Lock screen
-        "Super+Alt+L".action.spawn = ["loginctl" "lock-session"];
-      };
+      # Keybindings are now configured in keybinds.nix
     };
 
     # Enable xwayland-satellite for X11 app compatibility

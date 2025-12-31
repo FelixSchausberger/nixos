@@ -1,7 +1,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }: let
   cfg = config.hostConfig;
@@ -15,30 +14,30 @@ in {
       ];
 
       boot.kernel.sysctl = {
-        "vm.swappiness" = lib.mkForce 1; # Minimal swap for gaming
-        "kernel.sched_migration_cost_ns" = lib.mkForce 500000; # Lower latency
+        "vm.swappiness" = 1; # Minimal swap for gaming
+        "kernel.sched_migration_cost_ns" = 500000; # Lower latency
       };
 
       # Enable CPU governor for performance
-      powerManagement.cpuFreqGovernor = lib.mkForce "performance";
+      powerManagement.cpuFreqGovernor = "performance";
     })
 
     # Productivity profile - balanced performance and efficiency
     (lib.mkIf (cfg.performanceProfile == "productivity") {
-      powerManagement.cpuFreqGovernor = lib.mkDefault "schedutil";
+      powerManagement.cpuFreqGovernor = "schedutil";
 
       boot.kernel.sysctl = {
-        "vm.swappiness" = lib.mkForce 10; # Balanced swap
-        "kernel.sched_autogroup_enabled" = lib.mkForce 1; # Better for desktop workloads
+        "vm.swappiness" = 10; # Balanced swap
+        "kernel.sched_autogroup_enabled" = 1; # Better for desktop workloads
       };
     })
 
     # Power-saving profile - maximize battery life and reduce thermals
     (lib.mkIf (cfg.performanceProfile == "power-saving") {
-      powerManagement.cpuFreqGovernor = lib.mkForce "powersave";
+      powerManagement.cpuFreqGovernor = "powersave";
 
       boot.kernel.sysctl = {
-        "vm.dirty_writeback_centisecs" = lib.mkForce 1500; # Reduce disk writes
+        "vm.dirty_writeback_centisecs" = 1500; # Reduce disk writes
         "vm.laptop_mode" = 5; # Enable laptop mode
       };
 
@@ -64,22 +63,25 @@ in {
 
       boot.kernel.sysctl = {
         # Memory tuning for large builds
-        "vm.swappiness" = lib.mkForce 1; # Avoid swap during builds
-        "vm.dirty_ratio" = lib.mkForce 40; # Allow more dirty pages before sync
-        "vm.dirty_background_ratio" = lib.mkForce 10; # Start writeback later
+        # No lib.mkDefault - naturally overrides core defaults (which use lib.mkDefault)
+        "vm.swappiness" = 1; # Avoid swap during builds
+        "vm.dirty_ratio" = 40; # Allow more dirty pages before sync
+        "vm.dirty_background_ratio" = 10; # Start writeback later
 
         # Scheduler optimizations for parallel builds
-        "kernel.sched_autogroup_enabled" = lib.mkForce 0; # Better for make -j
-        "kernel.sched_migration_cost_ns" = lib.mkForce 500000; # Reduce migration cost
-        "kernel.sched_min_granularity_ns" = lib.mkForce 1000000; # Lower context switch overhead
+        "kernel.sched_autogroup_enabled" = 0; # Better for make -j
+        "kernel.sched_migration_cost_ns" = 500000; # Reduce migration cost
+        "kernel.sched_min_granularity_ns" = 1000000; # Lower context switch overhead
 
         # File system performance
-        "vm.vfs_cache_pressure" = lib.mkForce 50; # Keep inode/dentry cache
-        "fs.inotify.max_user_watches" = lib.mkForce 524288; # For file watching (IDEs, build tools)
+        "vm.vfs_cache_pressure" = 50; # Keep inode/dentry cache
+
+        # Inotify limits moved to system/core/default.nix as universal baseline
+        # Build profile inherits: 524288 watches, 8192 instances, 32768 events
       };
 
       # Maximum CPU performance
-      powerManagement.cpuFreqGovernor = lib.mkForce "performance";
+      powerManagement.cpuFreqGovernor = "performance";
     })
   ];
 }

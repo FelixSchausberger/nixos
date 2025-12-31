@@ -13,51 +13,57 @@ in {
       inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
-    # Ironbar configuration file
+    # Ironbar configuration file - Vertical floating dock on left
     xdg.configFile."ironbar/config.json".text = builtins.toJSON {
-      anchor_to_edges = true;
-      position = "top";
-      height = 28;
+      name = "main";
+
+      # VERTICAL FLOATING DOCK - LEFT SIDE
+      position = "left";
+      anchor_to_edges = false; # Enables floating appearance
+
+      # Floating positioning
+      margin = {
+        top = 8;
+        bottom = 8;
+        left = 8; # 8px from left edge
+        right = 0;
+      };
+
+      # Vertical dock sizing
+      height = 0; # Auto-height for vertical
+      width = 56; # Dock width
+
+      # Layer configuration
+      layer = "overlay"; # Appear above windows
+      exclusive = false; # Don't reserve space
+      start_hidden = true; # Start hidden, toggle with Mod+Tab
+
+      # Vertical layout
       start = [
         {
           type = "workspaces";
           all_monitors = false;
-          name_map = {
-            "Terminal" = "󰆍";
-            "Browser" = "";
-            "Code" = "";
-            "Chat" = "󰭹";
-            "Music" = "";
-            "Games" = "";
-          };
+          # Dynamic workspaces - automatic naming
         }
       ];
+
       center = [
-        {
-          type = "focused";
-          show_icon = true;
-          show_title = true;
-          icon_size = 24;
-          truncate = {
-            mode = "end";
-            max_length = 50;
-          };
-        }
+        # Empty for cleaner minimal dock
       ];
+
       end = [
         {
           type = "script";
           cmd = "bash ${./sysinfo.sh}";
           interval = 3000;
-          tooltip = "System Information";
         }
         {
           type = "tray";
-          icon_size = 16;
+          icon_size = 20; # Larger for vertical
         }
         {
           type = "volume";
-          format = "{icon} {percentage}%";
+          format = "{icon}"; # Icon only for vertical
           max_volume = 100;
           icons = {
             volume_high = "";
@@ -67,39 +73,44 @@ in {
           };
         }
         {
-          type = "network_manager";
-          format_ethernet = "󰈀 {ip}";
-          format_wifi = "{icon} {ssid} {signal_strength}%";
-          format_disconnected = "󰤭 Disconnected";
-          icons = {
-            wifi = {
-              "0-25" = "󰤯";
-              "25-50" = "󰤟";
-              "50-75" = "󰤢";
-              "75-100" = "󰤨";
-            };
-          };
-        }
-        {
           type = "clock";
-          format = "%Y-%m-%d %H:%M:%S";
+          format = "%H\n%M"; # Vertical time display
         }
       ];
     };
 
-    # Ironbar CSS styling file
-    xdg.configFile."ironbar/style.css".text = ''
+    # Ironbar CSS styling file with stylix colors
+    xdg.configFile."ironbar/style.css".text = let
+      # Use stylix colors directly as hex values
+      # Stylix base16Scheme colors are already in hex format without #
+      inherit (config.stylix.base16Scheme) base00;
+      inherit (config.stylix.base16Scheme) base04;
+      inherit (config.stylix.base16Scheme) base05;
+      inherit (config.stylix.base16Scheme) base09;
+      inherit (config.stylix.base16Scheme) base0A;
+      inherit (config.stylix.base16Scheme) base0D;
+    in ''
       * {
-        font-family: "JetBrainsMono Nerd Font";
-        font-size: 13px;
+        font-family: "${config.stylix.fonts.monospace.name}";
+        font-size: ${toString (config.stylix.fonts.sizes.applications - 1)}px;
         border: none;
         border-radius: 0;
       }
 
+      window {
+        background: transparent;
+      }
+
       .bar {
-        background-color: rgba(30, 30, 46, 0.9);
-        border-bottom: 2px solid #ffc87f;
-        padding: 4px 8px;
+        background-color: rgba(17, 17, 27, 0.75); /* base00 with 75% opacity */
+        border: 1px solid rgba(245, 194, 231, 0.25); /* base09 accent border */
+        border-radius: 28px; /* Rounded pill shape */
+        padding: 12px 8px; /* Vertical padding larger */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35),
+                    0 2px 6px rgba(0, 0, 0, 0.2); /* Depth shadow */
+        /* Future blur support:
+         * backdrop-filter: blur(16px);
+         */
       }
 
       .start, .center, .end {
@@ -108,116 +119,92 @@ in {
 
       .workspaces {
         background: transparent;
+        padding: 4px 0;
       }
 
       .workspaces .item {
-        background: rgba(49, 50, 68, 0.6);
-        color: #a6adc8;
-        border-radius: 6px;
-        margin: 2px;
-        padding: 4px 8px;
-        min-width: 30px;
-        transition: all 200ms ease;
+        background: rgba(30, 30, 46, 0.60);
+        color: ${base04};
+        border-radius: 14px; /* Round workspace buttons */
+        margin: 4px 0; /* Vertical spacing */
+        padding: 8px;
+        min-width: 40px;
+        min-height: 40px; /* Square-ish buttons */
+        transition: all 180ms cubic-bezier(0.4, 0.0, 0.2, 1);
       }
 
       .workspaces .item.focused {
-        background: rgba(255, 200, 127, 0.8);
-        color: #1e1e2e;
+        background: rgba(245, 194, 231, 0.80); /* base09 highlight */
+        color: ${base00};
+        transform: scale(1.1);
+        box-shadow: 0 0 12px rgba(245, 194, 231, 0.4); /* Glow effect */
       }
 
       .workspaces .item.urgent {
-        background: rgba(243, 139, 168, 0.8);
-        color: #1e1e2e;
+        background: rgba(245, 194, 231, 0.80);
+        color: ${base00};
+        animation: pulse 1.5s ease-in-out infinite;
       }
 
-      .focused {
-        color: #cdd6f4;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
       }
 
-      .focused .icon {
-        margin-right: 8px;
+      /* Widget styling for vertical dock */
+      .tray, .volume, .script, .clock {
+        background: rgba(30, 30, 46, 0.50);
+        border-radius: 12px;
+        padding: 8px;
+        margin: 4px 0; /* Vertical margins */
+        transition: all 150ms ease;
       }
 
-      .tray {
-        background: transparent;
+      .tray:hover, .volume:hover, .script:hover, .clock:hover {
+        background: rgba(30, 30, 46, 0.75);
+        transform: translateX(-2px); /* Subtle shift left on hover */
       }
+
+      .volume { color: ${base0D}; }
+      .script { color: ${base0A}; }
+      .clock { color: ${base09}; }
 
       .tray .item {
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 4px;
-        margin: 1px;
-        padding: 2px 4px;
-      }
-
-      .volume {
-        color: #89b4fa;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
-      }
-
-      .network_manager {
-        color: #94e2d5;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
-      }
-
-      .sys_info {
-        color: #f9e2af;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
-      }
-
-      .script {
-        color: #f9e2af;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
-      }
-
-      .clock {
-        color: #fab387;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
+        background: rgba(30, 30, 46, 0.60);
+        border-radius: 10px;
+        padding: 6px;
+        margin: 2px 0;
       }
 
       button {
         background: transparent;
         border: none;
-        border-radius: 0;
       }
 
       button:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
+        background: rgba(245, 194, 231, 0.20);
+        border-radius: 8px;
       }
 
       .popup {
-        background: rgba(30, 30, 46, 0.95);
-        border: 1px solid #ffc87f;
-        border-radius: 8px;
+        background: rgba(17, 17, 27, 0.92);
+        border: 1px solid rgba(245, 194, 231, 0.30);
+        border-radius: 12px;
         padding: 8px;
+        /* Future blur support:
+         * backdrop-filter: blur(16px);
+         */
       }
 
       .popup-item {
-        color: #cdd6f4;
-        padding: 4px 8px;
-        border-radius: 4px;
+        color: ${base05};
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: background 100ms ease;
       }
 
       .popup-item:hover {
-        background: rgba(255, 200, 127, 0.2);
+        background: rgba(245, 194, 231, 0.30);
       }
     '';
 

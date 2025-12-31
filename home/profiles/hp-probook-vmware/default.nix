@@ -16,6 +16,8 @@
     fileManager = "cosmic-files";
   };
 
+  # COSMIC is enabled via wm module import
+
   # Feature-based configuration for development environment
   features = {
     development = {
@@ -23,6 +25,9 @@
       languages = ["nix" "python" "go" "rust" "javascript"];
     };
   };
+
+  # AI assistants configuration
+  ai-assistants.vibe-kanban.enable = true;
 
   # Fix missing calendar configuration
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
@@ -55,7 +60,9 @@
   home = {
     # Useful packages for VM environment
     packages = with pkgs; [
+      gamescope # Gaming compositor for proper pointer locking in Niri
       lazyssh # Terminal-based SSH manager
+      quantumlauncher # Minecraft launcher
     ];
 
     # Environment variables for Wayland

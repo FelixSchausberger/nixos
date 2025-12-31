@@ -1,6 +1,5 @@
 {
   pkgs,
-  inputs,
   config,
   lib,
   ...
@@ -22,6 +21,7 @@ in {
         shellcheck # Shell script linter
         # Claude Code itself
         claude-code
+        # Note: rust-analyzer is provided by rustup (see features.nix)
       ])
       # MCP server packages from shared definitions
       ++ (lib.attrValues (lib.mapAttrs (_n: v: v.package) (lib.filterAttrs (_n: v: v.enabled) sharedMcp)));
@@ -125,6 +125,19 @@ in {
 
       # MCP server configuration - automatically approve all project MCP servers
       enableAllProjectMcpServers = true;
+
+      # Plugin configuration - enable all official Claude plugins
+      enabledPlugins = {
+        "commit-commands@claude-plugins-official" = true;
+        "feature-dev@claude-plugins-official" = true;
+        "frontend-design@claude-plugins-official" = true;
+        "github@claude-plugins-official" = true;
+        "hookify@claude-plugins-official" = true;
+        "lua-lsp@claude-plugins-official" = true;
+        "rust-analyzer-lsp@claude-plugins-official" = true;
+        "security-guidance@claude-plugins-official" = true;
+        "serena@claude-plugins-official" = true;
+      };
 
       permissions = {
         additionalDirectories = [

@@ -21,7 +21,7 @@
   # Minimal sops config - derive age key from SSH key
   sops = {
     # Use SSH key to derive age key automatically (same as .envrc)
-    age.sshKeyPaths = [ "/per/home/schausberger/.ssh/id_ed25519" ];
+    age.sshKeyPaths = ["/per/home/schausberger/.ssh/id_ed25519"];
     defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
     defaultSopsFormat = "yaml";
   };

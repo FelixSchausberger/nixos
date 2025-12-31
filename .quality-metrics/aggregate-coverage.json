@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-12-31T16:27:09Z",
+  "aggregate_coverage": 88,
+  "critical_path_coverage": 100,
+  "host_coverage": 83,
+  "module_coverage": 67,
+  "test_suites": 18,
+  "snapshot_assertions": 0,
+  "hosts_tested": 5,
+  "hosts_total": 6
+}

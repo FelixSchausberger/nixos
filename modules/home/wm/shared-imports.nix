@@ -5,5 +5,6 @@
   imports = [
     inputs.wired.homeManagerModules.default # Wired notification daemon
     ../wallpapers # Wallpaper management module
+    ./shared/walker.nix # Walker application launcher (shared between WMs)
   ];
 }

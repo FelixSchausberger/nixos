@@ -33,11 +33,11 @@ in {
     terminal = "ghostty";
     fileManager = "cosmic-files";
 
-    # Desktop-specific scratchpad preferences
-    scratchpad = {
-      musicApp = "spotify"; # Full Spotify for desktop
-      notesApp = "obsidian"; # Full note-taking app
-    };
+    # NOTE: Scratchpad feature temporarily disabled (option commented out in niri module)
+    # scratchpad = {
+    #   musicApp = "spotify"; # Full Spotify for desktop
+    #   notesApp = "obsidian"; # Full note-taking app
+    # };
   };
 
   # Desktop-specific packages (gaming and productivity)
@@ -54,7 +54,7 @@ in {
     gamescope
 
     # Game launchers
-    prismlauncher # Minecraft
+    quantumlauncher # Minecraft
 
     # Emulation (all temporarily disabled due to Qt 6.10 incompatibility)
     # dolphin-emu # Temporarily disabled: Qt 6.10 incompatibility causing build failures
@@ -123,7 +123,7 @@ in {
       whitelist=steam
       whitelist=lutris
       whitelist=heroic
-      whitelist=prismlauncher
+      whitelist=quantumlauncher
 
       [gpu]
       apply_gpu_optimisations=accept-responsibility

@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-12-30T22:25:04Z",
+  "critical_path_coverage": 100,
+  "critical_paths_covered": 5,
+  "critical_paths_total": 5,
+  "test_suites": 18,
+  "snapshot_assertions": 0,
+  "hosts_tested": 5,
+  "hosts_total": 6,
+  "total_modules": 133
+}

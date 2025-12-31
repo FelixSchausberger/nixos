@@ -259,6 +259,90 @@ When iterating on Niri configuration:
 
 This workflow avoids full system rebuilds during Niri development.
 
+### Quality Monitoring and Metrics
+
+The project includes comprehensive quality monitoring to ensure high code quality and prevent regressions.
+
+**Quality metrics tracked:**
+- Test coverage (critical paths, hosts, modules)
+- Dead code detection (unused bindings and modules)
+- Performance metrics (evaluation time, closure sizes)
+- Security vulnerabilities
+- Code quality issues (linting, formatting)
+
+**Quick commands:**
+
+```bash
+# Run all quality checks
+just quality-check
+
+# Individual checks
+just coverage           # Calculate test coverage
+just check-unused       # Detect unused modules
+just profile-eval       # Profile evaluation time
+just check-closures     # Check all closure sizes
+just dashboard          # Generate quality dashboard
+```
+
+**Quality gates in CI:**
+
+Every commit and pull request must pass:
+- ✅ No dead code (deadnix)
+- ✅ No unused modules
+- ✅ 100% critical path coverage (boot, networking, users, security, systemd)
+- ✅ Evaluation time <10s
+- ✅ Closure size within limits
+
+CI fails automatically if any gate fails, preventing quality regressions.
+
+**Viewing metrics:**
+
+1. **Quality Dashboard**: `docs/QUALITY_DASHBOARD.md` (auto-generated)
+2. **GitHub Pages**: `https://USERNAME.github.io/nixos/` (live dashboard)
+3. **CI Artifacts**: Download from GitHub Actions workflow runs
+4. **Local metrics**: `.quality-metrics/` directory
+
+**Interpreting results:**
+
+- **Coverage percentage**: Higher is better, target 100% for critical paths
+- **Evaluation time**: Lower is better, target <10s for fast iteration
+- **Closure sizes**: Smaller is better, indicates leaner system
+- **Dead code/unused modules**: Should always be 0
+
+**Fixing quality issues:**
+
+```bash
+# Fix formatting and dead code automatically
+deadnix --edit .
+statix fix .
+alejandra .
+
+# Find and remove unused modules
+just check-unused --verbose
+# Then manually remove the reported modules
+
+# Improve coverage
+# Add tests in tests/coverage/ or extend existing tests
+
+# Optimize performance
+just profile-eval --host desktop
+# Review slow modules in output
+```
+
+**Quality monitoring setup:**
+
+For new repositories or after cloning:
+
+1. Run initial quality check: `just quality-check`
+2. Fix any issues found
+3. Establish baselines: `.quality-metrics/` will be created
+4. CI will track deltas from baselines
+
+**Dynamic badges** (optional):
+
+Set up auto-updating badges in README showing coverage, performance, and quality gates status.
+See `docs/BADGES_SETUP.md` for complete setup instructions.
+
 ### VM Installation with nixos-anywhere
 
 For VM installations (VMware, VirtualBox, Proxmox), use nixos-anywhere:
@@ -417,6 +501,67 @@ jq -r '.mcpServers | keys[]' /per/etc/nixos/.mcp.json
 # Note: `claude mcp list` has a known bug and won't show project-scoped servers
 # Use `claude mcp get <server-name>` to verify individual servers
 ```
+
+### Plugins
+
+The configuration enables 9 official Claude Code plugins declaratively:
+
+**Development & Git:**
+- `commit-commands` - Git commit workflows (/commit, /commit-push-pr)
+- `feature-dev` - Guided feature development with architecture focus
+- `github` - GitHub repository operations
+
+**Code Quality:**
+- `hookify` - Create hooks to prevent unwanted behaviors
+- `security-guidance` - Security best practices and vulnerability detection
+
+**Language Support (LSP):**
+- `lua-lsp` - Lua language server integration
+- `rust-analyzer-lsp` - Rust language server integration
+
+**Specialized:**
+- `frontend-design` - Production-grade frontend interfaces
+- `serena` - AI assistant capabilities
+
+**Configuration:**
+
+Plugins are enabled in `settings.json` via `enabledPlugins`:
+
+```nix
+enabledPlugins = {
+  "plugin-name@claude-plugins-official" = true;
+};
+```
+
+Plugins are installed automatically by Claude Code from the official marketplace.
+
+### LSP Servers
+
+LSP servers are managed through system packages and discovered via PATH:
+
+**Configured LSP servers:**
+- `nixd` - Nix language server (for semantic Nix operations, installed via home.packages)
+- `rust-analyzer` - Rust language server (provided by rustup when Rust development is enabled)
+
+LSP plugins (lua-lsp, rust-analyzer-lsp) require the corresponding LSP server
+to be available in PATH. The rust-analyzer-lsp plugin uses the rust-analyzer
+binary provided by rustup.
+
+### MCP vs Plugins vs LSP
+
+**When to use each:**
+
+| Mechanism | Use Case | Examples | Configuration |
+|-----------|----------|----------|---------------|
+| **MCP Servers** | External tool integration, data sources | GitHub API, NixOS search, Language servers | `.mcp.json` + packages |
+| **Plugins** | Reusable commands/workflows, team sharing | Commit workflows, feature dev, security | `enabledPlugins` in settings.json |
+| **LSP (via plugins)** | Language-specific code intelligence | Go-to-definition, hover, diagnostics | Plugin + system package |
+
+**MCP Servers** provide external capabilities (APIs, databases, language servers).
+**Plugins** provide reusable commands, workflows, and automation.
+**LSP plugins** connect Claude Code to language servers for code intelligence.
+
+All three can coexist and complement each other.
 
 ### Claude Code Hooks
 

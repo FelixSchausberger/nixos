@@ -1,10 +1,14 @@
 {
   inputs,
   config,
+  pkgs,
   ...
 }: let
   inherit (inputs.self.lib) defaults;
 in {
+  # Enable fish shell system-wide
+  programs.fish.enable = true;
+
   users = {
     mutableUsers = false;
     users = {
@@ -20,6 +24,7 @@ in {
         extraGroups = ["fuse" "networkmanager" "input" "video" "render" "wheel" "dialout"];
         hashedPasswordFile = config.sops.secrets."private/password-hash".path;
         group = defaults.system.user;
+        shell = pkgs.fish;
       };
     };
 

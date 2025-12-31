@@ -68,13 +68,13 @@ in {
         };
 
         performanceProfile = lib.mkOption {
-          type = lib.types.enum ["default" "gaming" "productivity" "power-saving"];
+          type = lib.types.enum ["default" "gaming" "productivity" "power-saving" "build"];
           default = "default";
           description = "Performance profile for this system";
         };
 
         specialisations = lib.mkOption {
-          type = lib.types.attrsOf (lib.types.submodule ({name, ...}: {
+          type = lib.types.attrsOf (lib.types.submodule (_: {
             options = {
               wm = lib.mkOption {
                 type = lib.types.nullOr (lib.types.listOf lib.types.str);

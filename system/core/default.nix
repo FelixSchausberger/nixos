@@ -60,38 +60,41 @@ in {
   system.emergency.enable = true;
 
   # Kernel memory management optimization
+  # Use lib.mkDefault for all sysctl values to allow performance profiles and
+  # host-specific configs to override these baseline settings
   boot.kernel.sysctl = {
     # Memory management
-    "vm.swappiness" = 10; # Reduce swap usage preference
-    "vm.vfs_cache_pressure" = 50; # Keep directory/inode cache longer
+    "vm.swappiness" = lib.mkDefault 10; # Reduce swap usage preference
+    "vm.vfs_cache_pressure" = lib.mkDefault 50; # Keep directory/inode cache longer
 
     # Memory writeback tuning for better responsiveness
-    "vm.dirty_background_ratio" = 5; # Start background writeback early
-    "vm.dirty_ratio" = 10; # Force sync at 10% dirty pages
-    "vm.dirty_writeback_centisecs" = 100; # Writeback every 1s (default 5s)
-    "vm.dirty_expire_centisecs" = 3000; # Expire dirty pages after 30s (default 30s)
+    "vm.dirty_background_ratio" = lib.mkDefault 5; # Start background writeback early
+    "vm.dirty_ratio" = lib.mkDefault 10; # Force sync at 10% dirty pages
+    "vm.dirty_writeback_centisecs" = lib.mkDefault 100; # Writeback every 1s (default 5s)
+    "vm.dirty_expire_centisecs" = lib.mkDefault 3000; # Expire dirty pages after 30s (default 30s)
 
     # Build performance optimizations
-    "kernel.sched_autogroup_enabled" = 0; # Better for build workloads
-    "vm.max_map_count" = 1048576; # Help with large builds (default 65530)
-    "kernel.sched_migration_cost_ns" = 5000000; # Reduce CPU migration overhead
+    "kernel.sched_autogroup_enabled" = lib.mkDefault 0; # Better for build workloads
+    # Note: vm.max_map_count is already set by NixOS to 1048576
+    "kernel.sched_migration_cost_ns" = lib.mkDefault 5000000; # Reduce CPU migration overhead
 
     # I/O scheduler optimizations
-    "vm.page-cluster" = 0; # Disable read-ahead for SSDs
-    "vm.watermark_boost_factor" = 0; # Disable memory watermark boosting for better performance
+    "vm.page-cluster" = lib.mkDefault 0; # Disable read-ahead for SSDs
+    "vm.watermark_boost_factor" = lib.mkDefault 0; # Disable memory watermark boosting for better performance
 
     # Network performance tuning
-    "net.core.rmem_max" = 134217728; # 128MB receive buffer
-    "net.core.wmem_max" = 134217728; # 128MB send buffer
-    "net.ipv4.tcp_rmem" = "4096 65536 134217728"; # TCP receive buffer
-    "net.ipv4.tcp_wmem" = "4096 65536 134217728"; # TCP send buffer
-    "net.ipv4.tcp_congestion_control" = "bbr"; # Better congestion control
-    "net.core.default_qdisc" = "cake"; # Modern queueing discipline
+    "net.core.rmem_max" = lib.mkDefault 134217728; # 128MB receive buffer
+    "net.core.wmem_max" = lib.mkDefault 134217728; # 128MB send buffer
+    "net.ipv4.tcp_rmem" = lib.mkDefault "4096 65536 134217728"; # TCP receive buffer
+    "net.ipv4.tcp_wmem" = lib.mkDefault "4096 65536 134217728"; # TCP send buffer
+    "net.ipv4.tcp_congestion_control" = lib.mkDefault "bbr"; # Better congestion control
+    "net.core.default_qdisc" = lib.mkDefault "cake"; # Modern queueing discipline
 
-    # Security hardening while maintaining performance
-    "kernel.kptr_restrict" = 1; # Hide kernel pointers
-    "net.ipv4.conf.default.rp_filter" = 1; # Enable reverse path filtering
-    "net.ipv4.conf.all.rp_filter" = 1;
+    # Note: Inotify limits (max_user_watches=524288, max_user_instances=524288) are
+    # already set to good defaults by NixOS in nixos/modules/config/sysctl.nix
+
+    # Note: Security settings (kernel.kptr_restrict, rp_filter) are already set
+    # by NixOS defaults in nixos/modules/config/sysctl.nix, so we don't override them
   };
 
   system.stateVersion = lib.mkDefault defaults.system.version;

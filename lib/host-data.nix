@@ -4,13 +4,13 @@
   desktop = {
     wms = ["gnome" "hyprland" "niri"];
     isGui = true;
-    description = "Full desktop with multiple WMs";
+    description = "Desktop PC";
   };
 
   surface = {
     wms = ["niri"];
     isGui = true;
-    description = "Surface tablet with Niri WM";
+    description = "Surface Pro 5";
   };
 
   portable = {
@@ -20,14 +20,14 @@
   };
 
   hp-probook-wsl = {
-    wms = ["niri"]; # WSL with niri WM support via WSLg
-    isGui = true; # Enable GUI support for WSLg
-    description = "WSL environment with Niri WM";
+    wms = []; # No window manager needed in WSL
+    isGui = true; # Keep GUI support for WSLg apps
+    description = "WSL environment on HP Probook 465 G11";
   };
 
   hp-probook-vmware = {
     wms = ["niri"];
     isGui = true;
-    description = "VMware VM with Niri on HP ProBook 465 G11";
+    description = "VMware VM on HP ProBook 465 G11";
   };
 }

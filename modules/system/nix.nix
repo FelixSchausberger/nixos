@@ -24,13 +24,15 @@
       allowAliases = true;
     };
     overlays = [
+      inputs.niri.overlays.niri
       inputs.nur.overlays.default
-      # Custom overlay for TUI-specific packages
+      # Custom overlay for custom packages
       (final: prev: {
         zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
         helix-steel = final.callPackage ../../pkgs/helix-steel {};
         helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
         scooter-hx = final.callPackage ../../pkgs/scooter-hx {};
+        quantumlauncher = final.callPackage ../../pkgs/quantumlauncher {};
       })
     ];
   };
@@ -91,6 +93,9 @@
         # Very commonly used packages - high priority
         "https://nix-community.cachix.org?priority=5"
 
+        # Niri window manager cache
+        "https://niri.cachix.org?priority=6"
+
         # Personal cache for custom builds
         "https://felixschausberger.cachix.org?priority=7"
 
@@ -117,6 +122,9 @@
 
         # Garnix CI cache
         "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+
+        # Niri cache
+        "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
 
         # Project-specific caches
         "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="

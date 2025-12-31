@@ -48,6 +48,7 @@ in {
     xserver = {
       enable = true;
       videoDrivers = ["amdgpu"];
+      excludePackages = [pkgs.xterm];
     };
 
     # Use tuigreet for all window managers

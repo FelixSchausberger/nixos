@@ -1,0 +1,62 @@
+name: Deploy Quality Dashboard
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+jobs:
+  build:
+    name: Build Dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Copy dashboard files
+        run: |
+          mkdir -p _site
+          cp docs/site/index.html _site/
+      - name: Generate metrics JSON
+        run: |
+          # Create a basic metrics.json from the quality dashboard if it exists
+          if [ -f ".quality-metrics/aggregate-coverage.json" ]; then
+            # Merge all metrics into a single file for the dashboard
+            jq -s '
+              {
+                timestamp: (.[0].timestamp // now | todate),
+                aggregate_coverage: (.[0].aggregate_coverage // 0),
+                critical_path_coverage: (.[0].critical_path_coverage // 0),
+                test_suites: (.[0].test_suites // 0),
+                snapshot_assertions: (.[0].snapshot_assertions // 0),
+                dead_code: 0,
+                unused_modules: 0,
+                statix_issues: 0,
+                eval_time: 0
+              }
+            ' .quality-metrics/aggregate-coverage.json > _site/metrics.json 2>/dev/null || \
+            echo '{"timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
+          else
+            # Create placeholder metrics if none exist yet
+            echo '{"timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
+          fi
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+  deploy:
+    name: Deploy to Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

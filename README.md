@@ -1,6 +1,10 @@
 # FelixSchausberger/nixos
 
 [![CI Pipeline](https://github.com/FelixSchausberger/nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/coverage.json)
+![Eval Time](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/eval-time.json)
+![Quality Gates](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/quality-gates.json)
+![CI](https://github.com/FelixSchausberger/nixos/workflows/CI%20Pipeline/badge.svg)
 
 ## About
 

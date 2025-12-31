@@ -155,16 +155,9 @@
             command rm $argv
           end
         end
-        # Safe direnv initialization with enhanced error handling
-        if command -v direnv >/dev/null 2>&1
-          if direnv --help >/dev/null 2>&1
-            if not direnv hook fish | source 2>/dev/null
-              echo "⚠️  direnv hook failed to load - continuing without direnv integration"
-            end
-          else
-            echo "⚠️  direnv found but not working properly - skipping integration"
-          end
-        end
+
+        # direnv hook is automatically added by programs.direnv home-manager module
+        # No manual initialization needed here
 
         # Safe jujutsu completion with enhanced error handling (commented for now)
         # if command -v jj >/dev/null 2>&1
@@ -216,10 +209,10 @@
       # This prevents shell lockouts by providing automatic fallback on failure
       #
       # To enable: set -gx ZELLIJ_AUTO_START 1
-      # To disable: set -e ZELLIJ_AUTO_START
+      # To disable: set -e ZELLIJ_AUTO_START or set -gx ZELLIJ_AUTO_START 0
       #
       # Official documentation: https://zellij.dev/documentation/integration.html
-      if status is-interactive; and set -q ZELLIJ_AUTO_START; and not __emergency_check
+      if status is-interactive; and set -q ZELLIJ_AUTO_START; and test "$ZELLIJ_AUTO_START" != "0"; and not __emergency_check
         # Run pre-flight checks before attempting auto-start
         if __zellij_preflight_check
           # Use official Zellij auto-start method (safe, with fallback)

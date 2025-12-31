@@ -32,9 +32,12 @@
 
   programs = {
     cosmic-ext-ctl.enable = true; # CLI for COSMIC Desktop configuration management
-    cosmic-manager.enable = true; # Manage COSMIC desktop declaratively using home-manager
     cosmic-ext-tweaks.enable = true; # A tweaking tool for the COSMIC desktop
   };
+
+  # Note: cosmic-manager is enabled via cosmic-manager flake input
+  # The cosmic-manager.enable option has been removed from upstream
+  # Configuration is done via wayland.desktopManager.cosmic options below
 
   wayland.desktopManager.cosmic = {
     enable = true;

@@ -1,10 +1,48 @@
 {
   lib,
   pkgs,
+  firefox-addons ? null,
   ...
-}: {
+}: let
+  # Extension source selection
+  # - "flake": Use firefox-addons flake input (for zen-browser)
+  # - "nur": Use NUR repository (backward compatible)
+  getExtensions = source: let
+    # Keepa is marked as unfree in firefox-addons flake, so always use NUR for it
+    # NUR respects the system's allowUnfree config
+    keepaFromNur = [pkgs.nur.repos.rycee.firefox-addons.keepa];
+
+    # Get other extensions from requested source
+    otherExtensions =
+      if source == "flake" && firefox-addons != null
+      then
+        with firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
+          bitwarden
+          darkreader
+          ff2mpv
+          i-dont-care-about-cookies
+          ublock-origin
+          vimium-c
+          youtube-nonstop
+        ]
+      else
+        with pkgs.nur.repos.rycee.firefox-addons; [
+          bitwarden
+          darkreader
+          ff2mpv
+          i-dont-care-about-cookies
+          ublock-origin
+          vimium-c
+          youtube-nonstop
+        ];
+  in
+    otherExtensions ++ keepaFromNur;
+in {
   # Shared browser configuration for Firefox and Zen
   # Contains common settings, extensions, and search engines
+
+  # Export the helper function
+  inherit getExtensions;
 
   # Common language packs
   languagePacks = ["de" "en-US"];
@@ -92,17 +130,8 @@
     "ecosia".metaData.hidden = true;
   };
 
-  # Common extensions
-  extensions = with pkgs.nur.repos.rycee.firefox-addons; [
-    bitwarden
-    darkreader
-    ff2mpv
-    i-dont-care-about-cookies
-    keepa
-    ublock-origin
-    vimium-c
-    youtube-nonstop
-  ];
+  # Common extensions (default to NUR for backward compatibility)
+  extensions = getExtensions "nur";
 
   # Common uBlock Origin configuration
   ublockSettings = rec {
@@ -254,7 +283,13 @@
 
     # Cookie behavior (0 = Accept all, 1 = Block third-party, 2 = Block all, 4 = Block known trackers)
     "network.cookie.cookieBehavior" = 4;
-    "network.cookie.lifetimePolicy" = 2; # Accept for session only
+
+    # Cookie persistence - disabled to allow persistent cookies with expiry
+    "privacy.sanitize.sanitizeOnShutdown" = false;
+    "privacy.clearOnShutdown.cookies" = false;
+    "privacy.clearOnShutdown.cache" = false;
+    "privacy.clearOnShutdown.offlineApps" = false;
+    "privacy.clearOnShutdown.sessions" = false;
 
     # Disable WebRTC leaks
     "media.peerconnection.enabled" = false;

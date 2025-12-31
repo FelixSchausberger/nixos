@@ -17,8 +17,8 @@
     # Enable niri
     programs.niri = {
       enable = true;
-      # Enable xwayland for compatibility with X11 applications
-      package = pkgs.niri;
+      # Use niri-unstable for latest features and fixes
+      package = pkgs.niri-unstable;
     };
 
     # PipeWire, fonts, and common security configuration are provided by shared modules

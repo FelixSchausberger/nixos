@@ -6,7 +6,7 @@
   # Generate NixOS specialisations from hostConfig.specialisations
   # Note: hostConfig.specialisations option is defined in hosts/shared.nix
   config.specialisation =
-    lib.mapAttrs (name: spec: {
+    lib.mapAttrs (_name: spec: {
       inheritParentConfig = true;
       configuration = {
         # Override WM list if specified

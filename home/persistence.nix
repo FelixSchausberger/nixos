@@ -53,6 +53,16 @@
         directory = ".zen/Profile Groups";
         method = "symlink";
       }
+
+      # Zen browser cache for performance
+      {
+        directory = ".cache/zen";
+        method = "symlink";
+      }
+      {
+        directory = ".local/share/zen";
+        method = "symlink";
+      }
     ];
 
     # Additional config files for GUI applications

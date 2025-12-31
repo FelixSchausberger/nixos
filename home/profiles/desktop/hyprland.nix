@@ -44,7 +44,7 @@ in {
     gamescope
 
     # Game launchers
-    prismlauncher # Minecraft
+    quantumlauncher # Minecraft
 
     # Emulation (all temporarily disabled due to Qt 6.10 incompatibility)
     # dolphin-emu # Temporarily disabled: Qt 6.10 incompatibility causing build failures
@@ -218,7 +218,7 @@ in {
       whitelist=steam
       whitelist=lutris
       whitelist=heroic
-      whitelist=prismlauncher
+      whitelist=quantumlauncher
 
       [gpu]
       apply_gpu_optimisations=accept-responsibility

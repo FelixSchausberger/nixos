@@ -111,18 +111,18 @@
     open-vm-tools # VMware guest utilities
   ];
 
-  # Enable VMware shared folders (optional)
-  # Uncomment if you want to share folders between host Windows and guest NixOS
-  # fileSystems."/mnt/hgfs" = {
-  #   device = ".host:/";
-  #   fsType = "fuse./run/current-system/sw/bin/vmhgfs-fuse";
-  #   options = [
-  #     "umask=22"
-  #     "uid=1000"
-  #     "gid=100"
-  #     "allow_other"
-  #     "auto_unmount"
-  #     "defaults"
-  #   ];
-  # };
+  # VMware shared folders
+  # Mount Windows host PDTS folder to /mnt/PDTS
+  fileSystems."/mnt/PDTS" = {
+    device = ".host:/PDTS";
+    fsType = "fuse./run/current-system/sw/bin/vmhgfs-fuse";
+    options = [
+      "umask=22"
+      "uid=1000"
+      "gid=100"
+      "allow_other"
+      "auto_unmount"
+      "defaults"
+    ];
+  };
 }

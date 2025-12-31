@@ -1,4 +1,15 @@
-{pkgs, ...}: {
+{
+  lib,
+  pkgs,
+  hostName ? "",
+  ...
+}: let
+  # Hosts with real GPUs that support OpenGL 4.6
+  supportsGL46 = builtins.elem hostName ["desktop" "surface"];
+
+  # Hosts where Zed is supported (excludes VMware/WSL due to GLSL 4.60 requirement)
+  supportsZed = supportsGL46;
+in {
   home = {
     packages = with pkgs; [
       icu # Required for .NET globalization support (MCP servers)
@@ -8,26 +19,30 @@
       vulkan-loader # Vulkan compatibility
     ];
 
-    sessionVariables = {
-      GDK_BACKEND = "wayland";
-      # Network stability enhancements
-      DISABLE_REQUEST_THROTTLING = "1";
-      # Increase connection pools and timeouts
-      CHROME_NET_TCP_SOCKET_CONNECT_TIMEOUT_MS = "60000";
-      CHROME_NET_TCP_SOCKET_CONNECT_ATTEMPT_DELAY_MS = "2000";
+    sessionVariables =
+      {
+        GDK_BACKEND = "wayland";
+        # Network stability enhancements
+        DISABLE_REQUEST_THROTTLING = "1";
+        # Increase connection pools and timeouts
+        CHROME_NET_TCP_SOCKET_CONNECT_TIMEOUT_MS = "60000";
+        CHROME_NET_TCP_SOCKET_CONNECT_ATTEMPT_DELAY_MS = "2000";
 
-      # NixOS-specific optimizations for Zed
-      # Vulkan support (required for Zed) - Auto-detected drivers
-      VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json:/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json:/run/opengl-driver/share/vulkan/icd.d/intel_icd.x86_64.json";
-      # GPU library paths
-      LD_LIBRARY_PATH = "/run/opengl-driver/lib";
-      # Mesa GPU acceleration
-      MESA_GL_VERSION_OVERRIDE = "4.6";
-    };
+        # NixOS-specific optimizations for Zed
+        # Vulkan support (required for Zed) - Auto-detected drivers
+        VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json:/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json:/run/opengl-driver/share/vulkan/icd.d/intel_icd.x86_64.json";
+        # GPU library paths
+        LD_LIBRARY_PATH = "/run/opengl-driver/lib";
+      }
+      // lib.optionalAttrs supportsGL46 {
+        # Mesa GPU acceleration (only on hosts with real GPUs supporting OpenGL 4.6)
+        # VMware and WSL virtual GPUs don't support GLSL 4.60 despite reporting OpenGL 4.6
+        MESA_GL_VERSION_OVERRIDE = "4.6";
+      };
   };
 
   programs.zed-editor = {
-    enable = true;
+    enable = supportsZed;
 
     # Extensions using Home Manager's built-in support
     extensions = [
@@ -62,7 +77,7 @@
 
     userSettings = {
       # Theme and appearance
-      theme = {
+      theme = lib.mkForce {
         mode = "dark";
         light = "Catppuccin Latte";
         dark = "Catppuccin Mocha (Blur)"; # Using the blur theme from catppuccin-macchiatoblur extension
@@ -317,10 +332,10 @@
       };
 
       # UI settings
-      ui_font_size = 24;
-      ui_font_family = "Zed Sans";
-      buffer_font_size = 24;
-      buffer_font_family = "Fira Code Mono";
+      ui_font_size = lib.mkForce 24;
+      ui_font_family = lib.mkForce "Zed Sans";
+      buffer_font_size = lib.mkForce 24;
+      buffer_font_family = lib.mkForce "Fira Code Mono";
 
       # Window settings
       auto_update = false; # Managed by Nix

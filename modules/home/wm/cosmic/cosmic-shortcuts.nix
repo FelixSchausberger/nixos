@@ -25,7 +25,7 @@
 
     # Window management
     {
-      action = cosmicLib.cosmic.mkRON "enum" "Float";
+      action = cosmicLib.cosmic.mkRON "enum" "ToggleWindowFloating";
       description = cosmicLib.cosmic.mkRON "optional" "Toggle floating";
       key = "Super+Space";
     }
@@ -37,217 +37,289 @@
 
     # Window focus (Colemak-DH N/E/I/O pattern)
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus window left";
       key = "Super+N";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       key = "Super+Left";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus window down";
       key = "Super+E";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       key = "Super+Down";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus window up";
       key = "Super+I";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       key = "Super+Up";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus window right";
       key = "Super+O";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Focus";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       key = "Super+Right";
     }
 
     # Window movement (Ctrl + N/E/I/O)
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window left";
       key = "Super+Ctrl+N";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       key = "Super+Ctrl+Left";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window down";
       key = "Super+Ctrl+E";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       key = "Super+Ctrl+Down";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window up";
       key = "Super+Ctrl+I";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       key = "Super+Ctrl+Up";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window right";
       key = "Super+Ctrl+O";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "Move";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       key = "Super+Ctrl+Right";
     }
 
     # Monitor focus (Shift + N/E/I/O)
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus monitor left";
       key = "Super+Shift+N";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       key = "Super+Shift+Left";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus monitor down";
       key = "Super+Shift+E";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       key = "Super+Shift+Down";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus monitor up";
       key = "Super+Shift+I";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       key = "Super+Shift+Up";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Focus monitor right";
       key = "Super+Shift+O";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "FocusOutputRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "SwitchOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       key = "Super+Shift+Right";
     }
 
     # Move to monitor (Ctrl+Shift + N/E/I/O)
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window to monitor left";
       key = "Super+Ctrl+Shift+N";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputLeft";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Left")];
+      };
       key = "Super+Ctrl+Shift+Left";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window to monitor down";
       key = "Super+Ctrl+Shift+E";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputDown";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Down")];
+      };
       key = "Super+Ctrl+Shift+Down";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window to monitor up";
       key = "Super+Ctrl+Shift+I";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputUp";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Up")];
+      };
       key = "Super+Ctrl+Shift+Up";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       description = cosmicLib.cosmic.mkRON "optional" "Move window to monitor right";
       key = "Super+Ctrl+Shift+O";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" "MoveToOutputRight";
+      action = cosmicLib.cosmic.mkRON "enum" {
+        variant = "MoveToOutput";
+        value = [(cosmicLib.cosmic.mkRON "enum" "Right")];
+      };
       key = "Super+Ctrl+Shift+Right";
     }
 
     # Workspace navigation (U/I pattern)
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-        variant = "SwitchWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "PreviousWorkspace";
       description = cosmicLib.cosmic.mkRON "optional" "Switch to workspace above";
       key = "Super+U";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-        variant = "SwitchWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "PreviousWorkspace";
       key = "Super+Prior";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-        variant = "SwitchWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "NextWorkspace";
       description = cosmicLib.cosmic.mkRON "optional" "Switch to workspace below";
       key = "Super+Shift+U";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-        variant = "SwitchWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "NextWorkspace";
       key = "Super+Next";
     }
 
     # Move window to workspace
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-        variant = "MoveToWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "MoveToPreviousWorkspace";
       description = cosmicLib.cosmic.mkRON "optional" "Move to workspace above";
       key = "Super+Ctrl+U";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-        variant = "MoveToWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "MoveToPreviousWorkspace";
       key = "Super+Ctrl+Prior";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-        variant = "MoveToWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "MoveToNextWorkspace";
       description = cosmicLib.cosmic.mkRON "optional" "Move to workspace below";
       key = "Super+Ctrl+Shift+U";
     }
     {
-      action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-        variant = "MoveToWorkspace";
-      };
+      action = cosmicLib.cosmic.mkRON "enum" "MoveToNextWorkspace";
       key = "Super+Ctrl+Next";
     }
 
@@ -276,21 +348,21 @@
     }
     {
       action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "VolumeUp")];
+        value = [(cosmicLib.cosmic.mkRON "enum" "VolumeRaise")];
         variant = "System";
       };
       key = "XF86AudioRaiseVolume";
     }
     {
       action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "VolumeDown")];
+        value = [(cosmicLib.cosmic.mkRON "enum" "VolumeLower")];
         variant = "System";
       };
       key = "XF86AudioLowerVolume";
     }
     {
       action = cosmicLib.cosmic.mkRON "enum" {
-        value = [(cosmicLib.cosmic.mkRON "enum" "VolumeMute")];
+        value = [(cosmicLib.cosmic.mkRON "enum" "Mute")];
         variant = "System";
       };
       key = "XF86AudioMute";

@@ -86,6 +86,43 @@ review:
 # Full validation: format, hooks, and tests
 validate: fmt check test
 
+# === QUALITY METRICS ===
+
+# Profile full system build with detailed timing
+profile-build HOST="desktop":
+    nom build .#nixosConfigurations.{{HOST}}
+
+# Profile evaluation time only
+profile-eval HOST="desktop":
+    @./tools/scripts/profile-evaluation.sh --host {{HOST}}
+
+# Check closure sizes for all hosts
+check-closures:
+    @./tools/scripts/check-closure-size.sh --all
+
+# Check closure size for specific host
+check-closure HOST:
+    @./tools/scripts/check-closure-size.sh {{HOST}}
+
+# Detect unused modules
+check-unused:
+    @./tools/scripts/detect-unused-modules.sh --verbose
+
+# Generate coverage report
+coverage-report:
+    @./tools/scripts/namaka-coverage-report.sh --report
+
+# Calculate aggregate coverage
+coverage:
+    @./tools/scripts/calculate-coverage.sh
+
+# Generate quality dashboard
+dashboard:
+    @./tools/scripts/generate-quality-dashboard.sh
+
+# Run all quality checks
+quality-check: check-unused coverage dashboard
+
 # === SYSTEM MANAGEMENT ===
 
 # Test system configuration without making it permanent (SAFE - recommended for testing)

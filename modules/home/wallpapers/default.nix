@@ -23,6 +23,16 @@
       description = "Available wallpapers mapping name to filename";
     };
 
+    availableBlurred = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {
+        solar-system = "solar-system_blurred.jpg";
+        the-whale = "the-whale_blurred.jpg";
+        appa = "appa_blurred.jpg";
+      };
+      description = "Available blurred wallpapers mapping name to filename";
+    };
+
     wallpaperPath = lib.mkOption {
       type = lib.types.str;
       # default = "${config.home.homeDirectory}/.config/wallpapers";
@@ -71,6 +81,22 @@
             _name: filename: "${config.wallpapers.wallpaperPath}/${filename}"
           )
           config.wallpapers.available;
+
+        # Get path to a specific blurred wallpaper
+        getBlurredWallpaperPath = wallpaperName:
+          if builtins.hasAttr wallpaperName config.wallpapers.availableBlurred
+          then "${config.wallpapers.wallpaperPath}/${config.wallpapers.availableBlurred.${wallpaperName}}"
+          else builtins.throw "Blurred wallpaper '${wallpaperName}' not found. Available: ${builtins.concatStringsSep ", " (builtins.attrNames config.wallpapers.availableBlurred)}";
+
+        # Get current default blurred wallpaper path
+        getCurrentBlurredWallpaperPath = "${config.wallpapers.wallpaperPath}/${config.wallpapers.availableBlurred.${config.wallpapers.defaultWallpaper}}";
+
+        # Get all blurred wallpaper paths
+        getAllBlurredWallpaperPaths =
+          builtins.mapAttrs (
+            _name: filename: "${config.wallpapers.wallpaperPath}/${filename}"
+          )
+          config.wallpapers.availableBlurred;
       };
     };
 }

@@ -5,15 +5,15 @@
   pkgs,
   ...
 }: let
-  hostLib = import ../lib.nix;
+  hostLib = import ../helpers.nix;
   hostName = "hp-probook-wsl";
-  hostInfo = inputs.self.lib.hosts.${hostName};
+  hostInfo = inputs.self.lib.hostData.${hostName};
 in {
   imports =
     [
       ../shared-tui.nix
       inputs.nixos-wsl.nixosModules.default
-      inputs.stylix.nixosModules.stylix
+      ../../modules/system/stylix-catppuccin.nix
       ../../modules/system/backup.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
@@ -88,67 +88,16 @@ in {
       # user and system use defaults from lib/defaults.nix
     };
 
-    # Stylix configuration (PoC for TUI apps with Catppuccin theme)
-    stylix = let
-      inherit (inputs.self.lib) fonts;
-      catppuccin = inputs.self.lib.catppuccinColors.mocha;
-    in {
+    # Stylix theme management using shared Catppuccin Mocha module (PoC for TUI apps)
+    modules.system.stylix-catppuccin = {
       enable = true;
-
-      # Use Catppuccin Mocha colors via base16 scheme
-      base16Scheme = {
-        base00 = catppuccin.base; # Default background
-        base01 = catppuccin.mantle; # Lighter background (status bars, line numbers)
-        base02 = catppuccin.surface0; # Selection background
-        base03 = catppuccin.surface1; # Comments, invisibles
-        base04 = catppuccin.surface2; # Dark foreground (status bars)
-        base05 = catppuccin.text; # Default foreground
-        base06 = catppuccin.subtext1; # Light foreground
-        base07 = catppuccin.subtext0; # Light background
-        base08 = catppuccin.red; # Variables, XML tags
-        base09 = catppuccin.peach; # Integers, booleans
-        base0A = catppuccin.yellow; # Classes, search text
-        base0B = catppuccin.green; # Strings
-        base0C = catppuccin.teal; # Support, regex
-        base0D = catppuccin.blue; # Functions, methods
-        base0E = catppuccin.mauve; # Keywords, storage
-        base0F = catppuccin.flamingo; # Deprecated, embedded
+      # Use custom font packages from inputs for WSL
+      fontPackages = {
+        monospace = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
+        sansSerif = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
+        serif = inputs.nixpkgs.legacyPackages.x86_64-linux.merriweather;
       };
-
-      # Font configuration using centralized fonts
-      fonts = {
-        monospace = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
-          inherit (fonts.families.monospace) name;
-        };
-        sansSerif = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
-          inherit (fonts.families.sansSerif) name;
-        };
-        serif = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.merriweather;
-          inherit (fonts.families.serif) name;
-        };
-        sizes = {
-          applications = fonts.sizes.normal;
-          terminal = fonts.sizes.normal;
-          desktop = fonts.sizes.normal;
-          popups = fonts.sizes.normal;
-        };
-      };
-
-      # Cursor theme using centralized configuration
-      cursor = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.bibata-cursors;
-        inherit (fonts.cursor) name;
-        inherit (fonts.cursor) size;
-      };
-
-      targets = {
-        console.enable = true;
-        gtk.enable = true;
-        qt.enable = false;
-      };
+      cursorPackage = inputs.nixpkgs.legacyPackages.x86_64-linux.bibata-cursors;
     };
 
     # WSL uses its own boot mechanism, disable systemd-boot from shared-gui.nix

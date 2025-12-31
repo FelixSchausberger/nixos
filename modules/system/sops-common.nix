@@ -14,7 +14,7 @@ in {
 
     # Derive age key from SSH key automatically (same as .envrc)
     # This eliminates the need for /per/system/sops-key.txt
-    age.sshKeyPaths = [ "/per/home/${defaults.system.user}/.ssh/id_ed25519" ];
+    age.sshKeyPaths = ["/per/home/${defaults.system.user}/.ssh/id_ed25519"];
     gnupg.sshKeyPaths = [];
 
     # Common secrets used across all hosts

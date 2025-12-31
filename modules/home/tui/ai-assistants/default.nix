@@ -4,5 +4,6 @@
     ./behaviors.nix
     ./claude-code
     ./opencode
+    ./vibe-kanban
   ];
 }

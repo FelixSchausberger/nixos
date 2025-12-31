@@ -60,31 +60,46 @@ in {
     desktop = mkHostConfig {
       hostName = "desktop";
       baseModules = desktop;
-      extraModules = [./desktop.nix];
+      extraModules = [
+        ./desktop/default.nix
+        ./desktop/hardware/hardware-configuration.nix
+      ];
     };
 
     surface = mkHostConfig {
       hostName = "surface";
       baseModules = laptop;
-      extraModules = [./surface.nix];
+      extraModules = [
+        ./surface/default.nix
+        ./surface/hardware/hardware-configuration.nix
+      ];
     };
 
     portable = mkHostConfig {
       hostName = "portable";
       baseModules = desktop;
-      extraModules = [./portable.nix];
+      extraModules = [
+        ./portable/default.nix
+        ./portable/hardware/hardware-configuration.nix
+      ];
     };
 
     hp-probook-wsl = mkHostConfig {
       hostName = "hp-probook-wsl";
       baseModules = laptop;
-      extraModules = [./hp-probook-wsl.nix];
+      extraModules = [
+        ./hp-probook-wsl/default.nix
+        ./hp-probook-wsl/hardware/hardware-configuration.nix
+      ];
     };
 
     hp-probook-vmware = mkHostConfig {
       hostName = "hp-probook-vmware";
       baseModules = laptop;
-      extraModules = [./hp-probook-vmware.nix];
+      extraModules = [
+        ./hp-probook-vmware/default.nix
+        ./hp-probook-vmware/hardware/hardware-configuration.nix
+      ];
     };
   };
 }

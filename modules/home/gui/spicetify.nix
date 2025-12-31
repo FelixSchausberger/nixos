@@ -1,5 +1,6 @@
 {
   inputs,
+  lib,
   pkgs,
   ...
 }: let
@@ -43,7 +44,7 @@ in {
     # experimentalFeatures = true;
 
     # theme = spicePkgs.themes.hazy;
-    theme = spicePkgs.themes.catppuccin;
-    colorScheme = "macchiato";
+    theme = lib.mkForce spicePkgs.themes.catppuccin;
+    colorScheme = lib.mkForce "macchiato";
   };
 }

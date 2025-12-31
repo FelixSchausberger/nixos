@@ -4,10 +4,10 @@
   ...
 }: let
   hostName = "portable";
-  hostInfo = inputs.self.lib.hosts.${hostName};
+  hostInfo = inputs.self.lib.hostData.${hostName};
 in {
   imports = [
-    ./disko/disko.nix
+    ./disko.nix
     ../shared-tui.nix
     ../boot-zfs.nix # Portable needs ZFS support for recovery
     ../../modules/system/recovery-tools.nix

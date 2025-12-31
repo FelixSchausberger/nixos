@@ -6,6 +6,7 @@
       "https://cache.nixos.org"
       "https://cache.garnix.io"
       "https://felixschausberger.cachix.org"
+      "https://niri.cachix.org"
       "https://nix-community.cachix.org"
       "https://nixpkgs-unfree.cachix.org"
       "https://pre-commit-hooks.cachix.org"
@@ -15,6 +16,7 @@
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
       "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
+      "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
       "pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc="
@@ -198,6 +200,11 @@
     };
     typix.url = "github:loqusion/typix";
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
+    # Firefox extensions - direct flake input for Zen browser compatibility
+    firefox-addons = {
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Themes
     arc-2-theme = {
@@ -229,7 +236,7 @@
           defaults = import ./lib/defaults.nix;
           fonts = import ./lib/fonts.nix;
           catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix {inherit (inputs.nixpkgs) lib;};
-          hosts = import ./lib/hosts.nix;
+          hostData = import ./lib/host-data.nix;
 
           # Legacy compatibility - keep existing API
           mkHost = import ./lib/mkHost.nix;
@@ -255,8 +262,14 @@
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
 
+          # AI assistants
+          vibe-kanban = pkgs.callPackage ./pkgs/vibe-kanban {};
+
           # MOTD
           trotd = pkgs.callPackage ./pkgs/trotd {};
+
+          # Game launchers
+          quantumlauncher = pkgs.callPackage ./pkgs/quantumlauncher {};
 
           # Development tools
           repl = pkgs.callPackage ./pkgs/repl {};
@@ -574,13 +587,16 @@
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            actionlint
             alejandra
             bashInteractive # Use interactive bash with full features
+            bc # Calculator for quality metrics scripts
             deadnix
             fish
             flake-checker # Flake input health monitoring
             git
             inotify-tools # File system watching for niri-watch
+            jq # JSON processor for metrics
             just # Task runner for development workflows
             nodePackages.prettier
             pre-commit-hook-ensure-sops
@@ -589,6 +605,12 @@
             statix
             taplo
             inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
+
+            # Quality analysis tools
+            nix-output-monitor # Build monitoring with detailed timing
+            nix-tree # Interactive dependency tree explorer
+            nix-du # Disk usage analyzer for Nix store
+            nixpkgs-hammering # Best practices validation
           ];
 
           name = "nixos-config";

@@ -4,12 +4,18 @@
   pkgs,
   ...
 }: let
-  browserCommon = import ./firefox-common.nix {inherit lib pkgs;};
+  browserCommon = import ./firefox-common.nix {
+    inherit lib pkgs;
+    inherit (inputs) firefox-addons;
+  };
 in {
   imports = [
     inputs.zen-browser.homeModules.beta # More stable, less frequent updates
     # inputs.zen-browser.homeModules.twilight-official # Experimental build with direct official artifacts
   ];
+
+  # Stylix theming for zen-browser
+  stylix.targets.zen-browser.profileNames = ["default"];
 
   programs.zen-browser = {
     enable = true;
@@ -37,9 +43,28 @@ in {
           engines = browserCommon.searchEngines;
         };
 
-      # Extensions configuration
+      # Extensions configuration - use flake source for compatibility
       extensions = {
-        packages = browserCommon.extensions;
+        packages = browserCommon.getExtensions "flake";
+      };
+
+      # Declarative container configuration
+      containersForce = true;
+
+      containers = {
+        personal = {
+          id = 1;
+          name = "Personal";
+          color = "blue";
+          icon = "fingerprint";
+        };
+
+        work = {
+          id = 2;
+          name = "Work";
+          color = "orange";
+          icon = "briefcase";
+        };
       };
 
       # Custom theme from Arc-2.0 (loaded at build time)

@@ -1,22 +1,11 @@
 {
   hostName ? "",
   lib,
+  inputs,
   ...
 }: let
-  # Map hostname to window managers to avoid circular dependency
-  wmForHost = {
-    "desktop" = ["hyprland" "niri"];
-    "surface" = ["hyprland"];
-    "portable" = []; # TUI-only emergency/recovery system
-    "hp-probook-wsl" = ["niri"]; # WSL with niri WM
-    "hp-probook-vmware" = ["niri"]; # VMware VM with Niri
-  };
-
-  # Use provided hostname
-  currentHost = hostName;
-
-  # Get WM modules for current host (default to TUI-only for security/minimalism)
-  wms = wmForHost.${currentHost} or [];
+  # Get WM modules for current host from centralized host configuration
+  wms = inputs.self.lib.hostData.${hostName}.wms or [];
   wmModules = map (wm: ../../modules/home/wm + "/${wm}/default.nix") wms;
 in {
   imports =
@@ -24,8 +13,9 @@ in {
       # Base home configuration
       ../../modules/home
     ]
+    ++ (lib.optionals (wms != []) [../../modules/home/gui])
     ++ wmModules;
 
   # Enable OpenCode on hp-probook-wsl
-  ai-assistants.opencode.enable = lib.mkDefault (currentHost == "hp-probook-wsl");
+  ai-assistants.opencode.enable = lib.mkDefault (hostName == "hp-probook-wsl");
 }

@@ -27,11 +27,11 @@
     browser = "zen";
     fileManager = "cosmic-files";
 
-    # WSL-specific: minimal scratchpad apps
-    scratchpad = {
-      musicApp = "spotify";
-      notesApp = "obsidian";
-    };
+    # NOTE: Scratchpad feature temporarily disabled (option commented out in niri module)
+    # scratchpad = {
+    #   musicApp = "spotify";
+    #   notesApp = "obsidian";
+    # };
   };
 
   # Disable xwayland-satellite for Wayland-only setup (remove from auto-start)
