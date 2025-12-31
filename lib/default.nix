@@ -6,15 +6,17 @@
 }: let
   inherit (inputs.self.lib) defaults;
   importHelpers = import ./import.nix {inherit lib;};
+  profileLib = import ./profiles.nix;
 in rec {
   # Helper to generate user@host format
   getUserHost = user: host: "${user}@${host}";
 
   # Create consistent profile imports with automatic host detection
+  # Now uses static profile map instead of dynamic readDir for better performance
   mkProfileImports = hosts: let
     mkProfileForHost = host: {
       name = getUserHost defaults.system.user host;
-      value = importHelpers.importProfile host;
+      value = profileLib.getProfileImports host;
     };
   in
     lib.listToAttrs (map mkProfileForHost hosts);
