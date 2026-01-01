@@ -179,7 +179,8 @@ in {
     enable = true;
     settings = {
       PermitRootLogin = "yes";
-      PasswordAuthentication = true; # Allow password auth for installer convenience
+      # Override recovery-tools.nix security settings for installer convenience
+      PasswordAuthentication = lib.mkForce true;
     };
   };
 

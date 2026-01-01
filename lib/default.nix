@@ -5,7 +5,6 @@
   ...
 }: let
   inherit (inputs.self.lib) defaults;
-  importHelpers = import ./import.nix {inherit lib;};
   profileLib = import ./profiles.nix;
 in rec {
   # Helper to generate user@host format

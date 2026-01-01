@@ -9,29 +9,12 @@
     ../../../modules/home/work/git.nix # Add work Git config
   ];
 
-  # Enable GUI theming for niri
-  theme.gui.enable = lib.mkForce true;
-
   # Feature-based configuration for WSL development environment
   features = {
     development = {
       enable = true;
       languages = ["nix" "python" "go" "rust" "javascript"];
     };
-  };
-
-  # Niri configuration for WSL
-  wm.niri = {
-    enable = true; # Enable niri for WSL
-    terminal = "ghostty";
-    browser = "zen";
-    fileManager = "cosmic-files";
-
-    # NOTE: Scratchpad feature temporarily disabled (option commented out in niri module)
-    # scratchpad = {
-    #   musicApp = "spotify";
-    #   notesApp = "obsidian";
-    # };
   };
 
   # Disable xwayland-satellite for Wayland-only setup (remove from auto-start)
