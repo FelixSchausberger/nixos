@@ -1,25 +1,25 @@
 # NixOS Configuration Quality Dashboard
 
-Last updated: 2025-12-26 15:30:54 UTC
+Last updated: 2026-01-02 11:36:20 UTC
 
 ## 🎯 Overall Health: ⚠️ NEEDS IMPROVEMENT
 
 ## Test Coverage
 
-- **Aggregate Coverage**: 78%
-- **Critical Path Coverage**: 80% (boot, networking, users, security, systemd)
+- **Aggregate Coverage**: 88%
+- **Critical Path Coverage**: 100% (boot, networking, users, security, systemd)
 - **Host Coverage**: 83% (5/6 hosts tested)
-- **Module Coverage**: 66% (estimated)
+- **Module Coverage**: 67% (estimated)
 - **Test Suites**: 18
 - **Snapshot Assertions**: 0
 
 ## Code Quality
 
-- **Dead Code (deadnix)**: 11
+- **Dead Code (deadnix)**: 0
 0 unused bindings
-- **Linting Issues (statix)**: 29
+- **Linting Issues (statix)**: 19
 0 issues
-- **Unused Modules**: 2 orphaned modules
+- **Unused Modules**: 0 orphaned modules
 
 ## Critical Paths Details
 
@@ -27,7 +27,7 @@ Last updated: 2025-12-26 15:30:54 UTC
 - ✅ `boot` - Covered
 - ✅ `networking` - Covered
 - ✅ `users` - Covered
-- ❌ `security` - Not covered
+- ✅ `security` - Covered
 - ✅ `systemd.services` - Covered
 
 
