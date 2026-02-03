@@ -30,7 +30,6 @@
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
-    inputs.wayland-pipewire-idle-inhibit.homeModules.default
     ./animations.nix
     ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
     ./keybinds.nix

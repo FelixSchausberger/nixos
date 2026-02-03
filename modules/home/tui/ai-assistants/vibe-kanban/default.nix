@@ -2,6 +2,7 @@
   pkgs,
   config,
   lib,
+  inputs,
   ...
 }: let
   cfg = config.ai-assistants.vibe-kanban;
@@ -24,7 +25,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [pkgs.vibe-kanban];
+    home.packages = [inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.vibe-kanban];
 
     systemd.user.services.vibe-kanban = {
       Unit = {
@@ -34,7 +35,7 @@ in {
       };
       Service = {
         Type = "simple";
-        ExecStart = "${pkgs.vibe-kanban}/bin/vibe-server";
+        ExecStart = "${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.vibe-kanban}/bin/vibe-server";
         Restart = "on-failure";
         RestartSec = 5;
         Environment = [

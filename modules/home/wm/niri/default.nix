@@ -33,7 +33,6 @@
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
-    inputs.wayland-pipewire-idle-inhibit.homeModules.default
     ./keybinds.nix
     ./walker.nix
     ./ironbar.nix

@@ -70,6 +70,9 @@ in {
     ];
   };
 
+  # File systems - add neededForBoot for ephemeral storage
+  fileSystems."/home".neededForBoot = true;
+
   # Essential hardware support for portable use
   hardware = {
     # Better GPU compatibility

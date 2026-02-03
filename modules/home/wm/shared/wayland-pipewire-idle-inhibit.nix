@@ -3,6 +3,7 @@
 {
   lib,
   config,
+  inputs,
   ...
 }: let
   niriEnabled = config.wm.niri.enable or false;
@@ -19,6 +20,10 @@
   # Only enable if at least one WM is enabled
   shouldEnable = niriEnabled || hyprlandEnabled;
 in {
+  imports = [
+    inputs.wayland-pipewire-idle-inhibit.homeModules.default
+  ];
+
   config = lib.mkIf shouldEnable {
     services.wayland-pipewire-idle-inhibit = {
       enable = true;

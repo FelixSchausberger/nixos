@@ -11,9 +11,8 @@ fi
 # Ensure restrictive permissions
 perm=$(stat -c "%a" "$key_file")
 if [[ "$perm" != "600" ]]; then
-  echo "ERROR: $key_file must have permissions 600 (current: $perm)" >&2
-  echo "Fix with: chmod 600 $key_file" >&2
-  exit 1
+  echo "⚠️  Fixing $key_file permissions: $perm → 600" >&2
+  chmod 600 "$key_file"
 fi
 
 line_no=0

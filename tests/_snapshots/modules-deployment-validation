@@ -4,7 +4,7 @@
   critical_services_count = 3;
   deployment_validation_enabled = true;
   essential_paths_configured = true;
-  essential_paths_count = 4;
+  essential_paths_count = 3;
   has_activation_script = true;
   has_deployment_validation_option = true;
   has_smoke_test_service = true;

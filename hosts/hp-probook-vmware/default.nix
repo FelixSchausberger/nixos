@@ -174,4 +174,7 @@ in {
   # The systemd-initrd has a known issue with ZFS path resolution (assertion error)
   # Use traditional dracut-based initrd instead for reliable ZFS import
   boot.initrd.systemd.enable = lib.mkForce false;
+
+  # File systems - add neededForBoot for ephemeral storage
+  fileSystems."/home".neededForBoot = true;
 }
