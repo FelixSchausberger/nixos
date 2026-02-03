@@ -42,10 +42,10 @@ jobs:
                 eval_time: 0
               }
             ' .quality-metrics/aggregate-coverage.json > _site/metrics.json 2>/dev/null || \
-            echo '{"timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
+            echo '{"timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
           else
             # Create placeholder metrics if none exist yet
-            echo '{"timestamp":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
+            echo '{"timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
           fi
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
