@@ -50,7 +50,13 @@ in {
 
   users.users = {
     root = {
-      password = "nixos"; # Default password for installer convenience
+      # Clear any inherited password configurations
+      hashedPassword = lib.mkForce null;
+      hashedPasswordFile = lib.mkForce null;
+      initialPassword = lib.mkForce null;
+      initialHashedPassword = lib.mkForce null;
+      # Set installer password
+      password = "nixos";
       openssh.authorizedKeys.keyFiles =
         lib.optionals hasAuthorizedKeys [authorizedKeysFile];
     };

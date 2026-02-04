@@ -138,11 +138,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # === GUI-SPECIFIC INPUTS (Only used by GUI hosts) ===
     # Desktop environment managers
     cosmic-manager = {
@@ -280,30 +275,36 @@
           scooter-hx = pkgs.callPackage ./pkgs/scooter-hx {};
 
           # Minimal installer ISO (fast rebuilds for testing)
-          installer-iso-minimal = inputs.nixos-generators.nixosGenerate {
-            inherit (pkgs.hostPlatform) system;
-            format = "install-iso";
-            modules = [
-              ./hosts/installer-minimal
-            ];
-            specialArgs = {
-              inherit inputs;
-              repoConfig = import ./config.nix;
+          # Build: nix build .#installer-iso-minimal
+          installer-iso-minimal = let
+            system = inputs.nixpkgs.lib.nixosSystem {
+              modules = [
+                ./hosts/installer-minimal
+                {nixpkgs.hostPlatform = "x86_64-linux";}
+              ];
+              specialArgs = {
+                inherit inputs;
+                repoConfig = import ./config.nix;
+              };
             };
-          };
+          in
+            system.config.system.build.isoImage;
 
           # Full installer ISO (comprehensive recovery environment)
-          installer-iso-full = inputs.nixos-generators.nixosGenerate {
-            inherit (pkgs.hostPlatform) system;
-            format = "install-iso";
-            modules = [
-              ./hosts/installer
-            ];
-            specialArgs = {
-              inherit inputs;
-              repoConfig = import ./config.nix;
+          # Build: nix build .#installer-iso-full
+          installer-iso-full = let
+            system = inputs.nixpkgs.lib.nixosSystem {
+              modules = [
+                ./hosts/installer
+                {nixpkgs.hostPlatform = "x86_64-linux";}
+              ];
+              specialArgs = {
+                inherit inputs;
+                repoConfig = import ./config.nix;
+              };
             };
-          };
+          in
+            system.config.system.build.isoImage;
         };
 
         # Helper apps
