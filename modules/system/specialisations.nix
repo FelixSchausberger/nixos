@@ -10,13 +10,13 @@
       inheritParentConfig = true;
       configuration = {
         # Override WM list if specified
-        hostConfig.wms = lib.mkIf (spec.wm != null) (lib.mkForce spec.wm);
+        hostConfig.wms = lib.mkIf (spec.wms != null) (lib.mkForce spec.wms);
 
         # Apply performance profile
         hostConfig.performanceProfile = lib.mkForce spec.profile;
 
-        # Apply extra configuration and imports
-        imports = spec.imports ++ [spec.extraConfig];
+        # Apply extra configuration (which can include imports internally)
+        imports = [spec.extraConfig];
       };
     })
     config.hostConfig.specialisations;
