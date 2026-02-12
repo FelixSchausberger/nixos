@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   imports = [
     ./hyprland.nix
-    ./niri.nix
+    # niri.nix is loaded via specialisations, not parent config
   ];
 
   # Feature-based configuration for desktop

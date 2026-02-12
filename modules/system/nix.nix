@@ -58,13 +58,13 @@
       stalled-download-timeout = 600; # 10 minutes for large/slow downloads
 
       # Build optimization
-      cores = 0; # Use all CPU cores
-      max-jobs = "auto"; # Auto-detect job count
+      cores = lib.mkDefault 0; # Use all CPU cores
+      max-jobs = lib.mkDefault "auto"; # Auto-detect job count
       keep-going = true; # Continue building other derivations on failure
 
       # Store optimization for better performance
-      keep-outputs = true; # Keep build dependencies for faster rebuilds
-      keep-derivations = true; # Keep derivations for faster evaluation
+      keep-outputs = lib.mkDefault true; # Keep build dependencies for faster rebuilds
+      keep-derivations = lib.mkDefault true; # Keep derivations for faster evaluation
 
       # Disk space management
       min-free = 5368709120; # 5GB - trigger GC when less than 5GB free

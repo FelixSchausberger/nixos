@@ -2,9 +2,9 @@
 # Single source of truth for which window managers run on which hosts
 {
   desktop = {
-    wms = ["gnome" "hyprland" "niri"];
+    wms = ["hyprland"]; # Default WM, others via specialisations
     isGui = true;
-    description = "Full desktop with multiple WMs";
+    description = "Desktop with switchable WMs via specialisations";
   };
 
   surface = {

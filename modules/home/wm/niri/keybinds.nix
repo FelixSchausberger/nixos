@@ -63,11 +63,6 @@ in {
         hotkey-overlay.title = "Fullscreen Window";
       };
 
-      "Mod+Ctrl+F" = {
-        action.maximize-window-to-edges = {};
-        hotkey-overlay.title = "Maximize to Edges";
-      };
-
       # ===== CENTER COLUMN =====
       "Mod+C" = {
         action.center-column = {};

@@ -15,8 +15,8 @@
         # Apply performance profile
         hostConfig.performanceProfile = lib.mkForce spec.profile;
 
-        # Apply extra configuration
-        imports = [spec.extraConfig];
+        # Apply extra configuration and imports
+        imports = spec.imports ++ [spec.extraConfig];
       };
     })
     config.hostConfig.specialisations;

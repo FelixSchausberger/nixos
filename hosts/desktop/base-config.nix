@@ -1,51 +1,13 @@
-{inputs, ...}: let
-  hostLib = import ../lib.nix;
-  hostName = "desktop";
-  hostInfo = inputs.self.lib.hosts.${hostName};
-in {
-  imports =
-    [
-      ./disko.nix
-      ../shared-gui.nix
-      inputs.stylix.nixosModules.stylix
-      ../../modules/system/stylix-catppuccin.nix
-      ../../modules/system/specialisations.nix
-      ../../modules/system/performance-runtime.nix
-    ]
-    ++ hostLib.wmModules hostInfo.wms;
-
-  # Host-specific configuration using centralized host mapping
-  hostConfig = {
-    inherit hostName;
-    inherit (hostInfo) isGui;
-    inherit (hostInfo) wms;
-    # user and system use defaults from lib/defaults.nix
-
-    # Define specialisations for this host
-    # Parent config provides hyprland as default, specialisations provide alternative WMs
-    # Performance profiles handled via runtime systemd targets (see performance-runtime.nix)
-    specialisations = {
-      # Niri specialisation
-      niri = {
-        wms = ["niri"];
-        profile = "default";
-        imports = [../../modules/system/wm/niri.nix];
-        extraConfig = {
-          home-manager.users.${inputs.self.lib.user}.imports = [
-            ../../modules/home/wm/niri
-            ../../home/profiles/desktop/niri.nix.specialisation
-          ];
-        };
-      };
-
-      # GNOME specialisation
-      gnome = {
-        wms = ["gnome"];
-        profile = "default";
-        imports = [../../modules/system/wm/gnome.nix];
-      };
-    };
-  };
+{inputs, ...}: {
+  # Base configuration for Desktop host and specialisations
+  # This module contains all shared configuration except WM modules and specialisation definitions
+  # Note: disko.nix is NOT imported here as it's not needed in specialisations
+  imports = [
+    ../shared-gui.nix
+    inputs.stylix.nixosModules.stylix
+    ../../modules/system/stylix-catppuccin.nix
+    ../../modules/system/performance-profiles.nix
+  ];
 
   # Stylix theme management using Catppuccin Mocha
   stylix = let
@@ -116,27 +78,13 @@ in {
     };
   };
 
-  # Hardware configuration
-  hardware = {
-    # Desktop-specific hardware configuration
-    keyboard.qmk.enable = true;
+  # Note: Hardware-specific configuration (keyboard, GPU profiles) is set in
+  # the main Desktop configuration, not in base-config.nix, as specialisations
+  # don't need hardware reconfiguration.
 
-    # AMD RX 6700XT GPU configuration via profile
-    profiles.amdGpu = {
-      enable = true;
-      variant = "desktop";
-    };
-  };
-
-  # System maintenance and monitoring
-  modules.system.maintenance = {
-    enable = true;
-    autoUpdate.enable = true;
-    monitoring = {
-      enable = true;
-      alerts = true;
-    };
-  };
+  # Note: System maintenance and monitoring is set in the main Desktop
+  # configuration, not in base-config.nix, as specialisations inherit the
+  # parent's systemd services.
 
   # Nix build optimizations for desktop (Ryzen 5 5600: 6C/12T)
   nix.settings = {

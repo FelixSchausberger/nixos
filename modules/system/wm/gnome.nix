@@ -4,7 +4,7 @@
   hostConfig,
   ...
 }: {
-  config = lib.mkIf (builtins.elem "gnome" hostConfig.wms) {
+  config = lib.mkIf (hostConfig.isGui && builtins.elem "gnome" hostConfig.wms) {
     services = {
       desktopManager.gnome.enable = true;
       gnome.gnome-keyring.enable = true;
