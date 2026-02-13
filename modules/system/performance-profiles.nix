@@ -6,9 +6,9 @@
   cfg = config.hostConfig;
 in {
   config = lib.mkMerge [
-    # Default profile - no performance tuning, rely on hardware defaults
+    # Default profile - balanced baseline
     (lib.mkIf (cfg.performanceProfile == "default") {
-      # No cpuFreqGovernor setting - let hardware config handle it
+      powerManagement.cpuFreqGovernor = lib.mkOverride 1400 "powersave";
     })
 
     # Gaming profile - maximum performance

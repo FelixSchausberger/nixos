@@ -2,6 +2,8 @@
   hostLib = import ../lib.nix;
   hostName = "desktop";
   hostInfo = inputs.self.lib.hosts.${hostName};
+  # Only import WMs that are in the main config, not specialisation WMs
+  # This prevents eager evaluation of all WM modules
 in {
   imports =
     [
@@ -20,14 +22,12 @@ in {
 
     # Define specialisations for this host
     # Parent config provides hyprland as default, specialisations provide alternative WMs
-    # Performance profiles handled via runtime systemd targets (see performance-runtime.nix)
     specialisations = {
       # Niri specialisation
       niri = {
         wms = ["niri"];
         profile = "default";
         extraConfig = {
-          imports = [../../modules/system/wm/niri.nix];
           home-manager.users.${inputs.self.lib.user}.imports = [
             ../../modules/home/wm/niri
             ../../home/profiles/desktop/niri.nix.specialisation
@@ -39,9 +39,7 @@ in {
       gnome = {
         wms = ["gnome"];
         profile = "default";
-        extraConfig = {
-          imports = [../../modules/system/wm/gnome.nix];
-        };
+        extraConfig = {};
       };
     };
   };
