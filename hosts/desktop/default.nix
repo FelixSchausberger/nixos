@@ -29,6 +29,7 @@ in {
         profile = "default";
         extraConfig = {
           home-manager.users.${inputs.self.lib.user}.imports = [
+            inputs.niri.homeModules.config
             ../../modules/home/wm/niri
             ../../home/profiles/desktop/niri.nix.specialisation
           ];
