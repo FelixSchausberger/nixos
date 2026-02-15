@@ -20,6 +20,12 @@ rustPlatform.buildRustPackage rec {
     lockFile = "${src}/Cargo.lock";
     outputHashes = {
       "steel-core-0.8.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
+      "steel-derive-0.8.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
+      "steel-doc-0.8.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
+      "steel-gen-0.8.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
+      "steel-parser-0.8.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
+      "steel-quickscope-0.3.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
+      "steel-rc-0.8.1" = "sha256-YUYypFlZJcwMJFBFdy5mAFEmBNh4FW/opDMHo7R0Lkk=";
     };
   };
 

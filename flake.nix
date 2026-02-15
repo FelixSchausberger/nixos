@@ -252,6 +252,7 @@
 
           # MCP servers
           mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
+          garnix-insights = pkgs.callPackage ./pkgs/garnix-insights {};
 
           # Editor with Steel plugin support
           helix-steel = pkgs.callPackage ./pkgs/helix-steel {};
