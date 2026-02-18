@@ -4,11 +4,23 @@ builds:
     - nixosConfigurations.*
     # Custom packages
     - packages.x86_64-linux.*
-    # Installer ISOs (explicit for CI priority)
-    - packages.x86_64-linux.installer-iso-minimal
-    - packages.x86_64-linux.installer-iso-full
     # Namaka snapshot tests
     - checks.x86_64-linux.*
   exclude:
     # Development shells are not always buildable as derivations
     - devShells.*
+    # Memory-intensive Rust builds (use binary cache instead)
+    # helix-steel requires network access for git dependencies (allowBuiltinFetchGit)
+    - packages.x86_64-linux.helix-steel
+    # Rust builds excluded from CI to reduce memory footprint (available via binary cache)
+    - packages.x86_64-linux.starship-jj
+    - packages.x86_64-linux.lumen
+    - packages.x86_64-linux.scooter-hx
+    - packages.x86_64-linux.quantumlauncher
+    - packages.x86_64-linux.garnix-insights
+    # Optional plugins excluded from CI
+    - packages.x86_64-linux.opencode-antigravity-auth
+    # ISO builds are memory-intensive (system evaluation + squashfs)
+    # Build locally when needed: nix build .#installer-iso-{minimal,full}
+    - packages.x86_64-linux.installer-iso-minimal
+    - packages.x86_64-linux.installer-iso-full

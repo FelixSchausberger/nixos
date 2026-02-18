@@ -1,11 +1,8 @@
 {
   pkgs,
-  inputs,
   lib,
   ...
-}: let
-  inherit (inputs.self.packages.${pkgs.hostPlatform.system}) mcp-language-server;
-in {
+}: {
   # Legacy: Keep ai-assistants.mcpServers.definitions for Claude Code compatibility
   # Claude Code doesn't integrate with programs.mcp, so it needs its own format
   options.ai-assistants.mcpServers = {
@@ -55,13 +52,18 @@ in {
         };
 
         nix-language-server = {
-          command = "${mcp-language-server}/bin/mcp-language-server";
+          command = "${pkgs.mcp-language-server}/bin/mcp-language-server";
           args = ["--workspace" "/per/etc/nixos" "--lsp" "nixd"];
         };
 
         nixos = {
           command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
           args = [];
+        };
+
+        garnix-insights = {
+          command = "${pkgs.garnix-insights}/bin/garnix-insights";
+          args = ["mcp"];
         };
       };
     };
@@ -70,7 +72,8 @@ in {
     home.packages = [
       pkgs.github-mcp-server
       pkgs.mcp-nixos
-      mcp-language-server
+      pkgs.mcp-language-server
+      pkgs.garnix-insights
     ];
 
     # Legacy definitions for Claude Code (which doesn't use programs.mcp)
@@ -84,7 +87,7 @@ in {
       };
 
       nix-language-server = {
-        package = mcp-language-server;
+        package = pkgs.mcp-language-server;
         command = "mcp-language-server";
         args = ["--workspace" "/per/etc/nixos" "--lsp" "nixd"];
         enabled = true;
@@ -97,6 +100,14 @@ in {
         args = [];
         enabled = true;
         description = "NixOS package/option lookup (130K+ packages, 22K+ options, Home Manager, nix-darwin)";
+      };
+
+      garnix-insights = {
+        package = pkgs.garnix-insights;
+        command = "garnix-insights";
+        args = ["mcp"];
+        enabled = true;
+        description = "Garnix CI/CD insights and build logs (requires GARNIX_JWT_TOKEN environment variable)";
       };
     };
   };

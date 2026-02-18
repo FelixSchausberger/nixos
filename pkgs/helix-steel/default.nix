@@ -7,13 +7,13 @@
 }:
 rustPlatform.buildRustPackage rec {
   pname = "helix-steel";
-  version = "unstable-2025-12-17";
+  version = "unstable-2026-02-13";
 
   src = fetchFromGitHub {
     owner = "mattwparas";
     repo = "helix";
-    rev = "refs/heads/steel-event-system";
-    hash = "sha256-KkJomm/fQzzk7OoRIAoZEsJ7tKTO52aaE3A9pGz7AHM=";
+    rev = "a8e53bc18385a545885a2a63e1bcfd2f4fb42318";
+    hash = "sha256-XhBkqkoPFnxgtEcWfhoH9/k5xFwWHd/UWUjGS2BEpVo=";
   };
 
   cargoLock = {

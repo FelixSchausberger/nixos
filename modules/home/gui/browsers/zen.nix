@@ -50,7 +50,7 @@ in {
       # Containers and spaces are managed manually by the user in the browser
       # Declarative configuration removed to preserve user customizations
 
-      # Custom theme from Arc-2.0 with local overrides
+      # Custom CSS overrides (Arc-2.0 theme removed due to unavailable repository)
       userChrome = ''
         /* Hide new tab button in vertical sidebar */
         #new-tab-button,
@@ -58,12 +58,7 @@ in {
         .zen-sidebar-action-button[data-action="new-tab"] {
           display: none !important;
         }
-
-        /* Arc-2.0 theme imports */
-        @import "Arc 2.0/arc.css";
-        @import "./CONFIG.css";
       '';
-      userContent = inputs.arc-2-theme + "/userContent.css";
 
       # Browser settings
       settings =
@@ -93,24 +88,6 @@ in {
           "startup.homepage_welcome_url" = ""; # Disable welcome homepage
           "startup.homepage_welcome_url.additional" = ""; # Disable additional welcome pages
         };
-    };
-  };
-
-  # Add Arc 2.0 theme files to the profile chrome folder
-  home.file = {
-    # Copy specific Arc-2.0 files to chrome folder
-    ".zen/browsers/default/chrome/CONFIG.css" = {
-      source = inputs.arc-2-theme + "/CONFIG.css";
-    };
-    ".zen/browsers/default/chrome/preferences.json" = {
-      source = inputs.arc-2-theme + "/preferences.json";
-    };
-    ".zen/browsers/default/chrome/theme.json" = {
-      source = inputs.arc-2-theme + "/theme.json";
-    };
-    ".zen/browsers/default/chrome/Arc 2.0" = {
-      source = inputs.arc-2-theme + "/Arc 2.0";
-      recursive = true;
     };
   };
 

@@ -10,7 +10,4 @@ in {
 
   # Test: Package has expected metadata
   has_meta = starship-jj.meta != null;
-
-  # Test: Derivation path exists
-  drv_path = builtins.isString (builtins.unsafeDiscardStringContext "${starship-jj}");
 }

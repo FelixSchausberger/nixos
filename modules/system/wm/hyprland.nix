@@ -15,7 +15,7 @@
     ./shared-security.nix
   ];
 
-  config = lib.mkIf (builtins.elem "hyprland" hostConfig.wms) {
+  config = lib.mkIf (hostConfig.isGui && builtins.elem "hyprland" hostConfig.wms) {
     # Enable Hyprland with optimal settings
     programs.hyprland = {
       enable = true;

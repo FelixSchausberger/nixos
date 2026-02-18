@@ -200,10 +200,6 @@
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
 
     # Themes
-    arc-2-theme = {
-      url = "github:YashjitPal/Arc-2.0";
-      flake = false;
-    };
     stylix = {
       url = "github:danth/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -251,7 +247,7 @@
           starship-jj = pkgs.callPackage ./pkgs/starship-jj {};
 
           # MCP servers
-          mcp-language-server = pkgs.callPackage ./pkgs/mcp-language-server {};
+          garnix-insights = pkgs.callPackage ./pkgs/garnix-insights {};
 
           # Editor with Steel plugin support
           helix-steel = pkgs.callPackage ./pkgs/helix-steel {};
@@ -259,7 +255,6 @@
           scooter-hx = pkgs.callPackage ./pkgs/scooter-hx {};
 
           # Applications
-          jolt = pkgs.callPackage ./pkgs/jolt {};
           openchamber = pkgs.callPackage ./pkgs/openchamber {};
           opencode-antigravity-auth = pkgs.callPackage ./pkgs/opencode-antigravity-auth {};
           quantumlauncher = pkgs.callPackage ./pkgs/quantumlauncher {};

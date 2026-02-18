@@ -8,6 +8,42 @@
   cfg = config.wm.hyprland;
   safeNotifySend = import ../../../../home/lib/safe-notify-send.nix {inherit pkgs config lib;};
   safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
+
+  # Directional key mappings for programmatic keybind generation
+  directions = {
+    left = {
+      colemak = "n";
+      arrow = "left";
+      hyprDir = "l";
+      resize = "-40 0";
+    };
+    right = {
+      colemak = "o";
+      arrow = "right";
+      hyprDir = "r";
+      resize = "40 0";
+    };
+    up = {
+      colemak = "i";
+      arrow = "up";
+      hyprDir = "u";
+      resize = "0 -40";
+    };
+    down = {
+      colemak = "e";
+      arrow = "down";
+      hyprDir = "d";
+      resize = "0 40";
+    };
+  };
+
+  # Generate keybinds for a single direction with both input schemes
+  mkDirBind = modifier: dir: action: value: let
+    keys = directions.${dir};
+  in [
+    "$mod ${modifier}, ${keys.colemak}, ${action}, ${value}"
+    "$mod ${modifier}, ${keys.arrow}, ${action}, ${value}"
+  ];
 in {
   config = lib.mkIf cfg.enable {
     wayland.windowManager.hyprland.settings = {
@@ -38,36 +74,6 @@ in {
           "$mod SHIFT, F, fullscreen, 1" # Maximize
           "$mod, M, fullscreen, 2" # Fullscreen no bar
 
-          # Window focusing (arrow keys + Colemak-DH N/E/I/O)
-          "$mod, left, movefocus, l"
-          "$mod, right, movefocus, r"
-          "$mod, up, movefocus, u"
-          "$mod, down, movefocus, d"
-          "$mod, n, movefocus, l"
-          "$mod, o, movefocus, r"
-          "$mod, i, movefocus, u"
-          "$mod, e, movefocus, d"
-
-          # Window movement (arrow keys + Colemak-DH N/E/I/O)
-          "$mod CTRL, left, movewindow, l"
-          "$mod CTRL, right, movewindow, r"
-          "$mod CTRL, up, movewindow, u"
-          "$mod CTRL, down, movewindow, d"
-          "$mod CTRL, n, movewindow, l"
-          "$mod CTRL, o, movewindow, r"
-          "$mod CTRL, i, movewindow, u"
-          "$mod CTRL, e, movewindow, d"
-
-          # Window resizing (arrow keys + Colemak-DH N/E/I/O)
-          "$mod ALT, left, resizeactive, -40 0"
-          "$mod ALT, right, resizeactive, 40 0"
-          "$mod ALT, up, resizeactive, 0 -40"
-          "$mod ALT, down, resizeactive, 0 40"
-          "$mod ALT, n, resizeactive, -40 0"
-          "$mod ALT, o, resizeactive, 40 0"
-          "$mod ALT, i, resizeactive, 0 -40"
-          "$mod ALT, e, resizeactive, 0 40"
-
           # Workspace navigation (U/I pattern + Page keys)
           "$mod, u, workspace, e-1"
           "$mod, Prior, workspace, e-1" # Page Up
@@ -97,9 +103,7 @@ in {
           "$mod CTRL, K, exec, ${pkgs.pyprland}/bin/pypr change_workspace +1" # Next workspace (follow focus)
           "$mod CTRL, J, exec, ${pkgs.pyprland}/bin/pypr change_workspace -1" # Prev workspace (follow focus)
 
-          # Monitor Management
-          "$mod SHIFT, Left, exec, ${pkgs.pyprland}/bin/pypr shift_monitors -1" # Shift workspaces left
-          "$mod SHIFT, Right, exec, ${pkgs.pyprland}/bin/pypr shift_monitors +1" # Shift workspaces right
+          # Monitor Management (pyprland workspace shifting - different from directional focus)
           "$mod ALT, D, exec, ${pkgs.pyprland}/bin/pypr toggle_dpms" # Toggle displays (DPMS)
 
           # Screenshots
@@ -130,26 +134,6 @@ in {
           "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch togglesplit"
           "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch pseudo"
 
-          # Monitor focus (Shift + N/E/I/O)
-          "$mod SHIFT, left, focusmonitor, l"
-          "$mod SHIFT, right, focusmonitor, r"
-          "$mod SHIFT, up, focusmonitor, u"
-          "$mod SHIFT, down, focusmonitor, d"
-          "$mod SHIFT, n, focusmonitor, l"
-          "$mod SHIFT, o, focusmonitor, r"
-          "$mod SHIFT, i, focusmonitor, u"
-          "$mod SHIFT, e, focusmonitor, d"
-
-          # Move to monitor (Ctrl+Shift + N/E/I/O)
-          "$mod CTRL SHIFT, left, movewindow, mon:l"
-          "$mod CTRL SHIFT, right, movewindow, mon:r"
-          "$mod CTRL SHIFT, up, movewindow, mon:u"
-          "$mod CTRL SHIFT, down, movewindow, mon:d"
-          "$mod CTRL SHIFT, n, movewindow, mon:l"
-          "$mod CTRL SHIFT, o, movewindow, mon:r"
-          "$mod CTRL SHIFT, i, movewindow, mon:u"
-          "$mod CTRL SHIFT, e, movewindow, mon:d"
-
           # Window grouping
           "$mod, G, togglegroup"
           "$mod SHIFT, G, lockactivegroup, toggle"
@@ -173,6 +157,27 @@ in {
           # Resize mode
           "$mod, R, submap, resize"
         ]
+        # Generated directional keybinds (Colemak-DH + Arrow variants)
+        ++ (mkDirBind "" "left" "movefocus" directions.left.hyprDir)
+        ++ (mkDirBind "" "down" "movefocus" directions.down.hyprDir)
+        ++ (mkDirBind "" "up" "movefocus" directions.up.hyprDir)
+        ++ (mkDirBind "" "right" "movefocus" directions.right.hyprDir)
+        ++ (mkDirBind "CTRL" "left" "movewindow" directions.left.hyprDir)
+        ++ (mkDirBind "CTRL" "down" "movewindow" directions.down.hyprDir)
+        ++ (mkDirBind "CTRL" "up" "movewindow" directions.up.hyprDir)
+        ++ (mkDirBind "CTRL" "right" "movewindow" directions.right.hyprDir)
+        ++ (mkDirBind "ALT" "left" "resizeactive" directions.left.resize)
+        ++ (mkDirBind "ALT" "down" "resizeactive" directions.down.resize)
+        ++ (mkDirBind "ALT" "up" "resizeactive" directions.up.resize)
+        ++ (mkDirBind "ALT" "right" "resizeactive" directions.right.resize)
+        ++ (mkDirBind "SHIFT" "left" "focusmonitor" directions.left.hyprDir)
+        ++ (mkDirBind "SHIFT" "down" "focusmonitor" directions.down.hyprDir)
+        ++ (mkDirBind "SHIFT" "up" "focusmonitor" directions.up.hyprDir)
+        ++ (mkDirBind "SHIFT" "right" "focusmonitor" directions.right.hyprDir)
+        ++ (mkDirBind "CTRL SHIFT" "left" "movewindow" "mon:${directions.left.hyprDir}")
+        ++ (mkDirBind "CTRL SHIFT" "down" "movewindow" "mon:${directions.down.hyprDir}")
+        ++ (mkDirBind "CTRL SHIFT" "up" "movewindow" "mon:${directions.up.hyprDir}")
+        ++ (mkDirBind "CTRL SHIFT" "right" "movewindow" "mon:${directions.right.hyprDir}")
         ++ (
           # Workspace bindings 1-10
           builtins.concatLists (builtins.genList (x: let

@@ -15,7 +15,7 @@
     ./shared-security.nix
   ];
 
-  config = lib.mkIf (builtins.elem "niri" hostConfig.wms) {
+  config = lib.mkIf (hostConfig.isGui && builtins.elem "niri" hostConfig.wms) {
     # Enable niri
     programs.niri = {
       enable = true;

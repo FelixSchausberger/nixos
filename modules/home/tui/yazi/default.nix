@@ -53,7 +53,8 @@ in {
   imports = [
     ./plugins
     ./theme/filetype.nix
-    ./theme/icons.nix
+    ./theme/icons-base.nix
+    ./theme/icons-extended.nix
     ./theme/manager.nix
     ./theme/status.nix
   ];

@@ -5,7 +5,7 @@
 }: let
   # Map hostname to window managers to avoid circular dependency
   wmForHost = {
-    "desktop" = ["hyprland" "niri"];
+    "desktop" = ["hyprland"]; # Default WM, niri loaded via specialisations
     "surface" = ["hyprland"];
     "portable" = []; # TUI-only emergency/recovery system
     "hp-probook-wsl" = ["niri"]; # WSL with niri WM
