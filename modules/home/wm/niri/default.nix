@@ -10,7 +10,7 @@
   # Package mappings for applications
   browserPkg =
     if cfg.browser == "zen"
-    then inputs.zen-browser.packages.${pkgs.hostPlatform.system}.default
+    then inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
     else if cfg.browser == "firefox"
     then pkgs.firefox
     else if cfg.browser == "chromium"
@@ -19,12 +19,12 @@
 
   terminalPkg =
     if cfg.terminal == "ghostty"
-    then inputs.ghostty.packages.${pkgs.hostPlatform.system}.default
+    then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
     else if cfg.terminal == "cosmic-term"
     then pkgs.cosmic-term
     else if cfg.terminal == "wezterm"
     then pkgs.wezterm
-    else inputs.ghostty.packages.${pkgs.hostPlatform.system}.default;
+    else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   fileManagerPkg = pkgs.cosmic-files;
 in {
@@ -157,13 +157,16 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    # Enable which-key for keybind discovery
+    wm.which-key.enable = true;
+
     home = {
       packages = with pkgs; [
         # Niri-specific utilities
         swappy # Screenshot annotation
         cliphist # Clipboard history
         avizo # OSD for volume/brightness
-        inputs.walker.packages.${pkgs.hostPlatform.system}.default # Wayland-native application launcher with plugins
+        inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
         udiskie # Auto-mount
         cosmic-files # File manager
         # Cursor themes
@@ -240,9 +243,6 @@ in {
 
       prefer-no-csd = true;
 
-      # Hotkey overlay configuration
-      hotkey-overlay.skip-at-startup = true;
-
       # Debug configuration for honoring XDG activation requests with invalid serial
       # Cannot be set via programs.niri.settings due to KDL generation limitation
       # See: https://github.com/sodiboo/niri-flake/issues
@@ -265,7 +265,7 @@ in {
       # Startup applications
       # spawn-at-startup = [
       # {command = ["${pkgs.avizo}/bin/avizo-service"];}
-      # {command = ["${inputs.ironbar.packages.${pkgs.hostPlatform.system}.default}/bin/ironbar"];}
+      # {command = ["${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"];}
       # {command = ["${pkgs.udiskie}/bin/udiskie" "--tray"];}
       # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
       # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
@@ -353,7 +353,7 @@ in {
       Service = {
         Type = "notify";
         NotifyAccess = "all";
-        ExecStart = "${inputs.niri.packages.${pkgs.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
+        ExecStart = "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
         StandardOutput = "journal";
         Restart = "on-failure";
       };

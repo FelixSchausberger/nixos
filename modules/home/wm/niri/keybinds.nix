@@ -55,74 +55,35 @@ in {
     programs.niri.settings.binds = lib.mkMerge [
       {
         # ===== APPLICATION SHORTCUTS =====
-        "Mod+T" = {
-          action.spawn = "${terminalPkg}/bin/${cfg.terminal}";
-          hotkey-overlay.title = "Open Terminal";
-        };
+        "Mod+T".action.spawn = "${terminalPkg}/bin/${cfg.terminal}";
 
-        "Mod+Shift+T" = {
-          action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.fish}/bin/fish" "-c" "set -gx ZELLIJ_AUTO_START 0; exec fish"];
-          hotkey-overlay.title = "Open Terminal (Safe Mode)";
-        };
+        "Mod+Shift+T".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.fish}/bin/fish" "-c" "set -gx ZELLIJ_AUTO_START 0; exec fish"];
 
-        "Mod+D" = {
-          action.spawn = "walker";
-          hotkey-overlay.title = "Application Launcher";
-        };
+        "Mod+D".action.spawn = "walker";
 
         # ===== WINDOW MANAGEMENT =====
-        "Mod+Q" = {
-          action.close-window = {};
-          hotkey-overlay.title = "Close Window";
-        };
+        "Mod+Q".action.close-window = {};
 
-        "Mod+V" = {
-          action.toggle-window-floating = {};
-          hotkey-overlay.title = "Toggle Floating";
-        };
+        "Mod+V".action.toggle-window-floating = {};
 
-        "Mod+Shift+V" = {
-          action.switch-focus-between-floating-and-tiling = {};
-          hotkey-overlay.title = "Switch Floating/Tiling Focus";
-        };
+        "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = {};
 
         # ===== FULLSCREEN AND MAXIMIZE =====
-        "Mod+F" = {
-          action.maximize-column = {};
-          hotkey-overlay.title = "Maximize Column";
-        };
+        "Mod+F".action.maximize-column = {};
 
-        "Mod+Shift+F" = {
-          action.fullscreen-window = {};
-          hotkey-overlay.title = "Fullscreen Window";
-        };
+        "Mod+Shift+F".action.fullscreen-window = {};
 
         # ===== CENTER COLUMN =====
-        "Mod+C" = {
-          action.center-column = {};
-          hotkey-overlay.title = "Center Column";
-        };
+        "Mod+C".action.center-column = {};
 
-        "Mod+Ctrl+C" = {
-          action.center-visible-columns = {};
-          hotkey-overlay.title = "Center Visible Columns";
-        };
+        "Mod+Ctrl+C".action.center-visible-columns = {};
 
         # ===== COLUMN WIDTH AND WINDOW HEIGHT =====
-        "Mod+R" = {
-          action.switch-preset-column-width = {};
-          hotkey-overlay.title = "Switch Preset Column Width";
-        };
+        "Mod+R".action.switch-preset-column-width = {};
 
-        "Mod+Shift+R" = {
-          action.switch-preset-window-height = {};
-          hotkey-overlay.title = "Switch Preset Window Height";
-        };
+        "Mod+Shift+R".action.switch-preset-window-height = {};
 
-        "Mod+Ctrl+R" = {
-          action.reset-window-height = {};
-          hotkey-overlay.title = "Reset Window Height";
-        };
+        "Mod+Ctrl+R".action.reset-window-height = {};
 
         # Size adjustments (no overlay titles - repeated bindings)
         "Mod+Minus".action.set-column-width = "-10%";
@@ -144,15 +105,9 @@ in {
         "Mod+Ctrl+End".action.move-column-to-last = {};
 
         # ===== WORKSPACE NAVIGATION =====
-        "Mod+Page_Down" = {
-          action.focus-workspace-down = {};
-          hotkey-overlay.title = "Next Workspace";
-        };
+        "Mod+Page_Down".action.focus-workspace-down = {};
 
-        "Mod+Page_Up" = {
-          action.focus-workspace-up = {};
-          hotkey-overlay.title = "Previous Workspace";
-        };
+        "Mod+Page_Up".action.focus-workspace-up = {};
 
         # Numeric workspaces (no titles - obvious from number)
         "Mod+1".action.focus-workspace = 1;
@@ -166,15 +121,9 @@ in {
         "Mod+9".action.focus-workspace = 9;
 
         # ===== MOVE WINDOW TO WORKSPACE =====
-        "Mod+Ctrl+Page_Down" = {
-          action.move-column-to-workspace-down = {};
-          hotkey-overlay.title = "Move to Next Workspace";
-        };
+        "Mod+Ctrl+Page_Down".action.move-column-to-workspace-down = {};
 
-        "Mod+Ctrl+Page_Up" = {
-          action.move-column-to-workspace-up = {};
-          hotkey-overlay.title = "Move to Previous Workspace";
-        };
+        "Mod+Ctrl+Page_Up".action.move-column-to-workspace-up = {};
 
         # Numeric (no titles)
         "Mod+Ctrl+1".action.move-column-to-workspace = 1;
@@ -188,110 +137,63 @@ in {
         "Mod+Ctrl+9".action.move-column-to-workspace = 9;
 
         # ===== MOVE WORKSPACE =====
-        "Mod+Shift+Page_Down" = {
-          action.move-workspace-down = {};
-          hotkey-overlay.title = "Move Workspace Down";
-        };
+        "Mod+Shift+Page_Down".action.move-workspace-down = {};
 
-        "Mod+Shift+Page_Up" = {
-          action.move-workspace-up = {};
-          hotkey-overlay.title = "Move Workspace Up";
-        };
+        "Mod+Shift+Page_Up".action.move-workspace-up = {};
 
         # ===== CONSUME AND EXPEL WINDOWS =====
-        "Mod+BracketLeft" = {
-          action.consume-or-expel-window-left = {};
-          hotkey-overlay.title = "Consume/Expel Left";
-        };
+        "Mod+BracketLeft".action.consume-or-expel-window-left = {};
 
-        "Mod+BracketRight" = {
-          action.consume-or-expel-window-right = {};
-          hotkey-overlay.title = "Consume/Expel Right";
-        };
+        "Mod+BracketRight".action.consume-or-expel-window-right = {};
 
-        "Mod+Comma" = {
-          action.consume-window-into-column = {};
-          hotkey-overlay.title = "Consume into Column";
-        };
+        "Mod+Comma".action.consume-window-into-column = {};
 
-        "Mod+Period" = {
-          action.expel-window-from-column = {};
-          hotkey-overlay.title = "Expel from Column";
-        };
+        "Mod+Period".action.expel-window-from-column = {};
 
         # ===== SCREENSHOTS =====
-        "Print" = {
-          action.screenshot = {};
-          hotkey-overlay.title = "Screenshot (Selection)";
-        };
+        "Print".action.screenshot = {};
 
-        "Ctrl+Print" = {
-          action.screenshot-screen = {};
-          hotkey-overlay.title = "Screenshot (Full Screen)";
-        };
+        "Ctrl+Print".action.screenshot-screen = {};
 
-        "Alt+Print" = {
-          action.screenshot-window = {};
-          hotkey-overlay.title = "Screenshot (Window)";
-        };
+        "Alt+Print".action.screenshot-window = {};
 
         # ===== SYSTEM =====
+        # Which-key keybind discovery (Mod+F1 = Help)
         "Mod+F1" = {
-          action.show-hotkey-overlay = {};
-          hotkey-overlay.title = "Show Hotkey Overlay";
-        };
-
-        "Mod+Escape" = {
-          action.toggle-debug-tint = {};
-          hotkey-overlay.title = "Toggle Debug Tint";
-        };
-
-        "Mod+Shift+Escape" = {
           action.spawn = [
-            "${terminalPkg}/bin/${cfg.terminal}"
-            "-e"
-            "${pkgs.bash}/bin/bash"
-            "--norc"
-            "-c"
-            "touch /tmp/.nixos-emergency-mode && exec bash --norc"
+            "${pkgs.wlr-which-key}/bin/wlr-which-key"
+            "${config.xdg.configHome}/wlr-which-key/niri.yaml"
           ];
-          hotkey-overlay.title = "Emergency Shell";
+          hotkey-overlay.title = "Keybind Help";
         };
 
-        "Mod+Shift+Q" = {
-          action.quit = {};
-          hotkey-overlay.title = "Quit Niri";
-        };
+        "Mod+Escape".action.toggle-debug-tint = {};
 
-        "Ctrl+Alt+Delete" = {
-          action.quit = {};
-          hotkey-overlay.title = "Quit Niri";
-        };
+        "Mod+Shift+Escape".action.spawn = [
+          "${terminalPkg}/bin/${cfg.terminal}"
+          "-e"
+          "${pkgs.bash}/bin/bash"
+          "--norc"
+          "-c"
+          "touch /tmp/.nixos-emergency-mode && exec bash --norc"
+        ];
 
-        "Mod+Shift+P" = {
-          action.power-off-monitors = {};
-          hotkey-overlay.title = "Power Off Monitors";
-        };
+        "Mod+Shift+Q".action.quit = {};
+
+        "Ctrl+Alt+Delete".action.quit = {};
+
+        "Mod+Shift+P".action.power-off-monitors = {};
 
         # ===== LOCK SCREEN =====
-        "Super+Alt+L" = {
-          action.spawn = ["loginctl" "lock-session"];
-          hotkey-overlay.title = "Lock Screen";
-        };
+        "Super+Alt+L".action.spawn = ["loginctl" "lock-session"];
 
         # ===== IDLE INHIBITOR =====
-        "Mod+Z" = {
-          action.spawn = ["stasis-toggle"];
-          hotkey-overlay.title = "Toggle Idle Inhibitor";
-        };
+        "Mod+Z".action.spawn = ["stasis-toggle"];
 
         # ===== OVERVIEW + IRONBAR TOGGLE =====
         # Using spawn workaround since Niri doesn't support multiple actions per keybind yet
         # Reference: https://github.com/YaLTeR/niri/issues/965
-        "Mod+Tab" = {
-          action.spawn = ["bash" "-c" "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"];
-          hotkey-overlay.title = "Toggle Overview + Bar";
-        };
+        "Mod+Tab".action.spawn = ["bash" "-c" "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"];
       }
 
       # Generated directional keybinds (Colemak-DH canonical + Vim + Arrow variants)

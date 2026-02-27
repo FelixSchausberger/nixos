@@ -85,7 +85,7 @@ in {
       nh
     ])
     ++ [
-      inputs.nixos-wizard.packages.${pkgs.hostPlatform.system}.default
+      inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
   services.openssh = {

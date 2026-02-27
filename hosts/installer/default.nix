@@ -45,6 +45,7 @@ in {
   networking.hostName = hostName;
 
   users.users.root = {
+    hashedPassword = lib.mkForce null; # Clear inherited hashedPassword from system/core/users.nix
     password = "nixos"; # Default password for installer convenience
     openssh.authorizedKeys.keyFiles =
       lib.optionals hasAuthorizedKeys [authorizedKeysFile];

@@ -6,7 +6,7 @@
 }: let
   browserCommon = import ./firefox-common.nix {
     inherit lib pkgs;
-    inherit (inputs) firefox-addons;
+    firefox-addons = inputs.firefox-addons or null;
   };
 in {
   imports = [
@@ -14,10 +14,11 @@ in {
     # inputs.zen-browser.homeModules.twilight-official # Experimental build with direct official artifacts
   ];
 
-  # Stylix theming for zen-browser is configured in stylix-catppuccin.nix
+  stylix.targets.zen-browser.profileNames = ["default"];
 
   programs.zen-browser = {
     enable = true;
+    suppressXdgMigrationWarning = true;
     inherit (browserCommon) languagePacks nativeMessagingHosts;
 
     # Firefox/Zen policies - control browser behavior at the organization level

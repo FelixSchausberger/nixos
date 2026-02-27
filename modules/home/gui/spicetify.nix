@@ -3,7 +3,7 @@
   pkgs,
   ...
 }: let
-  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.hostPlatform.system};
+  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 in {
   imports = [
     inputs.spicetify-nix.homeManagerModules.default
@@ -42,8 +42,6 @@ in {
 
     # experimentalFeatures = true;
 
-    # theme = spicePkgs.themes.hazy;
-    theme = spicePkgs.themes.catppuccin;
-    colorScheme = "macchiato";
+    # Theme and colorScheme are controlled by stylix for system-wide consistency
   };
 }

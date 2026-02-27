@@ -97,7 +97,7 @@
             dolphin-emu
           ]
           ++ lib.optionals (lib.elem "minecraft" config.features.gaming.platforms) [
-            inputs.self.packages.${pkgs.hostPlatform.system}.quantumlauncher
+            inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.quantumlauncher
           ]
       ))
     ];

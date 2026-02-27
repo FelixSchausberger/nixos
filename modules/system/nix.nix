@@ -59,8 +59,10 @@
       stalled-download-timeout = 600; # 10 minutes for large/slow downloads
 
       # Build optimization
-      cores = lib.mkDefault 0; # Use all CPU cores
-      max-jobs = lib.mkDefault "auto"; # Auto-detect job count
+      # Limit parallelism to prevent "too many files open" during evaluation
+      # High values exhaust file handles when evaluating multiple host configurations
+      cores = lib.mkDefault 4; # Limit cores per build (was 0 = all)
+      max-jobs = lib.mkDefault 4; # Limit parallel jobs (was "auto")
       keep-going = true; # Continue building other derivations on failure
 
       # Store optimization for better performance
@@ -102,6 +104,7 @@
         "https://walker-git.cachix.org?priority=14"
         "https://helix.cachix.org?priority=15"
         "https://yazi.cachix.org?priority=20"
+        "https://claude-code.cachix.org?priority=21"
         "https://devenv.cachix.org?priority=25"
 
         # Additional popular caches to reduce compilation
@@ -126,6 +129,7 @@
         "walker-git.cachix.org-1:vmC0ocfPWh0S/vRAQGtChuiZBTAe4wiKDeyyXM0/7pM="
         "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="
         "yazi.cachix.org-1:Dcdz63NZKfvUCbDGngQDAZq6kOroIrFoyO064uvLh8k="
+        "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk="
         "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
         "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
 

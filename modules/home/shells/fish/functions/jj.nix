@@ -252,7 +252,7 @@
         echo ""
 
         # Generate suggestion using lumen
-        set -l suggestion (${inputs.self.packages.${pkgs.hostPlatform.system}.lumen}/bin/lumen draft 2>/dev/null)
+        set -l suggestion (${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen}/bin/lumen draft 2>/dev/null)
 
         if test -z "$suggestion"
           echo "❌ Failed to generate suggestion"

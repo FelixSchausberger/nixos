@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}: {
   home = {
     packages = with pkgs; [
       icu # Required for .NET globalization support (MCP servers)
@@ -44,12 +48,7 @@
     ];
 
     userSettings = {
-      # Theme and appearance
-      theme = {
-        mode = "dark";
-        light = "Catppuccin Latte";
-        dark = "Catppuccin Mocha (Blur)"; # Using the blur theme from catppuccin-macchiatoblur extension
-      };
+      # theme is controlled by stylix for system-wide Catppuccin Mocha consistency
 
       # Window transparency (requires compositor support)
       window_background_opacity = 0.75;
@@ -229,10 +228,10 @@
       };
 
       # UI settings
-      ui_font_size = 24;
-      ui_font_family = "Zed Sans";
-      buffer_font_size = 24;
-      buffer_font_family = "Fira Code Mono";
+      ui_font_size = lib.mkForce 24;
+      ui_font_family = lib.mkForce "Zed Sans";
+      buffer_font_size = lib.mkForce 24;
+      buffer_font_family = lib.mkForce "Fira Code Mono";
 
       # Window settings
       auto_update = false; # Managed by Nix

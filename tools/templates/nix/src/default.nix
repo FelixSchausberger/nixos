@@ -121,7 +121,7 @@
 
     # System information collector
     getSystemInfo = {
-      platform = pkgs.hostPlatform.system;
+      platform = pkgs.stdenv.hostPlatform.system;
       nixVersion = lib.version;
       availablePackages = builtins.length (builtins.attrNames pkgs);
     };

@@ -71,7 +71,7 @@
         format = "$output";
         ignore_timeout = true;
         shell = [
-          "${inputs.self.packages.${pkgs.hostPlatform.system}.starship-jj}/bin/starship-jj"
+          "${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.starship-jj}/bin/starship-jj"
           "--ignore-working-copy"
           "starship"
         ];

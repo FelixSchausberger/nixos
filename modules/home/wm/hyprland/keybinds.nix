@@ -62,9 +62,9 @@ in {
           "$mod, c, exec, ${pkgs.helix}/bin/hx"
 
           # Application launcher
-          "$mod, D, exec, ${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker"
-          # "$mod, R, exec, ${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker --modules runner"
-          # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker --modules hyprland"
+          "$mod, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker"
+          # "$mod, R, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules runner"
+          # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules hyprland"
 
           # Window management
           "$mod, Space, togglefloating"
@@ -97,9 +97,8 @@ in {
           "$mod, U, exec, ${pkgs.pyprland}/bin/pypr toggle impala" # Impala WiFi Manager
           "$mod, Y, exec, ${pkgs.pyprland}/bin/pypr toggle teams" # MS Teams (work-specific)
 
-          # Pyprland Quality of Life Features
-          "$mod, slash, exec, ${pkgs.pyprland}/bin/pypr menu" # Show shortcuts menu
-          "$mod SHIFT, slash, exec, scratchpad list" # Show scratchpad help
+          # Which-key keybind discovery (Mod+Shift+Slash = Mod+?)
+          "$mod SHIFT, slash, exec, ${pkgs.wlr-which-key}/bin/wlr-which-key ${config.xdg.configHome}/wlr-which-key/hyprland.yaml"
           "$mod CTRL, K, exec, ${pkgs.pyprland}/bin/pypr change_workspace +1" # Next workspace (follow focus)
           "$mod CTRL, J, exec, ${pkgs.pyprland}/bin/pypr change_workspace -1" # Prev workspace (follow focus)
 
@@ -112,8 +111,8 @@ in {
           "SHIFT, Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           "$mod SHIFT, Print, exec, ${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           # Utilities
-          "$mod, V, exec, ${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker --modules clipboard"
-          "$mod, period, exec, ${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker --modules emoji" # Emoji picker
+          "$mod, V, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules clipboard"
+          "$mod, period, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules emoji" # Emoji picker
 
           # Color picker
           "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${safeNotifyBin} 'Color picked' 'Copied to clipboard'"
@@ -129,10 +128,10 @@ in {
 
           # Window management extras
           "$mod, c, centerwindow"
-          "$mod, r, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cyclenext"
-          "$mod SHIFT, r, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cycleprev"
-          "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch togglesplit"
-          "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch pseudo"
+          "$mod, r, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cyclenext"
+          "$mod SHIFT, r, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cycleprev"
+          "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch togglesplit"
+          "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch pseudo"
 
           # Window grouping
           "$mod, G, togglegroup"
@@ -142,8 +141,8 @@ in {
           "$mod SHIFT, P, pseudo"
 
           # Layout switching
-          "$mod CTRL, Space, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg orientationcycle"
-          "$mod ALT, Space, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg swapwithmaster"
+          "$mod CTRL, Space, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg orientationcycle"
+          "$mod ALT, Space, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg swapwithmaster"
 
           # Notification controls (Wired)
           "$mod, Escape, exec, ${safeNotifyBin} 'Test' 'Wired notification system'" # Test notification
@@ -151,7 +150,7 @@ in {
           "$mod CTRL, Escape, exec, systemctl --user restart wired" # Restart wired
 
           # System controls
-          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.hostPlatform.system}.hyprland}/bin/hyprctl reload && ${safeNotifyBin} 'Hyprland' 'Configuration reloaded'"
+          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl reload && ${safeNotifyBin} 'Hyprland' 'Configuration reloaded'"
           "$mod CTRL, Q, exec, ${pkgs.systemd}/bin/systemctl --user restart hyprland"
 
           # Resize mode
@@ -224,7 +223,7 @@ in {
         ", XF86WLAN, exec, ${pkgs.networkmanagerapplet}/bin/nm-connection-editor"
         ", XF86Bluetooth, exec, hypr-scratchpad bluetui"
         ", XF86Tools, exec, ${pkgs.gnome-control-center}/bin/gnome-control-center"
-        ", XF86Search, exec, ${inputs.walker.packages.${pkgs.hostPlatform.system}.default}/bin/walker"
+        ", XF86Search, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker"
         ", XF86LaunchA, exec, ${cfg.fileManager}"
         ", XF86Explorer, exec, ${cfg.fileManager}"
 

@@ -45,6 +45,7 @@ in {
 
   users.users = {
     root = {
+      hashedPassword = lib.mkForce null; # Clear inherited hashedPassword from system/core/users.nix
       password = "nixos"; # Default password for installer convenience
       openssh.authorizedKeys.keyFiles =
         lib.optionals hasAuthorizedKeys [authorizedKeysFile];
@@ -146,7 +147,7 @@ in {
       tmux
     ])
     ++ [
-      inputs.nixos-wizard.packages.${pkgs.hostPlatform.system}.default
+      inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
   environment.sessionVariables = {

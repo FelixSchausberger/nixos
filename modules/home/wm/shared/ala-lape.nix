@@ -10,7 +10,7 @@
   config = {
     services.ala-lape = {
       enable = false; # Disabled by default, enable per-host
-      package = inputs.ala-lape.packages.${pkgs.hostPlatform.system}.default;
+      package = inputs.ala-lape.packages.${pkgs.stdenv.hostPlatform.system}.default;
       config = {
         inhibitors = {
           notifications = {

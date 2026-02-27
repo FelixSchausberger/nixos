@@ -25,7 +25,7 @@ in {
     '';
 
     packages = with pkgs; [
-      inputs.self.packages.${pkgs.hostPlatform.system}.lumen # Instant AI Git Commit message, Git changes summary from the CLI
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen # Instant AI Git Commit message, Git changes summary from the CLI
       lazygit # A simple terminal UI for git commands
       serie # A rich git commit graph in your terminal, like magic
       # graphite-cli # CLI that makes creating stacked git changes fast & intuitive
@@ -89,7 +89,6 @@ in {
         inherit (personalInfo) name;
         email = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
       };
-      github.token = "${config.sops.secrets."github/token".path}";
       init.defaultBranch = "main";
       pull.rebase = true;
       core.editor = "${pkgs.helix}/bin/hx";

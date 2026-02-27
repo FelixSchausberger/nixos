@@ -2,8 +2,12 @@
   pkgs,
   config,
   lib,
+  inputs,
   ...
 }: let
+  # Use claude-code from sadjow/claude-code-nix for hourly updates
+  claudeCodePackage = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+
   # Use shared MCP server definitions from ai-assistants module
   sharedMcp = config.ai-assistants.mcpServers.definitions;
 in {
@@ -20,7 +24,7 @@ in {
         nixd # Nix LSP
         shellcheck # Shell script linter
         # Claude Code itself
-        claude-code
+        claudeCodePackage
       ])
       # MCP server packages from shared definitions
       ++ (lib.attrValues (lib.mapAttrs (_n: v: v.package) (lib.filterAttrs (_n: v: v.enabled) sharedMcp)));

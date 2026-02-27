@@ -10,6 +10,7 @@
       "https://nixpkgs-unfree.cachix.org"
       "https://pre-commit-hooks.cachix.org"
       "https://yazi.cachix.org"
+      "https://claude-code.cachix.org"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
@@ -19,6 +20,7 @@
       "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
       "pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc="
       "yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA="
+      "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk="
     ];
     # Cache robustness settings
     narinfo-cache-positive-ttl = 3600; # 1 hour for R2 presigned URLs
@@ -91,6 +93,9 @@
     # File manager (used by both TUI and GUI)
     yazi.url = "github:sxyazi/yazi";
 
+    # AI assistants (hourly updates)
+    claude-code-nix.url = "github:sadjow/claude-code-nix";
+
     # Yazi plugins
     yazi-clipboard = {
       url = "github:DreamMaoMao/clipboard.yazi";
@@ -133,11 +138,6 @@
     # Installation tools (useful for portable/recovery)
     nixos-wizard = {
       url = "github:km-clay/nixos-wizard";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -260,30 +260,24 @@
           quantumlauncher = pkgs.callPackage ./pkgs/quantumlauncher {};
 
           # Minimal installer ISO (fast rebuilds for testing)
-          installer-iso-minimal = inputs.nixos-generators.nixosGenerate {
-            inherit (pkgs.hostPlatform) system;
-            format = "install-iso";
-            modules = [
-              ./hosts/installer-minimal
-            ];
+          installer-iso-minimal = (inputs.nixpkgs.lib.nixosSystem {
+            system = pkgs.stdenv.hostPlatform.system;
             specialArgs = {
               inherit inputs;
               repoConfig = import ./config.nix;
             };
-          };
+            modules = [./hosts/installer-minimal];
+          }).config.system.build.isoImage;
 
           # Full installer ISO (comprehensive recovery environment)
-          installer-iso-full = inputs.nixos-generators.nixosGenerate {
-            inherit (pkgs.hostPlatform) system;
-            format = "install-iso";
-            modules = [
-              ./hosts/installer
-            ];
+          installer-iso-full = (inputs.nixpkgs.lib.nixosSystem {
+            system = pkgs.stdenv.hostPlatform.system;
             specialArgs = {
               inherit inputs;
               repoConfig = import ./config.nix;
             };
-          };
+            modules = [./hosts/installer];
+          }).config.system.build.isoImage;
         };
 
         # Helper apps
@@ -577,7 +571,7 @@
             ssh-to-age
             statix
             taplo
-            inputs.namaka.packages.${pkgs.hostPlatform.system}.default # Snapshot testing
+            inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
           ];
 
           name = "nixos-config";

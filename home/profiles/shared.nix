@@ -24,8 +24,6 @@ in {
       # Base home configuration
       ../../modules/home
     ]
-    ++ wmModules;
-
-  # Enable OpenCode on hp-probook-wsl
-  ai-assistants.opencode.enable = lib.mkDefault (currentHost == "hp-probook-wsl");
+    ++ wmModules
+    ++ lib.optional (wms != []) ../../modules/home/gui;
 }
