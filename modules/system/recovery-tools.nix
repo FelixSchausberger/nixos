@@ -48,9 +48,6 @@ in {
       git
       vim
 
-      # Image creation / virtualization helpers
-      qemu_full
-
       # Workstation + collaboration
       firefox
       vscode
@@ -95,18 +92,6 @@ in {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
     };
-  };
-
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    publish.enable = true;
-    publish.userServices = true;
-  };
-
-  services.printing = {
-    enable = true;
-    drivers = [pkgs.hplip];
   };
 
   system.activationScripts.recoveryTools = ''

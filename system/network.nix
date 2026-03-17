@@ -14,6 +14,7 @@
     firewall = {
       enable = true;
       allowPing = true;
+      allowedTCPPorts = [22]; # SSH
     };
   };
 }

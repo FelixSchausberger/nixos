@@ -33,6 +33,12 @@ in {
         s = ["show"];
         b = ["bookmark"];
       };
+
+      # Automatically advance main bookmark when creating new commits
+      # Prevents bookmark/branch sync issues when working on main directly
+      experimental-advance-branches = {
+        enabled-branches = ["main"];
+      };
     };
   };
 }

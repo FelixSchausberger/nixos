@@ -12,7 +12,6 @@
 in {
   imports = [
     (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
-    ../default/00-host-config.nix
     ../default/10-sops.nix
     ../../system/core
     ../../system/hardware
@@ -23,8 +22,20 @@ in {
   hostConfig = {
     inherit hostName;
     isGui = false;
-    wm = [];
+    wms = [];
   };
+
+  nixpkgs.overlays = [
+    # ceph uses python311, which in current nixpkgs triggers sphinx-9.1.0 evaluation.
+    # sphinx-9.1.0 dropped Python 3.11 support, causing evaluation failure during CI.
+    # The installer does not need ceph-enabled qemu.
+    (_final: prev: {
+      qemu = prev.qemu.override {ceph = null;};
+    })
+  ];
+
+  # Disable persistence for live ISO (no persistent filesystem)
+  environment.persistence = lib.mkForce {};
 
   boot = {
     supportedFilesystems = [
@@ -41,8 +52,23 @@ in {
 
   networking.hostName = hostName;
 
-  users.users.root.openssh.authorizedKeys.keyFiles =
-    lib.optionals hasAuthorizedKeys [authorizedKeysFile];
+  users.users = {
+    root = {
+      hashedPassword = lib.mkForce null; # Clear inherited hashedPassword from system/core/users.nix
+      password = "nixos"; # Default password for installer convenience
+      openssh.authorizedKeys.keyFiles =
+        lib.optionals hasAuthorizedKeys [authorizedKeysFile];
+    };
+
+    # Override schausberger user for ISO (empty password, no sops)
+    schausberger = {
+      hashedPasswordFile = lib.mkForce null;
+      password = ""; # Empty password for easy ISO login
+    };
+  };
+
+  # Auto-login as schausberger on TTY1
+  services.getty.autologinUser = lib.mkForce "schausberger";
 
   systemd.tmpfiles.rules = [
     "d /per 0755 root root -"
@@ -69,11 +95,25 @@ in {
 
     Installation Steps:
       1. Configure network (if needed): nmtui
-      2. Export GitHub token:
-         export NIX_CONFIG="access-tokens = github.com=YOUR_TOKEN"
-      3. Install (specify your hostname):
-         sudo nixos-rebuild switch --flake .#hp-probook-vmware
-         (or: nh os switch .#hp-probook-vmware)
+      2. Option A - Remote install (recommended for VMs):
+         Set root password: passwd
+         Get IP: ip addr show
+         From dev machine:
+           nix run github:nix-community/nixos-anywhere -- \
+             --flake .#hostname root@<this-ip>
+      3. Option B - Local install from this ISO:
+         a. Create GitHub token (required for flake inputs):
+            Visit: https://github.com/settings/tokens/new
+            Scopes: NONE needed (just for public repo access)
+            Expiration: 7 days (temporary)
+         b. Set up configuration:
+            cp -r /per/etc/nixos /tmp/nixos-config
+            cd /tmp/nixos-config
+            ln -sf config-installer.nix config.nix
+         c. Install with GitHub authentication:
+            export NIX_CONFIG="access-tokens = github.com=$YOUR_TOKEN"
+            sudo -E nixos-rebuild switch --flake .#hostname
+            (Note: -E flag preserves environment)
       4. Reboot into your new system
 
     Available hosts: desktop, surface, portable, hp-probook-vmware
@@ -85,7 +125,8 @@ in {
     For full recovery environment, use installer-iso-full.
 
     Network:
-      • SSH enabled (if authorized_keys configured)
+      • SSH enabled with password and key authentication
+      • Root password: nixos
       • NetworkManager available: nmtui
       • Find IP: ip addr show
 
@@ -126,19 +167,21 @@ in {
     GIT_COMMITTER_EMAIL = "installer@nixos.local";
   };
 
-  # GitHub authentication handled via environment variable at runtime
-  # No secrets embedded in ISO - user provides token via NIX_CONFIG
+  # FlakeHub disabled during installation via config-installer.nix
+  # User symlinks config.nix -> config-installer.nix temporarily
+  # Deployed system uses FlakeHub normally (config.nix is in /nix/store, not affected by symlink)
 
   services.openssh = {
     enable = true;
     settings = {
       PermitRootLogin = "yes";
-      PasswordAuthentication = false;
+      PasswordAuthentication = true; # Allow password auth for installer convenience
     };
   };
 
   networking.networkmanager.enable = true;
   networking.wireless.enable = lib.mkForce false;
+  networking.wireless.iwd.enable = lib.mkForce false; # Disable IWD on installer (wired-only)
 
   security.sudo-rs.enable = lib.mkForce false;
   system.stateVersion = lib.mkForce "26.05";

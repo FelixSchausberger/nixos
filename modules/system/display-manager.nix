@@ -6,8 +6,8 @@
 }: let
   # Get first available WM for defaults
   firstWm =
-    if hostConfig.wm != []
-    then builtins.head hostConfig.wm
+    if hostConfig.wms != []
+    then builtins.head hostConfig.wms
     else "hyprland";
 
   # Map WM names to proper session names
@@ -24,6 +24,8 @@
     then "${pkgs.gnome-session}/bin/gnome-session --session=gnome"
     else if wm == "cosmic"
     then "cosmic-session"
+    else if wm == "niri"
+    then "${pkgs.niri}/bin/niri-session"
     else "${pkgs.hyprland}/bin/Hyprland";
 
   # Auto-login command based on WM
@@ -40,7 +42,7 @@
   #         else "Hyprland";
   #     in "${sessionLabel}:${sessionCmd}"
   #   )
-  #   hostConfig.wm);
+  #   hostConfig.wms);
 in {
   services = {
     xserver = {
@@ -64,7 +66,7 @@ in {
     # Allow tuigreet to handle session selection
     # displayManager.defaultSession = sessionName;
 
-    gnome = lib.mkIf (builtins.elem "gnome" hostConfig.wm) {
+    gnome = lib.mkIf (builtins.elem "gnome" hostConfig.wms) {
       core-apps.enable = true;
     };
   };
@@ -78,11 +80,11 @@ in {
         nerd-fonts.jetbrains-mono
         catppuccin-papirus-folders
       ]
-      ++ lib.optionals (builtins.elem "gnome" hostConfig.wm) [
+      ++ lib.optionals (builtins.elem "gnome" hostConfig.wms) [
         gnome-session
         gnome-shell
       ]
-      ++ lib.optionals (builtins.elem "hyprland" hostConfig.wm) [
+      ++ lib.optionals (builtins.elem "hyprland" hostConfig.wms) [
         hyprland
       ];
 
@@ -110,7 +112,7 @@ in {
   };
 
   # Enable GNOME keyring for all sessions that might need it
-  security.pam.services.greetd.enableGnomeKeyring = builtins.elem "gnome" hostConfig.wm;
+  security.pam.services.greetd.enableGnomeKeyring = builtins.elem "gnome" hostConfig.wms;
 
   fonts.packages = with pkgs; [
     liberation_ttf

@@ -11,13 +11,9 @@ in {
     ./helix # Post-modern modal text editor
     ./neovim.nix # Neovim with basic configuration (replaces nixvim to avoid tree-sitter-ada issue)
     ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
-    ./bat.nix # A cat clone with syntax highlighting and Git integration
     ./bluetui.nix # Bluetooth TUI management tool (kept separate due to config)
     ./ai-assistants # AI coding assistants (Claude Code, OpenCode) with shared MCP servers and behaviors
-    ./direnv.nix # A shell extension that manages your environment
-    ./eza.nix # A modern, maintained replacement for ls
     ./fd.nix # A simple, fast and user-friendly alternative to find
-    ./fzf.nix # A command-line fuzzy finder written in Go
     ./git.nix # Distributed version control system
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
     ./markdown-oxide.nix # Markdown LSP server inspired by Obsidian
@@ -28,10 +24,8 @@ in {
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./sops.nix # Simple and flexible tool for managing secrets
     # ./spotify-player.nix # Terminal-based Spotify client with full feature parity
-    ./starship.nix # A minimal, blazing fast, and extremely customizable prompt
     ./typix.nix # Typst: A markup-based typesetting system
     ./zellij.nix # Terminal multiplexer with modern features
-    ./zoxide.nix # A fast cd command that learns your habits
   ];
 
   programs = {
