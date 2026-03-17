@@ -3,6 +3,7 @@
   # This module provides common functionality for systems without GUI
 
   imports = [
+    ./shared.nix
     ../modules/system/tui.nix
   ];
 

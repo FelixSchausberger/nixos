@@ -1,6 +1,11 @@
 {
+  pkgs,
+  inputs,
+  ...
+}: {
   programs.ghostty = {
     enable = true;
+    package = inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
     settings = {
       # Font configuration
@@ -10,8 +15,7 @@
       #   "-calt" # Disable ligatures for better readability
       # ];
 
-      # Theme and colors
-      theme = "catppuccin-macchiato";
+      # Theme and colors — stylix provides theme = stylix via its HM integration
       background-opacity = 0.75; # More transparent for better blur effect
       background-blur-radius = 20; # Add blur effect (requires compositor support)
 
@@ -29,6 +33,11 @@
       # Cursor configuration
       cursor-style = "block";
       cursor-style-blink = false;
+
+      # Launch fish explicitly; system login shell remains bash (NixOS default).
+      # fish is not POSIX-compatible, so setting it as login shell can break
+      # systemd units and other system scripts that depend on shell=bash.
+      command = "${pkgs.fish}/bin/fish";
 
       # Shell integration
       shell-integration = "fish";

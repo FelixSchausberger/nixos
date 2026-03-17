@@ -1,7 +1,9 @@
-{
+{lib, ...}: {
   programs = {
     sioyek = {
       enable = true;
+      # Override stylix's string default with a list to satisfy the apply function
+      config.startup_commands = lib.mkForce ["toggle_custom_color"];
       # bindings = {
       #   "move_up" = "k";
       #   "move_down" = "j";

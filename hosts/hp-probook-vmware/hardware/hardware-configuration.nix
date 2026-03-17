@@ -30,6 +30,15 @@
       ];
       # Load AMD GPU driver early for graphical boot
       kernelModules = ["amdgpu"];
+      # Support ZFS in initrd for early boot
+      supportedFilesystems = ["zfs"];
+    };
+
+    # ZFS configuration
+    zfs = {
+      devNodes = "/dev/disk/by-uuid"; # more stable than by-id in VMware VMs
+      forceImportRoot = lib.mkForce true; # disk IDs may change when VM is moved
+      forceImportAll = lib.mkForce false;
     };
 
     # Kernel modules for running system
@@ -46,31 +55,24 @@
     extraModulePackages = [];
 
     # Bootloader configuration
+    # Using GRUB for better compatibility with nixos-anywhere/VMs
     loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
+      systemd-boot.enable = lib.mkForce false; # Disable systemd-boot (from shared-gui.nix)
+      grub = {
+        enable = true;
+        device = "nodev"; # Don't install to MBR
+        efiSupport = true;
+        efiInstallAsRemovable = true; # Install to default EFI location (works without EFI vars)
+      };
+      efi.canTouchEfiVariables = lib.mkForce false; # Required when using efiInstallAsRemovable
       timeout = lib.mkDefault 3; # Quick boot timeout for VM
     };
   };
 
-  # File systems - to be configured after VM installation
-  # These are placeholders and should be updated after running nixos-generate-config
-  fileSystems = {
-    "/" = {
-      device = "/dev/disk/by-label/nixos";
-      fsType = "ext4";
-      options = ["defaults" "noatime"]; # noatime for better VM performance
-    };
+  # Filesystems are managed entirely by disko (./disko.nix)
+  # Disko creates and configures all ZFS datasets and boot partition
 
-    "/boot" = {
-      device = "/dev/disk/by-label/boot";
-      fsType = "vfat";
-      options = ["fmask=0022" "dmask=0022"];
-    };
-  };
-
-  # Use zramSwap instead of disk swap for better VM performance
-  # This is configured system-wide in modules/system/core/swap.nix
+  # Swap is configured in disko (8GB encrypted swap partition)
   swapDevices = [];
 
   # Hardware configuration
@@ -109,18 +111,20 @@
     open-vm-tools # VMware guest utilities
   ];
 
-  # Enable VMware shared folders (optional)
-  # Uncomment if you want to share folders between host Windows and guest NixOS
-  # fileSystems."/mnt/hgfs" = {
-  #   device = ".host:/";
-  #   fsType = "fuse./run/current-system/sw/bin/vmhgfs-fuse";
-  #   options = [
-  #     "umask=22"
-  #     "uid=1000"
-  #     "gid=100"
-  #     "allow_other"
-  #     "auto_unmount"
-  #     "defaults"
-  #   ];
-  # };
+  # VMware shared folder: Windows host C:\Users\SchausbergerF\PDTS
+  # Share must be configured in VMware Workstation: VM Settings → Options → Shared Folders
+  # Share name must be "PDTS" to match the device path below
+  fileSystems."/mnt/PDTS" = {
+    device = ".host:/PDTS";
+    fsType = "fuse./run/current-system/sw/bin/vmhgfs-fuse";
+    options = [
+      "umask=22"
+      "uid=1000"
+      "gid=1000"
+      "allow_other"
+      "auto_unmount"
+      "defaults"
+      "nofail" # Don't fail boot if share is unavailable
+    ];
+  };
 }

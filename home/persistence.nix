@@ -41,16 +41,17 @@
       }
 
       # Zen browser essential data only - persist entire default profile
+      # XDG path since zen-browser 18.18.6b (previously ~/.zen)
       {
-        directory = ".zen/browsers";
+        directory = ".config/zen/browsers";
         method = "symlink";
       }
       {
-        directory = ".zen/default";
+        directory = ".config/zen/default";
         method = "symlink";
       }
       {
-        directory = ".zen/Profile Groups";
+        directory = ".config/zen/Profile Groups";
         method = "symlink";
       }
     ];
@@ -59,7 +60,7 @@
     files = [
       ".config/Code/User/settings.json"
       ".config/Code/User/keybindings.json"
-      ".zen/profiles.ini"
+      ".config/zen/profiles.ini"
     ];
   };
 }

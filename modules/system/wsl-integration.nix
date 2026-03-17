@@ -11,8 +11,8 @@
       # WSL Windows certificate import capability
       services.wsl-cert-setup = {
         description = "WSL Windows certificate integration setup";
-        wantedBy = ["multi-user.target"];
-        after = ["docker.service"];
+        # Disabled at boot - certificates set up via timer instead
+        wantedBy = lib.mkForce [];
         path = with pkgs; [openssl coreutils];
 
         serviceConfig = {

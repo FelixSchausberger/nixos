@@ -167,17 +167,17 @@ in {
   };
 
   # home.file = {
-  #   ".mozilla/firefox/default/chrome/theme" = {
+  #   ".local/state/firefox/default/chrome/theme" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/theme";
   #     recursive = true;
   #   };
-  #   ".mozilla/firefox/default/chrome/userChrome.css" = {
+  #   ".local/state/firefox/default/chrome/userChrome.css" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/userChrome.css";
   #   };
-  #   ".mozilla/firefox/default/chrome/userContent.css" = {
+  #   ".local/state/firefox/default/chrome/userContent.css" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/userContent.css";
   #   };
-  #   ".mozilla/firefox/default/user.js" = {
+  #   ".local/state/firefox/default/user.js" = {
   #     source = config.lib.file.mkOutOfStoreSymlink "${inputs.self}/home/programs/firefox/ffultima1.9.0/user.js";
   #   };
   # };

@@ -10,6 +10,7 @@
   home.packages = with pkgs; [
     age # Modern encryption tool with small explicit keys
     sops # Simple and flexible tool for managing secrets
+    ssh-to-age # Derive age keys from SSH keys (needed for .envrc)
   ];
 
   # Set nvim as sops editor to avoid Helix terminal issues

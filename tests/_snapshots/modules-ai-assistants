@@ -16,8 +16,9 @@
   github_mcp_exists = true;
   has_behaviors = true;
   has_mcp_servers = true;
-  mcp_server_count = 3;
+  mcp_server_count = 4;
   mcp_server_names = [
+    "garnix-insights"
     "github"
     "nix-language-server"
     "nixos"

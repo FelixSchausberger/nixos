@@ -42,6 +42,12 @@ repos:
         language: system
         files: \.toml$
         pass_filenames: true
+      - id: actionlint
+        name: GitHub Actions workflow linter
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+        pass_filenames: false
       - id: alejandra
         name: Alejandra Nix formatter
         entry: alejandra
@@ -64,6 +70,12 @@ repos:
         entry: namaka check
         language: system
         files: \.nix$
+        pass_filenames: false
+      - id: detect-unused-modules
+        name: Detect unused modules
+        entry: tools/scripts/detect-unused-modules.sh
+        language: system
+        files: ^modules/.*\.nix$
         pass_filenames: false
   # Project-specific hooks
   - repo: local

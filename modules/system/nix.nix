@@ -1,6 +1,7 @@
 {
   config,
   inputs,
+  lib,
   pkgs,
   ...
 }: {
@@ -13,9 +14,6 @@
   nixpkgs = {
     config = {
       allowUnfree = true;
-      permittedInsecurePackages = [
-        "electron-25.9.0"
-      ];
       allowBroken = true;
       # Keep aliases enabled - required for deprecated packages still using old names
       # Note: Some aliases like wrapGAppsHook have been converted to throw errors
@@ -25,21 +23,13 @@
     overlays = [
       inputs.nur.overlays.default
       # Custom overlay for TUI-specific packages
-      (_: prev: {
+      (final: prev: {
         zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
+        helix-steel = final.callPackage ../../pkgs/helix-steel {};
+        helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
+        scooter-hx = final.callPackage ../../pkgs/scooter-hx {};
+        garnix-insights = final.callPackage ../../pkgs/garnix-insights {};
       })
-      # Override bat-extras to disable broken tests
-      # Tests fail due to color output changes in bat 0.24.0 → 0.25.0
-      # Fix exists in nixpkgs master (PR #373146) but not yet in nixos-unstable
-      # This can be removed once nixos-unstable includes the fix
-      # (_: prev: {
-      #   bat-extras = prev.bat-extras.overrideScope (_: super: {
-      #     buildBatExtrasPkg = args:
-      #       (super.buildBatExtrasPkg args).overrideAttrs (_: {
-      #         doCheck = false;
-      #       });
-      #   });
-      # })
     ];
   };
 
@@ -52,7 +42,9 @@
       trusted-users = ["root" "@wheel"];
       warn-dirty = false;
 
-      access-tokens = ["github.com=${config.sops.secrets."github/token".path}"];
+      # GitHub token authentication (using sops secret)
+      # Note: This is set via extraOptions since it needs runtime secret path
+      # access-tokens config is handled below in extraOptions
 
       # WSL-specific configuration for better performance
       use-sqlite-wal = true; # Better database performance on WSL
@@ -64,13 +56,15 @@
       stalled-download-timeout = 600; # 10 minutes for large/slow downloads
 
       # Build optimization
-      cores = 0; # Use all CPU cores
-      max-jobs = "auto"; # Auto-detect job count
+      # Limit parallelism to prevent "too many files open" during evaluation
+      # High values exhaust file handles when evaluating multiple host configurations
+      cores = lib.mkDefault 4; # Limit cores per build (was 0 = all)
+      max-jobs = lib.mkDefault 4; # Limit parallel jobs (was "auto")
       keep-going = true; # Continue building other derivations on failure
 
       # Store optimization for better performance
-      keep-outputs = true; # Keep build dependencies for faster rebuilds
-      keep-derivations = true; # Keep derivations for faster evaluation
+      keep-outputs = lib.mkDefault true; # Keep build dependencies for faster rebuilds
+      keep-derivations = lib.mkDefault true; # Keep derivations for faster evaluation
 
       # Disk space management
       min-free = 5368709120; # 5GB - trigger GC when less than 5GB free
@@ -107,6 +101,7 @@
         "https://walker-git.cachix.org?priority=14"
         "https://helix.cachix.org?priority=15"
         "https://yazi.cachix.org?priority=20"
+        "https://claude-code.cachix.org?priority=21"
         "https://devenv.cachix.org?priority=25"
 
         # Additional popular caches to reduce compilation
@@ -131,6 +126,7 @@
         "walker-git.cachix.org-1:vmC0ocfPWh0S/vRAQGtChuiZBTAe4wiKDeyyXM0/7pM="
         "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs="
         "yazi.cachix.org-1:Dcdz63NZKfvUCbDGngQDAZq6kOroIrFoyO064uvLh8k="
+        "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk="
         "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
         "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
 
@@ -149,7 +145,24 @@
 
   programs.nix-index-database.comma.enable = true;
 
-  sops.secrets = {
-    "github/token" = {};
+  # GitHub token configuration (optional - only when sops is available)
+  sops.secrets."github/token" = lib.mkIf (config.sops.age.keyFile != null) {
+    mode = "0440";
+    group = "wheel";
   };
+
+  # Use sops template to generate nix.conf with GitHub token (only when sops available)
+  sops.templates."nix-access-tokens.conf" = lib.mkIf (config.sops.age.keyFile != null) {
+    content = ''
+      access-tokens = github.com=${config.sops.placeholder."github/token"}
+    '';
+    owner = "root";
+    group = "wheel";
+    mode = "0440";
+  };
+
+  # Include the generated config in Nix's extraOptions (only when template exists)
+  nix.extraOptions = lib.mkIf (config.sops.age.keyFile != null) ''
+    !include ${config.sops.templates."nix-access-tokens.conf".path}
+  '';
 }

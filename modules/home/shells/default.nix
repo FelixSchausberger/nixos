@@ -2,10 +2,16 @@
   imports = [
     ./bash.nix # GNU Bourne-Again Shell, the de facto standard shell on Linux (for interactive use)
     ./fish # Smart and user-friendly command line shell
-    ./motd.nix # Message of the Day integration
+    ./bat.nix # A cat clone with syntax highlighting and Git integration
+    ./direnv.nix # A shell extension that manages your environment
+    ./eza.nix # A modern, maintained replacement for ls
+    ./fzf.nix # A command-line fuzzy finder written in Go
+    ./starship.nix # A minimal, blazing fast, and extremely customizable prompt
+    ./zoxide.nix # A fast cd command that learns your habits
   ];
 
   home.shellAliases = {
+    bios = "systemctl reboot --firmware-setup";
     build = "nix build -L";
     cp = "cp -rpv";
     list-errors = "journalctl -p err -b --output=cat | sort | uniq -c | sort -nr";

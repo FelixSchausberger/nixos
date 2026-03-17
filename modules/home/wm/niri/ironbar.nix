@@ -16,8 +16,11 @@ in {
     # Ironbar configuration file
     xdg.configFile."ironbar/config.json".text = builtins.toJSON {
       anchor_to_edges = true;
-      position = "top";
-      height = 28;
+      position = "left";
+      # width controls bar thickness; height fills screen for vertical bars
+      width = 42;
+      autohide = 300;
+      start_hidden = true;
       start = [
         {
           type = "workspaces";
@@ -34,14 +37,9 @@ in {
       ];
       center = [
         {
-          type = "focused";
-          show_icon = true;
-          show_title = true;
-          icon_size = 24;
-          truncate = {
-            mode = "end";
-            max_length = 50;
-          };
+          # Two-line format renders naturally in a vertical bar without CSS rotation
+          type = "clock";
+          format = "%H\n%M";
         }
       ];
       end = [
@@ -52,12 +50,9 @@ in {
           tooltip = "System Information";
         }
         {
-          type = "tray";
-          icon_size = 16;
-        }
-        {
           type = "volume";
-          format = "{icon} {percentage}%";
+          # Icon-only keeps items within the 42px bar width
+          format = "{icon}";
           max_volume = 100;
           icons = {
             volume_high = "";
@@ -68,9 +63,10 @@ in {
         }
         {
           type = "network_manager";
-          format_ethernet = "󰈀 {ip}";
-          format_wifi = "{icon} {ssid} {signal_strength}%";
-          format_disconnected = "󰤭 Disconnected";
+          # Icon-only to fit the narrow vertical bar
+          format_ethernet = "󰈀";
+          format_wifi = "{icon}";
+          format_disconnected = "󰤭";
           icons = {
             wifi = {
               "0-25" = "󰤯";
@@ -81,8 +77,8 @@ in {
           };
         }
         {
-          type = "clock";
-          format = "%Y-%m-%d %H:%M:%S";
+          type = "tray";
+          icon_size = 16;
         }
       ];
     };
@@ -97,9 +93,11 @@ in {
       }
 
       .bar {
-        background-color: rgba(30, 30, 46, 0.9);
-        border-bottom: 2px solid #ffc87f;
-        padding: 4px 8px;
+        background-color: rgba(30, 30, 46, 0.92);
+        /* Right border accent for vertical left bar */
+        border-right: 2px solid #ffc87f;
+        padding: 8px 4px;
+        transition: all 200ms ease;
       }
 
       .start, .center, .end {
@@ -114,10 +112,16 @@ in {
         background: rgba(49, 50, 68, 0.6);
         color: #a6adc8;
         border-radius: 6px;
-        margin: 2px;
-        padding: 4px 8px;
+        /* Vertical margin between stacked workspace buttons */
+        margin: 2px 4px;
+        padding: 8px 4px;
         min-width: 30px;
-        transition: all 200ms ease;
+        min-height: 30px;
+        transition: all 200ms ease-in-out;
+      }
+
+      .workspaces .item:hover {
+        background: rgba(255, 255, 255, 0.08);
       }
 
       .workspaces .item.focused {
@@ -130,17 +134,6 @@ in {
         color: #1e1e2e;
       }
 
-      .focused {
-        color: #cdd6f4;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-      }
-
-      .focused .icon {
-        margin-right: 8px;
-      }
-
       .tray {
         background: transparent;
       }
@@ -148,48 +141,45 @@ in {
       .tray .item {
         background: rgba(49, 50, 68, 0.6);
         border-radius: 4px;
-        margin: 1px;
-        padding: 2px 4px;
+        margin: 2px 4px;
+        padding: 4px;
       }
 
       .volume {
         color: #89b4fa;
         background: rgba(49, 50, 68, 0.6);
         border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
+        padding: 8px 4px;
+        margin: 2px 4px;
+        transition: all 200ms ease-in-out;
       }
 
       .network_manager {
         color: #94e2d5;
         background: rgba(49, 50, 68, 0.6);
         border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
-      }
-
-      .sys_info {
-        color: #f9e2af;
-        background: rgba(49, 50, 68, 0.6);
-        border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
+        padding: 8px 4px;
+        margin: 2px 4px;
+        transition: all 200ms ease-in-out;
       }
 
       .script {
         color: #f9e2af;
         background: rgba(49, 50, 68, 0.6);
         border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
+        padding: 8px 4px;
+        margin: 2px 4px;
+        transition: all 200ms ease-in-out;
       }
 
       .clock {
         color: #fab387;
         background: rgba(49, 50, 68, 0.6);
         border-radius: 6px;
-        padding: 4px 8px;
-        margin: 0 4px;
+        /* Stack hours/minutes vertically; font-size reduced to fit 42px width */
+        font-size: 12px;
+        padding: 8px 4px;
+        margin: 2px 4px;
       }
 
       button {
@@ -199,8 +189,8 @@ in {
       }
 
       button:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
       }
 
       .popup {

@@ -20,7 +20,7 @@
     clang-tools # C/C++
     marksman # Markdown
     nixd # Nix
-    python311Packages.python-lsp-server # Python
+    python3Packages.python-lsp-server # Python
     taplo # TOML
     yaml-language-server # YAML
   ];

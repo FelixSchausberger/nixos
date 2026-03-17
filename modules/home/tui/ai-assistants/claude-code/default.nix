@@ -1,10 +1,13 @@
 {
   pkgs,
-  inputs,
   config,
   lib,
+  inputs,
   ...
 }: let
+  # Use claude-code from sadjow/claude-code-nix for hourly updates
+  claudeCodePackage = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+
   # Use shared MCP server definitions from ai-assistants module
   sharedMcp = config.ai-assistants.mcpServers.definitions;
 in {
@@ -21,12 +24,8 @@ in {
         nixd # Nix LSP
         shellcheck # Shell script linter
         # Claude Code itself
-        claude-code
+        claudeCodePackage
       ])
-      ++ [
-        # Usage tracking for statusline (from ccusage-flake)
-        inputs.ccusage.packages.${pkgs.stdenv.hostPlatform.system}.default
-      ]
       # MCP server packages from shared definitions
       ++ (lib.attrValues (lib.mapAttrs (_n: v: v.package) (lib.filterAttrs (_n: v: v.enabled) sharedMcp)));
 
@@ -45,7 +44,17 @@ in {
       lib.hm.dag.entryAfter ["writeBoundary"] ''
         # Create .mcp.json at /per/etc/nixos/ (project root) for Claude Code MCP servers
         if [ -w /per/etc/nixos ]; then
-          $DRY_RUN_CMD echo '${mcpJsonContent}' > /per/etc/nixos/.mcp.json
+          BASE_JSON='${mcpJsonContent}'
+          if [[ -f ${config.sops.secrets."github/token".path} ]]; then
+            GITHUB_TOKEN=$(cat ${config.sops.secrets."github/token".path})
+            $DRY_RUN_CMD printf '%s' "$BASE_JSON" | \
+              ${pkgs.jq}/bin/jq --arg token "$GITHUB_TOKEN" \
+                '.mcpServers.github.env = {"GITHUB_TOKEN": $token}' \
+              > /per/etc/nixos/.mcp.json
+          else
+            echo "Warning: GitHub token not found, MCP github server will not authenticate" >&2
+            $DRY_RUN_CMD printf '%s' "$BASE_JSON" > /per/etc/nixos/.mcp.json
+          fi
           $DRY_RUN_CMD chmod 644 /per/etc/nixos/.mcp.json
           echo "Created /per/etc/nixos/.mcp.json for Claude Code MCP servers"
         else
