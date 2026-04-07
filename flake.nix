@@ -480,6 +480,13 @@
                             # Fix git ownership for nixos-install
                             ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "git config --global --add safe.directory /tmp/nixos-config"
 
+                            # Copy sops key to persistent ZFS /per dataset (disko mounts it under /mnt)
+                            # Must happen after disko so /mnt/per exists
+                            echo "Placing sops key on persistent storage..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "mkdir -p /mnt/per/system && chmod 700 /mnt/per/system"
+                            scp -o StrictHostKeyChecking=accept-new "$SOPS_KEY" "root@$TARGET_IP:/mnt/per/system/sops-key.txt"
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "chmod 400 /mnt/per/system/sops-key.txt"
+
                             # Activate swap partition created by disko to prevent OOM during build.
                             # The live ISO boots without swap. Disko creates an 8GB swap partition
                             # (partition 2: after ESP, before ZFS) with randomEncryption=true which
@@ -537,9 +544,11 @@
                               exit 1
                             fi
 
-                            # Fix ownership of user files in persistent storage
+                            # Fix ownership of user files in persistent storage.
+                            # The user may not exist until home-manager activates on the first rebuild;
+                            # ignore the failure and let the rebuild create the user first.
                             echo "Fixing ownership of persistent user files..."
-                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "chown -R schausberger:schausberger /per/home/schausberger"
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "chown -R schausberger:schausberger /per/home/schausberger 2>/dev/null || true"
 
                             # Rebuild from persistent location with GitHub authentication (memory-optimized)
                             echo "Rebuilding from /per/etc/nixos to finalize installation..."
