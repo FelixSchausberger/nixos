@@ -7,8 +7,8 @@
   home.packages = lib.mkIf (config.features.development.enable or config.hostConfig.isGui or false) (with pkgs; [
     # Development language servers
     clang-tools # C/C++ tools (includes clangd)
-    nodePackages.typescript-language-server # TypeScript/JavaScript LSP
-    nodePackages.vscode-langservers-extracted # HTML/CSS/JSON LSPs
+    typescript-language-server # TypeScript/JavaScript LSP
+    vscode-langservers-extracted # HTML/CSS/JSON LSPs
     python312Packages.python-lsp-server # Python LSP
     lua-language-server # Lua LSP
     tinymist # Typst LSP
@@ -21,7 +21,7 @@
     lldb # LLDB debugger (includes lldb-dap)
 
     # Development formatters
-    nodePackages.prettier # Use development shell version to avoid conflicts
+    prettier # Use development shell version to avoid conflicts
     black # Python formatter
     stylua # Lua formatter
     fish # Fish shell (includes fish_indent formatter)
