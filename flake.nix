@@ -171,6 +171,7 @@
     niri = {
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.niri-unstable.url = "github:niri-wm/niri/wip/branch";
     };
 
     # Window manager and system tools
@@ -182,6 +183,7 @@
       url = "github:saltnpepper97/stasis";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    stethoscope.url = "path:/per/repos/stethoscope";
     ala-lape = {
       url = "git+https://git.madhouse-project.org/algernon/ala-lape.git";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -258,14 +260,10 @@
         packages = {
           lumen = pkgs.callPackage ./pkgs/lumen {};
 
-          # Shell tools
-          starship-jj = pkgs.callPackage ./pkgs/starship-jj {};
-
           # MCP servers
           garnix-insights = pkgs.callPackage ./pkgs/garnix-insights {};
 
           # Editor with Steel plugin support
-          helix-steel = pkgs.callPackage ./pkgs/helix-steel {};
           helix-steel-modules = pkgs.callPackage ./pkgs/helix-steel-modules {};
           scooter-hx = pkgs.callPackage ./pkgs/scooter-hx {};
 
@@ -379,10 +377,10 @@
 
                             # Validate hostname
                             case "$HOSTNAME" in
-                              desktop|surface|portable|hp-probook-vmware) ;;
+                              desktop|surface|portable|hp-probook-vmware|m920q) ;;
                               *)
                                 echo "Error: Invalid hostname '$HOSTNAME'" >&2
-                                echo "Valid options: desktop, surface, portable, hp-probook-vmware" >&2
+                                echo "Valid options: desktop, surface, portable, hp-probook-vmware, m920q" >&2
                                 exit 1
                                 ;;
                             esac
@@ -476,7 +474,7 @@
 
                             # Run disko partitioning (use file directly to avoid flake input fetching)
                             echo "Running disko partitioning..."
-                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "cd /tmp/nixos-config && nix --extra-experimental-features 'nix-command flakes' run --no-update-lock-file git+ssh://git@github.com/nix-community/disko -- --mode disko ./hosts/$HOSTNAME/disko/disko.nix"
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "cd /tmp/nixos-config && nix --extra-experimental-features 'nix-command flakes' run --no-update-lock-file git+ssh://git@github.com/nix-community/disko -- --mode disko ./hosts/$HOSTNAME/disko.nix"
 
                             # Fix git ownership for nixos-install
                             ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "git config --global --add safe.directory /tmp/nixos-config"
@@ -581,8 +579,9 @@
             flake-checker # Flake input health monitoring
             git
             inotify-tools # File system watching for niri-watch
+            jq # JSON processing for quality metric scripts
             just # Task runner for development workflows
-            nodePackages.prettier
+            prettier
             pre-commit-hook-ensure-sops
             prek
             ssh-to-age
