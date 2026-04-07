@@ -14,7 +14,7 @@ rustPlatform.buildRustPackage rec {
     owner = "jnsahaj";
     repo = "lumen";
     rev = "main";
-    sha256 = "sha256-2XW6YAFEkXsKP4d3agLdpp2yt/bw/bd1Bi/qYeLj4G4=";
+    sha256 = "sha256-ILAVTEo8t9+4QkIKJNPxMP7U3fSX2j3kqi9W99BdRB4=";
   };
 
   cargoLock = {
