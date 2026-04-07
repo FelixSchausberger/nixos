@@ -259,6 +259,7 @@
 
         packages = {
           lumen = pkgs.callPackage ./pkgs/lumen {};
+          starship-jj = pkgs.callPackage ./pkgs/starship-jj {};
 
           # MCP servers
           garnix-insights = pkgs.callPackage ./pkgs/garnix-insights {};

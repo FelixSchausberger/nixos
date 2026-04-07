@@ -13,7 +13,7 @@ rustPlatform.buildRustPackage rec {
   src = fetchFromGitHub {
     owner = "jnsahaj";
     repo = "lumen";
-    rev = "main";
+    rev = "6053b4ef3bc341332809ebfc712964cdeca902e6"; # main as of 2026-04-07
     sha256 = "sha256-ILAVTEo8t9+4QkIKJNPxMP7U3fSX2j3kqi9W99BdRB4=";
   };
 
