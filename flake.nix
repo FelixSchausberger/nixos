@@ -480,10 +480,14 @@
                             # Fix git ownership for nixos-install
                             ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "git config --global --add safe.directory /tmp/nixos-config"
 
-                            # Activate swap partition created by disko to prevent OOM during build
-                            # The live ISO boots without swap; disko creates an 8GB swap partition
-                            echo "Activating swap partition..."
-                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" "swapon --show && swapon -a 2>/dev/null || true; blkid -t TYPE=swap -o device | xargs -r swapon 2>/dev/null || true; free -h"
+                            # Activate swap partition created by disko to prevent OOM during build.
+                            # The live ISO boots without swap. Disko creates an 8GB swap partition
+                            # (partition 2: after ESP, before ZFS) with randomEncryption=true which
+                            # sets up dm-crypt — but we need plain swap during the install phase.
+                            # mkswap overwrites the dm-crypt header; NixOS will re-create it on first boot.
+                            echo "Activating swap partition for install phase..."
+                            ssh -o StrictHostKeyChecking=accept-new "root@$TARGET_IP" \
+                              'SWAP=$(lsblk -rno NAME,PARTLABEL | awk "$2==\"swap\"{print \"/dev/\"\$1}"); [[ -z "$SWAP" ]] && SWAP=/dev/nvme0n1p2; mkswap "$SWAP" && swapon "$SWAP" && echo "Swap active: $SWAP"; free -h'
 
                             # Install NixOS with GitHub authentication via environment variable
                             # Memory optimization: use existing lock file, limit parallelism, enable eval cache
