@@ -4,7 +4,7 @@
     inherit inputs;
   };
 
-  hosts = ["desktop" "surface" "portable" "hp-probook-wsl" "hp-probook-vmware"];
+  hosts = ["desktop" "surface" "portable" "hp-probook-wsl" "hp-probook-vmware" "m920q"];
   homeImports = lib.mkProfileImports hosts;
 in {
   _module.args = {inherit homeImports;};
