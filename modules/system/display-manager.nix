@@ -43,7 +43,7 @@
   #     in "${sessionLabel}:${sessionCmd}"
   #   )
   #   hostConfig.wms);
-in {
+in lib.mkIf (hostConfig.wms != []) {
   services = {
     xserver = {
       enable = true;

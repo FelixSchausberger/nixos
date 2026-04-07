@@ -1,6 +1,6 @@
 # Unified system modules - imports all core system functionality
-# display-manager.nix self-guards with lib.mkIf (hostConfig.wms != [])
-# This allows all hosts (GUI and TUI) to use same module set
+# display-manager.nix guards with lib.mkIf (hostConfig.wms != [])
+# so headless hosts (wms = []) get no display manager or graphics stack
 {
   imports = [
     ./containers.nix
