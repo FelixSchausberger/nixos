@@ -17,7 +17,7 @@
         # Formatters
         alejandra
         black
-        nodePackages.prettier
+        prettier
 
         # Additional tools
         claude-code

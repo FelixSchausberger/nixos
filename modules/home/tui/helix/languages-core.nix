@@ -4,9 +4,9 @@
     lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
 
     # Core language servers
-    nodePackages.vscode-langservers-extracted # HTML/CSS/JSON LSPs
+    vscode-langservers-extracted # HTML/CSS/JSON LSPs
     yaml-language-server # YAML LSP
-    nodePackages.bash-language-server # Bash LSP
+    bash-language-server # Bash LSP
 
     # Core formatters
     shfmt # Shell script formatter

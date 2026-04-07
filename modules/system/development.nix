@@ -16,7 +16,7 @@
     act
 
     # Language Servers
-    nodePackages.bash-language-server # Bash
+    bash-language-server # Bash
     clang-tools # C/C++
     marksman # Markdown
     nixd # Nix
