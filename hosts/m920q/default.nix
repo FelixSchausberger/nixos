@@ -26,23 +26,11 @@ in {
     # Server workload: use performance governor, no power-saving
     performanceProfile = "productivity";
 
-    # Opt-in GUI without rebooting:
-    #   sudo nixos-specialisation niri-gui activate  → display manager + niri
-    #   sudo nixos-specialisation '' activate        → back to headless
-    specialisations.niri-gui = {
-      wms = ["niri"];
-      profile = "default";
-      extraConfig = {
-        hostConfig.isGui = lib.mkForce true;
-        imports = [
-          ../../modules/system/wm/niri.nix
-          ../../modules/system/gui.nix
-        ];
-        home-manager.users.${inputs.self.lib.user}.imports = [
-          ../../modules/home/wm/niri
-        ];
-      };
-    };
+    # niri-gui specialisation deferred until after initial install:
+    # niri must be built from source on the live ISO (binary cache unavailable there),
+    # which fails with EMFILE in the sandbox. Re-enable after first boot:
+    #   sudo nixos-rebuild switch --flake /per/etc/nixos#m920q
+    # Then activate with: sudo nixos-specialisation niri-gui activate
   };
 
   # x86_64-linux; set here since hardware-configuration.nix is generated post-install
