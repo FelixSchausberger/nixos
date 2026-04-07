@@ -15,7 +15,7 @@
 
   inherit (pkgs.lib) nixosSystem optional;
 
-  inherit (import ../system) desktop laptop;
+  inherit (import ../system) desktop laptop server;
 
   specialArgs = {
     inherit inputs;
@@ -96,6 +96,12 @@ in {
       hostName = "hp-probook-vmware";
       baseModules = laptop;
       extraModules = [./hp-probook-vmware.nix];
+    };
+
+    m920q = mkHostConfig {
+      hostName = "m920q";
+      baseModules = server;
+      extraModules = [./m920q.nix];
     };
   };
 }

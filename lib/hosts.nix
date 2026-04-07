@@ -32,4 +32,10 @@
     isGui = true;
     description = "VMware VM with Niri on HP ProBook 465 G11";
   };
+
+  m920q = {
+    wms = [];
+    isGui = false;
+    description = "Lenovo ThinkCentre M920q homelab server (headless, niri-gui specialisation available)";
+  };
 }

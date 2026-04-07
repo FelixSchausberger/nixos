@@ -14,9 +14,6 @@
 
   hardware = {
     enableAllFirmware = true;
-    # Intel UHD 630 iGPU: minimal init for headless; graphics stack enabled
-    # via niri-gui specialisation when local display is needed
-    graphics.enable = false;
     cpu.intel.updateMicrocode = true;
   };
 }
