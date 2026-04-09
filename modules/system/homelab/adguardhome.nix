@@ -39,6 +39,12 @@ in {
       };
     };
 
+    # The NixOS adguardhome service declares StateDirectory = "AdGuardHome", which
+    # conflicts with impermanence's bind mount already in place at /var/lib/AdGuardHome.
+    # Clearing StateDirectory lets systemd skip its directory setup; the bind mount
+    # handles persistence instead.
+    systemd.services.adguardhome.serviceConfig.StateDirectory = lib.mkForce "";
+
     sops.secrets."adguardhome/admin-password" = {owner = "root";};
 
     systemd.services.adguardhome-setpasswd = {
