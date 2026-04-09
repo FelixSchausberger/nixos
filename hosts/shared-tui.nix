@@ -8,8 +8,8 @@
   ];
 
   config = {
-    # Minimal hardware graphics configuration (for basic compatibility)
-    hardware.graphics = lib.mkDefault {
+    # Minimal hardware graphics configuration (for basic compatibility
+    hardware.graphics = lib.mkForce {
       enable = false; # Disabled for TUI-only systems
       enable32Bit = false;
     };
