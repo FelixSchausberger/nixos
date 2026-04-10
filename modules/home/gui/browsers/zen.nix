@@ -4,12 +4,17 @@
   pkgs,
   ...
 }: let
-  browserCommon = import ./firefox-common.nix {inherit lib pkgs;};
+  browserCommon = import ./firefox-common.nix {
+    inherit lib pkgs;
+    firefox-addons = inputs.firefox-addons or null;
+  };
 in {
   imports = [
     inputs.zen-browser.homeModules.beta # More stable, less frequent updates
     # inputs.zen-browser.homeModules.twilight-official # Experimental build with direct official artifacts
   ];
+
+  stylix.targets.zen-browser.profileNames = ["default"];
 
   programs.zen-browser = {
     enable = true;
@@ -37,14 +42,23 @@ in {
           engines = browserCommon.searchEngines;
         };
 
-      # Extensions configuration
+      # Extensions configuration - use flake source for compatibility
       extensions = {
-        packages = browserCommon.extensions;
+        packages = browserCommon.getExtensions "flake";
       };
 
-      # Custom theme from Arc-2.0 (loaded at build time)
-      userChrome = inputs.arc-2-theme + "/userChrome.css";
-      userContent = inputs.arc-2-theme + "/userContent.css";
+      # Containers and spaces are managed manually by the user in the browser
+      # Declarative configuration removed to preserve user customizations
+
+      # Custom CSS overrides (Arc-2.0 theme removed due to unavailable repository)
+      userChrome = ''
+        /* Hide new tab button in vertical sidebar */
+        #new-tab-button,
+        #tabs-newtab-button,
+        .zen-sidebar-action-button[data-action="new-tab"] {
+          display: none !important;
+        }
+      '';
 
       # Browser settings
       settings =
@@ -74,24 +88,6 @@ in {
           "startup.homepage_welcome_url" = ""; # Disable welcome homepage
           "startup.homepage_welcome_url.additional" = ""; # Disable additional welcome pages
         };
-    };
-  };
-
-  # Add Arc 2.0 theme files to the profile chrome folder
-  home.file = {
-    # Copy specific Arc-2.0 files to chrome folder
-    ".zen/browsers/default/chrome/CONFIG.css" = {
-      source = inputs.arc-2-theme + "/CONFIG.css";
-    };
-    ".zen/browsers/default/chrome/preferences.json" = {
-      source = inputs.arc-2-theme + "/preferences.json";
-    };
-    ".zen/browsers/default/chrome/theme.json" = {
-      source = inputs.arc-2-theme + "/theme.json";
-    };
-    ".zen/browsers/default/chrome/Arc 2.0" = {
-      source = inputs.arc-2-theme + "/Arc 2.0";
-      recursive = true;
     };
   };
 

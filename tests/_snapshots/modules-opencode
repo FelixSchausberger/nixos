@@ -7,6 +7,6 @@
   has_rules = true;
   mcp_integration_enabled = true;
   opencode_hm_enabled = true;
-  opencode_wrapper_enabled = true;
-  project_config_enabled = true;
+  opencode_wrapper_enabled = false;
+  project_config_enabled = false;
 }

@@ -7,17 +7,44 @@
   hostInfo = inputs.self.lib.hosts.${hostName};
 in {
   imports = [
+    ./disko.nix
     ../shared-tui.nix
     ../boot-zfs.nix # Portable needs ZFS support for recovery
+    inputs.stylix.nixosModules.stylix
+    ../../modules/system/stylix-catppuccin.nix
     ../../modules/system/recovery-tools.nix
+    ../../modules/system/nixpkgs-overlays.nix
+    ../../modules/system/specialisations.nix
+    ../../modules/system/performance-profiles.nix
   ];
 
   # Host-specific configuration using centralized host mapping
   hostConfig = {
     inherit hostName;
     inherit (hostInfo) isGui;
-    wm = hostInfo.wms;
+    inherit (hostInfo) wms;
     # user and system use defaults from lib/defaults.nix
+
+    # Portable-specific specialisations for recovery scenarios
+    specialisations = {
+      # Enhanced recovery mode with additional tools
+      recovery = {
+        wms = null; # Inherit from parent (TUI-only)
+        profile = "default";
+        extraConfig = {pkgs, ...}: {
+          # Additional recovery and diagnostic tools
+          environment.systemPackages = with pkgs; [
+            testdisk # Data recovery (includes photorec)
+            ddrescue # Disk rescue
+            gpart # Partition recovery
+            hdparm # Hard disk parameters
+            smartmontools # SMART monitoring
+            ntfs3g # NTFS support
+            exfatprogs # exFAT support
+          ];
+        };
+      };
+    };
   };
 
   # Hardware compatibility enhancements for portable use
@@ -61,4 +88,10 @@ in {
   #   enable = true;
   #   config.common.default = "*"; # Use any available portal backend
   # };
+
+  # ZFS with impermanence (matching physical hosts)
+  # Disko creates the filesystems, but we need to set neededForBoot for impermanence
+  # Required for impermanence: filesystems must be mounted early in boot
+  fileSystems."/per".neededForBoot = true;
+  fileSystems."/home".neededForBoot = true;
 }

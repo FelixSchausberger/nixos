@@ -48,9 +48,6 @@ in {
       git
       vim
 
-      # Image creation / virtualization helpers
-      qemu_full
-
       # Workstation + collaboration
       firefox
       vscode
@@ -80,10 +77,12 @@ in {
       libreoffice
       p7zip
       unzip
+
+      # Installation tools
+      nh
     ])
     ++ [
       inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default
-      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.install-nixos
     ];
 
   services.openssh = {
@@ -93,18 +92,6 @@ in {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
     };
-  };
-
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    publish.enable = true;
-    publish.userServices = true;
-  };
-
-  services.printing = {
-    enable = true;
-    drivers = [pkgs.hplip];
   };
 
   system.activationScripts.recoveryTools = ''
@@ -236,19 +223,23 @@ in {
     echo
     echo "This system uses disko for declarative disk management."
     echo
-    echo "Installation command:"
-    echo "  install-nixos              # Interactive mode with auto-detection"
-    echo "  install-nixos --help       # Show all options"
+    echo "Installation workflow:"
+    echo "  1. Configure network (if needed): nmtui"
+    echo "  2. Export GitHub token:"
+    echo "     export NIX_CONFIG=\"access-tokens = github.com=YOUR_TOKEN\""
+    echo "  3. Install (specify your hostname):"
+    echo "     sudo nixos-rebuild switch --flake .#hp-probook-vmware"
+    echo "     (or: nh os switch .#hp-probook-vmware)"
+    echo "  4. Reboot into your new system"
+    echo
+    echo "Alternative: Install via SSH from dev machine"
+    echo "  ssh root@<this-ip> and run the same commands"
     echo
     echo "Available hosts:"
     echo "  • desktop           - Desktop PC with AMD RX 6700XT"
     echo "  • surface           - Surface tablet/laptop"
     echo "  • portable          - Portable/recovery with ZFS"
     echo "  • hp-probook-vmware - VMware VM"
-    echo
-    echo "Examples:"
-    echo "  install-nixos --host desktop --disk /dev/nvme0n1"
-    echo "  install-nixos --host portable --disk /dev/sda --yes"
     echo
     echo "Documentation:"
     echo "  https://github.com/FelixSchausberger/nixos/wiki/Installation"

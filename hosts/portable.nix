@@ -4,7 +4,7 @@ in {
   imports =
     importLib.importHost "portable"
     ++ [
-      # Disko config available at ./portable/disko/disko.nix
+      # Disko config available at ./portable/disko.nix
       # Only used during installation, not imported for running systems
       ./portable/hardware/hardware-configuration.nix
     ];

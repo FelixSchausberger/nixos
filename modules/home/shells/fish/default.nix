@@ -18,6 +18,8 @@
       # Fix Zed editor binary conflict with ZFS daemon
       zed = "zeditor";
       yn = "yazi-notes";
+      # Auto-start Docker on-demand for boot performance
+      docker = "systemctl is-active docker.service > /dev/null; or sudo systemctl start docker.service; and command docker";
     };
 
     # Shell init that runs in conf.d (before plugins load)

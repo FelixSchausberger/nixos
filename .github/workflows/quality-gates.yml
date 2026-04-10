@@ -1,0 +1,71 @@
+name: Quality Gates
+permissions:
+  contents: read
+on:
+  workflow_call:
+  push:
+    branches: [main]
+jobs:
+  quality-metrics:
+    name: Quality Metrics
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Calculate coverage
+        run: |
+          nix develop -c just coverage
+          COVERAGE=$(jq -r '.aggregate_coverage' .quality-metrics/aggregate-coverage.json)
+          echo "COVERAGE=$COVERAGE" >> "$GITHUB_ENV"
+      - name: Calculate eval time
+        run: |
+          EVAL_START=$(date +%s%N)
+          nix eval .#nixosConfigurations.desktop.config.system.build.toplevel --quiet
+          EVAL_END=$(date +%s%N)
+          EVAL_TIME=$(( (EVAL_END - EVAL_START) / 1000000000 ))
+          echo "EVAL_TIME=$EVAL_TIME" >> "$GITHUB_ENV"
+      - name: Check dead code
+        run: |
+          # shellcheck disable=SC2126
+          DEAD_CODE=$(nix run nixpkgs#deadnix -- -f . 2>&1 | grep "unused" | wc -l || echo "0")
+          DEAD_CODE=$(echo "$DEAD_CODE" | tr -d '\n')
+          echo "DEAD_CODE=$DEAD_CODE" >> "$GITHUB_ENV"
+          # Quality gates status
+          if [ "$DEAD_CODE" -eq 0 ]; then
+            echo "QUALITY_STATUS=passing" >> "$GITHUB_ENV"
+            echo "QUALITY_COLOR=brightgreen" >> "$GITHUB_ENV"
+          else
+            echo "QUALITY_STATUS=failing" >> "$GITHUB_ENV"
+            echo "QUALITY_COLOR=red" >> "$GITHUB_ENV"
+          fi
+      - name: Update Coverage Badge
+        uses: Schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: c9ae337c71e6379e6725776bed1a5f96
+          filename: coverage.json
+          label: Coverage
+          message: ${{ env.COVERAGE }}%
+          color: ${{ env.COVERAGE >= 80 && 'brightgreen' || env.COVERAGE >= 60 && 'yellow' || 'orange' }}
+      - name: Update Eval Time Badge
+        uses: Schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: c9ae337c71e6379e6725776bed1a5f96
+          filename: eval-time.json
+          label: Eval Time
+          message: ${{ env.EVAL_TIME }}s
+          color: ${{ env.EVAL_TIME < 10 && 'brightgreen' || env.EVAL_TIME < 20 && 'yellow' || 'orange' }}
+      - name: Update Quality Gates Badge
+        uses: Schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: c9ae337c71e6379e6725776bed1a5f96
+          filename: quality-gates.json
+          label: Quality
+          message: ${{ env.QUALITY_STATUS }}
+          color: ${{ env.QUALITY_COLOR }}

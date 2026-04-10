@@ -4,5 +4,10 @@
 {inputs, ...}: {
   imports = [
     inputs.wired.homeManagerModules.default # Wired notification daemon
+    ../wallpapers # Wallpaper management module
+    ./shared/ala-lape.nix # Idle inhibitor (gamepad/process-based)
+    ./shared/graphical-service.nix # Reusable graphical service wrapper
+    ./shared/walker.nix # Walker application launcher (shared between WMs)
+    ./shared/wlr-which-key.nix # Which-key keybind discovery (shared between WMs)
   ];
 }

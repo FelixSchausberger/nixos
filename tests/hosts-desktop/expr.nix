@@ -13,10 +13,10 @@ in {
   is_gui = config.hostConfig.isGui;
 
   # Test: Multiple window managers configured
-  wm_count = builtins.length config.hostConfig.wm;
-  has_gnome = builtins.elem "gnome" config.hostConfig.wm;
-  has_hyprland = builtins.elem "hyprland" config.hostConfig.wm;
-  has_niri = builtins.elem "niri" config.hostConfig.wm;
+  wm_count = builtins.length config.hostConfig.wms;
+  has_gnome = builtins.elem "gnome" config.hostConfig.wms;
+  has_hyprland = builtins.elem "hyprland" config.hostConfig.wms;
+  has_niri = builtins.elem "niri" config.hostConfig.wms;
 
   # Test: AMD GPU profile is enabled
   amd_gpu_enabled = config.hardware.profiles.amdGpu.enable;

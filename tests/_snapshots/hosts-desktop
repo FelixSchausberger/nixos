@@ -4,14 +4,14 @@
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
   auto_update_enabled = true;
-  has_gnome = true;
+  has_gnome = false;
   has_hyprland = true;
-  has_niri = true;
+  has_niri = false;
   hostname = "desktop";
   is_gui = true;
   maintenance_enabled = true;
   monitoring_enabled = true;
   qmk_enabled = true;
   user_exists = true;
-  wm_count = 3;
+  wm_count = 1;
 }

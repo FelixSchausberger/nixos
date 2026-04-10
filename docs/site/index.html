@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NixOS Config Quality Dashboard</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #0d1117;
+        color: #e6edf3;
+        font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+        font-size: 14px;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: #f0f6fc;
+      }
+      .subtitle {
+        color: #7d8590;
+        font-size: 0.8rem;
+        margin-bottom: 2rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      .card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 1.25rem;
+      }
+      .card-label {
+        color: #7d8590;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+      }
+      .card-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #f0f6fc;
+      }
+      .card-value.green { color: #3fb950; }
+      .card-value.yellow { color: #d29922; }
+      .card-value.red { color: #f85149; }
+      .timestamp {
+        color: #7d8590;
+        font-size: 0.75rem;
+      }
+      .error {
+        color: #f85149;
+        padding: 1rem;
+        border: 1px solid #f85149;
+        border-radius: 6px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>NixOS Config Quality Dashboard</h1>
+    <p class="subtitle" id="timestamp">Loading...</p>
+    <p class="error" id="error"></p>
+    <div class="grid" id="grid"></div>
+    <script>
+      function colorClass(key, value) {
+        if (key === "aggregate_coverage" || key === "critical_path_coverage") {
+          return value >= 80 ? "green" : value >= 60 ? "yellow" : "red";
+        }
+        if (key === "eval_time") {
+          return value < 10 ? "green" : value < 20 ? "yellow" : "red";
+        }
+        if (key === "dead_code" || key === "unused_modules" || key === "statix_issues") {
+          return value === 0 ? "green" : value <= 5 ? "yellow" : "red";
+        }
+        return "";
+      }
+
+      const labels = {
+        aggregate_coverage: "Coverage",
+        critical_path_coverage: "Critical Coverage",
+        test_suites: "Test Suites",
+        snapshot_assertions: "Snapshots",
+        dead_code: "Dead Code",
+        unused_modules: "Unused Modules",
+        statix_issues: "Statix Issues",
+        eval_time: "Eval Time (s)",
+      };
+
+      fetch("metrics.json")
+        .then((r) => r.json())
+        .then((data) => {
+          const ts = document.getElementById("timestamp");
+          ts.textContent = data.timestamp
+            ? "Updated: " + new Date(data.timestamp).toUTCString()
+            : "";
+
+          const grid = document.getElementById("grid");
+          for (const [key, label] of Object.entries(labels)) {
+            if (!(key in data)) continue;
+            const val = data[key];
+            const display =
+              key === "aggregate_coverage" || key === "critical_path_coverage"
+                ? val + "%"
+                : String(val);
+
+            const card = document.createElement("div");
+            card.className = "card";
+
+            const labelEl = document.createElement("div");
+            labelEl.className = "card-label";
+            labelEl.textContent = label;
+
+            const valueEl = document.createElement("div");
+            valueEl.className = "card-value " + colorClass(key, val);
+            valueEl.textContent = display;
+
+            card.appendChild(labelEl);
+            card.appendChild(valueEl);
+            grid.appendChild(card);
+          }
+        })
+        .catch((err) => {
+          const el = document.getElementById("error");
+          el.textContent = "Failed to load metrics: " + err.message;
+          el.style.display = "block";
+          document.getElementById("timestamp").textContent = "";
+        });
+    </script>
+  </body>
+</html>
