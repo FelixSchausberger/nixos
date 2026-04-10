@@ -11,7 +11,7 @@ in {
 
   # Test: System is TUI-only (emergency/recovery system)
   is_gui = config.hostConfig.isGui;
-  wm_count = builtins.length config.hostConfig.wm;
+  wm_count = builtins.length config.hostConfig.wms;
 
   # Test: NetworkManager enabled for WiFi
   networkmanager_enabled = config.networking.networkmanager.enable;

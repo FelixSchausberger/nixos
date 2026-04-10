@@ -12,9 +12,9 @@ in {
   systemd.user.services.spotify = {
     serviceConfig.Environment = let
       libs = with pkgs; [
-        xorg.libX11
-        xorg.libXScrnSaver
-        xorg.libXtst
+        libx11
+        libxscrnsaver
+        libxtst
         libxkbcommon
         libdbusmenu-gtk3
         libayatana-indicator
@@ -42,8 +42,6 @@ in {
 
     # experimentalFeatures = true;
 
-    # theme = spicePkgs.themes.hazy;
-    theme = spicePkgs.themes.catppuccin;
-    colorScheme = "macchiato";
+    # Theme and colorScheme are controlled by stylix for system-wide consistency
   };
 }

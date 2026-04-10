@@ -29,8 +29,6 @@ nix build .#installer-iso-minimal
 **Build command:**
 ```bash
 nix build .#installer-iso-full
-# OR (backwards compatible alias)
-nix build .#installer-iso
 ```
 
 **Characteristics:**

@@ -11,6 +11,13 @@ let
 
   # Laptop systems (same as desktop for now, but allows future differentiation)
   laptop = common;
+
+  # Server systems: no desktop graphics stack, no AMD GPU, no acpilight
+  server = [
+    ./core
+    ./hardware/server.nix
+    ./network.nix
+  ];
 in {
-  inherit desktop laptop common;
+  inherit desktop laptop common server;
 }

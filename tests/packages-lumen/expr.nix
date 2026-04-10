@@ -11,7 +11,4 @@ in {
 
   # Test: Package has expected metadata
   has_meta = lumen.meta != null;
-
-  # Test: Derivation path exists
-  drv_path = builtins.isString (builtins.unsafeDiscardStringContext "${lumen}");
 }

@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+# Fetches Claude API usage stats and writes them to /tmp/.claude_usage_cache.
+# Line 1: five_hour utilization (integer %)
+# Line 2: seven_day utilization (integer %)
+# Line 3: five_hour.resets_at (ISO string)
+# Line 4: seven_day.resets_at (ISO string)
+# Runs in background; all output suppressed. Adapted from xleddyl/claude-watch for Linux.
+
+CACHE_FILE="/tmp/.claude_usage_cache"
+TOKEN_CACHE="/tmp/.claude_token_cache"
+TOKEN_TTL=900  # 15 minutes
+CREDS_FILE="$HOME/.claude/.credentials.json"
+
+# --- token (15-min cache) ---
+token=""
+if [ -f "$TOKEN_CACHE" ]; then
+  cache_age=$(( $(date -u +%s) - $(stat -c %Y "$TOKEN_CACHE" 2>/dev/null || echo 0) ))
+  if [ "$cache_age" -lt "$TOKEN_TTL" ]; then
+    token=$(cat "$TOKEN_CACHE" 2>/dev/null)
+  fi
+fi
+
+if [ -z "$token" ]; then
+  [ -f "$CREDS_FILE" ] || exit 0
+  token=$(jq -r '.claudeAiOauth.accessToken // empty' "$CREDS_FILE" 2>/dev/null)
+  [ -z "$token" ] && exit 0
+  printf '%s' "$token" > "$TOKEN_CACHE"
+fi
+
+usage_json=$(curl -s -m 3 \
+  -H "accept: application/json" \
+  -H "anthropic-beta: oauth-2025-04-20" \
+  -H "authorization: Bearer $token" \
+  -H "user-agent: claude-code/2.1.90" \
+  "https://api.anthropic.com/oauth/usage" 2>/dev/null)
+
+[ -z "$usage_json" ] && exit 0
+
+five_h_raw=$(printf '%s' "$usage_json" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
+seven_d_raw=$(printf '%s' "$usage_json" | jq -r '.seven_day.utilization // empty' 2>/dev/null)
+five_h_reset=$(printf '%s' "$usage_json" | jq -r '.five_hour.resets_at // ""' 2>/dev/null)
+seven_d_reset=$(printf '%s' "$usage_json" | jq -r '.seven_day.resets_at // ""' 2>/dev/null)
+
+if [ -n "$five_h_raw" ] && [ -n "$seven_d_raw" ]; then
+  five_h=$(printf "%.0f" "$five_h_raw")
+  seven_d=$(printf "%.0f" "$seven_d_raw")
+  printf '%s\n%s\n%s\n%s\n' "$five_h" "$seven_d" "$five_h_reset" "$seven_d_reset" > "$CACHE_FILE"
+fi

@@ -3,6 +3,7 @@
   # This module provides common functionality for systems with desktop environments
 
   imports = [
+    ./shared.nix
     ./boot-zfs.nix
     ../modules/system/gui.nix
   ];

@@ -11,7 +11,7 @@
     # Enable Docker daemon
     virtualisation.docker = {
       enable = true;
-      enableOnBoot = true;
+      enableOnBoot = false; # Disabled for boot performance - start on-demand
 
       # Container daemon configuration
       daemon.settings = {
@@ -34,8 +34,16 @@
 
     # Merged systemd configuration
     systemd = {
+      # Disable Docker socket activation for boot performance
+      sockets.docker = {
+        wantedBy = lib.mkForce [];
+      };
+
       # Configure systemd Docker service with SSL from centralized config
       services.docker = {
+        # Explicitly disable auto-start at boot
+        wantedBy = lib.mkForce [];
+
         environment =
           config.modules.system.ssl.helpers.dockerEnv
           // {
@@ -226,10 +234,10 @@
       # Systemd service to prepare act-compatible containers with certificates
       services.act-cert-setup = {
         description = "Prepare act containers with proper certificate configuration";
-        wantedBy = ["multi-user.target"];
-        after = ["docker.service"];
-        requires = ["docker.service"];
-        path = with pkgs; [docker openssl coreutils];
+        # Disabled at boot - run manually when needed: systemctl start act-cert-setup
+        wantedBy = lib.mkForce [];
+        # No Docker dependency - just creates directories and symlinks
+        path = with pkgs; [openssl coreutils];
 
         serviceConfig = {
           Type = "oneshot";

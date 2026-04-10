@@ -1,10 +1,12 @@
-# Centralized host->WM mapping
-# Single source of truth for which window managers run on which hosts
+# hostConfig is the single source of truth for per-host behaviour.
+# Modules guard themselves with lib.mkIf to avoid evaluating inactive features.
+# wms controls which window manager modules activate; isGui skips the entire
+# GUI stack on TUI-only hosts.
 {
   desktop = {
-    wms = ["gnome" "hyprland" "niri"];
+    wms = ["hyprland"]; # Default WM, others via specialisations
     isGui = true;
-    description = "Full desktop with multiple WMs";
+    description = "Desktop with switchable WMs via specialisations";
   };
 
   surface = {
@@ -28,6 +30,12 @@
   hp-probook-vmware = {
     wms = ["niri"];
     isGui = true;
-    description = "VMware VM with Niri WM on HP ProBook 465 G11";
+    description = "VMware VM with Niri on HP ProBook 465 G11";
+  };
+
+  m920q = {
+    wms = [];
+    isGui = false;
+    description = "Lenovo ThinkCentre M920q homelab server (headless, niri-gui specialisation available)";
   };
 }

@@ -10,8 +10,8 @@
     useUserPackages = true;
     # Use timestamped backups to prevent collisions
     backupFileExtension = "backup-$(date +%Y%m%d-%H%M%S)";
-    # Enable verbose output for better debugging
-    verbose = true;
+    # Disabled for boot performance - enable when debugging
+    verbose = false;
 
     extraSpecialArgs = {
       inherit inputs;

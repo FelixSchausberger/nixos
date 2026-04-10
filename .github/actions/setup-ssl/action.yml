@@ -1,5 +1,5 @@
-name: 'Setup SSL Certificates'
-description: 'Configure SSL certificates and environment for Nix builds'
+name: "Setup SSL Certificates"
+description: "Configure SSL certificates and environment for Nix builds"
 runs:
   using: "composite"
   steps:
