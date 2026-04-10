@@ -1,18 +1,18 @@
 #pretty
 {
   alerts_enabled = true;
-  amd_gpu_enabled = true;
-  amd_gpu_variant = "laptop";
+  amd_gpu_enabled = false;
+  amd_gpu_variant = "desktop";
   auto_update_enabled = true;
   containers_enabled = true;
-  efi_can_touch_vars = true;
+  efi_can_touch_vars = false;
   has_niri = true;
   hostname = "hp-probook-vmware";
   is_gui = true;
   maintenance_enabled = true;
   monitoring_enabled = true;
   niri_enabled = true;
-  systemd_boot_enabled = true;
+  systemd_boot_enabled = false;
   user_exists = true;
   vmware_guest_enabled = true;
   vmware_headless = false;

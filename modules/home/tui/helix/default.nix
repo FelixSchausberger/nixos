@@ -6,7 +6,8 @@
 }: {
   imports = [
     ./dprint.nix # Code formatting platform written in Rust
-    ./languages.nix
+    ./languages-core.nix
+    ./languages-extended.nix
   ];
 
   home.shellAliases = {
@@ -16,7 +17,7 @@
   programs.helix = {
     enable = true;
     defaultEditor = true;
-    package = pkgs.helix;
+    package = pkgs.steelix;
 
     settings = {
       editor = {
@@ -39,7 +40,7 @@
           wrap-indicator = "";
         };
       };
-      theme = lib.mkDefault "base16_transparent";
+      theme = lib.mkDefault "catppuccin_mocha";
       keys = {
         insert = {
           esc = ["collapse_selection" "normal_mode"];
@@ -104,5 +105,33 @@
         };
       };
     };
+  };
+
+  home.sessionVariables.STEEL_COGS = "$HOME/.local/share/steel/cogs:${pkgs.scooter-hx}/lib/helix-plugins/scooter";
+
+  # Steel plugin system configuration
+  home.file.".config/helix/init.scm".text = ''
+    ;; Helix Steel initialization
+    ;; Load scooter plugin
+    (require "scooter/scooter.scm")
+  '';
+
+  # Symlink scooter plugin files to Steel's cogs directory
+  home.file.".steel/cogs/scooter" = {
+    source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter";
+    recursive = true;
+  };
+
+  home.file.".steel/cogs/ui" = {
+    source = "${pkgs.scooter-hx}/lib/helix-plugins/ui";
+    recursive = true;
+  };
+
+  # Helix generates Steel modules into this directory at runtime
+  home.file.".steel/cogs/helix/.keep".text = "";
+
+  # Steel searches for dylibs in ~/.steel/native/
+  home.file.".steel/native/libscooter_hx.so" = {
+    source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter/libscooter_hx.so";
   };
 }

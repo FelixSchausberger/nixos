@@ -37,6 +37,9 @@ in {
 
       # Private user information
       "private/email" = {};
+      "private/password-hash" = {
+        neededForUsers = true;
+      };
     };
 
     # Create netrc file for nix GitHub and Cachix access

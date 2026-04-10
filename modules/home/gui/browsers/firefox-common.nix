@@ -1,10 +1,52 @@
 {
   lib,
   pkgs,
+  firefox-addons ? null,
   ...
-}: {
+}: let
+  # Extension source selection
+  # - "flake": Use firefox-addons flake input (for zen-browser)
+  # - "nur": Use NUR repository (backward compatible)
+  getExtensions = source: let
+    # Keepa is marked as unfree in firefox-addons flake, so always use NUR for it
+    # NUR respects the system's allowUnfree config
+    keepaFromNur = [pkgs.nur.repos.rycee.firefox-addons.keepa];
+
+    # Get other extensions from requested source
+    otherExtensions =
+      if source == "flake" && firefox-addons != null
+      then
+        with firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
+          bitwarden
+          chrome-mask
+          darkreader
+          ff2mpv
+          i-dont-care-about-cookies
+          private-grammar-checker-harper
+          ublock-origin
+          vimium-c
+          youtube-nonstop
+        ]
+      else
+        with pkgs.nur.repos.rycee.firefox-addons; [
+          bitwarden
+          chrome-mask
+          darkreader
+          ff2mpv
+          i-dont-care-about-cookies
+          private-grammar-checker-harper
+          ublock-origin
+          vimium-c
+          youtube-nonstop
+        ];
+  in
+    otherExtensions ++ keepaFromNur;
+in {
   # Shared browser configuration for Firefox and Zen
   # Contains common settings, extensions, and search engines
+
+  # Export the helper function
+  inherit getExtensions;
 
   # Common language packs
   languagePacks = ["de" "en-US"];
@@ -92,17 +134,8 @@
     "ecosia".metaData.hidden = true;
   };
 
-  # Common extensions
-  extensions = with pkgs.nur.repos.rycee.firefox-addons; [
-    bitwarden
-    darkreader
-    ff2mpv
-    i-dont-care-about-cookies
-    keepa
-    ublock-origin
-    vimium-c
-    youtube-nonstop
-  ];
+  # Common extensions (default to NUR for backward compatibility)
+  extensions = getExtensions "nur";
 
   # Common uBlock Origin configuration
   ublockSettings = rec {
@@ -229,7 +262,30 @@
     "privacy.donottrackheader.enabled" = true;
     "privacy.trackingprotection.enabled" = true;
     "privacy.trackingprotection.socialtracking.enabled" = true;
-    "privacy.webrtc.legacyGlobalIndicator" = false;
+    "privacy.trackingprotection.cryptomining.enabled" = true;
+    "privacy.trackingprotection.fingerprinting.enabled" = true;
+
+    # Advanced fingerprinting resistance (replaces manual API blocking)
+    "privacy.resistFingerprinting" = true;
+    "privacy.resistFingerprinting.letterboxing" = true;
+    "privacy.resistFingerprinting.block_mozAddonManager" = true;
+    "privacy.resistFingerprinting.randomization.enabled" = true;
+
+    # Cookie behavior (0 = Accept all, 1 = Block third-party, 2 = Block all, 4 = Block known trackers)
+    "network.cookie.cookieBehavior" = 4;
+
+    # Cookie persistence - disabled to allow persistent cookies with expiry
+    "privacy.sanitize.sanitizeOnShutdown" = false;
+    "privacy.clearOnShutdown.cookies" = false;
+    "privacy.clearOnShutdown.cache" = false;
+    "privacy.clearOnShutdown.offlineApps" = false;
+    "privacy.clearOnShutdown.sessions" = false;
+
+    # WebRTC privacy protection (required for modern authentication)
+    "media.peerconnection.enabled" = true;
+    "media.peerconnection.ice.default_address_only" = true;
+    "media.peerconnection.ice.no_host" = true;
+    "media.peerconnection.ice.proxy_only_if_behind_proxy" = true;
 
     # Password and autofill settings
     "signon.rememberSignons" = false;
@@ -251,8 +307,5 @@
 
     # User customization
     "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
-
-    # User agent override to mimic Chrome for better YouTube performance
-    "general.useragent.override" = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
   };
 }

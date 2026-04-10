@@ -1,9 +1,8 @@
-_: {
+{...}: {
+  imports = [./steam.nix];
+
   # Centralized gaming and performance optimizations
   # This module provides gaming hardware support and performance tuning
-
-  # Gaming hardware support
-  hardware.steam-hardware.enable = true;
 
   # Security configuration for better gaming performance
   security.pam.loginLimits = [

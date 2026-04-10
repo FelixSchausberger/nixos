@@ -5,11 +5,11 @@
 }: let
   # Map hostname to window managers to avoid circular dependency
   wmForHost = {
-    "desktop" = ["hyprland" "niri"];
+    "desktop" = ["hyprland"]; # Default WM, niri loaded via specialisations
     "surface" = ["hyprland"];
     "portable" = []; # TUI-only emergency/recovery system
     "hp-probook-wsl" = ["niri"]; # WSL with niri WM
-    "hp-probook-vmware" = ["niri"]; # VMware VM with niri WM
+    "hp-probook-vmware" = ["niri"]; # VMware VM with Niri
   };
 
   # Use provided hostname
@@ -24,8 +24,6 @@ in {
       # Base home configuration
       ../../modules/home
     ]
-    ++ wmModules;
-
-  # Enable OpenCode on hp-probook-wsl
-  ai-assistants.opencode.enable = lib.mkDefault (currentHost == "hp-probook-wsl");
+    ++ wmModules
+    ++ lib.optional (wms != []) ../../modules/home/gui;
 }

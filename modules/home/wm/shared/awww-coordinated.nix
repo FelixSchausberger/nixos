@@ -1,0 +1,142 @@
+# awww coordinated wallpaper daemon configuration
+# Proper HM module so it can be imported from both hyprland and niri modules
+# without duplicate service definitions (the module system deduplicates same-path imports).
+#
+# graphical-session.target activates before WAYLAND_DISPLAY is set, causing
+# awww-daemon to default to wayland-0 and fail to connect. Each WM sets
+# wm.awww.sessionTarget to its compositor-specific session target instead.
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
+  options.wm.awww = {
+    enable = lib.mkEnableOption "awww coordinated wallpaper daemon";
+
+    sessionTarget = lib.mkOption {
+      type = lib.types.str;
+      description = "Systemd session target the awww daemons bind to";
+      example = "niri-session.target";
+    };
+  };
+
+  config = lib.mkIf config.wm.awww.enable {
+    home.packages = [pkgs.awww];
+
+    # awww daemon for workspace wallpapers (default namespace)
+    systemd.user.services.awww-wallpaper = {
+      Unit = {
+        Description = "awww daemon for workspace wallpapers";
+        After = [config.wm.awww.sessionTarget];
+        PartOf = [config.wm.awww.sessionTarget];
+        Wants = ["awww-wallpaper-init.service"];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.awww}/bin/awww-daemon";
+        Restart = "on-failure";
+      };
+      Install.WantedBy = [config.wm.awww.sessionTarget];
+    };
+
+    # awww daemon for blurred backdrop (backdrop namespace)
+    systemd.user.services.awww-backdrop = {
+      Unit = {
+        Description = "awww daemon for Niri overview backdrop (blurred wallpapers)";
+        After = [config.wm.awww.sessionTarget];
+        PartOf = [config.wm.awww.sessionTarget];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.awww}/bin/awww-daemon --namespace backdrop";
+        Restart = "on-failure";
+      };
+      Install.WantedBy = [config.wm.awww.sessionTarget];
+    };
+
+    # Initialize both wallpapers on startup (synchronized)
+    systemd.user.services.awww-wallpaper-init = {
+      Unit = {
+        Description = "Set initial synchronized wallpapers";
+        After = ["awww-wallpaper.service" "awww-backdrop.service"];
+        Requires = ["awww-wallpaper.service" "awww-backdrop.service"];
+      };
+      Service = {
+        Type = "oneshot";
+        Restart = "on-failure";
+        RestartSec = "2s";
+        ExecStart = let
+          wallpaperName = config.wallpapers.defaultWallpaper;
+          regularWallpaper = config.wallpapers.available.${wallpaperName};
+          blurredWallpaper = config.wallpapers.availableBlurred.${wallpaperName};
+          regularPath = "${config.wallpapers.wallpaperPath}/${regularWallpaper}";
+          blurredPath = "${config.wallpapers.wallpaperPath}/${blurredWallpaper}";
+          initScript = pkgs.writeShellScript "awww-init" ''
+            # Wait for default-namespace daemon socket to be ready
+            until ${pkgs.awww}/bin/awww query 2>/dev/null; do
+              sleep 0.1
+            done
+
+            # Wait for backdrop-namespace daemon socket to be ready
+            until ${pkgs.awww}/bin/awww query --namespace backdrop 2>/dev/null; do
+              sleep 0.1
+            done
+
+            # Set workspace wallpaper (default namespace)
+            ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none
+            # Set backdrop wallpaper (backdrop namespace)
+            ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none
+          '';
+        in "${initScript}";
+      };
+    };
+
+    # Rotate both wallpapers together (30 min schedule)
+    systemd.user.timers.awww-wallpaper-rotate = {
+      Unit = {
+        Description = "Timer for rotating synchronized wallpapers";
+      };
+      Timer = {
+        OnActiveSec = "30m";
+        OnUnitActiveSec = "30m";
+        Unit = "awww-wallpaper-rotate.service";
+      };
+      Install.WantedBy = ["timers.target"];
+    };
+
+    systemd.user.services.awww-wallpaper-rotate = {
+      Unit = {
+        Description = "Rotate synchronized wallpapers";
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = let
+          wallpaperDir = config.wallpapers.wallpaperPath;
+          wallpaperNames = lib.attrNames config.wallpapers.available;
+          rotateScript = pkgs.writeShellScript "rotate-wallpapers" ''
+            # Array of wallpaper names
+            names=(${lib.concatStringsSep " " wallpaperNames})
+            # Pick random name
+            random_name="''${names[$RANDOM % ''${#names[@]}]}"
+
+            # Get paths for this wallpaper
+            case "$random_name" in
+              ${lib.concatStringsSep "\n              " (map (name: ''
+                "${name}")
+                    regular="${wallpaperDir}/${config.wallpapers.available.${name}}"
+                    blurred="${wallpaperDir}/${config.wallpapers.availableBlurred.${name}}"
+                    ;;
+              '')
+              wallpaperNames)}
+            esac
+
+            # Update both wallpapers with fade transition
+            ${pkgs.awww}/bin/awww img "$regular" --transition-type fade --transition-duration 2
+            ${pkgs.awww}/bin/awww img --namespace backdrop "$blurred" --transition-type fade --transition-duration 2
+          '';
+        in "${rotateScript}";
+      };
+    };
+  };
+}

@@ -30,26 +30,20 @@
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
-    inputs.wayland-pipewire-idle-inhibit.homeModules.default
     ./animations.nix
     ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
     ./keybinds.nix
     ./scratchpads.nix
-    ./walker.nix # Wayland-native application launcher
     ./workspaces.nix
     # Shared options and imports (imported once)
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
-    ../shared/wayland-pipewire-idle-inhibit.nix
-    # Use shared compositor-agnostic modules with hyprland session target
-    (import ../shared/wired.nix "hyprland-session.target") # Modern notification daemon configuration
-    # (import ../shared/cthulock.nix "hyprland-session.target") # Screen locker - disabled until package is fixed
-    (import ../shared/wl-gammarelay.nix "hyprland-session.target") # Gamma control
-    (import ../shared/wpaperd.nix "hyprland-session.target") # Wallpaper daemon
     ../shared/satty.nix # Screenshot tool
-    ../shared/vigiland-simple.nix # Wayland idle inhibitor
-    # (import ../shared/ala-lape.nix "hyprland-session.target") # Idle inhibitor - disabled until package is fixed
-    # (import ../shared/wlsleephandler-rs.nix "hyprland-session.target") # Sleep handler - disabled until package is fixed
+    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
+    # Use shared compositor-agnostic modules with hyprland session target
+    (import ../shared/swww-coordinated.nix "hyprland-session.target") # Coordinated wallpaper system with blurred backgrounds
+    (import ../shared/wired.nix "hyprland-session.target") # Modern notification daemon configuration
+    (import ../shared/wl-gammarelay.nix "hyprland-session.target") # Gamma control
     (import ../shared/themes.nix "hyprland-session.target") # Theme and appearance configuration
     (import ../shared/wallpaper.nix "hyprland-session.target") # Wallpaper management
   ];
@@ -104,6 +98,9 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    # Enable which-key for keybind discovery
+    wm.which-key.enable = true;
+
     home.packages = with pkgs; [
       # Home-specific utilities
       hyprpolkitagent # Authentication agent
@@ -124,9 +121,10 @@ in {
       enable = true;
       package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
       portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
-      plugins = [
-        inputs.hyprland-plugins.packages.${pkgs.stdenv.hostPlatform.system}.hyprexpo
-      ];
+      # hyprexpo disabled: hyprland-plugins (b85a56b9, Mar 11) predates the
+      # IPassElement::type() API added in hyprland 0.54 (Mar 15). Re-enable once
+      # upstream hyprland-plugins ships a compatible release.
+      plugins = [];
 
       settings = {
         # Environment variables
@@ -233,20 +231,6 @@ in {
 
         ecosystem = {
           no_update_news = true;
-        };
-
-        plugin = {
-          hyprexpo = {
-            columns = 3;
-            gap_size = 5;
-            bg_col = "rgb(111111)";
-            workspace_method = "center current";
-
-            enable_gesture = true;
-            gesture_fingers = 3;
-            gesture_distance = 300;
-            gesture_positive = true;
-          };
         };
 
         cursor = {

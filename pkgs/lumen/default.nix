@@ -4,6 +4,7 @@
   lib,
   pkg-config,
   openssl,
+  perl,
 }:
 rustPlatform.buildRustPackage rec {
   pname = "lumen";
@@ -12,16 +13,18 @@ rustPlatform.buildRustPackage rec {
   src = fetchFromGitHub {
     owner = "jnsahaj";
     repo = "lumen";
-    rev = "main";
-    sha256 = "sha256-xDMWumYcNWb7HuqaRcpKypHCw1293TyPhrkJ6YzGOvA=";
+    rev = "6053b4ef3bc341332809ebfc712964cdeca902e6"; # main as of 2026-04-07
+    sha256 = "sha256-ILAVTEo8t9+4QkIKJNPxMP7U3fSX2j3kqi9W99BdRB4=";
   };
 
   cargoLock = {
     lockFile = "${src}/Cargo.lock";
   };
 
-  nativeBuildInputs = [pkg-config];
+  nativeBuildInputs = [pkg-config perl];
   buildInputs = [openssl];
+
+  doCheck = false; # Tests require git repository environment
 
   meta = with lib; {
     description = "Instant AI Git Commit message";

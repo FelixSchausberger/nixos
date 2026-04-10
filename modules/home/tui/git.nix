@@ -89,7 +89,6 @@ in {
         inherit (personalInfo) name;
         email = "131732042+FelixSchausberger@users.noreply.github.com"; # https://help.github.com/articles/setting-your-email-in-git/
       };
-      github.token = "${config.sops.secrets."github/token".path}";
       init.defaultBranch = "main";
       pull.rebase = true;
       core.editor = "${pkgs.helix}/bin/hx";

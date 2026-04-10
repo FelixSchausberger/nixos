@@ -1,20 +1,28 @@
-{inputs, ...}: let
+{
+  inputs,
+  config,
+  ...
+}: let
   inherit (inputs.self.lib) defaults;
 in {
   users = {
     mutableUsers = false;
     users = {
       root = {
-        # Enable root account for emergency access
-        hashedPassword = "$6$NCvaiR40U202pKeY$4MpPXCDHvMksfQ.V.O3fNR5L/UqtWBMxrbtGCuYjY/nDSqQOu8BqwCmZmp7f/5NMFnkvwqE34aSoPpE2SwqPw/";
+        # Enable root account for emergency access with hardcoded password
+        # Uses hardcoded hash instead of sops to prevent lockout if sops fails
+        hashedPassword = "$6$w4WluBt5QyBKBzLp$eDywK0Z2aDBc95bdXQBum6uj6fTAcpCgA2yT0H2i09iQrhFshQOKeyCcjcIUYQo7AHQ5Eyv4eT.ooBvhPyqDR1";
       };
 
       "${defaults.system.user}" = {
         isNormalUser = true;
         description = defaults.personalInfo.name;
-        extraGroups = ["fuse" "networkmanager" "input" "video" "wheel" "dialout"];
-        hashedPassword = "$6$NCvaiR40U202pKeY$4MpPXCDHvMksfQ.V.O3fNR5L/UqtWBMxrbtGCuYjY/nDSqQOu8BqwCmZmp7f/5NMFnkvwqE34aSoPpE2SwqPw/";
+        extraGroups = ["fuse" "networkmanager" "input" "video" "render" "wheel" "dialout"];
+        hashedPasswordFile = config.sops.secrets."private/password-hash".path;
         group = defaults.system.user;
+        openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILb6i2hFXxCZFLxxkDHKzyoyNO7pZjH4B177Ia+zZuJw fel.schausberger@gmail.com"
+        ];
       };
     };
 

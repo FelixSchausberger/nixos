@@ -33,8 +33,8 @@
     LIBGL_DRIVERS_PATH = "/run/opengl-driver/lib/dri";
   };
 
-  # Virtualization settings
-  virtualisation.docker.enable = true;
+  # Virtualization settings managed in modules/system/containers.nix
+  # (Docker configuration optimized for boot performance)
 
   # Network configuration for WSL (low level)
   networking = {

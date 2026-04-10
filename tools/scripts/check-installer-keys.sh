@@ -8,10 +8,11 @@ if [[ ! -f "$key_file" ]]; then
   exit 0
 fi
 
-# Ensure restrictive permissions
+# Ensure restrictive permissions (600 or 644 are acceptable from git)
+# Note: Git only stores 644/755, so we accept both 600 and 644
 perm=$(stat -c "%a" "$key_file")
-if [[ "$perm" != "600" ]]; then
-  echo "ERROR: $key_file must have permissions 600 (current: $perm)" >&2
+if [[ "$perm" != "600" && "$perm" != "644" ]]; then
+  echo "ERROR: $key_file must have permissions 600 or 644 (current: $perm)" >&2
   echo "Fix with: chmod 600 $key_file" >&2
   exit 1
 fi

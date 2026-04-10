@@ -21,15 +21,9 @@
           nnoremap <leader>w :w<CR>
           nnoremap <leader>q :q<CR>
 
-          " Tree-sitter setup
+          " Tree-sitter: parsers bundled by Nix, highlighting via built-in treesitter
           lua << EOF
-          require'nvim-treesitter.configs'.setup {
-            highlight = { enable = true },
-            indent = { enable = true },
-            -- Disable auto installation to avoid HTTP 401 errors
-            auto_install = false,
-            ensure_installed = {},
-          }
+          require'nvim-treesitter'.setup {}
           EOF
 
           " Markdown rendering setup (requires render-markdown.nvim)
@@ -44,6 +38,25 @@
             autocmd!
             autocmd FileType markdown if exists(":RenderMarkdown") | silent RenderMarkdown | endif
           augroup END
+
+          " Window title for Niri mode-based border colors
+          set title
+          lua << EOF
+          local mode_names = {
+            n = "NORMAL", i = "INSERT", v = "VISUAL",
+            V = "V-LINE", ["\22"] = "V-BLOCK",
+            c = "COMMAND", R = "REPLACE", r = "PROMPT",
+            ["!"] = "SHELL", t = "TERMINAL",
+          }
+          local function update_niri_title()
+            local mode = vim.fn.mode()
+            local mode_str = mode_names[mode] or "NORMAL"
+            vim.opt.titlestring = "nvim [" .. mode_str .. "]"
+          end
+          vim.api.nvim_create_autocmd({ "ModeChanged", "VimEnter" }, {
+            callback = update_niri_title,
+          })
+          EOF
 
           " Launch Yazi inside Neovim from the current file directory
           function! OpenYaziHere()

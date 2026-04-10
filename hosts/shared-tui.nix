@@ -3,13 +3,15 @@
   # This module provides common functionality for systems without GUI
 
   imports = [
+    ./shared.nix
     ../modules/system/tui.nix
   ];
 
   config = {
-    # Minimal hardware graphics configuration (for basic compatibility)
-    hardware.graphics = lib.mkDefault {
-      enable = false; # Disabled for TUI-only systems
+    # Overrides shared.nix mkDefault (priority 1000) without blocking host-level overrides.
+    # Plain assignments in host configs (priority 100) still take precedence.
+    hardware.graphics = lib.mkOverride 999 {
+      enable = false;
       enable32Bit = false;
     };
 

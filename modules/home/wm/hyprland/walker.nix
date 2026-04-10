@@ -125,17 +125,16 @@ in {
         };
       };
 
-      # Custom CSS styling disabled temporarily to test basic functionality
-      # theme = {
-      #   style = ''
-      #   * {
-      #     font-family: "JetBrainsMono Nerd Font";
-      #     font-size: 13px;
-      #     color: #cdd6f4;
-      #     background: transparent;
-      #   }
-      #   '';
-      # };
+      theme = {
+        style = ''
+          * {
+            font-family: "JetBrainsMono Nerd Font";
+            font-size: 13px;
+            color: #cdd6f4;
+            background: transparent;
+          }
+        '';
+      };
     };
 
     # Configure clipboard history for walker

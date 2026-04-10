@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: {
   home.packages = with pkgs; [
     dconf-editor # GSettings editor for GNOME
     gnome-tweaks # Tool to customize advanced GNOME 3 options
@@ -8,7 +12,8 @@
   dconf = {
     enable = true;
     settings = {
-      "org/gnome/desktop/interface".color-scheme = "prefer-dark";
+      # Allow Stylix to override color scheme
+      "org/gnome/desktop/interface".color-scheme = lib.mkDefault "prefer-dark";
       "org/gnome/desktop/wm/keybindings" = {
         # Window management
         close = ["<Super>q"];

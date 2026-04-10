@@ -19,13 +19,6 @@ in {
     gui.enable = lib.mkDefault false; # GUI themes disabled by default
   };
 
-  # MOTD configuration
-  programs.motd = {
-    enable = lib.mkDefault true;
-    fishIntegration = lib.mkDefault true;
-    bashIntegration = lib.mkDefault false;
-  };
-
   # Basic home configuration
   home = {
     username = lib.mkDefault defaults.system.user;

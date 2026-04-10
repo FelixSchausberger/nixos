@@ -13,8 +13,8 @@ in {
   is_gui = config.hostConfig.isGui;
 
   # Test: Niri window manager configured
-  wm_count = builtins.length config.hostConfig.wm;
-  has_niri = builtins.elem "niri" config.hostConfig.wm;
+  wm_count = builtins.length config.hostConfig.wms;
+  has_niri = builtins.elem "niri" config.hostConfig.wms;
 
   # Test: AMD GPU profile is enabled for laptop
   amd_gpu_enabled = config.hardware.profiles.amdGpu.enable;
