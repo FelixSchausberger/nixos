@@ -44,6 +44,7 @@ in {
 
     # Required for subnet routing and exit node functionality
     boot.kernel.sysctl = lib.mkIf (cfg.advertiseRoutes != [] || cfg.exitNode) {
+      "net.ipv4.conf.all.forwarding" = true;
       "net.ipv6.conf.all.forwarding" = true;
     };
 

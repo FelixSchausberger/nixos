@@ -1,9 +1,12 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
-}: {
+}: let
+  inherit (inputs.self.lib) defaults;
+in {
   options.modules.system.homelab.samba = {
     enable = lib.mkEnableOption "Samba SMB/CIFS file sharing";
     dataPath = lib.mkOption {
@@ -59,7 +62,7 @@
     };
 
     systemd.services.samba-setpasswd = {
-      description = "Set Samba password for schausberger from sops secret";
+      description = "Set Samba password for ${defaults.system.user} from sops secret";
       wantedBy = ["multi-user.target"];
       after = ["samba.service"];
       requires = ["samba.service"];
@@ -68,13 +71,13 @@
         RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "samba-setpasswd" ''
           password=$(cat ${config.sops.secrets."samba/user-password".path})
-          echo -e "$password\n$password" | ${pkgs.samba}/bin/smbpasswd -s -a schausberger
+          echo -e "$password\n$password" | ${pkgs.samba}/bin/smbpasswd -s -a ${defaults.system.user}
         '';
       };
     };
 
     users.groups.sambashare = {};
-    users.users.schausberger.extraGroups = ["sambashare"];
+    users.users.${defaults.system.user}.extraGroups = ["sambashare"];
 
     systemd.tmpfiles.rules = [
       "d ${config.modules.system.homelab.samba.dataPath} 0775 root sambashare -"

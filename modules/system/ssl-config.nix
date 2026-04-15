@@ -166,7 +166,6 @@ in {
         GO_CERTS_FILE = bundlePath;
         REQUESTS_CA_BUNDLE = bundlePath;
         CERT_FILE = bundlePath;
-        GODEBUG = "x509ignoreCN=0,tls13=1";
       };
   in
     lib.mkIf cfg.enable {
@@ -207,49 +206,12 @@ in {
         standardEnv = sslEnvVars;
         inherit bundlePath;
         dockerCertSetup = ''
-          # Ensure certificate directories exist with proper permissions
           mkdir -p /etc/docker/certs.d/registry-1.docker.io
           mkdir -p /etc/docker/certs.d/index.docker.io
           mkdir -p /etc/docker/certs.d/docker.io
-
-          # Link system certificates to Docker-specific locations
           ln -sf ${cfg.bundle.standard} /etc/docker/certs.d/registry-1.docker.io/ca.crt
           ln -sf ${cfg.bundle.standard} /etc/docker/certs.d/index.docker.io/ca.crt
           ln -sf ${cfg.bundle.standard} /etc/docker/certs.d/docker.io/ca.crt
-
-          # Verify certificate bundle is readable
-          if [ ! -r "${cfg.bundle.standard}" ]; then
-            echo "Warning: Certificate bundle not readable at ${cfg.bundle.standard}"
-          fi
-
-          # Certificate bundle validation check
-          echo "Validating certificate bundle integrity..."
-          CERT_BUNDLE="${cfg.bundle.standard}"
-          if [ -r "$CERT_BUNDLE" ]; then
-            CERT_COUNT=$(grep -c 'BEGIN CERTIFICATE' "$CERT_BUNDLE")
-            echo "✅ Certificate bundle readable with $CERT_COUNT certificates"
-
-            # Check for expired certificates
-            TEMP_DIR=$(mktemp -d)
-            csplit -s -f "$TEMP_DIR/cert-" "$CERT_BUNDLE" '/-----BEGIN CERTIFICATE-----/' '{*}'
-            EXPIRED_COUNT=0
-            for cert_file in "$TEMP_DIR"/cert-*; do
-              if [ -s "$cert_file" ] && grep -q 'BEGIN CERTIFICATE' "$cert_file"; then
-                if ! ${pkgs.openssl}/bin/openssl x509 -in "$cert_file" -checkend 0 -noout 2>/dev/null; then
-                  EXPIRED_COUNT=$((EXPIRED_COUNT + 1))
-                fi
-              fi
-            done
-            rm -rf "$TEMP_DIR"
-
-            if [ "$EXPIRED_COUNT" -eq 0 ]; then
-              echo "✅ No expired certificates found in bundle"
-            else
-              echo "⚠️  Warning: $EXPIRED_COUNT expired certificates found in bundle"
-            fi
-          else
-            echo "❌ Certificate bundle not readable at $CERT_BUNDLE"
-          fi
         '';
       };
     };

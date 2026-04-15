@@ -90,16 +90,16 @@ in {
   # Shell health check activation script
   # Runs after packages are linked to ensure they're available in PATH
   home.activation.shellHealthCheck = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    run echo "🏥 Running shell configuration health check..."
+    run echo "Running shell configuration health check..."
 
     # Set PATH to include new generation packages
     export PATH="$newGenPath/home-path/bin:$PATH"
 
     # Run health check with proper PATH - make it non-fatal (warnings only)
     if run ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
-      run echo "✅ Shell health check passed"
+      run echo "Shell health check passed"
     else
-      run echo "⚠️  Shell health check found issues (non-fatal during activation)"
+      run echo "Shell health check found issues (non-fatal during activation)"
       run echo "   Review warnings above - system will still activate"
     fi
   '';

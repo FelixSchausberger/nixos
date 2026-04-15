@@ -41,8 +41,6 @@ in {
       bindfs # FUSE filesystem for mounting a directory to another location
       xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
     ];
-
-    # Persistence configuration moved to ./persistence.nix for better organization
   };
 
   services = {

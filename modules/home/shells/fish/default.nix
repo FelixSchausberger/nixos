@@ -56,7 +56,7 @@
 
       # Verify minimum viable environment - fall back to bash if fish is broken
       if not command -v fish >/dev/null 2>&1
-        echo "🚨 CRITICAL: Fish shell environment broken, falling back to bash"
+        echo "CRITICAL: Fish shell environment broken, falling back to bash" >&2
         exec /run/current-system/sw/bin/bash --noprofile --norc
       end
 
@@ -65,7 +65,7 @@
       # Create this file to disable all auto-start and integrations:
       #   touch ~/.config/fish/EMERGENCY_MODE_ENABLED
       if test -f ~/.config/fish/EMERGENCY_MODE_ENABLED
-        echo "🚨 EMERGENCY MODE BYPASS ACTIVE"
+        echo "EMERGENCY MODE BYPASS ACTIVE"
         echo "   All auto-start features disabled"
         echo "   All shell integrations disabled"
         echo "   To restore normal operation:"
@@ -82,18 +82,18 @@
       ${(import ../emergency-functions.nix {inherit lib;}).emergencyShellFunctions.fish}
 
       function emergency-reset
-        string pad --center --width 60 "🔄 Resetting shell to safe state"
+        string pad --center --width 60 "Resetting shell to safe state"
         if emergency-mode-check >/dev/null 2>&1
-          echo "⚠️  System is in emergency mode - use 'systemctl default' to exit"
+          echo "System is in emergency mode - use 'systemctl default' to exit" >&2
         else
-          echo "✅ Emergency mode not active - restarting fish in safe mode..."
+          echo "Emergency mode not active - restarting fish in safe mode..."
           exec fish --no-config
         end
       end
 
       # Emergency mode detection using shared function
       if __emergency_check
-        echo "🚨 Emergency shell mode active - all integrations disabled"
+        echo "Emergency shell mode active - all integrations disabled"
         echo "   Use 'emergency-help' for recovery options"
         echo "   Use 'emergency-off' to disable, then restart shell"
       else
@@ -101,7 +101,7 @@
         function config --description "Open NixOS configuration directory"
           set -l config_dir "/per/etc/nixos"
           if not test -d "$config_dir" -o not test -f "$config_dir/flake.nix"
-            echo "⚠️  No NixOS configuration found at $config_dir"
+            echo "No NixOS configuration found at $config_dir" >&2
             return 1
           end
 
@@ -142,12 +142,12 @@
           if test $force_mode = true
             # Force mode: use real rm
             if test $is_interactive = true
-              string pad --center --width 60 "🔥 Using force delete (real rm)"
+              string pad --center --width 60 "Using force delete (real rm)"
             end
             command rm $argv
           else if test $is_interactive = true
             # Interactive mode: use safe rip with message
-            string pad --center --width 60 "🛡️  Using safe delete (rip)"
+            string pad --center --width 60 "Using safe delete (rip)"
             echo "   Files moved to graveyard - use 'rm -f' for permanent deletion"
             rip --graveyard "/per/home/"(whoami)"/.local/share/graveyard" $filtered_args
           else
@@ -159,10 +159,10 @@
         if command -v direnv >/dev/null 2>&1
           if direnv --help >/dev/null 2>&1
             if not direnv hook fish | source 2>/dev/null
-              echo "⚠️  direnv hook failed to load - continuing without direnv integration"
+              echo "direnv hook failed to load - continuing without direnv integration" >&2
             end
           else
-            echo "⚠️  direnv found but not working properly - skipping integration"
+            echo "direnv found but not working properly - skipping integration" >&2
           end
         end
 
@@ -244,7 +244,7 @@
             end
           end
         else
-          echo "⚠️  Zellij pre-flight checks failed - starting normal fish shell"
+          echo "Zellij pre-flight checks failed - starting normal fish shell" >&2
           echo "   To enable auto-start, ensure zellij is properly configured"
         end
       end

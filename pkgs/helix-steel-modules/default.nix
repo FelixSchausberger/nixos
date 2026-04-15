@@ -28,8 +28,6 @@ stdenv.mkDerivation {
     (provide (all-from helix/core))
     EOF
 
-        echo "Installed helix Steel module wrappers:"
-        ls -la $out/lib/helix-cogs/helix/
   '';
 
   meta = with lib; {

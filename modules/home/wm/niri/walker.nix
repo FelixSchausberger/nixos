@@ -98,7 +98,7 @@ in {
       hide_plugin_info = true;
       terminal = "${
         if cfg.terminal == "ghostty"
-        then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
+        then pkgs.ghostty
         else pkgs.${cfg.terminal}
       }/bin/${cfg.terminal}";
       runner = {

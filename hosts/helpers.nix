@@ -14,7 +14,7 @@ in {
   wmModules = wms:
     if builtins.isList wms
     then
-      # Legacy list format: ["hyprland" "gnome"]
+      # List format: ["hyprland" "gnome"]
       map (
         wm:
           if builtins.hasAttr wm availableWMs

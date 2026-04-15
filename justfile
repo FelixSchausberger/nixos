@@ -67,6 +67,10 @@ niri-rebuild:
 
 # === CODE QUALITY ===
 
+# Simplify staged changes via Claude Code CLI
+simplify:
+    git diff --cached | claude -p "Review the following diff and suggest simplifications: reduce nesting, remove debug artifacts, convert nested ternaries to if/else, remove obvious comments. Preserve all functionality and conditional logging. Output only the simplified file contents for files that need changes." --output-format text
+
 # Format all Nix files
 fmt:
     nix fmt
@@ -166,7 +170,7 @@ dashboard:
 
 # Run all quality checks
 quality-check: coverage check-unused profile-eval check-closures
-    @echo "✅ All quality checks complete"
+    @echo "All quality checks complete"
 
 # === FLAKE MANAGEMENT ===
 

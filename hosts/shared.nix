@@ -130,11 +130,9 @@ in {
           echo "To fix this, run:" >&2
           echo "  git clone https://github.com/FelixSchausberger/nixos.git $EXPECTED_PATH" >&2
           echo "  cd $EXPECTED_PATH" >&2
-          echo "  sudo nixos-rebuild switch --flake .#${cfg.hostName}" >&2
+          echo "  sudo nixos-rebuild test --flake .#${cfg.hostName}" >&2
         fi
       '';
     };
-
-    # Sops configuration and tmpfiles are now centralized in sops-common.nix
   };
 }

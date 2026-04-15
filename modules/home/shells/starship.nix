@@ -11,16 +11,16 @@
             if starship --help >/dev/null 2>&1; then
               eval "$(starship init bash)"
             else
-              echo "⚠️  starship found but not working properly - using fallback prompt"
+              echo "starship found but not working properly - using fallback prompt" >&2
               PS1='\u@\h:\w\$ '
             fi
           else
-            echo "⚠️  starship not found - using fallback prompt"
+            echo "starship not found - using fallback prompt" >&2
             PS1='\u@\h:\w\$ '
           fi
         fi
       else
-        echo "🚨 Emergency mode active - starship disabled"
+        echo "Emergency mode active - starship disabled" >&2
         PS1='[EMERGENCY] \u@\h:\w\$ '
       fi
     '';

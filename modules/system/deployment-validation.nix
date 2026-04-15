@@ -17,7 +17,7 @@ in {
       };
 
       checks = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+        type = lib.types.listOf (lib.types.enum ["essential-paths" "systemd-services" "shell-availability"]);
         default = [
           "essential-paths"
           "systemd-services"

@@ -1,6 +1,7 @@
 {
   inputs,
   lib,
+  pkgs,
   ...
 }: let
   hostLib = import ../lib.nix;
@@ -27,7 +28,7 @@ in {
     # Enable auto-login for VM convenience
     autoLogin = {
       enable = true;
-      user = "schausberger";
+      inherit (inputs.self.lib) user;
     };
   };
 
@@ -61,15 +62,15 @@ in {
     # Font configuration using centralized fonts
     fonts = {
       monospace = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
+        package = pkgs.nerd-fonts.jetbrains-mono;
         inherit (fonts.families.monospace) name;
       };
       sansSerif = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
+        package = pkgs.inter;
         inherit (fonts.families.sansSerif) name;
       };
       serif = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.merriweather;
+        package = pkgs.merriweather;
         inherit (fonts.families.serif) name;
       };
       sizes = {
@@ -82,7 +83,7 @@ in {
 
     # Cursor theme using centralized configuration
     cursor = {
-      package = inputs.nixpkgs.legacyPackages.x86_64-linux.bibata-cursors;
+      package = pkgs.bibata-cursors;
       inherit (fonts.cursor) name;
       inherit (fonts.cursor) size;
     };
