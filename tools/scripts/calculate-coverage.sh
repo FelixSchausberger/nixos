@@ -110,7 +110,7 @@ if [ "$JSON_ONLY" = true ]; then
 }
 EOF
 else
-  echo "📊 Coverage Summary"
+  echo "Coverage Summary"
   echo ""
   echo "Aggregate Coverage: ${aggregate_coverage}%"
   echo ""
@@ -139,7 +139,7 @@ else
 EOF
 
   echo ""
-  echo "📊 Metrics written to: $OUTPUT_DIR/aggregate-coverage.json"
+  echo "Metrics written to: $OUTPUT_DIR/aggregate-coverage.json"
 fi
 
 exit 0

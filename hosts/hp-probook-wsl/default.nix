@@ -118,15 +118,15 @@ in {
       # Font configuration using centralized fonts
       fonts = {
         monospace = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
+          package = pkgs.nerd-fonts.jetbrains-mono;
           inherit (fonts.families.monospace) name;
         };
         sansSerif = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
+          package = pkgs.inter;
           inherit (fonts.families.sansSerif) name;
         };
         serif = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.merriweather;
+          package = pkgs.merriweather;
           inherit (fonts.families.serif) name;
         };
         sizes = {
@@ -139,7 +139,7 @@ in {
 
       # Cursor theme using centralized configuration
       cursor = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.bibata-cursors;
+        package = pkgs.bibata-cursors;
         inherit (fonts.cursor) name;
         inherit (fonts.cursor) size;
       };
@@ -174,9 +174,9 @@ in {
     users.users.emergency = {
       isNormalUser = true;
       description = "Emergency recovery account";
-      shell = inputs.nixpkgs.legacyPackages.x86_64-linux.bash;
+      shell = pkgs.bash;
       extraGroups = ["wheel"]; # sudo access for recovery
-      hashedPassword = "$6$rounds=656000$cUk4Xh8KRvx9lTkN$OyVJ7QXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQ";
+      hashedPasswordFile = config.sops.secrets."private/password-hash".path;
       home = "/home/emergency";
     };
 
@@ -186,7 +186,7 @@ in {
     };
 
     # Enable linger for default user
-    users.users.schausberger.linger = true;
+    users.users.${config.hostConfig.user}.linger = true;
 
     # Merged modules configuration
     modules.system = {
@@ -235,39 +235,6 @@ in {
         "NetworkManager-wait-online".enable = false;
         "systemd-networkd-wait-online".enable = lib.mkForce false;
         "smartd".enable = false;
-
-        # Create DRI devices for WSL2 GPU access
-        "wsl-dri-devices" = {
-          description = "Create DRI device nodes for WSL2";
-          wantedBy = ["multi-user.target"];
-          before = ["display-manager.service"];
-
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-          };
-
-          script = ''
-            # Create /dev/dri directory
-            mkdir -p /dev/dri
-
-            # Create render node with proper permissions
-            if [ ! -c /dev/dri/renderD128 ]; then
-              mknod -m 666 /dev/dri/renderD128 c 226 128
-            else
-              chmod 666 /dev/dri/renderD128
-            fi
-
-            # Create card0 device
-            if [ ! -c /dev/dri/card0 ]; then
-              mknod -m 666 /dev/dri/card0 c 226 0
-            else
-              chmod 666 /dev/dri/card0
-            fi
-
-            echo "Created DRI devices for WSL2"
-          '';
-        };
       };
 
       # WSL-specific system directories (override shared-tui paths)
@@ -288,7 +255,7 @@ in {
 
     # Environment packages and tools
     environment = {
-      systemPackages = with inputs.nixpkgs.legacyPackages.x86_64-linux; [
+      systemPackages = with pkgs; [
         nix-ld
         wslu
         powershell
@@ -335,7 +302,7 @@ in {
     # Configure nix-ld with GUI application dependencies for WSL2
     programs.nix-ld = {
       enable = true;
-      libraries = with inputs.nixpkgs.legacyPackages.x86_64-linux; [
+      libraries = with pkgs; [
         gtk3
         alsa-lib
         libx11

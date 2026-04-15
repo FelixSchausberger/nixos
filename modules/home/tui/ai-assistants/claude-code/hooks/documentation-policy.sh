@@ -52,7 +52,7 @@ fi
 # Enforce the policy
 if [ "$allow_file" = false ]; then
 	{
-		echo "🚫 DOCUMENTATION POLICY VIOLATION"
+		echo "DOCUMENTATION POLICY VIOLATION"
 		echo
 		echo "Markdown documentation is restricted by policy."
 		echo

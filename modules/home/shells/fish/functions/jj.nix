@@ -138,7 +138,7 @@
             --preview-window=up:1)
 
         if test -z "$type"
-          echo "❌ No type selected, aborting"
+          echo "No type selected, aborting" >&2
           return 1
         end
 
@@ -147,13 +147,13 @@
         read -P "Enter description (lowercase, hyphens only): " description
 
         if test -z "$description"
-          echo "❌ No description provided, aborting"
+          echo "No description provided, aborting" >&2
           return 1
         end
 
         # Validate description format
         if not string match -qr '^[a-z0-9-]+$' "$description"
-          echo "❌ Invalid description format"
+          echo "Invalid description format" >&2
           echo "   Use lowercase letters, numbers, and hyphens only"
           return 1
         end
@@ -163,32 +163,32 @@
         set -l commit_msg "$type: "(string replace -a '-' ' ' "$description")
 
         echo ""
-        echo "📝 Creating branch: $branch_name"
-        echo "💬 Commit message: $commit_msg"
+        echo "Creating branch: $branch_name"
+        echo "Commit message: $commit_msg"
         echo ""
 
         # Create new change with description
         if not command jj new -m "$commit_msg"
-          echo "❌ Failed to create new change"
+          echo "Failed to create new change" >&2
           return 1
         end
 
         # Create bookmark
         if not command jj bookmark create "$branch_name"
-          echo "❌ Failed to create bookmark"
+          echo "Failed to create bookmark" >&2
           return 1
         end
 
         # Push to remote
         echo ""
-        echo "🚀 Pushing to remote..."
+        echo "Pushing to remote..."
         if not command jj git push --branch "$branch_name"
-          echo "❌ Failed to push to remote"
+          echo "Failed to push to remote" >&2
           return 1
         end
 
         echo ""
-        echo "✅ Branch created and pushed successfully!"
+        echo "Branch created and pushed successfully!"
         echo ""
         echo "Next steps:"
         echo "  1. Make your changes"
@@ -205,32 +205,32 @@
         set -l bookmark (command jj bookmark list 2>/dev/null | grep '^\*' | awk '{print $2}')
 
         if test -z "$bookmark"
-          echo "❌ No active bookmark found"
+          echo "No active bookmark found" >&2
           echo "   Create a branch first with 'jjbranch'"
           return 1
         end
 
         # Push changes
-        echo "🚀 Pushing changes..."
+        echo "Pushing changes..."
         if not command jj git push
-          echo "❌ Failed to push changes"
+          echo "Failed to push changes" >&2
           return 1
         end
 
         # Create PR with auto-merge label
         echo ""
-        echo "📋 Creating pull request with auto-merge..."
+        echo "Creating pull request with auto-merge..."
         if not command gh pr create --fill --label auto-merge
-          echo "❌ Failed to create PR"
+          echo "Failed to create PR" >&2
           echo "   You may need to create it manually"
           return 1
         end
 
         echo ""
-        echo "✅ Pull request created successfully!"
+        echo "Pull request created successfully!"
         echo ""
-        echo "🔄 CI pipeline will run automatically"
-        echo "✨ PR will auto-merge when all checks pass"
+        echo "CI pipeline will run automatically"
+        echo "PR will auto-merge when all checks pass"
         echo ""
         echo "View PR status:"
         echo "  gh pr view --web"
@@ -248,21 +248,21 @@
     jjdescribe = {
       description = "Update commit description with AI-powered suggestion";
       body = ''
-        echo "🤖 Generating commit message suggestion with lumen..."
+        echo "Generating commit message suggestion with lumen..."
         echo ""
 
         # Generate suggestion using lumen
         set -l suggestion (${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen}/bin/lumen draft 2>/dev/null)
 
         if test -z "$suggestion"
-          echo "❌ Failed to generate suggestion"
+          echo "Failed to generate suggestion" >&2
           echo "   Falling back to manual describe"
           command jj describe
           return $status
         end
 
         # Display suggestion
-        echo "💡 Suggested commit message:"
+        echo "Suggested commit message:"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "$suggestion"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -284,9 +284,9 @@
             command jj describe -m "$suggestion"
             if test $status -eq 0
               echo ""
-              echo "✅ Commit description updated"
+              echo "Commit description updated"
             else
-              echo "❌ Failed to update description"
+              echo "Failed to update description" >&2
               return 1
             end
 
@@ -302,13 +302,13 @@
               command jj describe -m "$edited_msg"
               if test $status -eq 0
                 echo ""
-                echo "✅ Commit description updated"
+                echo "Commit description updated"
               else
-                echo "❌ Failed to update description"
+                echo "Failed to update description" >&2
                 return 1
               end
             else
-              echo "❌ Empty message, aborting"
+              echo "Empty message, aborting" >&2
               return 1
             end
 
@@ -317,11 +317,11 @@
             command jj describe
 
           case q Q
-            echo "❌ Cancelled"
+            echo "Cancelled" >&2
             return 0
 
           case '*'
-            echo "❌ Invalid option"
+            echo "Invalid option" >&2
             return 1
         end
       '';

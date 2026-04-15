@@ -91,7 +91,7 @@
           ];
 
           shellHook = ''
-            echo "📦 Nix tool development environment ready!"
+            echo "Nix tool development environment ready!"
             echo "Available commands:"
             echo "  nix build          - Build the tool"
             echo "  nix run            - Run the tool"

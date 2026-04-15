@@ -12,8 +12,17 @@ in {
       ../../modules/system/specialisations.nix
       ../../modules/system/gaming.nix
       ../../modules/system/homelab
+      ../../modules/system/sunshine.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
+
+  # Niri home modules loaded at parent level (niri is the default WM)
+  # Note: inputs.niri.homeModules.config is already provided via nixosModules.niri
+  # (home-manager.sharedModules) in modules/system/wm/niri.nix — do not re-import it here.
+  home-manager.users.${inputs.self.lib.user}.imports = [
+    ../../modules/home/wm/niri
+    ../../home/profiles/desktop/niri.nix.specialisation
+  ];
 
   # Host-specific configuration using centralized host mapping
   hostConfig = {
@@ -22,27 +31,16 @@ in {
     inherit (hostInfo) wms;
     # user and system use defaults from lib/defaults.nix
 
-    # Define specialisations for this host
-    # Parent config provides hyprland as default, specialisations provide alternative WMs
+    # Cosmic available as a boot-time specialisation
     specialisations = {
-      # Niri specialisation
-      niri = {
-        wms = ["niri"];
+      cosmic = {
+        wms = ["cosmic"];
         profile = "default";
         extraConfig = {
           home-manager.users.${inputs.self.lib.user}.imports = [
-            inputs.niri.homeModules.config
-            ../../modules/home/wm/niri
-            ../../home/profiles/desktop/niri.nix.specialisation
+            ../../modules/home/wm/cosmic
           ];
         };
-      };
-
-      # GNOME specialisation
-      gnome = {
-        wms = ["gnome"];
-        profile = "default";
-        extraConfig = {};
       };
     };
   };
@@ -63,6 +61,10 @@ in {
     enable = true;
     udpGROInterface = "eno1";
   };
+
+  # Sunshine game streaming for remote access via Moonlight
+  # AMD VAAPI encoding is available via amdgpu driver (hardware.profiles.amdGpu above)
+  modules.system.sunshine.enable = true;
 
   # System maintenance and monitoring
   modules.system.maintenance = {

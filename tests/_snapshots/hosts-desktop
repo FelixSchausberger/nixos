@@ -5,8 +5,8 @@
   amd_gpu_variant = "desktop";
   auto_update_enabled = true;
   has_gnome = false;
-  has_hyprland = true;
-  has_niri = false;
+  has_hyprland = false;
+  has_niri = true;
   hostname = "desktop";
   is_gui = true;
   maintenance_enabled = true;

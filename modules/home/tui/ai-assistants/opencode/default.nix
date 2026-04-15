@@ -57,6 +57,7 @@ in {
     # Mirrors the patterns in claude-code/hooks/block-raw-git.sh.
     # Applied globally (all projects) since jj is used across all repos.
     settings = {
+      plugin = ["opencode-code-simplifier"];
       permission = {
         bash = {
           "git reset*" = "deny";

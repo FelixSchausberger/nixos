@@ -23,7 +23,7 @@
       # Add activation script to improve logging and error detection
       {
         home.activation.logActivation = ''
-          $DRY_RUN_CMD echo "🔄 Home Manager activation started at $(date)"
+          $DRY_RUN_CMD echo "Home Manager activation started at $(date)"
           $DRY_RUN_CMD echo "   Generation: $newGenPath"
 
           # Create a marker for successful activation

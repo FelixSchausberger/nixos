@@ -62,7 +62,7 @@ cd "$REPO_ROOT"
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
 
-echo "🔍 Analyzing test coverage..."
+echo "Analyzing test coverage..."
 
 # Count test suites
 test_suites=$(find tests -mindepth 1 -maxdepth 1 -type d | wc -l)
@@ -103,7 +103,7 @@ done
 critical_percent=$((critical_coverage * 100 / critical_total))
 
 echo ""
-echo "📊 Coverage Summary:"
+echo "Coverage Summary:"
 echo "  Critical Paths: $critical_coverage/$critical_total ($critical_percent%)"
 echo "  Test Suites: $test_suites"
 echo "  Snapshot Assertions: $snapshot_files"
@@ -131,9 +131,9 @@ EOF
 
   for path in "${CRITICAL_PATHS[@]}"; do
     if git grep -q "config\.$path" tests/ 2>/dev/null; then
-      echo "- ✅ \`$path\` - Covered" >> "$report_file"
+      echo "- \`$path\` - Covered" >> "$report_file"
     else
-      echo "- ❌ \`$path\` - Not covered" >> "$report_file"
+      echo "- \`$path\` - Not covered" >> "$report_file"
     fi
   done
 
@@ -151,7 +151,7 @@ EOF
   done
 
   echo ""
-  echo "📝 Detailed report written to: $report_file"
+  echo "Detailed report written to: $report_file"
 fi
 
 # Generate JSON metrics for CI
@@ -170,12 +170,12 @@ cat > "$json_file" <<EOF
 }
 EOF
 
-echo "📊 Metrics written to: $json_file"
+echo "Metrics written to: $json_file"
 echo ""
 
 # Check threshold
 if [ "$critical_percent" -lt "$THRESHOLD" ]; then
-  echo "❌ Critical path coverage ($critical_percent%) below threshold ($THRESHOLD%)"
+  echo "Critical path coverage ($critical_percent%) below threshold ($THRESHOLD%)"
   if [ ${#critical_missing[@]} -gt 0 ]; then
     echo ""
     echo "Missing coverage for critical paths:"
@@ -186,5 +186,5 @@ if [ "$critical_percent" -lt "$THRESHOLD" ]; then
   exit 1
 fi
 
-echo "✅ Coverage meets threshold ($critical_percent% >= $THRESHOLD%)"
+echo "Coverage meets threshold ($critical_percent% >= $THRESHOLD%)"
 exit 0

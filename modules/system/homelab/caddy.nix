@@ -37,7 +37,7 @@
           reverse_proxy localhost:${toString config.modules.system.homelab.monitoring.grafanaPort}
         '';
         ${config.modules.system.homelab.caddy.adguardDomain}.extraConfig = ''
-          reverse_proxy localhost:3000
+          reverse_proxy localhost:${toString config.modules.system.homelab.adguardhome.port}
         '';
       };
     };

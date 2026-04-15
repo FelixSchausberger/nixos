@@ -47,12 +47,6 @@ rustPlatform.buildRustPackage rec {
 
     # Copy ui directory to cogs level (sibling to scooter)
     cp -r ${src}/ui/* $out/lib/helix-plugins/ui/
-
-    # List what we installed for debugging
-    echo "Installed scooter plugin structure:"
-    ls -la $out/lib/helix-plugins/
-    ls -la $out/lib/helix-plugins/scooter/
-    ls -la $out/lib/helix-plugins/ui/
   '';
 
   meta = with lib; {

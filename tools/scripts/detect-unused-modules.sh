@@ -102,16 +102,16 @@ for module in "${all_modules[@]}"; do
   if [ "$found" = false ]; then
     unused_modules+=("$module_rel")
     if [ "$VERBOSE" = true ]; then
-      echo "❌ Unused: $module_rel"
+      echo "Unused: $module_rel"
     fi
   elif [ "$VERBOSE" = true ]; then
-    echo "✅ Used: $module_rel"
+    echo "Used: $module_rel"
   fi
 done
 
 # Report results
 if [ ${#unused_modules[@]} -gt 0 ]; then
-  echo "❌ Found ${#unused_modules[@]} unused module(s):"
+  echo "Found ${#unused_modules[@]} unused module(s):"
   echo ""
   for module in "${unused_modules[@]}"; do
     echo "  • $module"
@@ -122,5 +122,5 @@ if [ ${#unused_modules[@]} -gt 0 ]; then
   exit 1
 fi
 
-echo "✅ No unused modules detected (analyzed ${#all_modules[@]} modules)"
+echo "No unused modules detected (analyzed ${#all_modules[@]} modules)"
 exit 0

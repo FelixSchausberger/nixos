@@ -5,6 +5,11 @@
 }: {
   options.modules.system.homelab.adguardhome = {
     enable = lib.mkEnableOption "AdGuard Home DNS ad-blocker";
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 3000;
+      description = "Admin UI HTTP port";
+    };
     openFirewall = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -18,7 +23,7 @@
       inherit (config.modules.system.homelab.adguardhome) openFirewall;
       settings = {
         # Admin UI port — migrate to 80/443 via Caddy after initial setup
-        http.address = "0.0.0.0:3000";
+        http.address = "0.0.0.0:${toString config.modules.system.homelab.adguardhome.port}";
         dns = {
           upstream_dns = [
             "https://dns.cloudflare.com/dns-query"

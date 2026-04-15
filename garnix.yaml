@@ -17,5 +17,5 @@ builds:
     # Build locally when needed: nix build .#installer-iso-{minimal,full}
     - packages.x86_64-linux.installer-iso-minimal
     - packages.x86_64-linux.installer-iso-full
-    # Desktop specialisations (niri + gnome) exceed Garnix ~8GB RAM limit during build
+    # desktop: cosmic specialisation (niri + COSMIC) exceeds Garnix ~8GB RAM evaluation limit
     - nixosConfigurations.desktop

@@ -6,8 +6,7 @@
     # Monospace font for terminals, editors, and code
     monospace = {
       name = "JetBrainsMono Nerd Font Mono";
-      package = "nerdfonts";
-      # For nerdfonts overlay: override with fonts = [ "JetBrainsMono" ]
+      package = "nerd-fonts.jetbrains-mono";
     };
 
     # Sans-serif font for UI elements
