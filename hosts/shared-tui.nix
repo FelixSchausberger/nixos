@@ -8,10 +8,9 @@
   ];
 
   config = {
-    # Overrides shared.nix mkDefault (priority 1000) without blocking host-level overrides.
-    # Plain assignments in host configs (priority 100) still take precedence.
-    hardware.graphics = lib.mkOverride 999 {
-      enable = false;
+    # Minimal hardware graphics configuration (for basic compatibility
+    hardware.graphics = lib.mkForce {
+      enable = false; # Disabled for TUI-only systems
       enable32Bit = false;
     };
 

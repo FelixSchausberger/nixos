@@ -9,6 +9,9 @@ builds:
   exclude:
     # Development shells are not always buildable as derivations
     - devShells.*
+    # Memory-intensive Rust builds (use binary cache instead)
+    # helix-steel requires network access for git dependencies (allowBuiltinFetchGit)
+    - packages.x86_64-linux.helix-steel
     # Rust builds excluded from CI to reduce memory footprint (available via binary cache)
     - packages.x86_64-linux.starship-jj
     - packages.x86_64-linux.lumen

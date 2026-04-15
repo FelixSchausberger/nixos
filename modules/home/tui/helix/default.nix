@@ -17,7 +17,10 @@
   programs.helix = {
     enable = true;
     defaultEditor = true;
-    package = pkgs.steelix;
+    # Using upstream helix; helix-steel fails to build because steel-core requires
+    # network access (git fetch) during the vendored Cargo build. Re-enable when fixed.
+    # package = pkgs.helix-steel;
+    package = pkgs.helix;
 
     settings = {
       editor = {
@@ -107,31 +110,42 @@
     };
   };
 
-  home.sessionVariables.STEEL_COGS = "$HOME/.local/share/steel/cogs:${pkgs.scooter-hx}/lib/helix-plugins/scooter";
+  # home.sessionVariables.STEEL_COGS = ''
+  #   $HOME/.local/share/steel/cogs:${pkgs.scooter-hx}/lib/helix-plugins/scooter:${pkgs.helix-steel}/share/steel/cogs
+  # '';
 
-  # Steel plugin system configuration
-  home.file.".config/helix/init.scm".text = ''
-    ;; Helix Steel initialization
-    ;; Load scooter plugin
-    (require "scooter/scooter.scm")
-  '';
+  # Steel plugin system disabled - helix-steel cannot be built offline
+  # (steel-core git dependency requires network access during vendored Cargo build)
+  # Uncomment when the packaging issue is resolved upstream.
+  #
+  # To re-enable:
+  # 1. Uncomment the entire Steel plugin configuration block below
+  # 2. Switch package = pkgs.helix; to package = pkgs.helix-steel; (line 23)
 
-  # Symlink scooter plugin files to Steel's cogs directory
-  home.file.".steel/cogs/scooter" = {
-    source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter";
-    recursive = true;
-  };
-
-  home.file.".steel/cogs/ui" = {
-    source = "${pkgs.scooter-hx}/lib/helix-plugins/ui";
-    recursive = true;
-  };
-
-  # Helix generates Steel modules into this directory at runtime
-  home.file.".steel/cogs/helix/.keep".text = "";
-
-  # Steel searches for dylibs in ~/.steel/native/
-  home.file.".steel/native/libscooter_hx.so" = {
-    source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter/libscooter_hx.so";
-  };
+  # # Steel plugin system configuration
+  # home.file.".config/helix/init.scm".text = ''
+  #   ;; Helix Steel initialization
+  #   ;; Load scooter plugin
+  #   (require "scooter/scooter.scm")
+  # '';
+  #
+  # # Symlink scooter plugin files to Steel's cogs directory
+  # home.file.".steel/cogs/scooter" = {
+  #   source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter";
+  #   recursive = true;
+  # };
+  #
+  # home.file.".steel/cogs/ui" = {
+  #   source = "${pkgs.scooter-hx}/lib/helix-plugins/ui";
+  #   recursive = true;
+  # };
+  #
+  # # Create writable helix cogs directory (Helix generates modules here)
+  # home.file.".steel/cogs/helix/.keep".text = "";
+  #
+  # # Copy dylib to Steel's native library directory
+  # # Steel searches for dylibs in ~/.steel/native/
+  # home.file.".steel/native/libscooter_hx.so" = {
+  #   source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter/libscooter_hx.so";
+  # };
 }
