@@ -183,7 +183,7 @@
       url = "github:saltnpepper97/stasis";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    stethoscope.url = "path:/per/repos/stethoscope";
+    vitals.url = "github:FelixSchausberger/vitals";
     ala-lape = {
       url = "git+https://git.madhouse-project.org/algernon/ala-lape.git";
       inputs.nixpkgs.follows = "nixpkgs";
