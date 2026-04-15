@@ -31,7 +31,7 @@ in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
     ./keybinds.nix
-    ../shared/ironbar.nix # Floating pill bar with dynamic workspaces and popup widgets
+    ./ironbar.nix
     # Shared options and imports (imported once)
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
@@ -40,7 +40,6 @@ in {
     # swww-coordinated imported by hyprland only to avoid duplicate systemd service definitions
     (import ../shared/wired.nix "niri-session.target") # Modern notification daemon configuration
     (import ../shared/cthulock.nix "niri-session.target") # Screen locker
-    ../shared/awww-coordinated.nix # awww wallpaper daemon (opt-in via wm.awww.enable)
   ];
 
   options.wm.niri = {
@@ -158,12 +157,6 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # Enable awww wallpaper daemon for all niri hosts by default
-    wm.awww = {
-      enable = lib.mkDefault true;
-      sessionTarget = lib.mkDefault "niri-session.target";
-    };
-
     # Enable which-key for keybind discovery
     wm.which-key.enable = true;
 
@@ -362,10 +355,20 @@ in {
       # Place swww backdrop surface behind workspace thumbnails in overview
       layer-rules = [
         {
-          matches = [{namespace = "^awww-daemonbackdrop$";}];
+          matches = [{namespace = "^swww-daemonbackdrop$";}];
           place-within-backdrop = true;
         }
       ];
+
+      # Named workspaces
+      workspaces = {
+        "Terminal" = {};
+        "Browser" = {};
+        "Code" = {};
+        "Chat" = {};
+        "Music" = {};
+        "Games" = {};
+      };
 
       # Keybindings imported from keybinds.nix
     };

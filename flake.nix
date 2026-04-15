@@ -183,7 +183,7 @@
       url = "github:saltnpepper97/stasis";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    vitals.url = "github:FelixSchausberger/vitals";
+    stethoscope.url = "path:/per/repos/stethoscope";
     ala-lape = {
       url = "git+https://git.madhouse-project.org/algernon/ala-lape.git";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -265,6 +265,7 @@
           garnix-insights = pkgs.callPackage ./pkgs/garnix-insights {};
 
           # Editor with Steel plugin support
+          helix-steel-modules = pkgs.callPackage ./pkgs/helix-steel-modules {};
           scooter-hx = pkgs.callPackage ./pkgs/scooter-hx {};
 
           # Applications

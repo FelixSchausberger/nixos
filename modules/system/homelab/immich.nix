@@ -2,9 +2,12 @@
   config,
   lib,
   ...
-}: {
+}: let
+  cfg = config.modules.system.homelab.immich;
+in {
   options.modules.system.homelab.immich = {
     enable = lib.mkEnableOption "Immich photo backup server";
+    openFirewall = lib.mkEnableOption "open firewall port for direct access (no reverse proxy)";
     dataPath = lib.mkOption {
       type = lib.types.str;
       default = "/per/mnt/data/immich";
@@ -13,22 +16,24 @@
     port = lib.mkOption {
       type = lib.types.port;
       default = 2283;
-      description = "HTTP port for Immich web UI (accessed via Caddy reverse proxy)";
+      description = "HTTP port for Immich web UI";
     };
   };
 
-  config = lib.mkIf config.modules.system.homelab.immich.enable {
+  config = lib.mkIf cfg.enable {
     services.immich = {
       enable = true;
-      host = "127.0.0.1";
-      inherit (config.modules.system.homelab.immich) port;
-      mediaLocation = config.modules.system.homelab.immich.dataPath;
-      # Not exposed directly — access via Caddy reverse proxy only
-      openFirewall = false;
+      host =
+        if cfg.openFirewall
+        then "0.0.0.0"
+        else "127.0.0.1";
+      inherit (cfg) port;
+      mediaLocation = cfg.dataPath;
+      inherit (cfg) openFirewall;
     };
 
     systemd.tmpfiles.rules = [
-      "d ${config.modules.system.homelab.immich.dataPath} 0700 immich immich -"
+      "d ${cfg.dataPath} 0700 immich immich -"
     ];
 
     environment.persistence."/per".directories = [

@@ -56,8 +56,6 @@ in {
     geoclue2.enable = lib.mkForce false;
   };
 
-  # Host-specific sops secrets — expanded when monitoring/tailscale-auth are enabled
-
   modules.system = {
     stylix-catppuccin.enable = true;
     containers.enable = true;
@@ -75,9 +73,11 @@ in {
   modules.system.homelab = {
     adguardhome.enable = true;
 
-    # Requires data disk (dpool) — enable after 2TB drive is installed
-    samba.enable = false;
-    immich.enable = false;
+    samba = {
+      enable = true;
+      # Using NVMe (rpool) until 2TB data drive is installed; update to dpool mount then
+      dataPath = "/per/mnt/data";
+    };
 
     tailscale = {
       enable = true;
@@ -85,14 +85,17 @@ in {
       advertiseRoutes = ["192.168.178.0/24"];
     };
 
+    immich = {
+      enable = true;
+      openFirewall = true;
+      # dataPath defaults to /per/mnt/data/immich
+    };
+
     # Requires real domain names pointing to 116.204.198.109 — enable after DNS is configured
     caddy.enable = false;
 
     rustdesk.enable = true;
-
-    # Requires grafana secrets — enable after adding grafana/{admin-password,secret-key} to secrets.yaml
-    monitoring.enable = false;
-
+    monitoring.enable = true;
     ssh.enable = true;
   };
 }
