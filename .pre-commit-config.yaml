@@ -105,3 +105,9 @@ repos:
         entry: pre-commit-hook-ensure-sops
         language: system
         files: ^secrets/secrets\.yaml$
+      - id: ai-simplify
+        name: AI code simplifier review
+        entry: "bash -c 'git diff origin/main...HEAD | claude -p \"Briefly flag any code that should be simplified: nesting, debug artifacts, nested ternaries, obvious comments. Be concise.\" --output-format text'"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
