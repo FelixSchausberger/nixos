@@ -11,9 +11,6 @@
   # Use shared MCP server definitions from ai-assistants module
   sharedMcp = config.ai-assistants.mcpServers.definitions;
 in {
-  imports = [
-    ./good-morning.nix
-  ];
   home = {
     packages =
       (with pkgs; [

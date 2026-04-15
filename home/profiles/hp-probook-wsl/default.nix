@@ -43,13 +43,6 @@
   # WSL-specific home configuration
   # Focus on terminal applications and CLI tools
   programs = {
-    # Enable good morning message at 7am
-    claude-code.goodMorning = {
-      enable = true;
-      time = "07:00:00";
-      message = "Good morning! Ready to start the day.";
-    };
-
     # Enable direnv for project-specific environments
     direnv = {
       enable = true;

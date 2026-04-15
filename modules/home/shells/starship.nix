@@ -1,8 +1,4 @@
-{
-  pkgs,
-  inputs,
-  ...
-}: {
+{pkgs, ...}: {
   programs.bash = {
     enable = true;
 
@@ -63,21 +59,16 @@
           description = "Show git status only when not in jj repo";
         };
 
-        # starship-jj integration (upstream tool)
+        # jj-starship integration (nixpkgs package)
         # Uses jj-cli crate for better performance than multiple jj invocations
         # Displays bookmarks, commit state, and file change metrics
-        # Always runs (will be empty in non-jj repos)
         jj = {
           command = "prompt";
           format = "$output";
           ignore_timeout = true;
-          shell = [
-            "${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.starship-jj}/bin/starship-jj"
-            "--ignore-working-copy"
-            "starship"
-          ];
+          shell = ["${pkgs.jj-starship}/bin/jj-starship"];
           use_stdin = false;
-          when = true;
+          when = "${pkgs.jj-starship}/bin/jj-starship detect";
         };
       };
     };

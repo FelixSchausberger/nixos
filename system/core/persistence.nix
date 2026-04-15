@@ -11,25 +11,60 @@
     # System directories that must persist
     directories = [
       # Network configuration - WiFi passwords, VPN configs
-      "/etc/NetworkManager/system-connections"
+      {
+        directory = "/etc/NetworkManager/system-connections";
+        user = "root";
+        group = "root";
+        mode = "0700";
+      }
 
       # Bluetooth device pairings and settings
-      "/var/lib/bluetooth"
+      {
+        directory = "/var/lib/bluetooth";
+        user = "root";
+        group = "root";
+        mode = "0755";
+      }
 
       # System logs for debugging and monitoring
-      "/var/log"
+      {
+        directory = "/var/log";
+        user = "root";
+        group = "root";
+        mode = "0755";
+      }
 
       # NixOS configuration state
-      "/var/lib/nixos"
+      {
+        directory = "/var/lib/nixos";
+        user = "root";
+        group = "root";
+        mode = "0755";
+      }
 
       # Core dumps for debugging
-      "/var/lib/systemd/coredump"
+      {
+        directory = "/var/lib/systemd/coredump";
+        user = "root";
+        group = "root";
+        mode = "0755";
+      }
 
       # Docker containers and images
-      "/var/lib/docker"
+      {
+        directory = "/var/lib/docker";
+        user = "root";
+        group = "root";
+        mode = "0711";
+      }
 
       # Libvirt virtual machines
-      "/var/lib/libvirt"
+      {
+        directory = "/var/lib/libvirt";
+        user = "root";
+        group = "root";
+        mode = "0755";
+      }
     ];
 
     # User-specific persistent data

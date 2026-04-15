@@ -9,7 +9,6 @@
     ./display-manager.nix
     ./emergency-shell.nix
     ./fonts.nix
-    ./gaming.nix
     ./hardware/battery.nix
     ./hardware/intel-cpu.nix
     ./home-manager.nix

@@ -41,6 +41,9 @@
           "meminfo"
           "loadavg"
           "zfs"
+          # Hardware sensors: CPU temps, fan speeds via ACPI/hwmon
+          "hwmon"
+          "thermal_zone"
         ];
       };
 
@@ -66,8 +69,10 @@
         };
         security = {
           admin_user = "admin";
-          # Admin password set via $GF_SECURITY_ADMIN_PASSWORD env var from sops
+          # Admin password injected via EnvironmentFile from sops secret
           admin_password = "$__env{GF_SECURITY_ADMIN_PASSWORD}";
+          # Secret key must be set explicitly since NixOS 26.05 removed the default
+          secret_key = "$__file{${config.sops.secrets."grafana/secret-key".path}}";
         };
       };
       provision = {
@@ -83,16 +88,34 @@
       };
     };
 
-    # Inject Grafana admin password from sops secret
     sops.secrets."grafana/admin-password" = {
       owner = "grafana";
     };
+    sops.secrets."grafana/secret-key" = {
+      owner = "grafana";
+    };
 
-    systemd.services.grafana.serviceConfig.EnvironmentFile = config.sops.secrets."grafana/admin-password".path;
+    # sops.templates generates a KEY=VALUE file; raw secret files cannot be used as EnvironmentFile
+    sops.templates."grafana-env" = {
+      content = "GF_SECURITY_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}";
+      owner = "grafana";
+    };
+
+    systemd.services.grafana.serviceConfig.EnvironmentFile = config.sops.templates."grafana-env".path;
 
     environment.persistence."/per".directories = [
-      "/var/lib/grafana"
-      "/var/lib/prometheus2"
+      {
+        directory = "/var/lib/grafana";
+        user = "grafana";
+        group = "grafana";
+        mode = "0700";
+      }
+      {
+        directory = "/var/lib/prometheus2";
+        user = "prometheus";
+        group = "prometheus";
+        mode = "0700";
+      }
     ];
 
     networking.firewall.allowedTCPPorts = [

@@ -81,7 +81,12 @@
     ];
 
     environment.persistence."/per".directories = [
-      "/var/lib/samba"
+      {
+        directory = "/var/lib/samba";
+        user = "root";
+        group = "root";
+        mode = "0755";
+      }
     ];
   };
 }

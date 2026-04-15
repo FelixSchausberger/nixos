@@ -10,6 +10,7 @@ in {
       ./disko.nix
       ./base-config.nix
       ../../modules/system/specialisations.nix
+      ../../modules/system/gaming.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
