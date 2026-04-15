@@ -100,6 +100,29 @@ home-build:
     nix build .#nixosConfigurations.$HOSTNAME.config.home-manager.users.$USERNAME.home.activationPackage \
         --out-link result-home
 
+# Switch system specialisation temporarily (reverts on next reboot)
+# Uses /nix/var/nix/profiles/system (the latest deployed generation) so that:
+# - Newly rebuilt specialisations take effect without a reboot
+# - headless <-> specialisation cycles work without redeploying in between
+#   just activate niri -> just activate headless -> just activate niri -> ...
+# Usage: just activate list | headless | <name>
+activate NAME:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PROFILE=/nix/var/nix/profiles/system
+    case "{{NAME}}" in
+        list)
+            echo "headless"
+            ls "$PROFILE/specialisation/" 2>/dev/null || true
+            ;;
+        headless)
+            sudo "$PROFILE/bin/switch-to-configuration" test
+            ;;
+        *)
+            sudo "$PROFILE/specialisation/{{NAME}}/bin/switch-to-configuration" test
+            ;;
+    esac
+
 # === QUALITY MONITORING ===
 
 # Calculate test coverage

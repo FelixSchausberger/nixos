@@ -22,6 +22,7 @@ in {
         group = defaults.system.user;
         openssh.authorizedKeys.keys = [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILb6i2hFXxCZFLxxkDHKzyoyNO7pZjH4B177Ia+zZuJw fel.schausberger@gmail.com"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOkv0EEQ9PF91cuKW5ZIQkFoSmSWMwgXlUEjWq4D7R43 pixel9a"
         ];
       };
     };

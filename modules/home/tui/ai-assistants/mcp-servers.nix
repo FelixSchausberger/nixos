@@ -60,11 +60,6 @@
           command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
           args = [];
         };
-
-        garnix-insights = {
-          command = "${pkgs.garnix-insights}/bin/garnix-insights";
-          args = ["mcp"];
-        };
       };
     };
 
@@ -73,7 +68,6 @@
       pkgs.github-mcp-server
       pkgs.mcp-nixos
       pkgs.mcp-language-server
-      pkgs.garnix-insights
     ];
 
     # Legacy definitions for Claude Code (which doesn't use programs.mcp)
@@ -100,14 +94,6 @@
         args = [];
         enabled = true;
         description = "NixOS package/option lookup (130K+ packages, 22K+ options, Home Manager, nix-darwin)";
-      };
-
-      garnix-insights = {
-        package = pkgs.garnix-insights;
-        command = "garnix-insights";
-        args = ["mcp"];
-        enabled = true;
-        description = "Garnix CI/CD insights and build logs (requires GARNIX_JWT_TOKEN environment variable)";
       };
     };
   };

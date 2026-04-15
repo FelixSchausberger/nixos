@@ -27,7 +27,6 @@
         zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
         helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
         scooter-hx = final.callPackage ../../pkgs/scooter-hx {};
-        garnix-insights = final.callPackage ../../pkgs/garnix-insights {};
       })
     ];
   };

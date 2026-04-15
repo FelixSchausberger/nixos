@@ -1,0 +1,59 @@
+{pkgs, ...}: {
+  # m920q niri specialisation: minimal GUI config for occasional desktop use.
+  # Monitor auto-detection used since output names vary (HDMI-A-1, DP-1, etc.).
+
+  # agetty autologin (set in hosts/m920q/default.nix specialisation) logs in schausberger
+  # on tty1. Fish detects tty1 on login and starts the niri session via UWSM.
+  # exec replaces the fish process so UWSM becomes the session leader.
+  programs.fish.loginShellInit = ''
+    if test (tty) = /dev/tty1
+      exec uwsm start niri-uwsm.desktop
+    end
+  '';
+
+  wm.niri = {
+    enable = true;
+    browser = "firefox";
+    terminal = "ghostty";
+    # VIRTUAL-1 is the output created by the vkms kernel module for headless operation.
+    outputs = [
+      {
+        name = "VIRTUAL-1";
+        mode = {
+          width = 1920;
+          height = 1080;
+        };
+      }
+    ];
+  };
+
+  home.packages = [pkgs.rustdesk];
+
+  # RustDesk daemon accepting incoming remote desktop connections.
+  # The relay server (hbbs/hbbr) runs as system services on this machine; client points to localhost.
+  # DISPLAY=:0 is required: rustdesk --service uses GTK which falls back to X11.
+  # xwayland-satellite provides the :0 display; UWSM does not export DISPLAY to the
+  # systemd user environment automatically.
+  modules.home.graphicalService.rustdesk = {
+    enable = true;
+    description = "RustDesk remote desktop daemon";
+    execStart = "${pkgs.rustdesk}/bin/rustdesk --service";
+    environment = {
+      DISPLAY = ":0";
+    };
+  };
+
+  # Key left empty — connection is secured by Tailscale; add the key from
+  # /per/var/lib/rustdesk/id_ed25519.pub for stricter relay server verification.
+  # Connect via Tailscale IP so the daemon discovers 100.105.37.12 as local-ip-addr.
+  # With local-ip-addr = ::1 (loopback), hbbs tells Windows to connect to ::1, which
+  # fails (it's Windows's own loopback). Connecting via the Tailscale IP makes the
+  # daemon register with its Tailscale-reachable address, enabling direct connections.
+  xdg.configFile."rustdesk/RustDesk2.toml".text = ''
+    [options]
+    custom-rendezvous-server = "100.105.37.12"
+    relay-server = "100.105.37.12"
+    api-server = ""
+    key = "VURTqDwC4fSo6XGDT4rwnjj2+obq+3whEZkYXL+6pM0=" # pragma: allowlist secret
+  '';
+}

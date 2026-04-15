@@ -5,7 +5,7 @@ rec {
   # System-wide defaults (apply to all hosts unless overridden)
   system = {
     # NixOS state version - determines compatibility with Home Manager releases
-    version = "25.11";
+    version = "26.05";
 
     # Default system architecture for all hosts
     architecture = "x86_64-linux";

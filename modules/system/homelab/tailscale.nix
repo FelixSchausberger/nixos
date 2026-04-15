@@ -1,8 +1,11 @@
 {
   config,
   lib,
+  pkgs,
   ...
-}: {
+}: let
+  cfg = config.modules.system.homelab.tailscale;
+in {
   options.modules.system.homelab.tailscale = {
     enable = lib.mkEnableOption "Tailscale VPN";
     authKeyFile = lib.mkOption {
@@ -20,25 +23,52 @@
       default = false;
       description = "Advertise this host as a Tailscale exit node";
     };
+    udpGROInterface = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Network interface to apply UDP GRO forwarding fix for Tailscale throughput";
+    };
   };
 
-  config = lib.mkIf config.modules.system.homelab.tailscale.enable {
+  config = lib.mkIf cfg.enable {
     services.tailscale = {
       enable = true;
-      inherit (config.modules.system.homelab.tailscale) authKeyFile;
+      inherit (cfg) authKeyFile;
       openFirewall = true;
       extraUpFlags =
-        lib.optionals config.modules.system.homelab.tailscale.exitNode ["--advertise-exit-node"]
-        ++ lib.optionals (config.modules.system.homelab.tailscale.advertiseRoutes != []) [
-          "--advertise-routes=${lib.concatStringsSep "," config.modules.system.homelab.tailscale.advertiseRoutes}"
+        lib.optionals cfg.exitNode ["--advertise-exit-node"]
+        ++ lib.optionals (cfg.advertiseRoutes != []) [
+          "--advertise-routes=${lib.concatStringsSep "," cfg.advertiseRoutes}"
         ];
+    };
+
+    # Required for subnet routing and exit node functionality
+    boot.kernel.sysctl = lib.mkIf (cfg.advertiseRoutes != [] || cfg.exitNode) {
+      "net.ipv6.conf.all.forwarding" = true;
+    };
+
+    # Improves UDP forwarding throughput for Tailscale when interface is specified
+    systemd.services.tailscale-udp-gro-fix = lib.mkIf (cfg.udpGROInterface != null) {
+      description = "Apply UDP GRO forwarding settings for Tailscale on ${cfg.udpGROInterface}";
+      after = ["network.target"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${pkgs.ethtool}/bin/ethtool -K ${cfg.udpGROInterface} rx-udp-gro-forwarding on rx-gro-list off";
+      };
     };
 
     # Allow all traffic on the Tailscale interface
     networking.firewall.trustedInterfaces = ["tailscale0"];
 
     environment.persistence."/per".directories = [
-      "/var/lib/tailscale"
+      {
+        directory = "/var/lib/tailscale";
+        user = "root";
+        group = "root";
+        mode = "0750";
+      }
     ];
   };
 }

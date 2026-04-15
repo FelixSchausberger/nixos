@@ -15,7 +15,7 @@
 
   # Set nvim as sops editor to avoid Helix terminal issues
   home.sessionVariables = {
-    SOPS_EDITOR = "nvim";
+    SOPS_EDITOR = "nvim --clean";
   };
 
   # Minimal sops config - use same key as system

@@ -212,8 +212,12 @@
       end
 
       # === SAFE ZELLIJ AUTO-START ===
-      # Using official Zellij integration method - NEVER use 'exec' for multiplexers
-      # This prevents shell lockouts by providing automatic fallback on failure
+      # SSH logins attach to a named persistent session ("homelab") so that agent
+      # sessions survive disconnect and are immediately resumable from any device.
+      # exec is intentional for SSH: replacing fish means detaching from zellij
+      # cleanly ends the SSH connection while the session continues in the background.
+      #
+      # Local logins use the official auto-start method (safe, with fallback).
       #
       # To enable: set -gx ZELLIJ_AUTO_START 1
       # To disable: set -e ZELLIJ_AUTO_START
@@ -222,8 +226,23 @@
       if status is-interactive; and set -q ZELLIJ_AUTO_START; and not __emergency_check
         # Run pre-flight checks before attempting auto-start
         if __zellij_preflight_check
-          # Use official Zellij auto-start method (safe, with fallback)
-          eval (zellij setup --generate-auto-start fish | string collect)
+          if not set -q ZELLIJ
+            if set -q SSH_CONNECTION; and set -q ZELLIJ_SSH_SESSION
+              # SSH login: attach to or create the host-configured named session.
+              # ZELLIJ_SSH_SESSION is set per-host in home.sessionVariables.
+              # Small terminals (phone, <100 cols) get a separate session so they don't
+              # constrain the layout of large-terminal (laptop/desktop) sessions.
+              # exec replaces fish so detaching from zellij ends the SSH connection cleanly.
+              if test "$COLUMNS" -lt 100
+                zellij attach -c $ZELLIJ_SSH_SESSION-phone
+              else
+                zellij attach -c $ZELLIJ_SSH_SESSION
+              end
+            else
+              # Local login: use official auto-start method (safe, with fallback)
+              eval (zellij setup --generate-auto-start fish | string collect)
+            end
+          end
         else
           echo "⚠️  Zellij pre-flight checks failed - starting normal fish shell"
           echo "   To enable auto-start, ensure zellij is properly configured"

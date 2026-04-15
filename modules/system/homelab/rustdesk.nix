@@ -16,6 +16,15 @@
       default = 21115;
       description = "RustDesk signal (hbbs) port";
     };
+    relayAddress = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = ''
+        Externally-reachable address advertised by hbbs to clients for relay connections.
+        Must be an IP or hostname that remote clients can reach (e.g. Tailscale IP).
+        When empty, hbbs advertises no relay and clients must have it pre-configured.
+      '';
+    };
   };
 
   config = lib.mkIf config.modules.system.homelab.rustdesk.enable {
@@ -55,7 +64,9 @@
       wantedBy = ["multi-user.target"];
       after = ["network.target"];
       serviceConfig = {
-        ExecStart = "${pkgs.rustdesk-server}/bin/hbbs";
+        ExecStart =
+          "${pkgs.rustdesk-server}/bin/hbbs"
+          + lib.optionalString (config.modules.system.homelab.rustdesk.relayAddress != "") " -r ${config.modules.system.homelab.rustdesk.relayAddress}";
         WorkingDirectory = "/var/lib/rustdesk";
         User = "rustdesk";
         Group = "rustdesk";
@@ -69,7 +80,12 @@
     };
 
     environment.persistence."/per".directories = [
-      "/var/lib/rustdesk"
+      {
+        directory = "/var/lib/rustdesk";
+        user = "rustdesk";
+        group = "rustdesk";
+        mode = "0700";
+      }
     ];
 
     networking.firewall.allowedTCPPorts = [

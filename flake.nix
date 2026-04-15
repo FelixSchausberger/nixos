@@ -107,6 +107,10 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    openchamber-nix = {
+      url = "github:kyoukisu/openchamber-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Yazi plugins
     yazi-clipboard = {
@@ -259,17 +263,11 @@
 
         packages = {
           lumen = pkgs.callPackage ./pkgs/lumen {};
-          starship-jj = pkgs.callPackage ./pkgs/starship-jj {};
-
-          # MCP servers
-          garnix-insights = pkgs.callPackage ./pkgs/garnix-insights {};
 
           # Editor with Steel plugin support
           scooter-hx = pkgs.callPackage ./pkgs/scooter-hx {};
 
           # Applications
-          openchamber = pkgs.callPackage ./pkgs/openchamber {};
-          opencode-antigravity-auth = pkgs.callPackage ./pkgs/opencode-antigravity-auth {};
           quantumlauncher = pkgs.callPackage ./pkgs/quantumlauncher {};
 
           # Minimal installer ISO (fast rebuilds for testing)
