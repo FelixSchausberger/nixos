@@ -54,7 +54,7 @@
     };
 
     "/per/mnt/2tb-ssd" = {
-      device = "/dev/sda1";
+      device = "/dev/disk/by-uuid/8b243c7a-cdd6-40b0-9e89-a18bfb92d7d3";
       fsType = "ext4";
     };
   };

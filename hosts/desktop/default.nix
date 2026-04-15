@@ -11,6 +11,7 @@ in {
       ./base-config.nix
       ../../modules/system/specialisations.nix
       ../../modules/system/gaming.nix
+      ../../modules/system/homelab
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
@@ -56,6 +57,11 @@ in {
       enable = true;
       variant = "desktop";
     };
+  };
+
+  modules.system.homelab.tailscale = {
+    enable = true;
+    udpGROInterface = "eno1";
   };
 
   # System maintenance and monitoring
