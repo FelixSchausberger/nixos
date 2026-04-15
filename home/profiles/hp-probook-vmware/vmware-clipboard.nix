@@ -65,9 +65,6 @@ in {
         Environment = [
           "DISPLAY=:0"
           "XAUTHORITY=%t/Xauthority"
-          # GTK3 (libdndcp.so plugin) must use X11 backend; the session exports
-          # GDK_BACKEND=wayland which causes GTK to skip X11 and fail.
-          "GDK_BACKEND=x11"
         ];
         ExecStart = "/run/wrappers/bin/vmware-user-suid-wrapper";
         Restart = "on-failure";

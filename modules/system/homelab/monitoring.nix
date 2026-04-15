@@ -2,7 +2,9 @@
   config,
   lib,
   ...
-}: {
+}: let
+  cfg = config.modules.system.homelab.monitoring;
+in {
   options.modules.system.homelab.monitoring = {
     enable = lib.mkEnableOption "Prometheus + node_exporter + Grafana monitoring stack";
     grafanaPort = lib.mkOption {
@@ -22,16 +24,16 @@
     };
   };
 
-  config = lib.mkIf config.modules.system.homelab.monitoring.enable {
+  config = lib.mkIf cfg.enable {
     services.prometheus = {
       enable = true;
-      port = config.modules.system.homelab.monitoring.prometheusPort;
+      port = cfg.prometheusPort;
       listenAddress = "127.0.0.1";
       retentionTime = "30d";
 
       exporters.node = {
         enable = true;
-        port = config.modules.system.homelab.monitoring.nodeExporterPort;
+        port = cfg.nodeExporterPort;
         enabledCollectors = [
           "systemd"
           "processes"
@@ -49,7 +51,7 @@
           job_name = "node";
           static_configs = [
             {
-              targets = ["127.0.0.1:${toString config.modules.system.homelab.monitoring.nodeExporterPort}"];
+              targets = ["127.0.0.1:${toString cfg.nodeExporterPort}"];
             }
           ];
         }
@@ -61,13 +63,14 @@
       settings = {
         server = {
           http_addr = "0.0.0.0";
-          http_port = config.modules.system.homelab.monitoring.grafanaPort;
+          http_port = cfg.grafanaPort;
           domain = "m920q";
         };
         security = {
           admin_user = "admin";
-          # Admin password set via $GF_SECURITY_ADMIN_PASSWORD env var from sops
+          # Credentials injected via EnvironmentFile from sops template
           admin_password = "$__env{GF_SECURITY_ADMIN_PASSWORD}";
+          secret_key = "$__env{GF_SECURITY_SECRET_KEY}";
         };
       };
       provision = {
@@ -76,27 +79,32 @@
           {
             name = "Prometheus";
             type = "prometheus";
-            url = "http://127.0.0.1:${toString config.modules.system.homelab.monitoring.prometheusPort}";
+            url = "http://127.0.0.1:${toString cfg.prometheusPort}";
             isDefault = true;
           }
         ];
       };
     };
 
-    # Inject Grafana admin password from sops secret
-    sops.secrets."grafana/admin-password" = {
+    sops.secrets."grafana/admin-password" = {owner = "grafana";};
+    sops.secrets."grafana/secret-key" = {owner = "grafana";};
+
+    # Combine both secrets into a single env file for Grafana's serviceConfig
+    sops.templates."grafana-env" = {
       owner = "grafana";
+      content = ''
+        GF_SECURITY_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}
+        GF_SECURITY_SECRET_KEY=${config.sops.placeholder."grafana/secret-key"}
+      '';
     };
 
-    systemd.services.grafana.serviceConfig.EnvironmentFile = config.sops.secrets."grafana/admin-password".path;
+    systemd.services.grafana.serviceConfig.EnvironmentFile = config.sops.templates."grafana-env".path;
 
     environment.persistence."/per".directories = [
       "/var/lib/grafana"
       "/var/lib/prometheus2"
     ];
 
-    networking.firewall.allowedTCPPorts = [
-      config.modules.system.homelab.monitoring.grafanaPort
-    ];
+    networking.firewall.allowedTCPPorts = [cfg.grafanaPort];
   };
 }

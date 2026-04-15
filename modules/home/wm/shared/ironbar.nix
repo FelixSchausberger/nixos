@@ -13,7 +13,6 @@
   ironbarPkg = inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   niriConfig = {
-    name = "main";
     anchor_to_edges = false;
     position = "left";
     # Layer shell margins create the floating pill gap from screen edges
@@ -34,8 +33,8 @@
         type = "custom";
         name = "clock";
         class = "clock";
-        on_mouse_enter = "ironbar bar main show-popup clock";
-        on_mouse_exit = "ironbar bar main hide-popup clock";
+        on_mouse_enter = "ironbar popup:open clock";
+        on_mouse_exit = "ironbar popup:close clock";
         bar = [
           {
             type = "label";
@@ -71,8 +70,8 @@
         type = "custom";
         name = "sysinfo";
         class = "sysinfo";
-        on_mouse_enter = "ironbar bar main show-popup sysinfo";
-        on_mouse_exit = "ironbar bar main hide-popup sysinfo";
+        on_mouse_enter = "ironbar popup:open sysinfo";
+        on_mouse_exit = "ironbar popup:close sysinfo";
         bar = [
           {
             type = "label";
@@ -85,31 +84,6 @@
             mode = "poll";
             cmd = "bash ${../niri/sysinfo.sh}";
             interval = 3000;
-          }
-        ];
-      }
-      {
-        type = "custom";
-        name = "vitals";
-        class = "vitals";
-        bar = [
-          {
-            type = "label";
-            name = "vitals-score";
-            label = "{{10000:vitals status --format ironbar | ${pkgs.jq}/bin/jq -r .text}}";
-          }
-        ];
-      }
-      {
-        type = "custom";
-        name = "stasis";
-        class = "stasis";
-        bar = [
-          {
-            type = "button";
-            name = "stasis-btn";
-            label = "{{10000:stasis-status | ${pkgs.jq}/bin/jq -r .text}}";
-            on_click_left = "stasis-toggle";
           }
         ];
       }
@@ -261,8 +235,8 @@
       border-radius: 8px;
       margin: 3px 4px;
       padding: 8px 4px;
-      min-width: 40px;
-      min-height: 40px;
+      min-width: 32px;
+      min-height: 32px;
       transition: all 500ms cubic-bezier(0.5, 1, 0.89, 1);
     }
 
@@ -284,37 +258,27 @@
     .clock {
       color: #${c.base09};
       padding: 4px 8px;
-      min-width: 40px;
-      min-height: 40px;
-    }
-
-    /* * { font-size } wins over container rules — target labels directly */
-    .clock label {
-      font-size: 18px;
+      min-width: 32px;
+      min-height: 32px;
     }
 
     /* Sysinfo — bar icon, popup to the right */
     .sysinfo {
       color: #${c.base09};
       padding: 4px 8px;
-      min-width: 40px;
-      min-height: 40px;
-    }
-
-    .sysinfo label {
-      font-size: 18px;
+      min-width: 32px;
+      min-height: 32px;
     }
 
     /* Volume — centered icon, equal padding to prevent left-offset */
     .volume {
       color: #${c.base0D};
       padding: 4px 8px;
-      min-width: 40px;
-      min-height: 40px;
+      min-width: 32px;
+      min-height: 32px;
     }
 
     .volume label {
-      font-size: 18px;
       min-width: 18px;
       margin: auto;
     }
@@ -323,41 +287,8 @@
     .network_manager {
       color: #${c.base0C};
       padding: 4px 8px;
-      min-width: 40px;
-      min-height: 40px;
-    }
-
-    .network_manager label {
-      font-size: 18px;
-    }
-
-    /* Vitals healthscore */
-    .vitals {
-      color: #${c.base0B};
-      padding: 4px 8px;
-      min-width: 40px;
-      min-height: 40px;
-    }
-
-    .vitals label {
-      font-size: 16px;
-    }
-
-    /* Stasis idle-manager toggle */
-    .stasis {
-      color: #${c.base04};
-      padding: 4px 8px;
-      min-width: 40px;
-      min-height: 40px;
-    }
-
-    .stasis label,
-    .stasis button {
-      font-size: 16px;
-    }
-
-    .stasis.active {
-      color: #${c.base0A};
+      min-width: 32px;
+      min-height: 32px;
     }
 
     /* Focused window title (Hyprland) */
