@@ -57,6 +57,12 @@ in {
     # Mirrors the patterns in claude-code/hooks/block-raw-git.sh.
     # Applied globally (all projects) since jj is used across all repos.
     settings = {
+      model = "ollama-cloud/minimax-m2.7";
+      small_model = "ollama-cloud/minimax-m2.7";
+      agent = {
+        plan.model = "ollama-cloud/glm-5.1";
+        build.model = "ollama-cloud/minimax-m2.7";
+      };
       plugin = ["opencode-code-simplifier"];
       permission = {
         bash = {
@@ -66,7 +72,6 @@ in {
           "git rebase*" = "deny";
           "git commit*" = "deny";
           "git stash*" = "deny";
-          # Pathspec form overwrites working tree; bare "git checkout <branch>" is safe
           "git checkout * -- *" = "deny";
         };
       };

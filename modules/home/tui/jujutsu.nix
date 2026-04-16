@@ -11,7 +11,6 @@ in {
 
   home.packages = with pkgs; [
     jjui # A TUI for Jujutsu VCS
-    # lazyjj # Lazygit-style TUI for Jujutsu (commented out due to test failures)
   ];
 
   programs.jujutsu = {

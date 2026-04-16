@@ -60,13 +60,6 @@
 
   # WSL-specific home configuration
   home = {
-    # WSL backup aliases (shell-agnostic)
-    shellAliases = {
-      wsl-backup = "sudo /per/etc/nixos/tools/scripts/wsl-backup-hpprobook.sh backup";
-      wsl-restore = "sudo /per/etc/nixos/tools/scripts/wsl-backup-hpprobook.sh restore";
-      wsl-backup-verify = "sudo /per/etc/nixos/tools/scripts/wsl-backup-hpprobook.sh verify";
-    };
-
     # WSL work-specific packages
     packages = with pkgs; [
       lazyssh # Terminal-based SSH manager

@@ -149,8 +149,6 @@ in {
     };
 
     environment.systemPackages = with pkgs; [
-      wslu
-      powershell
     ];
 
     home-manager.users.${hostConfig.user} = {

@@ -37,10 +37,9 @@ in {
     ../shared/options.nix
     ../shared/satty.nix
     ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
-    # swww-coordinated imported by hyprland only to avoid duplicate systemd service definitions
+    ../shared/awww-coordinated.nix # awww wallpaper daemon, enabled via wm.awww options below
     (import ../shared/wired.nix "niri-session.target") # Modern notification daemon configuration
     (import ../shared/cthulock.nix "niri-session.target") # Screen locker
-    ../shared/awww-coordinated.nix # awww wallpaper daemon (opt-in via wm.awww.enable)
   ];
 
   options.wm.niri = {
@@ -198,9 +197,9 @@ in {
       # Input configuration
       input = {
         keyboard.xkb = {
-          layout = "de";
-          variant = "";
-          options = "terminate:ctrl_alt_bksp";
+          layout = "eu,de";
+          variant = ",";
+          options = "grp:alt_shift_toggle,terminate:ctrl_alt_bksp";
           model = "pc104";
         };
 
@@ -359,7 +358,7 @@ in {
         }
       ];
 
-      # Place swww backdrop surface behind workspace thumbnails in overview
+      # Place awww backdrop surface behind workspace thumbnails in overview
       layer-rules = [
         {
           matches = [{namespace = "^awww-daemonbackdrop$";}];
