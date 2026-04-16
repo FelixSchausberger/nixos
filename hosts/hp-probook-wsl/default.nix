@@ -14,7 +14,7 @@ in {
       ../shared-tui.nix
       inputs.nixos-wsl.nixosModules.default
       inputs.stylix.nixosModules.stylix
-      ../../modules/system/backup.nix
+      ../../modules/system/wsl-integration.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
@@ -192,17 +192,6 @@ in {
     modules.system = {
       containers.enable = true;
       wsl-integration.enable = true;
-      backup = {
-        enable = true;
-        backupDir = "D:/Backups/WSL-NixOS";
-        retention = {
-          fullBackups = 3;
-          incrementalDays = 30;
-        };
-        schedule = {
-          enable = false; # Disable systemd timer, use Windows Task Scheduler instead
-        };
-      };
       maintenance = {
         enable = true;
         autoUpdate.enable = false; # Disable auto-updates in WSL environment
@@ -257,8 +246,6 @@ in {
     environment = {
       systemPackages = with pkgs; [
         nix-ld
-        wslu
-        powershell
 
         util-linux
         inetutils

@@ -1,35 +1,39 @@
 # awww coordinated wallpaper daemon configuration
-# Proper HM module so it can be imported from both hyprland and niri modules
-# without duplicate service definitions (the module system deduplicates same-path imports).
-#
+# Options-based module: enabled and configured via wm.awww options.
 # graphical-session.target activates before WAYLAND_DISPLAY is set, causing
-# awww-daemon to default to wayland-0 and fail to connect. Each WM sets
-# wm.awww.sessionTarget to its compositor-specific session target instead.
+# awww-daemon to default to wayland-0 and fail to connect. Use a WM-specific
+# session target (e.g. niri-session.target) instead.
+#
+# This module should be imported once. Configure via:
+#   wm.awww.enable = true;
+#   wm.awww.sessionTarget = "<wm>-session.target";
 {
+  lib,
   config,
   pkgs,
-  lib,
   ...
-}: {
+}: let
+  cfg = config.wm.awww;
+in {
   options.wm.awww = {
     enable = lib.mkEnableOption "awww coordinated wallpaper daemon";
 
     sessionTarget = lib.mkOption {
       type = lib.types.str;
-      description = "Systemd session target the awww daemons bind to";
+      description = "Systemd user target to bind awww services to";
       example = "niri-session.target";
     };
   };
 
-  config = lib.mkIf config.wm.awww.enable {
+  config = lib.mkIf cfg.enable {
     home.packages = [pkgs.awww];
 
     # awww daemon for workspace wallpapers (default namespace)
     systemd.user.services.awww-wallpaper = {
       Unit = {
         Description = "awww daemon for workspace wallpapers";
-        After = [config.wm.awww.sessionTarget];
-        PartOf = [config.wm.awww.sessionTarget];
+        After = [cfg.sessionTarget];
+        PartOf = [cfg.sessionTarget];
         Wants = ["awww-wallpaper-init.service"];
       };
       Service = {
@@ -37,22 +41,22 @@
         ExecStart = "${pkgs.awww}/bin/awww-daemon";
         Restart = "on-failure";
       };
-      Install.WantedBy = [config.wm.awww.sessionTarget];
+      Install.WantedBy = [cfg.sessionTarget];
     };
 
     # awww daemon for blurred backdrop (backdrop namespace)
     systemd.user.services.awww-backdrop = {
       Unit = {
         Description = "awww daemon for Niri overview backdrop (blurred wallpapers)";
-        After = [config.wm.awww.sessionTarget];
-        PartOf = [config.wm.awww.sessionTarget];
+        After = [cfg.sessionTarget];
+        PartOf = [cfg.sessionTarget];
       };
       Service = {
         Type = "simple";
         ExecStart = "${pkgs.awww}/bin/awww-daemon --namespace backdrop";
         Restart = "on-failure";
       };
-      Install.WantedBy = [config.wm.awww.sessionTarget];
+      Install.WantedBy = [cfg.sessionTarget];
     };
 
     # Initialize both wallpapers on startup (synchronized)
@@ -124,9 +128,9 @@
             case "$random_name" in
               ${lib.concatStringsSep "\n              " (map (name: ''
                 "${name}")
-                    regular="${wallpaperDir}/${config.wallpapers.available.${name}}"
-                    blurred="${wallpaperDir}/${config.wallpapers.availableBlurred.${name}}"
-                    ;;
+                  regular="${wallpaperDir}/${config.wallpapers.available.${name}}"
+                  blurred="${wallpaperDir}/${config.wallpapers.availableBlurred.${name}}"
+                  ;;
               '')
               wallpaperNames)}
             esac

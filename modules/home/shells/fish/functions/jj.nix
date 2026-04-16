@@ -20,7 +20,7 @@
           echo "  jj commit [-m]     - Create commit"
           echo "  jj sync            - Fetch and push"
           echo "  jj search          - Interactive file search"
-          echo "  jj ui              - Open lazyjj TUI"
+          echo "  jj ui              - Open jjui TUI"
           echo ""
           echo "Workflow commands:"
           echo "  jjbranch (jjb)     - Create feature branch (optional, for experimental work)"
@@ -33,7 +33,7 @@
           echo "  - Push with 'jj git push'"
           echo "  - Create feature branches (jjbranch) only for experimental work"
           echo ""
-          echo "Note: Use 'lazyjj' for visual TUI operations"
+          echo "Note: Use 'jj ui' for visual TUI operations"
           echo ""
           return 0
         end
@@ -50,8 +50,8 @@
           case search
             jj_search $flags
           case ui
-            # Launch lazyjj TUI
-            command lazyjj $flags
+            # Launch jjui TUI
+            command jjui $flags
           case '*'
             # Pass through to actual jj command
             command jj $subcommand $flags
@@ -339,7 +339,7 @@
     complete -c jjpush -d "Push and create PR with auto-merge"
     complete -c jjdescribe -d "Update description with AI suggestion"
 
-    # Add lazyjj alias for convenience
-    alias jjui="lazyjj"
+    # Add jjui alias for convenience
+    # alias jjui="jjui" # No longer needed, jjui is the actual binary
   '';
 }

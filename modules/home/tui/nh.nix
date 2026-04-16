@@ -20,9 +20,10 @@ _: {
   programs.fish.shellAliases = {
     # Test configuration, then auto-switch if successful
     # jj status runs first as a non-blocking sanity check (shows untracked files, pending changes)
-    deploy = "jj status; and nh os test; and nh os switch; and validate-system";
-    deploy-offline = "jj status; and nh os test -- --option substitute false; and nh os switch -- --option substitute false; and validate-system";
-    deploy-verbose = "jj status; and NH_LOG=nh=debug nh os test; and NH_LOG=nh=debug nh os switch; and validate-system";
+    # --repository targets the flake dir regardless of cwd
+    deploy = "jj --repository $NH_FLAKE status; and nh os test; and nh os switch; and validate-system";
+    deploy-offline = "jj --repository $NH_FLAKE status; and nh os test -- --option substitute false; and nh os switch -- --option substitute false; and validate-system";
+    deploy-verbose = "jj --repository $NH_FLAKE status; and NH_LOG=nh=debug nh os test; and NH_LOG=nh=debug nh os switch; and validate-system";
 
     # Update inputs, test configuration, then auto-switch if successful
     update = "nh os test --update; and nh os switch";

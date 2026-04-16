@@ -5,8 +5,8 @@
   lib,
   ...
 }: let
-  niri = config.wm.niri.enable;
-  hyprland = config.wm.hyprland.enable;
+  niri = config.wm.niri.enable or false;
+  hyprland = config.wm.hyprland.enable or false;
   enabled = niri || hyprland;
   c = config.lib.stylix.colors;
   fontMono = inputs.self.lib.fonts.families.monospace.name;
