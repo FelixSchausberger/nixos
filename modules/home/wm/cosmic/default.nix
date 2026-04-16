@@ -28,7 +28,6 @@
 
   programs = {
     cosmic-ext-ctl.enable = true; # CLI for COSMIC Desktop configuration management
-    cosmic-manager.enable = true; # Manage COSMIC desktop declaratively using home-manager
     cosmic-ext-tweaks.enable = true; # A tweaking tool for the COSMIC desktop
   };
 
