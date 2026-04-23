@@ -121,12 +121,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
-    openchamber-nix = {
-      url = "github:kyoukisu/openchamber-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-      inputs.home-manager.follows = "home-manager";
-    };
 
     # Yazi plugins
     yazi-clipboard = {

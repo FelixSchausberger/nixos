@@ -49,6 +49,7 @@
         github = {
           command = "${pkgs.github-mcp-server}/bin/github-mcp-server";
           args = [];
+          env.GITHUB_TOKEN = "{env:GITHUB_TOKEN}";
         };
 
         nix-language-server = {
