@@ -11,7 +11,10 @@
     development = {
       enable = true;
       # Rust devshells work out of the box via direnv; no global toolchain needed
-      languages = ["nix" "rust"];
+      languages = [
+        "nix"
+        "rust"
+      ];
     };
   };
 
@@ -61,19 +64,7 @@
     };
   };
 
-  # OpenChamber: web UI for OpenCode, accessible from phone via Tailscale.
-  # tailscale0 is a trusted interface so port 3000 is reachable without firewall changes.
-  # openchamber binds to 0.0.0.0 by default (no --host flag in CLI).
-  ai-assistants.opencode.openchamber = {
-    enable = true;
-    port = 3030;
-    autoStart = true;
-    enableCloudflare = false;
-    enableQrCode = false;
-  };
-
-  # OpenCode server is now enabled via programs.opencode.web in the module
-
   # Required by some shared modules
+
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 }

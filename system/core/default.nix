@@ -16,6 +16,7 @@ in {
   ];
 
   documentation.dev.enable = true;
+  documentation.nixos.options.splitBuild = false;
 
   i18n = {
     defaultLocale = "en_US.UTF-8";

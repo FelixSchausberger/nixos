@@ -1,27 +1,28 @@
 #!/usr/bin/env bash
 # Claude Code Documentation Policy Hook
 # Enforces documentation policy: only README.md at root and docs/adr/*.md allowed
+# Triggered as PreToolUse for Write|Edit. Input: JSON on stdin.
+# Exit 2 to block the command; exit 0 to allow.
 
 set -euo pipefail
 
-# Get the target file path from command line arguments
-if [ $# -lt 1 ]; then
-	echo "Error: Missing file path argument" >&2
-	exit 1
+# Read JSON input from stdin and extract the file path
+stdin=$(cat)
+target_file=$(echo "$stdin" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || echo "")
+
+# Fall back to command line argument for standalone usage
+if [[ -z "$target_file" && $# -ge 1 ]]; then
+	target_file="$1"
 fi
 
-target_file="$1"
-
-# Convert to absolute path for consistent comparison
-if [[ "$target_file" != /* ]]; then
-	# Relative path - resolve against current working directory
-	target_file="$(realpath -m "$target_file")"
-else
-	# Absolute path - normalize it
-	target_file="$(realpath -m "$target_file")"
+# If no target file found, allow the operation
+if [[ -z "$target_file" ]]; then
+	exit 0
 fi
 
-# Get repository root (assuming we're in a git repo)
+target_file="$(realpath -m "$target_file")"
+
+# Get repository root
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
 
 # Convert to relative path from repo root for pattern matching
@@ -73,7 +74,7 @@ if [ "$allow_file" = false ]; then
 		echo "  3. See docs/adr/0001-documentation-policy.md for example"
 		echo
 	} >&2
-	exit 1
+	exit 2
 fi
 
 # File is allowed by policy

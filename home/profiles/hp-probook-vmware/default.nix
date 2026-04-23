@@ -30,16 +30,6 @@
     };
   };
 
-  # Enable OpenChamber with Cloudflare tunnel for remote AI coding access
-  # TODO: Fix openchamber package availability issue
-  # ai-assistants.opencode.openchamber = {
-  #   enable = true;
-  #   password = "vmware-dev";
-  #   enableCloudflare = true;
-  #   enableQrCode = true;
-  #   autoStart = false;
-  # };
-
   # Fix missing calendar configuration
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 
