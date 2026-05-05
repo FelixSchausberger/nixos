@@ -1,4 +1,9 @@
-{pkgs, ...}: {
+{
+  lib,
+  pkgs,
+  hostConfig,
+  ...
+}: {
   programs.bash = {
     enable = true;
 
@@ -48,14 +53,20 @@
         git_branch = {
           when = "! jj --ignore-working-copy root";
           command = "starship module git_branch";
-          shell = ["sh" "--norc"];
+          shell = [
+            "sh"
+            "--norc"
+          ];
           description = "Show git branch only when not in jj repo";
         };
 
         git_status = {
           when = "! jj --ignore-working-copy root";
           command = "starship module git_status";
-          shell = ["sh" "--norc"];
+          shell = [
+            "sh"
+            "--norc"
+          ];
           description = "Show git status only when not in jj repo";
         };
 
@@ -69,6 +80,16 @@
           shell = ["${pkgs.jj-starship}/bin/jj-starship"];
           use_stdin = false;
           when = "${pkgs.jj-starship}/bin/jj-starship detect";
+        };
+
+        vitals = lib.mkIf (!(hostConfig.isGui or false)) {
+          when = "curl -sf http://127.0.0.1:8080/ > /dev/null 2>&1";
+          shell = ["bash"];
+          style = "bold green";
+          format = "[$output]($style) ";
+          command = ''
+            curl -sf http://127.0.0.1:8080/score 2>/dev/null | jq -r '[.score, .delta_1h] | @tsv' 2>/dev/null | while IFS=$'\t' read -r score delta; do score=$(printf '%.1f' "$score"); if [ -n "$delta" ] && [ "$delta" != "null" ] && [ "$delta" != "0" ]; then sign=$(echo "$delta" | jq -r 'if . > 0 then "↑" else "↓" end'); mag=$(printf '%.1f' "$(echo "$delta" | jq -r 'abs')"); echo "$score $sign$mag"; else echo "$score"; fi; done
+          '';
         };
       };
     };

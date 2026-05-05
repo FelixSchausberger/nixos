@@ -1,3 +1,5 @@
+# Flake entrypoint for the VMware variant of the HP ProBook host.
+# Imports generated VM hardware metadata while treating disko as install-time only.
 {lib, ...}: let
   importLib = import ../lib/import.nix {inherit lib;};
 in {

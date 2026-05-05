@@ -431,7 +431,7 @@ Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 #### Binary Caches
 
 - **Primary**: cache.nixos.org (official NixOS cache)
-- **Personal**: felixschausberger.cachix.org (custom builds, see [Cachix Setup](../../wiki/Cachix-Setup))
+- **Personal**: felixschausberger.cachix.org (custom builds)
 - **Garnix**: cache.garnix.io (shared CI builds with centralized signing)
 - **Community**: nix-community.cachix.org and project-specific caches
 
@@ -444,8 +444,6 @@ Detailed guides available in the [Wiki](../../wiki):
 - **[Installation Guide](../../wiki/Installation)** - Disko automated installation, ZFS setup, post-installation configuration
 - **[Secret Management](../../wiki/Secret-Management)** - Detailed sops-nix usage and key management
 - **[Emergency Recovery](../../wiki/Emergency-Recovery)** - Complete recovery procedures and troubleshooting
-- **[Cachix Setup](../../wiki/Cachix-Setup)** - Setting up personal binary cache for faster builds
-- **[Contributing](../../wiki/Contributing)** - Development guidelines and contribution workflow
 
 ### Quick Reference
 

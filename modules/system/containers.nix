@@ -1,3 +1,5 @@
+# Container runtime profile for Docker-based workflows on selected hosts.
+# Optimizes startup behavior and daemon defaults for development and homelab use.
 {
   config,
   lib,
@@ -21,7 +23,10 @@
           "max-size" = "10m";
           "max-file" = "3";
         };
-        "dns" = ["8.8.8.8" "8.8.4.4"];
+        "dns" = [
+          "8.8.8.8"
+          "8.8.4.4"
+        ];
         "userland-proxy" = false;
         "live-restore" = false;
       };

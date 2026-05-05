@@ -199,6 +199,8 @@ For complete details, see [README.md Architecture](README.md#architecture):
 
 The project uses Jujutsu (jj) for version control with a main-branch workflow.
 
+**AI agent requirement:** Use `jj` commands for commit and push workflows. Avoid using `git commit`/`git push` in normal operation.
+
 **Key Principles:**
 - Work happens on `main` by default for straightforward changes
 - Feature branches (via `jjbranch` helper) are optional for experimental work
@@ -460,6 +462,14 @@ Custom statusline showing:
 Detailed documentation is maintained in the GitHub Wiki.
 
 For wiki pages and quick references, see [README.md Additional Documentation](README.md#additional-documentation).
+
+The wiki stays intentionally minimal and operational-only:
+
+- Installation
+- Emergency Recovery
+- Secret Management
+
+Architecture and module rationale are documented inline in Nix modules.
 
 **Updating Wiki:**
 

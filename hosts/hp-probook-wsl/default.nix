@@ -1,3 +1,5 @@
+# WSL2 daily-driver host with NixOS userland, WSLg GUI support, and corporate CA integration.
+# Replaces unsupported bare-metal features (ZFS/bootloader) with WSL-safe equivalents.
 {
   inputs,
   lib,
@@ -213,7 +215,11 @@ in {
     # Network configuration optimized for WSL (high level)
     networking = {
       inherit hostName;
-      nameservers = ["8.8.8.8" "1.1.1.1" "8.8.4.4"];
+      nameservers = [
+        "8.8.8.8"
+        "1.1.1.1"
+        "8.8.4.4"
+      ];
       # Disable NetworkManager in WSL
       networkmanager.enable = lib.mkForce false;
     };
@@ -267,7 +273,10 @@ in {
     nix = {
       settings = {
         auto-optimise-store = true;
-        experimental-features = ["nix-command" "flakes"];
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
         connect-timeout = lib.mkForce 10;
 
         # Use ESET-enhanced bundle (created by systemd service at boot)

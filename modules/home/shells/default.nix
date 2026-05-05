@@ -11,7 +11,7 @@
   ];
 
   home.shellAliases = {
-    bios = "systemctl reboot --firmware-setup";
+    bios = "sudo systemctl reboot --firmware-setup";
     build = "nix build -L";
     cp = "cp -rpv";
     list-errors = "journalctl -p err -b --output=cat | sort | uniq -c | sort -nr";
@@ -21,7 +21,5 @@
     repair = "sudo nix-store --verify --check-contents --repair";
     rip = "rip --graveyard /per/home/${config.home.username}/.local/share/graveyard";
     rsync = "rsync -avhP --no-inc-recursive";
-    # Trailing space enables alias expansion after sudo
-    sudo = "sudo ";
   };
 }

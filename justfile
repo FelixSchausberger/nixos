@@ -121,11 +121,25 @@ activate NAME:
             ;;
         headless)
             sudo "$PROFILE/bin/switch-to-configuration" test
+            sudo systemctl restart home-manager-$(whoami).service
+            sudo systemctl restart getty@tty1.service
             ;;
         *)
             sudo "$PROFILE/specialisation/{{NAME}}/bin/switch-to-configuration" test
+            sudo systemctl restart home-manager-$(whoami).service
+            if [ "{{NAME}}" = "niri" ]; then
+                sudo systemctl start bluetooth.service
+                sudo systemctl restart getty@tty1.service
+            fi
             ;;
     esac
+
+# Shorthand aliases for common specialisation switches
+gui:
+    just activate niri
+
+tty:
+    just activate headless
 
 # === QUALITY MONITORING ===
 

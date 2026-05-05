@@ -29,8 +29,12 @@ in {
       "cachix/token" = {};
 
       # Cloud storage
-      "rclone/client-secret" = {};
-      "rclone/token" = {};
+      "rclone/client-secret" = {
+        owner = defaults.system.user;
+      };
+      "rclone/token" = {
+        owner = defaults.system.user;
+      };
 
       # Bitwarden master password
       "bitwarden/master-password" = {};
@@ -40,6 +44,9 @@ in {
       "private/password-hash" = {
         neededForUsers = true;
       };
+
+      # WiFi passwords
+      "wifi/pretty-fly-for-a-wifi" = {};
     };
 
     # Create netrc file for nix GitHub and Cachix access
@@ -66,9 +73,30 @@ in {
   # Ensure Nix uses the netrc file
   nix.settings.netrc-file = config.sops.templates."nix/netrc".path;
 
+  # WiFi environment file for NM ensureProfiles (envsubst substitution)
+  sops.templates."wifi/env" = {
+    content = "WIFI_PSK=${config.sops.placeholder."wifi/pretty-fly-for-a-wifi"}";
+    owner = defaults.system.user;
+    path = "/run/secrets/wifi/env";
+    mode = "0400";
+  };
+
+  # iwd network config for systemd-networkd-based WiFi (e.g., m920q specialisation)
+  sops.templates."wifi/iwd" = {
+    content = ''
+      [Security]
+      Passphrase=${config.sops.placeholder."wifi/pretty-fly-for-a-wifi"}
+
+      [Settings]
+      AutoConnect=true
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0600";
+  };
+
   # Create system mount directories for rclone
   systemd.tmpfiles.rules = [
     "d ${defaults.paths.mountDirs.base} 0755 root root -"
-    "d ${defaults.paths.mountDirs.gdrive} 0755 root root -"
   ];
 }

@@ -1,3 +1,5 @@
+# Desktop workstation host: AMD gaming/rendering machine with Niri as default WM.
+# Keeps COSMIC as a boot-time specialisation and enables Sunshine for remote streaming.
 {inputs, ...}: let
   hostLib = import ../lib.nix;
   hostName = "desktop";

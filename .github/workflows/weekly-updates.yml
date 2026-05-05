@@ -23,11 +23,34 @@ env:
     stalled-download-timeout = 30
 jobs:
   update-flake:
-    name: Update Flake Inputs
+    name: Update Flake Inputs and Snapshots
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
+        id: checkout
         uses: actions/checkout@v4
+        with:
+          ref: weekly-updates
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Checkout main if branch missing
+        if: steps.checkout.outcome == 'failure'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Prepare weekly-updates branch
+        run: |
+          if git show-ref --verify --quiet refs/heads/weekly-updates; then
+            git switch weekly-updates
+          else
+            git switch -c weekly-updates
+          fi
+
+          git fetch origin main
+          git rebase origin/main
       - name: Setup SSL certificates
         uses: ./.github/actions/setup-ssl
       - name: Install Nix
@@ -35,32 +58,59 @@ jobs:
         with:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
-      - name: Update flake lock
-        uses: DeterminateSystems/update-flake-lock@v24
+      - name: Update lock and snapshots
+        run: |
+          nix flake update
+
+          if ! nix develop --command namaka check; then
+            if [ -d tests/_snapshots/.pending ]; then
+              find tests/_snapshots/.pending -type f ! -name '.gitignore' | while read -r file; do
+                cp "$file" "tests/_snapshots/$(basename "$file")"
+              done
+              nix develop --command namaka check
+            else
+              echo "namaka check failed without pending snapshots" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Commit updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add flake.lock tests/_snapshots/coverage-critical-paths tests/_snapshots/modules-containers || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: weekly dependency update"
+          git push --force-with-lease origin weekly-updates
+
+      - name: Create or update PR
+        uses: peter-evans/create-pull-request@v7
         with:
-          commit-msg: "chore: weekly dependency update"
-          pr-title: "chore: weekly dependency update"
-          pr-body: |
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: weekly-updates
+          base: main
+          title: "chore: weekly dependency update"
+          labels: auto-merge
+          commit-message: "chore: weekly dependency update"
+          body: |
             ## Weekly Dependency Update
 
-            Automated weekly update of all flake inputs to their latest versions.
+            Automated weekly update of flake inputs and required Namaka snapshots.
 
             **Validation:**
-            - Garnix CI builds all NixOS configurations
-            - Security scans check for vulnerabilities
-            - Pre-commit hooks validate code quality
-
-            **Auto-merge:**
-            - This PR will automatically merge when all checks pass
-            - Review the flake.lock changes for major version bumps
-            - Check Garnix build logs for any issues
+            - Namaka snapshot checks run in this workflow
+            - Garnix CI validates flake evaluation and builds
+            - PR is auto-merged when required checks pass
 
             ---
             Triggered by: `${{ github.event_name }}`
             Workflow: weekly-updates.yml
-          pr-labels: auto-merge
-          branch: weekly-updates
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge for PR
         if: success()
         env:

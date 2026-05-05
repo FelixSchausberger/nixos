@@ -1,3 +1,5 @@
+# Shared lock-screen integration for Wayland sessions using cthulock.
+# Parameterized by session target so systemd ordering matches the active compositor.
 sessionTarget: {
   inputs,
   pkgs,

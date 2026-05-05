@@ -19,3 +19,5 @@ builds:
     - packages.x86_64-linux.installer-iso-full
     # desktop: cosmic specialisation (niri + COSMIC) exceeds Garnix ~8GB RAM evaluation limit
     - nixosConfigurations.desktop
+    # surface: full GUI + updated Hyprland stack exceeds Garnix ~8GB RAM evaluation limit
+    - nixosConfigurations.surface

@@ -1,3 +1,5 @@
+# Scheduled maintenance orchestration for updates, health checks, and alerting.
+# Centralizes recurring host hygiene tasks under one opt-in module.
 {
   config,
   lib,
@@ -126,8 +128,9 @@
             # Optimize store
             ${pkgs.nix}/bin/nix store optimise
 
-            # Clean temporary files
-            ${pkgs.systemd}/bin/systemd-tmpfiles --clean
+            # Clean temporary files while ignoring ephemeral roots that may not be
+            # attached in impermanence configurations.
+            ${pkgs.systemd}/bin/systemd-tmpfiles --clean --exclude-prefix=/tmp --exclude-prefix=/var/tmp --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd
 
             echo "Cleanup completed at $(date)"
           '';
@@ -182,8 +185,8 @@
     # are already configured in system/core/default.nix
     boot.kernel.sysctl = {
       # Network security improvements (new additions beyond system/core)
-      "net.ipv4.conf.all.log_martians" = 1; # Log suspicious packets
-      "net.ipv4.conf.default.log_martians" = 1;
+      "net.ipv4.conf.all.log_martians" = 0; # Disable noisy martian packet logging
+      "net.ipv4.conf.default.log_martians" = 0;
       "net.ipv4.conf.all.accept_source_route" = 0; # Reject source routing
       "net.ipv4.conf.default.accept_source_route" = 0;
       "net.ipv4.conf.all.accept_redirects" = 0; # Ignore ICMP redirects

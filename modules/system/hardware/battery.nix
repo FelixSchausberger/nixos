@@ -1,3 +1,5 @@
+# Battery power profile for laptops with persistent charge-threshold enforcement.
+# Uses TLP for policy and tmpfiles writes for hardware charge limits across boots.
 {
   lib,
   config,
@@ -8,12 +10,12 @@ in {
   options.hardware.profiles.battery = {
     enable = lib.mkEnableOption "Unified battery management with automatic detection";
 
-    jolt = {
-      enable = lib.mkEnableOption "jolt battery monitor" // {default = true;};
-    };
-
     tlp = {
-      enable = lib.mkEnableOption "TLP advanced power management" // {default = true;};
+      enable =
+        lib.mkEnableOption "TLP advanced power management"
+        // {
+          default = true;
+        };
       settings = lib.mkOption {
         type = lib.types.attrs;
         default = {
@@ -28,26 +30,15 @@ in {
     };
 
     chargeThresholds = {
-      enable = lib.mkEnableOption "Battery charge limits for longevity" // {default = true;};
+      enable =
+        lib.mkEnableOption "Battery charge limits for longevity"
+        // {
+          default = true;
+        };
     };
   };
 
   config = lib.mkIf cfg.enable {
-    # TODO: jolt disabled due to upstream build issue
-    # See: https://github.com/jordond/jolt/issues/XXX
-    # environment.systemPackages = lib.optionals cfg.jolt.enable [pkgs.jolt];
-
-    # systemd.services.jolt-daemon = lib.mkIf cfg.jolt.enable {
-    #   description = "Jolt battery monitoring daemon";
-    #   unitConfig.ConditionPathExists = "/sys/class/power_supply/BAT0";
-    #   serviceConfig = {
-    #     ExecStart = "${pkgs.jolt}/bin/jolt daemon start";
-    #     Type = "forking";
-    #     Restart = "on-failure";
-    #   };
-    #   wantedBy = ["multi-user.target"];
-    # };
-
     services.tlp = lib.mkIf cfg.tlp.enable {
       enable = true;
       settings = cfg.tlp.settings // {};

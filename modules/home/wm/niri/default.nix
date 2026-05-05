@@ -67,61 +67,72 @@ in {
     };
 
     outputs = lib.mkOption {
-      type = lib.types.listOf (lib.types.submodule {
-        options = {
-          name = lib.mkOption {
-            type = lib.types.str;
-            description = "Output name";
-          };
-          mode = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                width = lib.mkOption {
-                  type = lib.types.int;
-                  description = "Output width in pixels";
-                };
-                height = lib.mkOption {
-                  type = lib.types.int;
-                  description = "Output height in pixels";
-                };
-                refresh = lib.mkOption {
-                  type = lib.types.float;
-                  description = "Refresh rate in Hz";
-                  default = 60.0;
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Output name";
+            };
+            mode = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  width = lib.mkOption {
+                    type = lib.types.int;
+                    description = "Output width in pixels";
+                  };
+                  height = lib.mkOption {
+                    type = lib.types.int;
+                    description = "Output height in pixels";
+                  };
+                  refresh = lib.mkOption {
+                    type = lib.types.float;
+                    description = "Refresh rate in Hz";
+                    default = 60.0;
+                  };
                 };
               };
+              default = {};
             };
-            default = {};
-          };
-          scale = lib.mkOption {
-            type = lib.types.float;
-            default = 1.0;
-            description = "Output scale factor";
-          };
-          transform = lib.mkOption {
-            type = lib.types.enum ["normal" "90" "180" "270" "flipped" "flipped-90" "flipped-180" "flipped-270"];
-            default = "normal";
-            description = "Output transform";
-          };
-          position = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                x = lib.mkOption {
-                  type = lib.types.int;
-                  description = "X position";
-                  default = 0;
-                };
-                y = lib.mkOption {
-                  type = lib.types.int;
-                  description = "Y position";
-                  default = 0;
+            scale = lib.mkOption {
+              type = lib.types.float;
+              default = 1.0;
+              description = "Output scale factor";
+            };
+            transform = lib.mkOption {
+              type = lib.types.enum [
+                "normal"
+                "90"
+                "180"
+                "270"
+                "flipped"
+                "flipped-90"
+                "flipped-180"
+                "flipped-270"
+              ];
+              default = "normal";
+              description = "Output transform";
+            };
+            position = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  x = lib.mkOption {
+                    type = lib.types.int;
+                    description = "X position";
+                    default = 0;
+                  };
+                  y = lib.mkOption {
+                    type = lib.types.int;
+                    description = "Y position";
+                    default = 0;
+                  };
                 };
               };
+              default = {};
             };
-            default = {};
           };
-        };
-      });
+        }
+      );
       default = [];
       description = "Output configuration";
       example = [
@@ -143,13 +154,19 @@ in {
 
     scratchpad = {
       notesApp = lib.mkOption {
-        type = lib.types.enum ["obsidian" "basalt"];
+        type = lib.types.enum [
+          "obsidian"
+          "basalt"
+        ];
         default = "obsidian";
         description = "Notes application for scratchpad";
       };
 
       musicApp = lib.mkOption {
-        type = lib.types.enum ["spotify" "spotify-player"];
+        type = lib.types.enum [
+          "spotify"
+          "spotify-player"
+        ];
         default = "spotify";
         description = "Music application for scratchpad";
       };
@@ -167,27 +184,57 @@ in {
     wm.which-key.enable = true;
 
     home = {
-      packages = with pkgs; [
-        # Niri-specific utilities
-        swappy # Screenshot annotation
-        cliphist # Clipboard history
-        avizo # OSD for volume/brightness
-        inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
-        udiskie # Auto-mount
-        cosmic-files # File manager
-        # Cursor themes
-        adwaita-icon-theme # For Adwaita cursor theme
-        bibata-cursors # Better cursor theme
-        gnome-themes-extra # Additional cursor themes
-        hicolor-icon-theme # Base icon theme
+      packages = with pkgs;
+        [
+          # Niri-specific utilities
+          terminalPkg # Default terminal for this profile (e.g. ghostty)
+          swappy # Screenshot annotation
+          cliphist # Clipboard history
+          avizo # OSD for volume/brightness
+          inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
+          udiskie # Auto-mount
+          cosmic-files # File manager
+          # Cursor themes
+          adwaita-icon-theme # For Adwaita cursor theme
+          bibata-cursors # Better cursor theme
+          gnome-themes-extra # Additional cursor themes
+          hicolor-icon-theme # Base icon theme
 
-        # Screenshot tools provided by shared/satty.nix
-      ];
+          # Screenshot tools provided by shared/satty.nix
+        ]
+        ++ lib.optionals (cfg.browser != "zen") [
+          browserPkg # Zen is provided by programs.zen-browser
+        ];
 
       # Home environment variables for proper cursor theme support
       sessionVariables = {
         XCURSOR_THEME = "Bibata-Modern-Classic";
         XCURSOR_SIZE = "24";
+      };
+    };
+
+    xdg.configFile = lib.mkIf (cfg.terminal == "ghostty") {
+      "ghostty/config.ghostty".text = ''
+        command = ${pkgs.fish}/bin/fish
+        shell-integration = fish
+      '';
+    };
+
+    # Walker prefers DBus activation for Ghostty desktop entries, which can start
+    # the daemon without opening a window. Override the desktop entry in
+    # ~/.local/share/applications so launchers use direct Exec instead.
+    xdg.desktopEntries."com.mitchellh.ghostty" = {
+      name = "Ghostty";
+      exec = "${pkgs.ghostty}/bin/ghostty --gtk-single-instance=true";
+      terminal = false;
+      type = "Application";
+      categories = [
+        "System"
+        "TerminalEmulator"
+      ];
+      settings = {
+        DBusActivatable = "false";
+        StartupWMClass = "com.mitchellh.ghostty";
       };
     };
 
@@ -227,7 +274,9 @@ in {
         gaps = 16;
         center-focused-column = "never";
         always-center-single-column = true;
-        default-column-width = {proportion = 0.5;};
+        default-column-width = {
+          proportion = 0.5;
+        };
 
         preset-column-widths = [
           {proportion = 0.33333;}
@@ -298,7 +347,9 @@ in {
         }
         {
           matches = [{app-id = "^scratchpad-.*";}];
-          default-column-width = {proportion = 0.8;};
+          default-column-width = {
+            proportion = 0.8;
+          };
           open-on-output = "eDP-1";
         }
         {
@@ -311,34 +362,46 @@ in {
         }
         {
           matches = [{app-id = "^pavucontrol$";}];
-          default-column-width = {fixed = 400;};
+          default-column-width = {
+            fixed = 400;
+          };
           open-on-output = "focused";
         }
         {
           matches = [{app-id = "^it\\.mijorus\\.smile$";}];
-          default-column-width = {fixed = 400;};
+          default-column-width = {
+            fixed = 400;
+          };
           open-on-output = "focused";
         }
         {
           matches = [{app-id = "^org\\.gnome\\.Calculator$";}];
-          default-column-width = {fixed = 400;};
+          default-column-width = {
+            fixed = 400;
+          };
           open-on-output = "focused";
         }
         {
           matches = [{app-id = "^nm-connection-editor$";}];
-          default-column-width = {fixed = 400;};
+          default-column-width = {
+            fixed = 400;
+          };
           open-on-output = "focused";
         }
         {
           matches = [{title = "^Picture-in-Picture$";}];
-          default-column-width = {fixed = 480;};
+          default-column-width = {
+            fixed = 480;
+          };
           open-on-output = "focused";
         }
         # Neovim mode-based border colors (title set via vim.opt.titlestring)
         # NORMAL falls through to the Stylix default (base0D, blue)
         {
           matches = [{title = "\\[INSERT\\]";}];
-          border.active = {color = "#a6e3a1";};
+          border.active = {
+            color = "#a6e3a1";
+          };
         }
         {
           matches = [
@@ -346,15 +409,21 @@ in {
             {title = "\\[V-LINE\\]";}
             {title = "\\[V-BLOCK\\]";}
           ];
-          border.active = {color = "#cba6f7";};
+          border.active = {
+            color = "#cba6f7";
+          };
         }
         {
           matches = [{title = "\\[COMMAND\\]";}];
-          border.active = {color = "#fab387";};
+          border.active = {
+            color = "#fab387";
+          };
         }
         {
           matches = [{title = "\\[REPLACE\\]";}];
-          border.active = {color = "#f38ba8";};
+          border.active = {
+            color = "#f38ba8";
+          };
         }
       ];
 
@@ -393,7 +462,9 @@ in {
       Service = {
         Type = "notify";
         NotifyAccess = "all";
-        ExecStart = "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
+        ExecStart = "${
+          inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable
+        }/bin/xwayland-satellite";
         StandardOutput = "journal";
         Restart = "on-failure";
       };
