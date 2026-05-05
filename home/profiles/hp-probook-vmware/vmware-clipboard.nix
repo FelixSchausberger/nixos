@@ -35,7 +35,7 @@
         last_x11="$current_wayland"
       fi
 
-      sleep 0.5
+      ${pkgs.coreutils}/bin/sleep 0.5
     done
   '';
 in {
@@ -52,7 +52,10 @@ in {
     systemd.user.services.vmware-user-wayland = {
       Unit = {
         Description = "VMware User Agent (Wayland)";
-        After = ["graphical-session.target" "xwayland-satellite.service"];
+        After = [
+          "graphical-session.target"
+          "xwayland-satellite.service"
+        ];
         Wants = ["xwayland-satellite.service"]; # Soft dependency - start if available
         PartOf = ["graphical-session.target"];
         # Only start when graphical session is actually active
@@ -84,7 +87,10 @@ in {
     systemd.user.services.vmware-clipboard-bridge = {
       Unit = {
         Description = "VMware X11-Wayland Clipboard Bridge";
-        After = ["graphical-session.target" "vmware-user-wayland.service"];
+        After = [
+          "graphical-session.target"
+          "vmware-user-wayland.service"
+        ];
         Wants = ["vmware-user-wayland.service"];
         PartOf = ["graphical-session.target"];
         # Only start when graphical session is actually active

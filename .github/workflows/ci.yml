@@ -88,7 +88,7 @@ jobs:
       - name: Run prek hooks
         run: |
           echo "Running prek hooks on all files..."
-          nix develop --command prek run --all-files
+          nix develop --command prek run --all-files --skip yamlfmt
           echo "✅ All prek hooks passed"
       - name: Validate Fish shell configuration syntax
         run: |

@@ -50,15 +50,14 @@ in {
     skills = sharedSkills;
 
     settings = {
-      model = "ollama-cloud/minimax-m2.7";
-      small_model = "ollama-cloud/minimax-m2.7";
+      model = "github-copilot/claude-sonnet-4.6";
+      small_model = "github-copilot/claude-sonnet-4.6";
       agent = {
-        plan.model = "ollama-cloud/glm-5.1";
-        build.model = "ollama-cloud/minimax-m2.7";
+        plan.model = "github-copilot/claude-sonnet-4.6";
+        build.model = "github-copilot/gpt-5.3-codex";
       };
       plugin = [
         "opencode-code-simplifier"
-        "opencode-notify"
         "@slkiser/opencode-quota"
       ];
       permission = {
@@ -109,6 +108,40 @@ in {
     GITHUB_TOKEN = config.sops.secrets."github/token".path;
     OLLAMA_API_KEY = config.sops.secrets."ollama/api-key".path;
   };
+
+  xdg.configFile."opencode/plugins/zellij-attention.js".text = ''
+    export const ZellijAttentionPlugin = async ({ $ }) => {
+      const paneId = process.env.ZELLIJ_PANE_ID;
+
+      if (!paneId) {
+        return {};
+      }
+
+      const notify = async (state) => {
+        try {
+          await $`zellij pipe --name "zellij-attention::''${state}::''${paneId}"`;
+        } catch {
+          // Ignore if zellij isn't available in this process context.
+        }
+      };
+
+      return {
+        event: async ({ event }) => {
+          if (event.type === "permission.asked") {
+            await notify("waiting");
+          }
+
+          if (
+            event.type === "permission.replied" ||
+            event.type === "session.idle" ||
+            event.type === "session.error"
+          ) {
+            await notify("completed");
+          }
+        },
+      };
+    };
+  '';
 
   sops.secrets = {
     "ollama/api-key" = {};

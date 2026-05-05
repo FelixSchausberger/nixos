@@ -1,57 +1,29 @@
-{
-  config,
-  inputs,
-  ...
-}: {
+{inputs, ...}: {
   imports = [
     (inputs.impermanence + "/home-manager.nix")
   ];
 
   # Base TUI persistence configuration for all systems
   # This defines essential data that survives system reboots in an impermanent setup
-  home.persistence."/per/home/${config.home.username}" = {
-    allowOther = true;
-    removePrefixDirectory = false;
-
-    # Essential directories that must persist - using symlinks for better performance
+  home.persistence."/per/home" = {
+    # Essential directories that must persist
     directories = [
       # Development tool configurations and caches
-      {
-        directory = ".docker";
-        method = "symlink";
-      }
-      {
-        directory = ".cargo";
-        method = "bindfs";
-      }
-      {
-        directory = ".rustup";
-        method = "bindfs";
-      }
-      {
-        directory = ".npm";
-        method = "symlink";
-      }
-      {
-        directory = ".cache/pip";
-        method = "symlink";
-      }
-      {
-        directory = ".vscode";
-        method = "symlink";
-      }
+      ".docker"
+      ".cargo"
+      ".rustup"
+      ".npm"
+      ".cache/pip"
+      ".vscode"
 
       # Trash bin for rm-improved
-      {
-        directory = ".local/share/graveyard";
-        method = "symlink";
-      }
+      ".local/share/graveyard"
 
       # Rclone cache for faster access to cloud files
-      {
-        directory = ".cache/rclone";
-        method = "symlink";
-      }
+      ".cache/rclone"
+
+      # Zellij plugin permissions cache (avoids re-prompting after reboot)
+      ".cache/zellij"
     ];
   };
 }

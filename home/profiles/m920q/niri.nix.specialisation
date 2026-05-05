@@ -1,4 +1,9 @@
 {pkgs, ...}: {
+  imports = [
+    ../../../modules/home/gui/browsers
+    ../../persistence.nix
+  ];
+
   # m920q niri specialisation: minimal GUI config for occasional desktop use.
   # Monitor auto-detection used since output names vary (HDMI-A-1, DP-1, etc.).
 
@@ -13,7 +18,7 @@
 
   wm.niri = {
     enable = true;
-    browser = "firefox";
+    browser = "zen";
     terminal = "ghostty";
     # VIRTUAL-1 is the output created by the vkms kernel module for headless operation.
     outputs = [
@@ -27,7 +32,10 @@
     ];
   };
 
-  home.packages = [pkgs.rustdesk];
+  home.packages = with pkgs; [
+    rustdesk
+    moonlight-qt
+  ];
 
   # RustDesk daemon accepting incoming remote desktop connections.
   # The relay server (hbbs/hbbr) runs as system services on this machine; client points to localhost.

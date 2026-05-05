@@ -18,6 +18,10 @@
   };
 
   config = lib.mkIf config.modules.system.homelab.adguardhome.enable {
+    # systemd-resolved binds a local DNS stub on port 53 by default.
+    # Disable it so AdGuardHome can listen on 0.0.0.0:53 for LAN clients.
+    services.resolved.settings.Resolve.DNSStubListener = false;
+
     services.adguardhome = {
       enable = true;
       inherit (config.modules.system.homelab.adguardhome) openFirewall;
@@ -29,7 +33,10 @@
             "https://dns.cloudflare.com/dns-query"
             "https://dns.quad9.net/dns-query"
           ];
-          bootstrap_dns = ["9.9.9.9" "1.1.1.1"];
+          bootstrap_dns = [
+            "9.9.9.9"
+            "1.1.1.1"
+          ];
           bind_hosts = ["0.0.0.0"];
           port = 53;
         };

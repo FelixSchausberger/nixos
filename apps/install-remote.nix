@@ -168,7 +168,7 @@
             echo "Manual reboot may be needed" >&2
             exit 1
           fi
-          sleep 2
+          ${pkgs.coreutils}/bin/sleep 2
         done
 
         echo "Cloning configuration repository to /per/etc/nixos..."
@@ -188,7 +188,7 @@
             exit 1
           }
           echo "Attempt $attempt failed, retrying..." >&2
-          sleep 2
+          ${pkgs.coreutils}/bin/sleep 2
         done
 
         # Fix ownership of user files in persistent storage.

@@ -28,7 +28,6 @@ in {
     "zfs.zfs_arc_min=${arcMinBytes}" # Minimum ARC size (12.5% of RAM, 2GB floor)
 
     # ARC performance tuning
-    "zfs.zfs_arc_meta_limit_percent=75" # Allow 75% of ARC for metadata (default 75%)
     "zfs.zfs_arc_dnode_limit_percent=10" # Limit dnode cache to 10% of meta limit
 
     # Prefetch tuning for better sequential read performance
@@ -40,7 +39,6 @@ in {
     "zfs.zfs_dirty_data_max_percent=25" # Allow up to 25% of ARC for dirty data
 
     # Scrub performance tuning
-    "zfs.zfs_scrub_delay=0" # No delay between scrub I/Os (faster scrubs)
     "zfs.zfs_scan_vdev_limit=16777216" # 16MB scan limit per vdev
   ];
 
@@ -105,15 +103,19 @@ in {
     extraModprobeConfig = ''
       # L2ARC (Level 2 ARC) tuning for systems with SSDs
       # L2ARC extends ARC with SSD storage for larger cache
-      options zfs l2arc_write_max=134217728          # 128MB max L2ARC write rate
-      options zfs l2arc_write_boost=268435456        # 256MB initial write boost
-      options zfs l2arc_headroom=8                   # L2ARC headroom multiplier
+      options zfs l2arc_write_max=134217728
+      options zfs l2arc_write_boost=268435456
+      options zfs l2arc_headroom=8
 
       # Compression performance tuning
-      options zfs zfs_compressed_arc_enabled=1        # Keep compressed data in ARC
+      options zfs zfs_compressed_arc_enabled=1
+
+      # These options are not reliably consumed via kernel cmdline.
+      options zfs zfs_arc_meta_limit_percent=75
+      options zfs zfs_scrub_delay=0
 
       # Checksum verification tuning
-      options zfs zfs_fletcher_4_impl=fastest        # Use fastest Fletcher-4 implementation
+      options zfs zfs_fletcher_4_impl=fastest
     '';
   };
 

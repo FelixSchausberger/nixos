@@ -182,29 +182,35 @@
       function __zellij_preflight_check
         # Check 1: PATH is set and functional
         if not test -n "$PATH"
+          echo "  Check failed: PATH is not set" >&2
           return 1
         end
 
         # Check 2: Core commands available (critical for WSL)
         if not command -v fish >/dev/null 2>&1
+          echo "  Check failed: fish not found in PATH" >&2
           return 1
         end
         if not command -v ls >/dev/null 2>&1
+          echo "  Check failed: ls not found in PATH" >&2
           return 1
         end
 
         # Check 3: WSL root shell detection - skip auto-start for root
         if test (id -u) -eq 0
+          echo "  Check failed: running as root" >&2
           return 1
         end
 
         # Check 4: Zellij binary exists and is executable
         if not command -v zellij >/dev/null 2>&1
+          echo "  Check failed: zellij not found in PATH" >&2
           return 1
         end
 
         # Check 5: Zellij configuration is valid
         if not zellij setup --check >/dev/null 2>&1
+          echo "  Check failed: zellij setup --check (run 'zellij setup --check' for details)" >&2
           return 1
         end
 

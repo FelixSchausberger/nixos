@@ -46,6 +46,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
+    crane.url = "github:ipetkov/crane";
     # Determinate Nix (FlakeHub with semver)
     # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
     nixpkgs-flakehub.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
@@ -161,6 +162,13 @@
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.flake-utils.follows = "flake-utils";
     };
+    zjstatus-hints = {
+      url = "github:b0o/zjstatus-hints";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.crane.follows = "crane";
+      inputs.rust-overlay.follows = "rust-overlay";
+    };
 
     # Installation tools (useful for portable/recovery)
     nixos-wizard = {
@@ -254,31 +262,35 @@
     # Import profile detection utilities
     profileLib = import ./lib/profiles.nix;
   in
-    inputs.flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
-      systems = ["x86_64-linux"];
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} (
+      {...}: {
+        systems = ["x86_64-linux"];
 
-      imports = [
-        ./home/profiles
-        ./hosts
-        ./flake-parts/apps.nix
-        ./flake-parts/packages.nix
-        ./flake-parts/dev.nix
-      ];
+        imports = [
+          ./home/profiles
+          ./hosts
+          ./flake-parts/apps.nix
+          ./flake-parts/packages.nix
+          ./flake-parts/dev.nix
+        ];
 
-      flake = {
-        # Utility functions
-        lib = rec {
-          # Centralized defaults - single source of truth
-          defaults = import ./lib/defaults.nix;
-          fonts = import ./lib/fonts.nix;
-          catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix {inherit (inputs.nixpkgs) lib;};
-          hosts = import ./lib/hosts.nix;
+        flake = {
+          # Utility functions
+          lib = rec {
+            # Centralized defaults - single source of truth
+            defaults = import ./lib/defaults.nix;
+            fonts = import ./lib/fonts.nix;
+            catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix {
+              inherit (inputs.nixpkgs) lib;
+            };
+            hosts = import ./lib/hosts.nix;
 
-          profiles = profileLib;
-          inherit (defaults.system) user;
-          inherit (defaults) personalInfo;
-          inherit (defaults) paths;
+            profiles = profileLib;
+            inherit (defaults.system) user;
+            inherit (defaults) personalInfo;
+            inherit (defaults) paths;
+          };
         };
-      };
-    });
+      }
+    );
 }

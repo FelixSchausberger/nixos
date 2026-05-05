@@ -108,10 +108,12 @@
 
     systemd.services = {
       zfs-zed = {
+        unitConfig = {
+          StartLimitIntervalSec = "0";
+        };
         serviceConfig = {
           Restart = "always";
           RestartSec = "5s";
-          StartLimitIntervalSec = "0";
         };
       };
 

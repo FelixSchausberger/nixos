@@ -22,6 +22,11 @@
       # Applications
       quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
 
+      # Vitals health monitoring (from local vitals repo)
+      vitals-daemon = inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.daemon;
+      vitals-cli = inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.cli;
+      vitals-tui = inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.tui;
+
       # Minimal installer ISO (fast rebuilds for testing)
       installer-iso-minimal = makeISO [../hosts/installer-minimal];
 

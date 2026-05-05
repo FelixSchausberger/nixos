@@ -20,7 +20,6 @@ in {
 
       boot.kernel.sysctl = {
         "vm.swappiness" = lib.mkForce 1; # Minimal swap for gaming
-        "kernel.sched_migration_cost_ns" = lib.mkForce 500000; # Lower latency
       };
 
       # Enable CPU governor for performance
@@ -58,6 +57,31 @@ in {
       };
     })
 
+    # Server-efficiency profile - 24/7 homelab server with low idle power
+    # Goals: reach deep C-states when idle, minimal wakeups, no turbo spikes,
+    # low fan activity, suitable for bedroom deployment.
+    (lib.mkIf (cfg.performanceProfile == "server-efficiency") {
+      powerManagement.cpuFreqGovernor = lib.mkForce "powersave";
+
+      boot.kernel.sysctl = {
+        # Swappiness: moderate preference against swap. Server may have
+        # significant ZFS ARC; keep some anon pages for fast wake.
+        "vm.swappiness" = lib.mkForce 10;
+        # Dirty writeback: reduce disk spin-up frequency by writeback every 15s
+        # instead of default 0.5s. Pairs with laptop_mode for HDD power savings.
+        "vm.dirty_writeback_centisecs" = lib.mkForce 1500;
+        # Dirty expiry: extend dirty page lifetime to 30s — acceptable for a NAS
+        # server where data is replicated and consistency is managed by ZFS.
+        "vm.dirty_expire_centisecs" = lib.mkForce 30000;
+        # Laptop mode: reduces disk IO caused by writeback and fsync.
+        # Value 2 is a gentle setting — not as aggressive as 5 (battery laptops)
+        # but still reduces unnecessary disk wakeups on always-on server.
+        "vm.laptop_mode" = 2;
+        # Keep scheduler autogroup for mixed service responsiveness
+        "kernel.sched_autogroup_enabled" = 1;
+      };
+    })
+
     # Build profile - optimized for compilation and development
     (lib.mkIf (cfg.performanceProfile == "build") {
       boot.kernelParams = [
@@ -74,7 +98,6 @@ in {
 
         # Scheduler optimizations for parallel builds
         "kernel.sched_autogroup_enabled" = lib.mkForce 0; # Better for make -j
-        "kernel.sched_migration_cost_ns" = lib.mkForce 500000; # Reduce migration cost
         "kernel.sched_min_granularity_ns" = lib.mkForce 1000000; # Lower context switch overhead
 
         # File system performance

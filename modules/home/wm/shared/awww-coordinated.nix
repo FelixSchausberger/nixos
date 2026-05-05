@@ -63,8 +63,14 @@ in {
     systemd.user.services.awww-wallpaper-init = {
       Unit = {
         Description = "Set initial synchronized wallpapers";
-        After = ["awww-wallpaper.service" "awww-backdrop.service"];
-        Requires = ["awww-wallpaper.service" "awww-backdrop.service"];
+        After = [
+          "awww-wallpaper.service"
+          "awww-backdrop.service"
+        ];
+        Requires = [
+          "awww-wallpaper.service"
+          "awww-backdrop.service"
+        ];
       };
       Service = {
         Type = "oneshot";
@@ -77,20 +83,20 @@ in {
           regularPath = "${config.wallpapers.wallpaperPath}/${regularWallpaper}";
           blurredPath = "${config.wallpapers.wallpaperPath}/${blurredWallpaper}";
           initScript = pkgs.writeShellScript "awww-init" ''
-            # Wait for default-namespace daemon socket to be ready
-            until ${pkgs.awww}/bin/awww query 2>/dev/null; do
-              sleep 0.1
-            done
+                          # Wait for default-namespace daemon socket to be ready
+                          until ${pkgs.awww}/bin/awww query 2>/dev/null; do
+                            ${pkgs.coreutils}/bin/sleep 0.1
+                          done
 
-            # Wait for backdrop-namespace daemon socket to be ready
+                          # Wait for backdrop-namespace daemon socket to be ready
             until ${pkgs.awww}/bin/awww query --namespace backdrop 2>/dev/null; do
-              sleep 0.1
-            done
+                          ${pkgs.coreutils}/bin/sleep 0.1
+                        done
 
-            # Set workspace wallpaper (default namespace)
-            ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none
-            # Set backdrop wallpaper (backdrop namespace)
-            ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none
+                          # Set workspace wallpaper (default namespace)
+                          ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none
+                          # Set backdrop wallpaper (backdrop namespace)
+                          ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none
           '';
         in "${initScript}";
       };
@@ -102,7 +108,9 @@ in {
         Description = "Timer for rotating synchronized wallpapers";
       };
       Timer = {
-        OnActiveSec = "30m";
+        # Run shortly after session start to handle late-appearing outputs
+        # (e.g. DP monitors that come up after compositor initialization).
+        OnActiveSec = "20s";
         OnUnitActiveSec = "30m";
         Unit = "awww-wallpaper-rotate.service";
       };
@@ -126,13 +134,15 @@ in {
 
             # Get paths for this wallpaper
             case "$random_name" in
-              ${lib.concatStringsSep "\n              " (map (name: ''
+              ${lib.concatStringsSep "\n              " (
+              map (name: ''
                 "${name}")
                   regular="${wallpaperDir}/${config.wallpapers.available.${name}}"
                   blurred="${wallpaperDir}/${config.wallpapers.availableBlurred.${name}}"
                   ;;
               '')
-              wallpaperNames)}
+              wallpaperNames
+            )}
             esac
 
             # Update both wallpapers with fade transition

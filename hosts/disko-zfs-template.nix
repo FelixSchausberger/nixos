@@ -146,6 +146,16 @@ in {
               "com.sun:auto-snapshot" = "true";
             };
           };
+
+          # Repositories (snapshots enabled)
+          "eyd/per/repos" = {
+            type = "zfs_fs";
+            mountpoint = "/per/repos";
+            options = {
+              mountpoint = "/per/repos";
+              "com.sun:auto-snapshot" = "true";
+            };
+          };
         };
       };
     };

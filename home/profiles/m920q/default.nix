@@ -31,7 +31,12 @@
   };
 
   home = {
+    shellAliases = {
+      just = "just --justfile /per/etc/nixos/justfile --working-directory /per/etc/nixos";
+    };
+
     sessionVariables = {
+      VITALS_URL = "http://127.0.0.1:8080";
       # SSH logins attach to this named zellij session (see fish auto-start logic).
       ZELLIJ_SSH_SESSION = "homelab";
     };
@@ -46,6 +51,9 @@
       lsof
       smartmontools
 
+      # Power/CPU monitoring
+      linuxPackages.turbostat # Per-CPU frequency and C-state statistics
+
       # Network tools
       nmap
       dig
@@ -57,6 +65,9 @@
 
       # Remote coding from phone via SSH
       inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
+
+      # Vitals health monitoring CLI
+      inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.cli
     ];
 
     sessionVariables = {

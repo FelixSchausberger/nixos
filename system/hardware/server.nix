@@ -8,10 +8,6 @@
     ./zfs.nix
   ];
 
-  boot.kernelParams = [
-    "elevator=mq-deadline" # ZFS workload optimization
-  ];
-
   hardware = {
     enableAllFirmware = true;
     cpu.intel.updateMicrocode = true;

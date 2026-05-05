@@ -103,6 +103,8 @@
 
     systemd.services.grafana.serviceConfig.EnvironmentFile = config.sops.templates."grafana-env".path;
 
+    users.groups.netdev = {};
+
     environment.persistence."/per".directories = [
       {
         directory = "/var/lib/grafana";

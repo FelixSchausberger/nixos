@@ -7,6 +7,23 @@
   inputs,
   ...
 }: let
+  # Resolve terminal executable from the active WM profile.
+  terminalName =
+    if (config.wm.niri.enable or false)
+    then config.wm.niri.terminal
+    else if (config.wm.hyprland.enable or false)
+    then config.wm.hyprland.terminal
+    else "ghostty";
+
+  terminalBin =
+    if terminalName == "ghostty"
+    then "${pkgs.ghostty}/bin/ghostty"
+    else if terminalName == "cosmic-term"
+    then "${pkgs.cosmic-term}/bin/cosmic-term"
+    else if terminalName == "wezterm"
+    then "${pkgs.wezterm}/bin/wezterm"
+    else "${pkgs.ghostty}/bin/ghostty";
+
   # Detect which WM-specific modules should be enabled
   wmModules = lib.optionals (config.wm.hyprland.enable or false) [
     {
@@ -127,9 +144,15 @@ in {
 
         # Runner configuration
         runner = {
-          includes = ["/run/current-system/sw/bin" "${config.home.homeDirectory}/.nix-profile/bin"];
+          includes = [
+            "/run/current-system/sw/bin"
+            "${config.home.homeDirectory}/.nix-profile/bin"
+            "/etc/profiles/per-user/${config.home.username}/bin"
+          ];
           excludes = [];
         };
+
+        terminal = terminalBin;
       };
     };
 

@@ -25,6 +25,7 @@
       # Custom overlay for TUI-specific packages
       (final: prev: {
         zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
+        "zjstatus-hints" = inputs.zjstatus-hints.packages.${prev.stdenv.hostPlatform.system}.default;
         helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
         scooter-hx = final.callPackage ../../pkgs/scooter-hx {};
       })
@@ -34,10 +35,17 @@
   nix = {
     settings = {
       # Basic settings
-      experimental-features = ["nix-command" "flakes" "pipe-operators"];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+        "pipe-operators"
+      ];
       accept-flake-config = true; # Trust flake nixConfig settings (safe for own configurations)
       auto-optimise-store = true;
-      trusted-users = ["root" "@wheel"];
+      trusted-users = [
+        "root"
+        "@wheel"
+      ];
       warn-dirty = false;
 
       # GitHub token authentication (using sops secret)

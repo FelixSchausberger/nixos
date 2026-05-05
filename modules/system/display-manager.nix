@@ -55,13 +55,15 @@ in
       greetd = {
         enable = true;
         settings.default_session = {
-          command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
+          command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --user ${hostConfig.user} --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
           user = "greeter";
         };
-        settings.initial_session = lib.mkIf (hostConfig ? autoLogin && hostConfig.autoLogin ? enable && hostConfig.autoLogin.enable) {
-          command = autoLoginCommand;
-          user = hostConfig.autoLogin.user or hostConfig.user;
-        };
+        settings.initial_session =
+          lib.mkIf (hostConfig ? autoLogin && hostConfig.autoLogin ? enable && hostConfig.autoLogin.enable)
+          {
+            command = autoLoginCommand;
+            user = hostConfig.autoLogin.user or hostConfig.user;
+          };
       };
 
       # Allow tuigreet to handle session selection
@@ -123,7 +125,10 @@ in
     users.users.greeter = {
       isSystemUser = true;
       group = "greeter";
-      extraGroups = ["video" "render"];
+      extraGroups = [
+        "video"
+        "render"
+      ];
     };
 
     users.groups.greeter = {};
