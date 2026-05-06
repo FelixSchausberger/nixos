@@ -1,3 +1,5 @@
+# Host-level performance policy selector used by hostConfig.performanceProfile.
+# Keeps profile trade-offs explicit (latency, thermals, throughput) without per-host duplication.
 {
   lib,
   config,

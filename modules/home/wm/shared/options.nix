@@ -1,8 +1,14 @@
+# Shared Home Manager option set for cross-WM features (wallpaper/theme/notifications).
+# Keeps user-facing knobs stable while compositor modules differ underneath.
 {lib, ...}: {
   # Shared options for all window managers
   options.wm.shared = {
     wallpaper = {
-      enable = lib.mkEnableOption "Shared wallpaper management" // {default = true;};
+      enable =
+        lib.mkEnableOption "Shared wallpaper management"
+        // {
+          default = true;
+        };
 
       path = lib.mkOption {
         type = lib.types.str;
@@ -11,17 +17,30 @@
       };
 
       mode = lib.mkOption {
-        type = lib.types.enum ["fill" "fit" "stretch" "center" "tile"];
+        type = lib.types.enum [
+          "fill"
+          "fit"
+          "stretch"
+          "center"
+          "tile"
+        ];
         default = "fill";
         description = "Wallpaper scaling mode";
       };
     };
 
     theme = {
-      enable = lib.mkEnableOption "Shared WM theme configuration" // {default = true;};
+      enable =
+        lib.mkEnableOption "Shared WM theme configuration"
+        // {
+          default = true;
+        };
 
       colorScheme = lib.mkOption {
-        type = lib.types.enum ["catppuccin-macchiato" "custom"];
+        type = lib.types.enum [
+          "catppuccin-macchiato"
+          "custom"
+        ];
         default = "catppuccin-macchiato";
         description = "Color scheme for window managers";
       };

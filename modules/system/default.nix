@@ -10,7 +10,6 @@
     ./emergency-shell.nix
     ./fonts.nix
     ./hardware/battery.nix
-    ./hardware/intel-cpu.nix
     ./home-manager.nix
     ./maintenance.nix
     ./nix.nix

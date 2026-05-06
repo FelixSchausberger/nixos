@@ -1,3 +1,5 @@
+# AMD GPU hardware profile with desktop/laptop variants.
+# Encapsulates kernel tuning and userspace graphics stack for Radeon systems.
 {
   pkgs,
   lib,
@@ -8,7 +10,10 @@
     enable = lib.mkEnableOption "AMD GPU configuration";
 
     variant = lib.mkOption {
-      type = lib.types.enum ["desktop" "laptop"];
+      type = lib.types.enum [
+        "desktop"
+        "laptop"
+      ];
       default = "desktop";
       description = "AMD GPU variant for different form factors";
     };
@@ -17,7 +22,10 @@
   config = lib.mkIf config.hardware.profiles.amdGpu.enable {
     # AMD GPU kernel modules and parameters
     boot = {
-      kernelModules = ["amdgpu" "kvm-amd"];
+      kernelModules = [
+        "amdgpu"
+        "kvm-amd"
+      ];
       kernelParams =
         [
           "amdgpu.dc=1"

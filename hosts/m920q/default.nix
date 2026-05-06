@@ -1,3 +1,5 @@
+# ThinkCentre M920q dual-role host: headless homelab server with optional HDMI-triggered GUI mode.
+# Prioritizes low idle power while keeping a Niri specialisation available for local media use.
 {
   inputs,
   lib,
@@ -7,13 +9,14 @@
   hostLib = import ../lib.nix;
   hostName = "m920q";
   hostInfo = inputs.self.lib.hosts.${hostName};
+  inherit (inputs.self.lib) user;
   modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
     set -euo pipefail
 
     profile=/nix/var/nix/profiles/system
     headless_switch="$profile/bin/switch-to-configuration"
     gui_switch="$profile/specialisation/niri/bin/switch-to-configuration"
-    hm_service="home-manager-${inputs.self.lib.user}.service"
+    hm_service="home-manager-${user}.service"
 
     if grep -qs connected /sys/class/drm/*-HDMI-A-*/status; then
       "$gui_switch" test
@@ -203,6 +206,16 @@ in {
   services.udev.extraRules = ''
     ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", KERNEL=="card*-HDMI-A-*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="m920q-mode-switch.service"
   '';
+
+  # Allow rebuilds from inside zellij by lazily detaching the persistence bind mount
+  # when activation stops/restarts mount units.
+  systemd.units."home-${user}-.cache-zellij.mount" = {
+    overrideStrategy = lib.mkForce "asDropin";
+    text = lib.mkForce ''
+      [Mount]
+      LazyUnmount=yes
+    '';
+  };
 
   fileSystems."/per".neededForBoot = true;
   fileSystems."/home".neededForBoot = true;

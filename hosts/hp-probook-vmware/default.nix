@@ -1,3 +1,5 @@
+# VMware workstation profile for the HP ProBook environment.
+# Mirrors physical-host defaults where possible while using VM-specific graphics and firmware behavior.
 {
   inputs,
   lib,
@@ -108,7 +110,10 @@ in {
   # Override video drivers for VMware and disable smartd for VM (VMware virtual disks don't support SMART)
   services = {
     xserver = {
-      videoDrivers = lib.mkForce ["vmware" "modesetting"];
+      videoDrivers = lib.mkForce [
+        "vmware"
+        "modesetting"
+      ];
       xkb = {
         layout = "de";
         variant = "";

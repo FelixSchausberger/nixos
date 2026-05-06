@@ -1,3 +1,5 @@
+# WSL-specific integration layer for Windows interop, certificate import, and service behavior.
+# Isolates Linux-on-WSL edge cases from bare-metal host modules.
 {
   config,
   lib,
@@ -130,7 +132,10 @@ in {
       services.wsl-cert-refresh = {
         description = "Refresh Windows certificates in WSL";
         after = ["network.target"];
-        path = with pkgs; [openssl coreutils];
+        path = with pkgs; [
+          openssl
+          coreutils
+        ];
 
         serviceConfig = {
           Type = "oneshot";

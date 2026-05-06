@@ -1,3 +1,5 @@
+# System-side COSMIC session module wired into shared UWSM session management.
+# Activates only when hostConfig selects COSMIC on GUI-capable hosts.
 {
   inputs,
   pkgs,
@@ -28,7 +30,10 @@
         [
           cosmic-wallpapers
         ]
-        ++ (pkgs.lib.optional (pkgs.kdePackages ? xwaylandvideobridge) pkgs.kdePackages.xwaylandvideobridge);
+        ++ (pkgs.lib.optional (
+            pkgs.kdePackages ? xwaylandvideobridge
+          )
+          pkgs.kdePackages.xwaylandvideobridge);
 
       # Allow auto-login
       # etc."greetd/cosmic-greeter.toml" = {

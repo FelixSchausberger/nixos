@@ -1,3 +1,5 @@
+# Host helper library for resolving configured window managers into module imports.
+# Supports both legacy list syntax and attrset-based WM enable flags.
 let
   # Available window manager modules
   availableWMs = {
@@ -24,16 +26,20 @@ in {
       wms
     else
       # Attribute set format: { hyprland.enable = true; gnome.enable = false; }
-      builtins.concatLists (builtins.attrValues (builtins.mapAttrs (
-          name: config:
-            if config.enable or false
-            then
-              if builtins.hasAttr name availableWMs
-              then [availableWMs.${name}]
-              else builtins.throw "Unknown window manager: ${name}. Available: ${builtins.concatStringsSep ", " (builtins.attrNames availableWMs)}"
-            else []
+      builtins.concatLists (
+        builtins.attrValues (
+          builtins.mapAttrs (
+            name: config:
+              if config.enable or false
+              then
+                if builtins.hasAttr name availableWMs
+                then [availableWMs.${name}]
+                else builtins.throw "Unknown window manager: ${name}. Available: ${builtins.concatStringsSep ", " (builtins.attrNames availableWMs)}"
+              else []
+          )
+          wms
         )
-        wms));
+      );
 
   # Convenience function to check if a specific WM is enabled
   hasWM = wms: wm:

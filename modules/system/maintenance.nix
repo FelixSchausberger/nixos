@@ -1,3 +1,5 @@
+# Scheduled maintenance orchestration for updates, health checks, and alerting.
+# Centralizes recurring host hygiene tasks under one opt-in module.
 {
   config,
   lib,

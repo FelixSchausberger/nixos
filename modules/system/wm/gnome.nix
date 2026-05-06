@@ -1,3 +1,5 @@
+# System-side GNOME session module for hosts that select GNOME in hostConfig.
+# Keeps GNOME-specific PAM and portal behavior isolated from other WMs.
 {
   pkgs,
   lib,
@@ -48,7 +50,7 @@
           blur-my-shell # Adds a blur look to different parts of the GNOME Shell
           clipboard-history # Clipboard manager
           # gsconnect # KDE Connect implementation for Gnome Shell
-          pop-shell #  Keyboard-driven layer for GNOME Shell
+          pop-shell # Keyboard-driven layer for GNOME Shell
           vitals # A glimpse into your computer's stats
           compiz-windows-effect # Adds wobbly windows and other effects
           transparent-window-moving # Makes windows transparent while moving

@@ -1,3 +1,5 @@
+# Emergency recovery integration for broken shell/session states.
+# Exposes minimal fallback commands and systemd emergency-mode wiring.
 {
   config,
   lib,

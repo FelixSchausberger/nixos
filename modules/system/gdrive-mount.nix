@@ -1,3 +1,5 @@
+# Declarative Google Drive mount integration using rclone and sops-managed credentials.
+# Prepares config and mount services so hosts can expose shared cloud files consistently.
 {
   config,
   inputs,

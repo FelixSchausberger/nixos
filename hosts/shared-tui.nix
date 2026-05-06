@@ -1,3 +1,5 @@
+# Shared baseline for TUI-only hosts such as WSL and headless systems.
+# Forces graphics defaults off while still allowing host-level overrides.
 {lib, ...}: {
   # Shared configuration for TUI-only hosts (WSL, headless, portable emergency)
   # This module provides common functionality for systems without GUI

@@ -1,3 +1,5 @@
+# Shared boot profile for ZFS hosts with systemd-boot recovery entries and initrd rollback.
+# Provides consistent boot-time behavior for impermanence-based machines.
 {
   config,
   lib,

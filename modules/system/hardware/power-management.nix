@@ -1,3 +1,5 @@
+# Power profile for always-on hosts where low idle power and predictable wake behavior matter.
+# Combines CPU policy, thermal control, Wake-on-LAN, and LED suppression defaults.
 {
   lib,
   config,
@@ -5,6 +7,7 @@
   ...
 }: let
   cfg = config.hardware.profiles.powerManagement;
+  isIntel = config.hardware.cpu.intel.updateMicrocode or false;
 in {
   options.hardware.profiles.powerManagement = {
     enable = lib.mkEnableOption "power management for 24/7 homelab servers (auto-cpufreq, powertop, WoL, LED suppression)";
@@ -19,6 +22,12 @@ in {
       type = lib.types.bool;
       default = true;
       description = "Disable front panel LEDs to reduce light/noise in bedroom";
+    };
+
+    intelCpuThermals = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable thermald on Intel systems for sustained thermal control";
     };
   };
 
@@ -47,7 +56,7 @@ in {
     powerManagement.powertop.enable = lib.mkDefault true;
 
     # Keep thermal throttling policy active for long-running workloads.
-    services.thermald.enable = true;
+    services.thermald.enable = cfg.intelCpuThermals && isIntel;
 
     boot.kernelParams = [
       # Let cpufreq-based tools manage frequency policy.
