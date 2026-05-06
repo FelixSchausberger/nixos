@@ -18,14 +18,6 @@ in {
       enable32Bit = true;
     };
 
-    # VAAPI driver configuration: use intel-media-driver (iHD) for Gen8+ Intel GPUs.
-    # The iHD driver supports H.264, H.265/HEVC, VP8, VP9 decode on Coffee Lake GT2.
-    nixpkgs.config.packageOverrides = pkgs: {
-      vaapiIntel = pkgs.vaapiIntel.override {
-        enableHybridCodec = true;
-      };
-    };
-
     # Additional VAAPI and graphics packages for the UHD 630 iGPU.
     hardware.graphics.extraPackages = with pkgs; [
       intel-media-driver # VAAPI iHD driver for Gen8+ Intel iGPUs
@@ -35,7 +27,6 @@ in {
     ];
 
     environment.systemPackages = with pkgs; [
-      # Moonlight streaming client with VAAPI hardware decode.
       moonlight-qt
     ];
   };

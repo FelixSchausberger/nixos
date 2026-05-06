@@ -75,60 +75,78 @@ in {
               description = "Output name";
             };
             mode = lib.mkOption {
-              type = lib.types.submodule {
-                options = {
-                  width = lib.mkOption {
-                    type = lib.types.int;
-                    description = "Output width in pixels";
+              type = lib.types.nullOr (
+                lib.types.submodule {
+                  options = {
+                    width = lib.mkOption {
+                      type = lib.types.int;
+                      description = "Output width in pixels";
+                    };
+                    height = lib.mkOption {
+                      type = lib.types.int;
+                      description = "Output height in pixels";
+                    };
+                    refresh = lib.mkOption {
+                      type = lib.types.nullOr lib.types.float;
+                      description = "Refresh rate in Hz";
+                      default = null;
+                    };
                   };
-                  height = lib.mkOption {
-                    type = lib.types.int;
-                    description = "Output height in pixels";
-                  };
-                  refresh = lib.mkOption {
-                    type = lib.types.float;
-                    description = "Refresh rate in Hz";
-                    default = 60.0;
-                  };
-                };
-              };
-              default = {};
+                }
+              );
+              default = null;
+            };
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether this output should be enabled";
             };
             scale = lib.mkOption {
-              type = lib.types.float;
-              default = 1.0;
+              type = lib.types.nullOr lib.types.float;
+              default = null;
               description = "Output scale factor";
             };
             transform = lib.mkOption {
-              type = lib.types.enum [
-                "normal"
-                "90"
-                "180"
-                "270"
-                "flipped"
-                "flipped-90"
-                "flipped-180"
-                "flipped-270"
-              ];
-              default = "normal";
+              type = lib.types.nullOr (
+                lib.types.submodule {
+                  options = {
+                    flipped = lib.mkOption {
+                      type = lib.types.bool;
+                      default = false;
+                      description = "Whether to vertically flip output";
+                    };
+                    rotation = lib.mkOption {
+                      type = lib.types.enum [
+                        0
+                        90
+                        180
+                        270
+                      ];
+                      default = 0;
+                      description = "Counter-clockwise output rotation in degrees";
+                    };
+                  };
+                }
+              );
+              default = null;
               description = "Output transform";
             };
             position = lib.mkOption {
-              type = lib.types.submodule {
-                options = {
-                  x = lib.mkOption {
-                    type = lib.types.int;
-                    description = "X position";
-                    default = 0;
+              type = lib.types.nullOr (
+                lib.types.submodule {
+                  options = {
+                    x = lib.mkOption {
+                      type = lib.types.int;
+                      description = "X position";
+                    };
+                    y = lib.mkOption {
+                      type = lib.types.int;
+                      description = "Y position";
+                    };
                   };
-                  y = lib.mkOption {
-                    type = lib.types.int;
-                    description = "Y position";
-                    default = 0;
-                  };
-                };
-              };
-              default = {};
+                }
+              );
+              default = null;
             };
           };
         }
@@ -241,6 +259,19 @@ in {
     # Niri declarative configuration using programs.niri.settings
     # Provided by niri-flake's home-manager module (auto-imported via nixosModules.niri)
     programs.niri.settings = {
+      outputs = lib.listToAttrs (
+        map (output: {
+          inherit (output) name;
+          value =
+            lib.optionalAttrs (!output.enable) {enable = false;}
+            // lib.optionalAttrs (output.mode != null) {inherit (output) mode;}
+            // lib.optionalAttrs (output.scale != null) {inherit (output) scale;}
+            // lib.optionalAttrs (output.transform != null) {inherit (output) transform;}
+            // lib.optionalAttrs (output.position != null) {inherit (output) position;};
+        })
+        cfg.outputs
+      );
+
       # Input configuration
       input = {
         keyboard.xkb = {

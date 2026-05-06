@@ -33,14 +33,12 @@ jobs:
           ref: weekly-updates
           fetch-depth: 0
         continue-on-error: true
-
       - name: Checkout main if branch missing
         if: steps.checkout.outcome == 'failure'
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-
       - name: Prepare weekly-updates branch
         run: |
           if git show-ref --verify --quiet refs/heads/weekly-updates; then
@@ -73,7 +71,6 @@ jobs:
               exit 1
             fi
           fi
-
       - name: Commit updates
         run: |
           git config user.name "github-actions[bot]"
@@ -88,7 +85,6 @@ jobs:
 
           git commit -m "chore: weekly dependency update"
           git push --force-with-lease origin weekly-updates
-
       - name: Create or update PR
         uses: peter-evans/create-pull-request@v7
         with:

@@ -3,6 +3,8 @@
 {
   config,
   inputs,
+  lib,
+  repoConfig,
   ...
 }: let
   inherit (inputs.self.lib) defaults;
@@ -70,8 +72,21 @@ in {
     };
   };
 
-  # Ensure Nix uses the netrc file
-  nix.settings.netrc-file = config.sops.templates."nix/netrc".path;
+  # Standard Nix reads credentials directly from /etc/nix/netrc.
+  nix.settings = lib.mkIf (!repoConfig.useDeterminateNix) {
+    netrc-file = config.sops.templates."nix/netrc".path;
+  };
+
+  # Determinate Nixd owns nix.settings.netrc-file and expects /nix/var/determinate/netrc.
+  # Merge our sops-managed credentials into Determinate's effective netrc.
+  environment.etc."determinate/config.json" = lib.mkIf repoConfig.useDeterminateNix {
+    text = builtins.toJSON {
+      authentication.additionalNetrcSources = [
+        config.sops.templates."nix/netrc".path
+      ];
+    };
+    mode = "0644";
+  };
 
   # WiFi environment file for NM ensureProfiles (envsubst substitution)
   sops.templates."wifi/env" = {

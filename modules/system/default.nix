@@ -13,6 +13,7 @@
     ./home-manager.nix
     ./maintenance.nix
     ./nix.nix
+    ./security-hardening.nix
     ./ssl-config.nix
   ];
 }

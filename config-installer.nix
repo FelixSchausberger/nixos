@@ -1,10 +1,10 @@
 # Installer Configuration Override
 #
 # This is a temporary override for use during installation from the installer ISO.
-# It disables FlakeHub to work around installer compatibility issues.
+# It disables Determinate Nix integration for installer compatibility.
 #
 # GitHub Authentication Required:
-#   The flake needs to fetch inputs from GitHub, which requires authentication.
+#   The flake still fetches some inputs from GitHub, which can require authentication.
 #
 #   1. Create a GitHub Personal Access Token:
 #      https://github.com/settings/tokens/new

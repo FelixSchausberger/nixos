@@ -1,239 +1,241 @@
 {
   config,
+  hostConfig ? {},
   pkgs,
   lib,
   ...
 }: let
   safeNotifySend = import ../../lib/safe-notify-send.nix {inherit pkgs config lib;};
   safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
-in {
-  # Desktop-specific Hyprland configuration
-  wm.hyprland = {
-    # Monitor configuration for desktop setup
-    # Using auto-detection as default - can be overridden for specific multi-monitor setups
-    monitors = [
-      ",preferred,auto,1"
-      # Add specific monitor configs here if needed, e.g.:
-      # "DP-1,2560x1440@144,0x0,1"
-      # "HDMI-A-1,1920x1080@60,2560x0,1"
-    ];
+in
+  lib.optionalAttrs (builtins.elem "hyprland" (hostConfig.wms or [])) {
+    # Desktop-specific Hyprland configuration
+    wm.hyprland = {
+      # Monitor configuration for desktop setup
+      # Using auto-detection as default - can be overridden for specific multi-monitor setups
+      monitors = [
+        ",preferred,auto,1"
+        # Add specific monitor configs here if needed, e.g.:
+        # "DP-1,2560x1440@144,0x0,1"
+        # "HDMI-A-1,1920x1080@60,2560x0,1"
+      ];
 
-    # Desktop-specific application preferences
-    browser = "zen";
-    terminal = "ghostty";
-    fileManager = "cosmic-files";
+      # Desktop-specific application preferences
+      browser = "zen";
+      terminal = "ghostty";
+      fileManager = "cosmic-files";
 
-    # Desktop-specific scratchpad preferences
-    scratchpad = {
-      musicApp = "spotify"; # Full Spotify for desktop
-      notesApp = "obsidian"; # Full note-taking app
+      # Desktop-specific scratchpad preferences
+      scratchpad = {
+        musicApp = "spotify"; # Full Spotify for desktop
+        notesApp = "obsidian"; # Full note-taking app
+      };
     };
-  };
 
-  # Desktop-specific packages (gaming and productivity)
-  home.packages = with pkgs; [
-    # Core gaming
-    steam
-    lutris
-    bottles
+    # Desktop-specific packages (gaming and productivity)
+    home.packages = with pkgs; [
+      # Core gaming
+      steam
+      lutris
+      bottles
 
-    # Performance monitoring and optimization
-    mangohud
-    goverlay
-    gamemode
-    gamescope
+      # Performance monitoring and optimization
+      mangohud
+      goverlay
+      gamemode
+      gamescope
 
-    # Game launchers
-    prismlauncher # Minecraft
+      # Game launchers
+      prismlauncher # Minecraft
 
-    # Emulation
-    dolphin-emu
-    pcsx2
-    rpcs3
+      # Emulation
+      dolphin-emu
+      pcsx2
+      rpcs3
 
-    # Communication
-    discord
+      # Communication
+      discord
 
-    # Tools
-    winetricks
-    protontricks
-    steamtinkerlaunch
-  ];
-
-  # Desktop-specific Hyprland configuration
-  wayland.windowManager.hyprland.settings = {
-    # Gaming environment variables
-    env = [
-      # Steam optimizations
-      "STEAM_EXTRA_COMPAT_TOOLS_PATHS,${config.home.homeDirectory}/.steam/root/compatibilitytools.d"
-
-      # AMD GPU gaming optimizations
-      "AMD_VULKAN_ICD,RADV"
-      "RADV_PERFTEST,gpl,nggc,sam"
-      "RADV_DEBUG,novrsflatshading"
-
-      # Mesa optimizations
-      "MESA_VK_VERSION_OVERRIDE,1.3"
-      "mesa_glthread,true"
-
-      # Game performance
-      "__GL_THREADED_OPTIMIZATIONS,1"
-      "__GL_SHADER_DISK_CACHE,1"
-      "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP,1"
-
-      # Wayland gaming
-      "SDL_VIDEODRIVER,wayland"
-      "QT_QPA_PLATFORM,wayland;xcb"
-
-      # MangoHud - disabled globally (use per-application instead)
-      # "MANGOHUD,1"
-      "MANGOHUD_DLSYM,1"
-
-      # GameMode is handled automatically by the system-level gamemode service
-      # No need for manual LD_PRELOAD - gamemode daemon handles this
+      # Tools
+      winetricks
+      protontricks
+      steamtinkerlaunch
     ];
 
-    # Desktop-specific window rules (including gaming)
-    windowrulev2 = [
-      # Steam - float dialogs/popups only
-      "float,class:^(steam)$,title:^(Friends List)$"
-      "float,class:^(steam)$,title:^(Steam Settings)$"
-      "float,class:^(steam)$,title:^(Screenshot Uploader)$"
-      "float,class:^(steam)$,title:^(Steam Guard)$"
-      "float,class:^(steam)$,title:^(Steam - News)$"
-      "float,class:^(steam)$,title:^(Special Offers)$"
-      "float,class:^(steam)$,title:^(Steam Cloud)$"
+    # Desktop-specific Hyprland configuration
+    wayland.windowManager.hyprland.settings = {
+      # Gaming environment variables
+      env = [
+        # Steam optimizations
+        "STEAM_EXTRA_COMPAT_TOOLS_PATHS,${config.home.homeDirectory}/.steam/root/compatibilitytools.d"
 
-      # Steam games - fullscreen and performance optimizations
-      "fullscreen,class:^(steam_app_).*"
-      "immediate,class:^(steam_app_).*"
-      "allowsinput,class:^(steam_app_).*"
-      "noborder,class:^(steam_app_).*"
-      "noanim,class:^(steam_app_).*"
-      "noblur,class:^(steam_app_).*"
-      "noshadow,class:^(steam_app_).*"
-      "norounding,class:^(steam_app_).*"
-      "opaque,class:^(steam_app_).*"
-      "dimaround,class:^(steam_app_).*"
-      "idleinhibit focus,class:^(steam_app_).*"
+        # AMD GPU gaming optimizations
+        "AMD_VULKAN_ICD,RADV"
+        "RADV_PERFTEST,gpl,nggc,sam"
+        "RADV_DEBUG,novrsflatshading"
 
-      # Lutris
-      "float,class:^(lutris)$,title:^(Lutris)$"
+        # Mesa optimizations
+        "MESA_VK_VERSION_OVERRIDE,1.3"
+        "mesa_glthread,true"
 
-      # Lutris games
-      "fullscreen,class:^(lutris-wrapper)$"
-      "immediate,class:^(lutris-wrapper)$"
-      "allowsinput,class:^(lutris-wrapper)$"
-      "idleinhibit focus,class:^(lutris-wrapper)$"
+        # Game performance
+        "__GL_THREADED_OPTIMIZATIONS,1"
+        "__GL_SHADER_DISK_CACHE,1"
+        "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP,1"
 
-      # Bottles
-      "float,class:^(com.usebottles.bottles)$,title:^(Bottles)$"
+        # Wayland gaming
+        "SDL_VIDEODRIVER,wayland"
+        "QT_QPA_PLATFORM,wayland;xcb"
 
-      # Emulators
-      "fullscreen,class:^(dolphin-emu)$"
-      "fullscreen,class:^(PCSX2)$"
-      "fullscreen,class:^(rpcs3)$"
-      "immediate,class:^(dolphin-emu)$"
-      "immediate,class:^(PCSX2)$"
-      "immediate,class:^(rpcs3)$"
-      "idleinhibit focus,class:^(dolphin-emu)$"
-      "idleinhibit focus,class:^(PCSX2)$"
-      "idleinhibit focus,class:^(rpcs3)$"
+        # MangoHud - disabled globally (use per-application instead)
+        # "MANGOHUD,1"
+        "MANGOHUD_DLSYM,1"
 
-      # Minecraft
-      "fullscreen,class:^(Minecraft)$"
-      "immediate,class:^(Minecraft)$"
-      "idleinhibit focus,class:^(Minecraft)$"
+        # GameMode is handled automatically by the system-level gamemode service
+        # No need for manual LD_PRELOAD - gamemode daemon handles this
+      ];
 
-      # MangoHud settings
-      "float,class:^(mangohud)$"
-      "float,class:^(goverlay)$"
-    ];
+      # Desktop-specific window rules (including gaming)
+      windowrulev2 = [
+        # Steam - float dialogs/popups only
+        "float,class:^(steam)$,title:^(Friends List)$"
+        "float,class:^(steam)$,title:^(Steam Settings)$"
+        "float,class:^(steam)$,title:^(Screenshot Uploader)$"
+        "float,class:^(steam)$,title:^(Steam Guard)$"
+        "float,class:^(steam)$,title:^(Steam - News)$"
+        "float,class:^(steam)$,title:^(Special Offers)$"
+        "float,class:^(steam)$,title:^(Steam Cloud)$"
 
-    # Desktop-specific keybinds
-    bind = [
-      # Quick launch games
-      "$mod, G, exec, steam"
-      "$mod SHIFT, L, exec, lutris"
-      "$mod SHIFT, M, exec, prismlauncher"
+        # Steam games - fullscreen and performance optimizations
+        "fullscreen,class:^(steam_app_).*"
+        "immediate,class:^(steam_app_).*"
+        "allowsinput,class:^(steam_app_).*"
+        "noborder,class:^(steam_app_).*"
+        "noanim,class:^(steam_app_).*"
+        "noblur,class:^(steam_app_).*"
+        "noshadow,class:^(steam_app_).*"
+        "norounding,class:^(steam_app_).*"
+        "opaque,class:^(steam_app_).*"
+        "dimaround,class:^(steam_app_).*"
+        "idleinhibit focus,class:^(steam_app_).*"
 
-      # Gaming utilities
-      "$mod CTRL, M, exec, mangohud"
+        # Lutris
+        "float,class:^(lutris)$,title:^(Lutris)$"
 
-      # Discord overlay toggle
-      "$mod, TAB, exec, ${pkgs.discord}/bin/discord --enable-features=UseOzonePlatform --ozone-platform=wayland"
-    ];
-  };
+        # Lutris games
+        "fullscreen,class:^(lutris-wrapper)$"
+        "immediate,class:^(lutris-wrapper)$"
+        "allowsinput,class:^(lutris-wrapper)$"
+        "idleinhibit focus,class:^(lutris-wrapper)$"
 
-  # Gaming-specific systemd services
-  # Note: Steam auto-start disabled for boot performance
-  # Launch Steam manually via application menu or `steam` command
-  systemd.user.services = {};
+        # Bottles
+        "float,class:^(com.usebottles.bottles)$,title:^(Bottles)$"
 
-  # Gaming configuration files
-  xdg.configFile = {
-    # MangoHud configuration
-    "MangoHud/MangoHud.conf".text = ''
-      # Performance monitoring
-      fps
-      frametime
-      cpu_temp
-      gpu_temp
-      cpu_power
-      gpu_power
-      ram
-      vram
+        # Emulators
+        "fullscreen,class:^(dolphin-emu)$"
+        "fullscreen,class:^(PCSX2)$"
+        "fullscreen,class:^(rpcs3)$"
+        "immediate,class:^(dolphin-emu)$"
+        "immediate,class:^(PCSX2)$"
+        "immediate,class:^(rpcs3)$"
+        "idleinhibit focus,class:^(dolphin-emu)$"
+        "idleinhibit focus,class:^(PCSX2)$"
+        "idleinhibit focus,class:^(rpcs3)$"
 
-      # Position and appearance
-      position=top-left
-      width=400
-      height=200
-      font_size=16
-      background_alpha=0.4
-      alpha=0.8
+        # Minecraft
+        "fullscreen,class:^(Minecraft)$"
+        "immediate,class:^(Minecraft)$"
+        "idleinhibit focus,class:^(Minecraft)$"
 
-      # Data logging
-      output_folder=${config.home.homeDirectory}/Documents/Gaming/MangoHud
-      log_duration=60
-      autostart_log=0
+        # MangoHud settings
+        "float,class:^(mangohud)$"
+        "float,class:^(goverlay)$"
+      ];
 
-      # Networking
-      no_display=0
+      # Desktop-specific keybinds
+      bind = [
+        # Quick launch games
+        "$mod, G, exec, steam"
+        "$mod SHIFT, L, exec, lutris"
+        "$mod SHIFT, M, exec, prismlauncher"
 
-      # Control
-      toggle_fps_limit=F1
-      toggle_logging=F2
-      reload_cfg=F4
-      upload_log=F5
-    '';
+        # Gaming utilities
+        "$mod CTRL, M, exec, mangohud"
 
-    # GameMode configuration
-    "gamemode.ini".text = ''
-      [general]
-      renice=10
-      ioprio=4
-      inhibit_screensaver=1
+        # Discord overlay toggle
+        "$mod, TAB, exec, ${pkgs.discord}/bin/discord --enable-features=UseOzonePlatform --ozone-platform=wayland"
+      ];
+    };
 
-      [filter]
-      whitelist=steam
-      whitelist=lutris
-      whitelist=heroic
-      whitelist=prismlauncher
+    # Gaming-specific systemd services
+    # Note: Steam auto-start disabled for boot performance
+    # Launch Steam manually via application menu or `steam` command
+    systemd.user.services = {};
 
-      [gpu]
-      apply_gpu_optimisations=accept-responsibility
-      gpu_device=0
-      amd_performance_level=high
+    # Gaming configuration files
+    xdg.configFile = {
+      # MangoHud configuration
+      "MangoHud/MangoHud.conf".text = ''
+        # Performance monitoring
+        fps
+        frametime
+        cpu_temp
+        gpu_temp
+        cpu_power
+        gpu_power
+        ram
+        vram
 
-      [custom]
-      start=${safeNotifyBin} "GameMode activated"
-      end=${safeNotifyBin} "GameMode deactivated"
-    '';
-  };
+        # Position and appearance
+        position=top-left
+        width=400
+        height=200
+        font_size=16
+        background_alpha=0.4
+        alpha=0.8
 
-  # Create gaming directories
-  home.file = {
-    "${config.home.homeDirectory}/Documents/Gaming/.keep".text = "";
-    "${config.home.homeDirectory}/Documents/Gaming/MangoHud/.keep".text = "";
-  };
-}
+        # Data logging
+        output_folder=${config.home.homeDirectory}/Documents/Gaming/MangoHud
+        log_duration=60
+        autostart_log=0
+
+        # Networking
+        no_display=0
+
+        # Control
+        toggle_fps_limit=F1
+        toggle_logging=F2
+        reload_cfg=F4
+        upload_log=F5
+      '';
+
+      # GameMode configuration
+      "gamemode.ini".text = ''
+        [general]
+        renice=10
+        ioprio=4
+        inhibit_screensaver=1
+
+        [filter]
+        whitelist=steam
+        whitelist=lutris
+        whitelist=heroic
+        whitelist=prismlauncher
+
+        [gpu]
+        apply_gpu_optimisations=accept-responsibility
+        gpu_device=0
+        amd_performance_level=high
+
+        [custom]
+        start=${safeNotifyBin} "GameMode activated"
+        end=${safeNotifyBin} "GameMode deactivated"
+      '';
+    };
+
+    # Create gaming directories
+    home.file = {
+      "${config.home.homeDirectory}/Documents/Gaming/.keep".text = "";
+      "${config.home.homeDirectory}/Documents/Gaming/MangoHud/.keep".text = "";
+    };
+  }

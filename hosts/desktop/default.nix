@@ -22,7 +22,6 @@ in {
   # Note: inputs.niri.homeModules.config is already provided via nixosModules.niri
   # (home-manager.sharedModules) in modules/system/wm/niri.nix — do not re-import it here.
   home-manager.users.${inputs.self.lib.user}.imports = [
-    ../../modules/home/wm/niri
     ../../home/profiles/desktop/niri.nix.specialisation
   ];
 

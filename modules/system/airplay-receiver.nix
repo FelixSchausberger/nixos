@@ -46,11 +46,13 @@ in {
     systemd.user.services.uxplay = {
       description = "UxPlay AirPlay receiver";
       after = ["graphical-session.target"];
+      partOf = ["graphical-session.target"];
+      bindsTo = ["graphical-session.target"];
       wantedBy = ["graphical-session.target"];
       serviceConfig = {
-        ExecStart = "${pkgs.uxplay}/bin/uxplay -p -as pulsesink";
+        ExecStart = "${pkgs.uxplay}/bin/uxplay -p -as pulsesink -fs -n Projector -nh";
         Restart = "on-failure";
-        RestartSec = 2;
+        RestartSec = 5;
       };
     };
   };

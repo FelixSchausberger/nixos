@@ -74,8 +74,6 @@ in {
       };
       Service = {
         Type = "oneshot";
-        Restart = "on-failure";
-        RestartSec = "2s";
         ExecStart = let
           wallpaperName = config.wallpapers.defaultWallpaper;
           regularWallpaper = config.wallpapers.available.${wallpaperName};
@@ -93,10 +91,19 @@ in {
                           ${pkgs.coreutils}/bin/sleep 0.1
                         done
 
-                          # Set workspace wallpaper (default namespace)
-                          ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none
-                          # Set backdrop wallpaper (backdrop namespace)
-                          ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none
+                          # Skip initialization when the daemon has no active outputs
+                          # yet (for example, virtual/headless-only startup).
+                          if [ -z "$(${pkgs.awww}/bin/awww query 2>/dev/null)" ]; then
+                            exit 0
+                          fi
+
+                          # Set workspace wallpaper (default namespace).
+                          if ! ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none; then
+                            exit 0
+                          fi
+
+                          # Set backdrop wallpaper (backdrop namespace).
+                          ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none || true
           '';
         in "${initScript}";
       };
@@ -145,9 +152,10 @@ in {
             )}
             esac
 
-            # Update both wallpapers with fade transition
-            ${pkgs.awww}/bin/awww img "$regular" --transition-type fade --transition-duration 2
-            ${pkgs.awww}/bin/awww img --namespace backdrop "$blurred" --transition-type fade --transition-duration 2
+            # Update both wallpapers with fade transition. Skip quietly when no
+            # outputs are active.
+            ${pkgs.awww}/bin/awww img "$regular" --transition-type fade --transition-duration 2 || exit 0
+            ${pkgs.awww}/bin/awww img --namespace backdrop "$blurred" --transition-type fade --transition-duration 2 || true
           '';
         in "${rotateScript}";
       };

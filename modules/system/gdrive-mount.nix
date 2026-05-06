@@ -25,17 +25,19 @@
     fi
 
     mkdir -p /home/${user}/.config/rclone
-    ${pkgs.coreutils}/bin/cat > ${rcloneConfig} << EOF
-    [gdrive]
-    type = drive
-    scope = drive
-    root_folder_id = ${root_folder_id}
-    client_id = ${client_id}
-    client_secret = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/client-secret".path})
-    token = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/token".path})
-    config_is_local = true
-    disable_http2 = true
-    EOF
+    ${pkgs.coreutils}/bin/printf '%s\n' \
+      '[gdrive]' \
+      'type = drive' \
+      'scope = drive' \
+      'root_folder_id = ${root_folder_id}' \
+      'client_id = ${client_id}' \
+      "client_secret = $(${pkgs.coreutils}/bin/cat ${
+      config.sops.secrets."rclone/client-secret".path
+    })" \
+      "token = $(${pkgs.coreutils}/bin/cat ${config.sops.secrets."rclone/token".path})" \
+      'config_is_local = true' \
+      'disable_http2 = true' \
+      > ${rcloneConfig}
 
     chmod 600 ${rcloneConfig}
   '';
@@ -51,7 +53,7 @@ in {
 
     serviceConfig = {
       Type = "simple";
-      ExecStartPre = ["${setupScript}"];
+      ExecStartPre = "${setupScript}";
 
       ExecStart = ''
         ${pkgs.rclone}/bin/rclone mount \

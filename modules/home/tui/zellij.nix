@@ -59,6 +59,7 @@ in {
         pane_frames = false;
         simplified_ui = true;
         default_layout = "default";
+        show_startup_tip = false;
 
         # Mouse support
         mouse_mode = true;

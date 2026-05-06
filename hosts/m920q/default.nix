@@ -12,21 +12,28 @@
   inherit (inputs.self.lib) user;
   modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
     set -euo pipefail
+    shopt -s nullglob
+
+    exec 9>/run/m920q-mode-switch.lock
+    ${pkgs.util-linux}/bin/flock -n 9 || exit 0
 
     profile=/nix/var/nix/profiles/system
     headless_switch="$profile/bin/switch-to-configuration"
     gui_switch="$profile/specialisation/niri/bin/switch-to-configuration"
     hm_service="home-manager-${user}.service"
 
-    if grep -qs connected /sys/class/drm/*-HDMI-A-*/status; then
+    hdmi_status_files=(/sys/class/drm/*-HDMI-A-*/status)
+    if (( ''${#hdmi_status_files[@]} == 0 )); then
+      exit 0
+    fi
+
+    if grep -qs connected "''${hdmi_status_files[@]}"; then
       "$gui_switch" test
       systemctl restart "$hm_service"
-      systemctl restart getty@tty1.service
       systemctl start bluetooth.service
     else
       "$headless_switch" test
       systemctl restart "$hm_service"
-      systemctl restart getty@tty1.service
     fi
   '';
 in {
@@ -204,8 +211,13 @@ in {
   };
 
   services.udev.extraRules = ''
-    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", KERNEL=="card*-HDMI-A-*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="m920q-mode-switch.service"
+    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", ENV{DEVTYPE}=="drm_minor", RUN+="${pkgs.systemd}/bin/systemctl start m920q-mode-switch.service"
   '';
+
+  # Determinate Nix keeps helper processes in the service cgroup. During frequent
+  # config test switches this can leave stale children and generate repeated
+  # "left-over process" warnings on the next start.
+  systemd.services.nix-daemon.serviceConfig.KillMode = lib.mkForce "control-group";
 
   # Allow rebuilds from inside zellij by lazily detaching the persistence bind mount
   # when activation stops/restarts mount units.

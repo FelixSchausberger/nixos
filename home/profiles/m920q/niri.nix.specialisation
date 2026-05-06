@@ -20,14 +20,11 @@
     enable = true;
     browser = "zen";
     terminal = "ghostty";
-    # VIRTUAL-1 is the output created by the vkms kernel module for headless operation.
+    # VIRTUAL-1 is the vkms headless output; disable it in GUI mode so content stays on projector.
     outputs = [
       {
         name = "VIRTUAL-1";
-        mode = {
-          width = 1920;
-          height = 1080;
-        };
+        enable = false;
       }
     ];
   };

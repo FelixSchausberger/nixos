@@ -83,11 +83,8 @@
       # Evaluation performance
       eval-cache = true; # Cache evaluation results
 
-      # GitHub access token from sops secrets
-      netrc-file = "/etc/nix/netrc";
-
       # Substituters and caches
-      substituters = [
+      extra-substituters = [
         # Primary cache - fastest and most reliable
         "https://cache.nixos.org?priority=1"
 
@@ -117,7 +114,7 @@
         "https://install.determinate.systems?priority=35"
       ];
 
-      trusted-public-keys = [
+      extra-trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
@@ -136,8 +133,7 @@
         "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
         "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
 
-        # Determinate Systems / FlakeHub cache
-        "cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM="
+        # FlakeHub key is injected by Determinate Nix when enabled
       ];
     };
   };

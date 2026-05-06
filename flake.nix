@@ -36,9 +36,9 @@
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
 
-    # Nixpkgs sources - toggle via config.nix useDeterminateNix boolean
-    # Standard Nix (GitHub nixos-unstable)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Nixpkgs source (FlakeHub semver channel)
+    # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
     # Shared rust-overlay and flake-utils; all inputs that use them follow these
     # to avoid fetching and evaluating duplicate copies during flake evaluation
     rust-overlay = {
@@ -47,10 +47,6 @@
     };
     flake-utils.url = "github:numtide/flake-utils";
     crane.url = "github:ipetkov/crane";
-    # Determinate Nix (FlakeHub with semver)
-    # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
-    nixpkgs-flakehub.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
-
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     home-manager = {
@@ -258,10 +254,7 @@
     };
   };
 
-  outputs = inputs: let
-    # Import profile detection utilities
-    profileLib = import ./lib/profiles.nix;
-  in
+  outputs = inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} (
       {...}: {
         systems = ["x86_64-linux"];
@@ -285,7 +278,6 @@
             };
             hosts = import ./lib/hosts.nix;
 
-            profiles = profileLib;
             inherit (defaults.system) user;
             inherit (defaults) personalInfo;
             inherit (defaults) paths;
