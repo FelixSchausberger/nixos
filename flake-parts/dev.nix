@@ -22,6 +22,7 @@
         fish
         flake-checker # Flake input health monitoring
         git
+        go # Required by yamlfmt pre-commit hook
         inotify-tools # File system watching for niri-watch
         jq # JSON processing for quality metric scripts
         just # Task runner for development workflows
@@ -31,6 +32,7 @@
         ssh-to-age
         statix
         taplo
+        treefmt
         inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
       ];
 
@@ -41,6 +43,6 @@
       '';
     };
 
-    formatter = pkgs.alejandra;
+    formatter = pkgs.treefmt;
   };
 }

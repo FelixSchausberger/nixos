@@ -1,0 +1,14 @@
+#pretty
+{
+  adguard_enabled = true;
+  adguard_port = 3000;
+  caddy_enabled = false;
+  grafana_port = 3001;
+  has_adguard_grafana_assertion = true;
+  has_adguard_port_assertion = true;
+  has_monitoring_ports_assertion = true;
+  has_tailscale_interface_assertion = true;
+  monitoring_enabled = true;
+  prometheus_port = 9090;
+  tailscale_enabled = true;
+}

@@ -5,8 +5,10 @@
   docker_enabled = true;
   docker_on_boot = false;
   docker_ssl_cert = "/nix/store/zp564phiicll8d53d973gbh8y3iiwlm7-nss-cacert-3.121/etc/ssl/certs/ca-bundle.crt";
+  has_containers_ssl_assertion = true;
   has_dns = true;
   has_log_driver = "json-file";
   has_storage_driver = "overlay2";
   nix_ssl_cert = "/run/ca-bundle-plus-eset.pem";
+  ssl_enabled = true;
 }

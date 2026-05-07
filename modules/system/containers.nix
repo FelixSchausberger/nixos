@@ -12,6 +12,13 @@
   };
 
   config = lib.mkIf config.modules.system.containers.enable {
+    assertions = [
+      {
+        assertion = config.modules.system.ssl.enable;
+        message = "modules.system.containers.enable requires modules.system.ssl.enable because Docker environment uses modules.system.ssl.helpers.dockerEnv";
+      }
+    ];
+
     virtualisation.docker = {
       enable = true;
       enableOnBoot = false; # Start on-demand for boot performance
@@ -38,7 +45,11 @@
       services.docker = {
         wantedBy = lib.mkForce [];
         environment =
-          config.modules.system.ssl.helpers.dockerEnv
+          (
+            if config.modules.system.ssl.enable
+            then config.modules.system.ssl.helpers.dockerEnv
+            else {}
+          )
           // {
             DOCKER_TLS_VERIFY = "0"; # Unix socket — no TLS
             GOPROXY = "direct";

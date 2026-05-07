@@ -56,10 +56,7 @@ in {
         plan.model = "github-copilot/claude-sonnet-4.6";
         build.model = "github-copilot/gpt-5.3-codex";
       };
-      plugin = [
-        "opencode-code-simplifier"
-        "@slkiser/opencode-quota"
-      ];
+      plugin = ["@slkiser/opencode-quota"];
       permission = {
         bash = {
           "git reset*" = "deny";
@@ -117,9 +114,23 @@ in {
         return {};
       }
 
-      const notify = async (state) => {
+      const notifyAttention = async (state) => {
         try {
           await $`zellij pipe --name "zellij-attention::''${state}::''${paneId}"`;
+        } catch {
+          // Ignore if zellij isn't available in this process context.
+        }
+      };
+
+      const notifySmartTabs = async (status, onFocus = null) => {
+        const payload = JSON.stringify({
+          pane_id: paneId,
+          status,
+          ...(onFocus ? { on_focus: onFocus } : {}),
+        });
+
+        try {
+          await $`zellij pipe --name pane_status --plugin smart-tabs -- ''${payload}`;
         } catch {
           // Ignore if zellij isn't available in this process context.
         }
@@ -128,7 +139,8 @@ in {
       return {
         event: async ({ event }) => {
           if (event.type === "permission.asked") {
-            await notify("waiting");
+            await notifyAttention("waiting");
+            await notifySmartTabs("pending", "idle");
           }
 
           if (
@@ -136,11 +148,45 @@ in {
             event.type === "session.idle" ||
             event.type === "session.error"
           ) {
-            await notify("completed");
+            await notifyAttention("completed");
+            await notifySmartTabs("done", "idle");
           }
         },
       };
     };
+  '';
+
+  xdg.configFile."opencode/agents/code-simplifier.md".text = ''
+    ---
+    description: Simplifies recently modified code while preserving exact behavior
+    mode: subagent
+    model: github-copilot/claude-sonnet-4.6
+    permission:
+      edit: allow
+      bash: deny
+    ---
+
+    You are a code simplification specialist.
+
+    Simplify recently modified code for clarity, consistency, and maintainability while preserving exact functionality.
+
+    Rules:
+    - Never change behavior, side effects, or outputs.
+    - Prefer explicit readable code over compact clever code.
+    - Reduce avoidable nesting and duplicated logic.
+    - Remove obvious comments and stale debug artifacts.
+    - Prefer if/else or switch over nested ternaries.
+    - Keep useful abstractions; do not collapse structure just to reduce line count.
+
+    Scope:
+    - Focus on files touched in the current change unless the user asks for broader refactoring.
+
+    Workflow:
+    1. Identify touched code paths.
+    2. Apply small, behavior-preserving simplifications.
+    3. Keep naming consistent with repository conventions.
+    4. Validate that semantics are unchanged.
+    5. Report meaningful simplifications only.
   '';
 
   sops.secrets = {

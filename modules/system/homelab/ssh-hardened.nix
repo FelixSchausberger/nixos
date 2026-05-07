@@ -12,7 +12,7 @@
       enable = true;
 
       # Persist host keys across impermanence reboots
-      hostKeys = [
+      hostKeys = lib.mkForce [
         {
           path = "/per/etc/ssh/ssh_host_rsa_key";
           type = "rsa";

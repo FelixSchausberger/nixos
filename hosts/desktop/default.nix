@@ -66,6 +66,7 @@ in {
   # Sunshine game streaming for remote access via Moonlight
   # AMD VAAPI encoding is available via amdgpu driver (hardware.profiles.amdGpu above)
   modules.system.sunshine.enable = true;
+  modules.system.gaming.enable = true;
 
   # System maintenance and monitoring
   modules.system.maintenance = {

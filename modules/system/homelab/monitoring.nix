@@ -23,6 +23,34 @@
   };
 
   config = lib.mkIf config.modules.system.homelab.monitoring.enable {
+    assertions = [
+      {
+        assertion =
+          config.modules.system.homelab.monitoring.grafanaPort
+          != config.modules.system.homelab.monitoring.prometheusPort;
+        message = "Grafana and Prometheus must use different ports";
+      }
+      {
+        assertion =
+          config.modules.system.homelab.monitoring.grafanaPort
+          != config.modules.system.homelab.monitoring.nodeExporterPort;
+        message = "Grafana and node_exporter must use different ports";
+      }
+      {
+        assertion =
+          config.modules.system.homelab.monitoring.prometheusPort
+          != config.modules.system.homelab.monitoring.nodeExporterPort;
+        message = "Prometheus and node_exporter must use different ports";
+      }
+      {
+        assertion =
+          !config.modules.system.homelab.adguardhome.enable
+          || config.modules.system.homelab.monitoring.grafanaPort
+          != config.modules.system.homelab.adguardhome.port;
+        message = "When AdGuard Home is enabled, Grafana port must differ from AdGuard admin port";
+      }
+    ];
+
     services.prometheus = {
       enable = true;
       port = config.modules.system.homelab.monitoring.prometheusPort;

@@ -18,6 +18,20 @@
   };
 
   config = lib.mkIf config.modules.system.homelab.adguardhome.enable {
+    assertions = [
+      {
+        assertion = config.modules.system.homelab.adguardhome.port != 53;
+        message = "AdGuard Home admin UI port must not be 53 (reserved for DNS service)";
+      }
+      {
+        assertion =
+          !config.modules.system.homelab.monitoring.enable
+          || config.modules.system.homelab.adguardhome.port
+          != config.modules.system.homelab.monitoring.grafanaPort;
+        message = "AdGuard Home admin UI port must differ from Grafana port when monitoring is enabled";
+      }
+    ];
+
     # systemd-resolved binds a local DNS stub on port 53 by default.
     # Disable it so AdGuardHome can listen on 0.0.0.0:53 for LAN clients.
     services.resolved.settings.Resolve.DNSStubListener = false;

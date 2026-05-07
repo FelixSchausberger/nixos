@@ -4,6 +4,14 @@
   hostConfig,
   ...
 }: let
+  supportedWms = [
+    "gnome"
+    "cosmic"
+    "niri"
+    "hyprland"
+  ];
+  invalidWms = builtins.filter (wm: !(builtins.elem wm supportedWms)) hostConfig.wms;
+
   # Get first available WM for defaults
   firstWm =
     if hostConfig.wms != []
@@ -45,6 +53,17 @@
   #   hostConfig.wms);
 in
   lib.mkIf (hostConfig.wms != []) {
+    assertions = [
+      {
+        assertion = hostConfig.isGui;
+        message = "display-manager.nix requires hostConfig.isGui = true when hostConfig.wms is non-empty";
+      }
+      {
+        assertion = invalidWms == [];
+        message = "display-manager.nix received unsupported window managers in hostConfig.wms: ${builtins.concatStringsSep ", " invalidWms}";
+      }
+    ];
+
     services = {
       xserver = {
         enable = true;

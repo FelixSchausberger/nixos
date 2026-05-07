@@ -30,6 +30,7 @@
     if grep -qs connected "''${hdmi_status_files[@]}"; then
       "$gui_switch" test
       systemctl restart "$hm_service"
+      systemctl restart getty@tty1.service
       systemctl start bluetooth.service
     else
       "$headless_switch" test
@@ -91,7 +92,6 @@ in {
           };
 
           services.dbus.implementation = lib.mkForce "dbus";
-          services.getty.autologinUser = inputs.self.lib.user;
 
           home-manager.users.${inputs.self.lib.user}.imports = [
             ../../modules/home/wm/niri
@@ -234,6 +234,8 @@ in {
 
   # Disable services not applicable to server hardware
   services = {
+    getty.autologinUser = inputs.self.lib.user;
+
     # fwupd: useful for real hardware (BIOS, NIC firmware); keep enabled
     # geoclue2: location services have no purpose on a headless server
     geoclue2.enable = lib.mkForce false;
@@ -272,6 +274,10 @@ in {
   # VAAPI allows efficient video playback via Intel UHD 630 iGPU.
   # Moonlight connects to Sunshine server on the desktop host.
   modules.system.mediaClient.enable = true;
+
+  # Steam Controller wireless puck uses Bluetooth — enable steam-hardware
+  # so hid-steam kernel module is loaded on the m920q (Moonlight client).
+  hardware.steam-hardware.enable = true;
 
   # Host-specific sops secrets — expanded when monitoring/tailscale-auth are enabled
 

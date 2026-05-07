@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  hostConfig,
   ...
 }: let
   cfg = config.modules.system.sunshine;
@@ -10,6 +11,17 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = hostConfig.wms != [];
+        message = "modules.system.sunshine.enable requires a graphical session (hostConfig.wms must be non-empty)";
+      }
+      {
+        assertion = hostConfig.isGui;
+        message = "modules.system.sunshine.enable requires hostConfig.isGui = true";
+      }
+    ];
+
     services.sunshine = {
       enable = true;
       openFirewall = true;

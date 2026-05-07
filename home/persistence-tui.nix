@@ -22,8 +22,9 @@
       # Rclone cache for faster access to cloud files
       ".cache/rclone"
 
-      # Zellij plugin permissions cache (avoids re-prompting after reboot)
+      # Zellij plugin permissions cache and downloaded plugin data
       ".cache/zellij"
+      ".local/share/zellij"
     ];
   };
 }

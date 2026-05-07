@@ -330,6 +330,11 @@ in {
 
       prefer-no-csd = true;
 
+      # Suppress the startup "Important Hotkeys" popup globally.
+      hotkey-overlay = {
+        skip-at-startup = true;
+      };
+
       # Debug configuration for honoring XDG activation requests with invalid serial
       # Cannot be set via programs.niri.settings due to KDL generation limitation
       # See: https://github.com/sodiboo/niri-flake/issues
@@ -375,6 +380,13 @@ in {
             bottom-left = 12.0;
           };
           clip-to-geometry = true;
+        }
+        {
+          matches = [
+            {title = "^Projector$";}
+            {title = "^UxPlay$";}
+          ];
+          open-fullscreen = true;
         }
         {
           matches = [{app-id = "^scratchpad-.*";}];

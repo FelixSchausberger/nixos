@@ -2,8 +2,7 @@
   homeImports,
   inputs,
   ...
-}:
-let
+}: let
   # Import configuration toggle
   repoConfig = import ../config.nix;
 
@@ -16,21 +15,24 @@ let
     inherit repoConfig;
   };
 
-  mkHostConfig =
-    {
-      hostName,
-      baseModules,
-      extraModules ? [ ],
-    }:
+  mkHostConfig = {
+    hostName,
+    baseModules,
+    extraModules ? [],
+  }:
     nixosSystem {
-      specialArgs = specialArgs // {
-        # Make hostConfig available to all modules
-        # Merge host-specific config with defaults
-        hostConfig = (inputs.self.lib.hosts.${hostName} or { }) // {
-          inherit (inputs.self.lib) user;
-          inherit hostName;
+      specialArgs =
+        specialArgs
+        // {
+          # Make hostConfig available to all modules
+          # Merge host-specific config with defaults
+          hostConfig =
+            (inputs.self.lib.hosts.${hostName} or {})
+            // {
+              inherit (inputs.self.lib) user;
+              inherit hostName;
+            };
         };
-      };
       modules =
         baseModules
         ++ [
@@ -41,59 +43,62 @@ let
           (_: {
             home-manager = {
               users.${inputs.self.lib.user}.imports = homeImports."${inputs.self.lib.user}@${hostName}";
-              extraSpecialArgs = specialArgs // {
-                inherit hostName;
-                hostConfig = (inputs.self.lib.hosts.${hostName} or { }) // {
-                  inherit (inputs.self.lib) user;
+              extraSpecialArgs =
+                specialArgs
+                // {
                   inherit hostName;
+                  hostConfig =
+                    (inputs.self.lib.hosts.${hostName} or {})
+                    // {
+                      inherit (inputs.self.lib) user;
+                      inherit hostName;
+                    };
                 };
-              };
             };
           })
         ]
         # Conditionally include Determinate Nix module based on config
         ++ optional repoConfig.useDeterminateNix inputs.determinate.nixosModules.default
         # Add disko module for disk partitioning (required for nixos-anywhere)
-        ++ [ inputs.disko.nixosModules.disko ]
+        ++ [inputs.disko.nixosModules.disko]
         ++ extraModules;
     };
-in
-{
+in {
   flake.nixosConfigurations = {
     desktop = mkHostConfig {
       hostName = "desktop";
       baseModules = desktop;
-      extraModules = [ ./desktop.nix ];
+      extraModules = [./desktop.nix];
     };
 
     surface = mkHostConfig {
       hostName = "surface";
       baseModules = laptop;
-      extraModules = [ ./surface.nix ];
+      extraModules = [./surface.nix];
     };
 
     portable = mkHostConfig {
       hostName = "portable";
       baseModules = desktop;
-      extraModules = [ ./portable.nix ];
+      extraModules = [./portable.nix];
     };
 
     hp-probook-wsl = mkHostConfig {
       hostName = "hp-probook-wsl";
       baseModules = laptop;
-      extraModules = [ ./hp-probook-wsl.nix ];
+      extraModules = [./hp-probook-wsl.nix];
     };
 
     hp-probook-vmware = mkHostConfig {
       hostName = "hp-probook-vmware";
       baseModules = laptop;
-      extraModules = [ ./hp-probook-vmware.nix ];
+      extraModules = [./hp-probook-vmware.nix];
     };
 
     m920q = mkHostConfig {
       hostName = "m920q";
       baseModules = server;
-      extraModules = [ ./m920q.nix ];
+      extraModules = [./m920q.nix];
     };
   };
 }

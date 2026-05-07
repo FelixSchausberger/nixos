@@ -31,6 +31,13 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.udpGROInterface == null || cfg.udpGROInterface != "";
+        message = "modules.system.homelab.tailscale.udpGROInterface must be null or a non-empty interface name";
+      }
+    ];
+
     services.tailscale = {
       enable = true;
       inherit (cfg) authKeyFile;

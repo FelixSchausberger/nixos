@@ -1,6 +1,7 @@
 {
   pkgs,
   inputs,
+  lib,
   ...
 }: let
   inherit (inputs.self.lib) defaults;
@@ -46,6 +47,43 @@ in {
     }
   '';
 
+  home.activation.writeZellijPermissions = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    permissions_file="$HOME/.cache/zellij/permissions.kdl"
+    mkdir -p "$(dirname "$permissions_file")"
+    $DRY_RUN_CMD cat > "$permissions_file" << 'PERMISSIONS_EOF'
+    "${pkgs.zjstatus}/bin/zjstatus.wasm" {
+        RunCommands
+        ChangeApplicationState
+        ReadApplicationState
+    }
+    "${pkgs."zjstatus-hints"}/bin/zjstatus-hints.wasm" {
+        MessageAndLaunchOtherPlugins
+        ChangeApplicationState
+        ReadCliPipes
+        ReadApplicationState
+    }
+    "https://github.com/Nacho114/harpoon/releases/latest/download/harpoon.wasm" {
+        ReadApplicationState
+        ChangeApplicationState
+    }
+    "https://github.com/karimould/zellij-forgot/releases/latest/download/zellij_forgot.wasm" {
+        ReadApplicationState
+        ChangeApplicationState
+    }
+    "https://github.com/KiryuuLight/zellij-attention/releases/latest/download/zellij-attention.wasm" {
+        MessageAndLaunchOtherPlugins
+        ChangeApplicationState
+        ReadCliPipes
+        ReadApplicationState
+    }
+    "https://github.com/YesYouKenSpace/zellij-smart-tabs/releases/download/v0.2.1/zellij-smart-tabs.wasm" {
+        ChangeApplicationState
+        ReadApplicationState
+        RunCommands
+    }
+    PERMISSIONS_EOF
+  '';
+
   programs.zellij = {
     enable = true;
 
@@ -54,6 +92,7 @@ in {
         theme = "catppuccin-mocha";
         default_shell = "fish";
         default_cwd = defaults.paths.homeDir;
+        default_mode = "Locked";
 
         # UI settings
         pane_frames = false;
@@ -107,13 +146,33 @@ in {
         zellij-attention location="https://github.com/KiryuuLight/zellij-attention/releases/latest/download/zellij-attention.wasm"
         zjstatus-hints location="file://${pkgs."zjstatus-hints"}/bin/zjstatus-hints.wasm" {
           pipe_name "zjstatus_hints"
-          hide_in_base_mode true
+          hide_in_base_mode false
+        }
+        smart-tabs location="https://github.com/YesYouKenSpace/zellij-smart-tabs/releases/download/v0.2.1/zellij-smart-tabs.wasm" {
+          format "{% if short_git_root %}{{ short_git_root }}{% else %}{{ short_dir }}{% endif %}{% if program %}  {{ program }}{% endif %}"
+          poll_interval "5"
+          debounce "0.2"
+          debug "false"
+          sub {
+            program {
+              "opencode-wrapped" "opencode"
+              "fish" ""
+            }
+            status {
+              "idle" ""
+              "running" ""
+              "pending" ""
+              "done" ""
+              "error" ""
+            }
+          }
         }
       }
 
       load_plugins {
         zjstatus-hints
         zellij-attention
+        smart-tabs
       }
 
       keybinds clear-defaults=true {
@@ -180,6 +239,23 @@ in {
           bind "8" { GoToTab 8; SwitchToMode "Locked"; }
           bind "9" { GoToTab 9; SwitchToMode "Locked"; }
           bind "Tab" { ToggleTab; }
+          bind "r" {
+            MessagePlugin "smart-tabs" {
+              name "set_focused_to_manual"
+            }
+            SwitchToMode "RenameTab"
+            TabNameInput 0
+          }
+        }
+
+        renametab {
+          bind "Esc" {
+            UndoRenameTab
+            SwitchToMode "tab"
+            MessagePlugin "smart-tabs" {
+              name "set_focused_to_managed"
+            }
+          }
         }
 
         // Pane mode: Manage panes with Colemak-DH navigation (neio)

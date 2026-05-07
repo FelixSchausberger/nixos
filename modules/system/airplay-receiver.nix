@@ -50,7 +50,7 @@ in {
       bindsTo = ["graphical-session.target"];
       wantedBy = ["graphical-session.target"];
       serviceConfig = {
-        ExecStart = "${pkgs.uxplay}/bin/uxplay -p -as pulsesink -fs -n Projector -nh";
+        ExecStart = "${pkgs.uxplay}/bin/uxplay -p -vs waylandsink -as pulsesink -n Projector -nh";
         Restart = "on-failure";
         RestartSec = 5;
       };
