@@ -233,21 +233,10 @@
         # Run pre-flight checks before attempting auto-start
         if __zellij_preflight_check
           if not set -q ZELLIJ
-            if set -q SSH_CONNECTION; and set -q ZELLIJ_SSH_SESSION
-              # SSH login: attach to or create the host-configured named session.
-              # ZELLIJ_SSH_SESSION is set per-host in home.sessionVariables.
-              # Small terminals (phone, <100 cols) get a separate session so they don't
-              # constrain the layout of large-terminal (laptop/desktop) sessions.
-              # exec replaces fish so detaching from zellij ends the SSH connection cleanly.
-              if test "$COLUMNS" -lt 100
-                zellij attach -c $ZELLIJ_SSH_SESSION-phone
-              else
-                zellij attach -c $ZELLIJ_SSH_SESSION
-              end
-            else
-              # Local login: use official auto-start method (safe, with fallback)
-              eval (zellij setup --generate-auto-start fish | string collect)
-            end
+            # Local login: use official auto-start method (safe, with fallback)
+            # SSH connections are excluded: nested zellij sessions cause issues and
+            # zellij captures mouse events preventing terminal text selection
+            eval (zellij setup --generate-auto-start fish | string collect)
           end
         else
           echo "Zellij pre-flight checks failed - starting normal fish shell" >&2

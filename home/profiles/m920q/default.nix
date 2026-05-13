@@ -37,8 +37,6 @@
 
     sessionVariables = {
       VITALS_URL = "http://127.0.0.1:8080";
-      # SSH logins attach to this named zellij session (see fish auto-start logic).
-      ZELLIJ_SSH_SESSION = "homelab";
     };
 
     packages = with pkgs; [
