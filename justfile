@@ -114,19 +114,39 @@ activate NAME:
     #!/usr/bin/env bash
     set -euo pipefail
     PROFILE=/nix/var/nix/profiles/system
+    MODE_FILE=/run/m920q-current-mode
+    HM_SERVICE="home-manager-$(whoami).service"
+    USERNAME=$(whoami)
+
+    wait_for_nix_daemon() {
+        timeout 30 bash -c 'until nix-daemon --version >/dev/null 2>&1; do sleep 0.5; done' 2>/dev/null || true
+    }
+
+    graceful_niri_exit() {
+        sudo -u "$USERNAME" DISPLAY= WAYLAND_DISPLAY= XDG_RUNTIME_DIR=/run/user/1000 niri msg quit 2>/dev/null || true
+        timeout 5 bash -c "while systemctl --user -M ${USERNAME}@ is-active niri.service 2>/dev/null; do sleep 0.5; done" || true
+    }
+
     case "{{NAME}}" in
         list)
             echo "headless"
             ls "$PROFILE/specialisation/" 2>/dev/null || true
             ;;
         headless)
+            wait_for_nix_daemon
+            if systemctl --user -M "${USERNAME}@" is-active niri.service 2>/dev/null; then
+                graceful_niri_exit
+            fi
             sudo "$PROFILE/bin/switch-to-configuration" test
-            sudo systemctl restart home-manager-$(whoami).service
+            echo "headless" | sudo tee "$MODE_FILE" > /dev/null
+            sudo systemctl restart "$HM_SERVICE"
             sudo systemctl restart getty@tty1.service
             ;;
         *)
+            wait_for_nix_daemon
             sudo "$PROFILE/specialisation/{{NAME}}/bin/switch-to-configuration" test
-            sudo systemctl restart home-manager-$(whoami).service
+            echo "{{NAME}}" | sudo tee "$MODE_FILE" > /dev/null
+            sudo systemctl restart "$HM_SERVICE"
             if [ "{{NAME}}" = "niri" ]; then
                 sudo systemctl start bluetooth.service
                 sudo systemctl restart getty@tty1.service

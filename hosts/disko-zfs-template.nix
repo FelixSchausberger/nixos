@@ -20,6 +20,7 @@
   device ? "/dev/disk/by-id/changeme",
   swapSize ? null,
   poolName ? "rpool",
+  ...
 }: let
   # Build partition list conditionally based on swapSize
   partitions =

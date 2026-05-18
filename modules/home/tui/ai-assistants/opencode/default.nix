@@ -122,25 +122,10 @@ in {
         }
       };
 
-      const notifySmartTabs = async (status, onFocus = null) => {
-        const payload = JSON.stringify({
-          pane_id: paneId,
-          status,
-          ...(onFocus ? { on_focus: onFocus } : {}),
-        });
-
-        try {
-          await $`zellij pipe --name pane_status --plugin smart-tabs -- ''${payload}`;
-        } catch {
-          // Ignore if zellij isn't available in this process context.
-        }
-      };
-
       return {
         event: async ({ event }) => {
           if (event.type === "permission.asked") {
             await notifyAttention("waiting");
-            await notifySmartTabs("pending", "idle");
           }
 
           if (
@@ -149,7 +134,6 @@ in {
             event.type === "session.error"
           ) {
             await notifyAttention("completed");
-            await notifySmartTabs("done", "idle");
           }
         },
       };

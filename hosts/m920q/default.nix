@@ -10,17 +10,9 @@
   hostName = "m920q";
   hostInfo = inputs.self.lib.hosts.${hostName};
   inherit (inputs.self.lib) user;
-  modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
+
+  hdmiDetectScript = pkgs.writeShellScript "m920q-hdmi-detect" ''
     set -euo pipefail
-    shopt -s nullglob
-
-    exec 9>/run/m920q-mode-switch.lock
-    ${pkgs.util-linux}/bin/flock -n 9 || exit 0
-
-    profile=/nix/var/nix/profiles/system
-    headless_switch="$profile/bin/switch-to-configuration"
-    gui_switch="$profile/specialisation/niri/bin/switch-to-configuration"
-    hm_service="home-manager-${user}.service"
 
     hdmi_status_files=(/sys/class/drm/*-HDMI-A-*/status)
     if (( ''${#hdmi_status_files[@]} == 0 )); then
@@ -28,13 +20,62 @@
     fi
 
     if grep -qs connected "''${hdmi_status_files[@]}"; then
+      echo "niri" > /run/m920q-hdmi-state
+    else
+      echo "headless" > /run/m920q-hdmi-state
+    fi
+
+    exec /run/current-system/sw/bin/systemctl start m920q-mode-switch.timer
+  '';
+
+  modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
+    set -euo pipefail
+
+    exec 9>/run/m920q-mode-switch.lock
+    /run/current-system/sw/bin/flock -n 9 || exit 0
+
+    profile=/nix/var/nix/profiles/system
+    headless_switch="$profile/bin/switch-to-configuration"
+    gui_switch="$profile/specialisation/niri/bin/switch-to-configuration"
+    hm_service="home-manager-${user}.service"
+    mode_file=/run/m920q-current-mode
+    state_file=/run/m920q-hdmi-state
+
+    timeout 30 bash -c 'until /run/current-system/sw/bin/nix-daemon --version >/dev/null 2>&1; do sleep 0.5; done' 2>/dev/null || true
+
+    if [[ ! -f "$state_file" ]]; then
+      exit 0
+    fi
+
+    desired_mode=$(cat "$state_file")
+
+    current_mode=""
+    if [[ -f "$mode_file" ]]; then
+      current_mode=$(cat "$mode_file")
+    fi
+
+    if [[ "$current_mode" == "$desired_mode" ]]; then
+      exit 0
+    fi
+
+    if [[ "$current_mode" == "niri" ]]; then
+      sudo -u ${user} DISPLAY= WAYLAND_DISPLAY= XDG_RUNTIME_DIR=/run/user/1000 /run/current-system/sw/bin/niri msg quit 2>/dev/null || true
+      timeout 5 bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
+    fi
+
+    if [[ "$desired_mode" == "niri" ]]; then
       "$gui_switch" test
-      systemctl restart "$hm_service"
-      systemctl restart getty@tty1.service
-      systemctl start bluetooth.service
     else
       "$headless_switch" test
-      systemctl restart "$hm_service"
+    fi
+
+    echo "$desired_mode" > "$mode_file"
+
+    systemctl restart "$hm_service"
+    systemctl restart getty@tty1.service
+
+    if [[ "$desired_mode" == "niri" ]]; then
+      systemctl start bluetooth.service
     fi
   '';
 in {
@@ -57,9 +98,6 @@ in {
   hostConfig = {
     inherit hostName;
     inherit (hostInfo) isGui wms;
-    # ThinkCentre M920q dual-role: 24/7 homelab server + near-silent bedroom media client.
-    # server-efficiency profile: powersave governor, deep C-states, reduced wakeups,
-    # no turbo spikes, minimal fan activity. Switch to niri specialisation for GUI use.
     performanceProfile = "server-efficiency";
 
     specialisations = {
@@ -99,14 +137,35 @@ in {
           ];
         };
       };
+
+      wifi = {
+        wms = null;
+        profile = "server-efficiency";
+        extraConfig = {
+          pkgs,
+          config,
+          ...
+        }: {
+          systemd.services.deploy-iwd-wifi = {
+            wantedBy = ["multi-user.target"];
+            after = ["sops-nix.service"];
+            before = ["iwd.service"];
+            serviceConfig = {
+              Type = "oneshot";
+              ExecStart =
+                "${pkgs.coreutils}/bin/install -m 0600 -o root -g root "
+                + "${config.sops.templates."wifi/iwd".path} "
+                + "/var/lib/iwd/PrettyFlyForAWiFi.psk";
+            };
+          };
+        };
+      };
     };
   };
 
-  # Vitals health monitoring daemon
   services.vitals.enable = true;
   services.vitals.headless = true;
 
-  # Observability packages: verify power efficiency and system health.
   environment.systemPackages = lib.mkDefault (
     with pkgs; [
       powertop # CPU C-state residency, wakeups/sec, power estimation
@@ -116,32 +175,20 @@ in {
     ]
   );
 
-  # ZFS snapshot policy override for server-efficiency:
-  # Disable frequent (15-min) snapshots — unnecessary wakeups for a server
-  # that already has hourly/daily snapshots for recovery.
-  # Clamp minimum ARC to 512MB — small floor for a headless server.
   boot.kernelParams = lib.mkAfter [
     "zfs.zfs_arc_max=8589934592"
     "zfs.zfs_arc_min=536870912"
   ];
 
-  # x86_64-linux; set here since hardware-configuration.nix is generated post-install
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  # ThinkCentre M920q: Intel i7-8700T, Intel UHD 630 iGPU
-  # modesetting covers headless operation; full graphics stack added by niri specialisation
   services.xserver.videoDrivers = lib.mkDefault [
     "modesetting"
     "intel"
   ];
 
-  # Unique ZFS host identifier — required per machine, must not match any other host
   networking.hostId = lib.mkForce "b580701b";
 
-  # Static LAN: systemd-networkd with fixed IP for reliability and lower overhead than NetworkManager.
-  # WiFi (iwd) remains available via 'iwctl' for manual connections when needed.
-  # NetworkManager is replaced entirely — eno1 gets a static lease from the router DHCP,
-  # which reserves 192.168.178.2 for this MAC, so the IP is effectively static.
   networking.useNetworkd = true;
   networking.networkmanager.enable = lib.mkForce false;
 
@@ -154,7 +201,6 @@ in {
         networkConfig.DHCP = "no";
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
-        # DNS: AdGuardHome (local) primary, router fallback
         dns = [
           "127.0.0.1"
           "192.168.178.1"
@@ -162,42 +208,50 @@ in {
         domains = ["local"];
       };
     };
-    # Wait only for the wired interface to come up — don't block boot on WiFi
     wait-online = {
       extraArgs = ["--interface=eno1"];
     };
   };
 
-  # iwd (wireless daemon) available for manual WiFi via 'iwctl'.
-  # Standalone mode — not managed by NetworkManager (which is disabled).
-  # Activate on demand: 'iwctl' will start the daemon automatically.
   networking.wireless.iwd.enable = true;
 
-  # vkms provides a virtual display adapter for the niri specialisation's headless remote desktop.
-  # Loaded unconditionally so `just activate niri` works without a reboot.
   boot.kernelModules = ["vkms"];
 
-  # Auto-switch runtime mode based on projector HDMI hotplug events.
-  # Any connected HDMI sink activates niri; all disconnected reverts to headless.
+  systemd.services.m920q-hdmi-detect = {
+    description = "Detect HDMI hotplug and update mode state";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = hdmiDetectScript;
+    };
+  };
+
+  systemd.timers.m920q-mode-switch = {
+    description = "Debounced M920q mode switch after HDMI hotplug";
+    wantedBy = ["multi-user.target"];
+    timerConfig = {
+      OnActiveSec = 10;
+      AccuracySec = "5s";
+    };
+  };
+
   systemd.services.m920q-mode-switch = {
-    description = "Switch M920q mode from HDMI hotplug";
+    description = "Switch M920q mode from HDMI hotplug (debounced)";
     serviceConfig = {
       Type = "oneshot";
       ExecStart = modeSwitchScript;
+      TimeoutStartSec = 120;
     };
   };
 
   services.udev.extraRules = ''
-    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", ENV{DEVTYPE}=="drm_minor", RUN+="${pkgs.systemd}/bin/systemctl start m920q-mode-switch.service"
+    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", ENV{DEVTYPE}=="drm_minor", RUN+="${pkgs.systemd}/bin/systemctl start m920q-hdmi-detect.service"
   '';
 
-  # Determinate Nix keeps helper processes in the service cgroup. During frequent
-  # config test switches this can leave stale children and generate repeated
-  # "left-over process" warnings on the next start.
   systemd.services.nix-daemon.serviceConfig.KillMode = lib.mkForce "control-group";
 
-  # Allow rebuilds from inside zellij by lazily detaching the persistence bind mount
-  # when activation stops/restarts mount units.
+  systemd.sockets.nix-daemon.enable = false;
+  systemd.sockets.determinate-nixd.enable = false;
+
   systemd.units."home-${user}-.cache-zellij.mount" = {
     overrideStrategy = lib.mkForce "asDropin";
     text = lib.mkForce ''
@@ -209,20 +263,13 @@ in {
   fileSystems."/per".neededForBoot = true;
   fileSystems."/home".neededForBoot = true;
 
-  # Disable services not applicable to server hardware
   services = {
     getty.autologinUser = inputs.self.lib.user;
 
-    # fwupd: useful for real hardware (BIOS, NIC firmware); keep enabled
-    # geoclue2: location services have no purpose on a headless server
     geoclue2.enable = lib.mkForce false;
 
-    # session/default.nix switches dbus to broker when UWSM is enabled.
-    # Force dbus on the parent config so live activation never attempts a dbus swap.
     dbus.implementation = lib.mkForce "dbus";
 
-    # journald: rate-limit to reduce CPU wakeups from excessive logging.
-    # 30-second interval and 100-burst limit is conservative for a quiet server.
     journald = {
       extraConfig = ''
         RateLimitIntervalSec=30s
@@ -235,35 +282,33 @@ in {
     };
   };
 
-  # Power management: auto-cpufreq + powertop autotune for deep C-states and low idle power.
-  # See modules/system/hardware/power-management.nix for full configuration.
+  systemd.services."getty@tty1" = {
+    unitConfig = {
+      StartLimitBurst = 3;
+      StartLimitIntervalSec = 60;
+    };
+    serviceConfig = {
+      Restart = "on-success";
+    };
+  };
+
   hardware.profiles.powerManagement = {
     enable = true;
     lanInterface = "eno1";
     suppressLeds = true;
   };
 
-  # Disable 15-minute snapshots to avoid frequent wakeups on a 24/7 efficiency-focused host.
-  # Hourly/daily/weekly snapshots remain enabled for recovery.
   systemd.timers.zfs-snapshot-frequent.enable = lib.mkForce false;
 
-  # Media client: VAAPI hardware decode + Moonlight streaming client.
-  # VAAPI allows efficient video playback via Intel UHD 630 iGPU.
-  # Moonlight connects to Sunshine server on the desktop host.
   modules.system.mediaClient.enable = true;
 
-  # Steam Controller wireless puck uses Bluetooth — enable steam-hardware
-  # so hid-steam kernel module is loaded on the m920q (Moonlight client).
   hardware.steam-hardware.enable = true;
-
-  # Host-specific sops secrets — expanded when monitoring/tailscale-auth are enabled
 
   modules.system = {
     stylix-catppuccin.enable = true;
     containers.enable = true;
     maintenance = {
       enable = true;
-      # Manual updates preferred for a production server
       autoUpdate.enable = false;
       monitoring = {
         enable = true;
@@ -272,21 +317,40 @@ in {
     };
   };
 
+  boot.zfs.extraPools = [
+    "dpool"
+    "bpool"
+  ];
+
+  fileSystems = {
+    "/per/mnt/data" = {
+      device = "dpool/data";
+      fsType = "zfs";
+      neededForBoot = false;
+    };
+    "/per/mnt/backup" = {
+      device = "bpool/backup";
+      fsType = "zfs";
+      neededForBoot = false;
+    };
+  };
+
   modules.system.homelab = {
     adguardhome.enable = true;
-
-    # Requires data disk (dpool) — enable after 2TB drive is installed
-    samba.enable = false;
-    immich.enable = false;
-
+    backup.enable = true;
+    samba.enable = true;
+    immich = {
+      enable = true;
+      host = "0.0.0.0";
+      openFirewall = true;
+      dataPath = "/per/mnt/data/Media/Pictures";
+    };
     tailscale = {
       enable = true;
-      # authKeyFile omitted — run `sudo tailscale up` after first boot to authenticate
       advertiseRoutes = ["192.168.178.0/24"];
       udpGROInterface = "eno1";
     };
 
-    # Requires grafana secrets
     monitoring.enable = true;
 
     ssh.enable = true;

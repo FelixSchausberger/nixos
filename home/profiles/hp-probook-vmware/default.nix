@@ -78,6 +78,8 @@
 
     # Environment variables for native Wayland
     sessionVariables = {
+      ZELLIJ_SESSION_NAME = "vmware";
+
       # Wayland backend preferences
       GDK_BACKEND = lib.mkDefault "wayland,x11";
       QT_QPA_PLATFORM = lib.mkDefault "wayland;xcb";

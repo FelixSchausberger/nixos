@@ -3,6 +3,7 @@
 {
   imports = [
     ./adguardhome.nix
+    ./backup.nix
     ./samba.nix
     ./tailscale.nix
     ./immich.nix

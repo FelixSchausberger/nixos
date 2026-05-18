@@ -56,7 +56,7 @@ in {
     powerManagement.powertop.enable = lib.mkDefault true;
 
     # Keep thermal throttling policy active for long-running workloads.
-    services.thermald.enable = cfg.intelCpuThermals && isIntel;
+    services.thermald.enable = lib.mkForce (cfg.intelCpuThermals && isIntel);
 
     boot.kernelParams = [
       # Let cpufreq-based tools manage frequency policy.

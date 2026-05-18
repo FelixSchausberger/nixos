@@ -35,7 +35,7 @@ rec {
     nixosConfig = "/per/etc/nixos";
 
     # Obsidian vault location
-    obsidianVault = "${homeDir}/Documents/Obsidian";
+    obsidianVault = "/per/mnt/data/gdrive/Obsidian";
 
     # Repositories directory
     repos = "/per/repos";
@@ -46,7 +46,7 @@ rec {
     # System mount directories
     mountDirs = {
       base = "/per/mnt";
-      gdrive = "/per/mnt/gdrive";
+      gdrive = "/per/mnt/data/gdrive";
     };
   };
 }

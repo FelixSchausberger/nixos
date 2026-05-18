@@ -12,7 +12,6 @@ in {
   imports = [
     ../modules/system
     ../modules/system/sops-common.nix
-    ../modules/system/gdrive-mount.nix
     ../modules/system/wifi.nix
     inputs.sops-nix.nixosModules.sops
   ];

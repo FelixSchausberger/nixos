@@ -1,6 +1,10 @@
 # Desktop workstation host: AMD gaming/rendering machine with Niri as default WM.
 # Keeps COSMIC as a boot-time specialisation and enables Sunshine for remote streaming.
-{inputs, ...}: let
+{
+  inputs,
+  lib,
+  ...
+}: let
   hostLib = import ../lib.nix;
   hostName = "desktop";
   hostInfo = inputs.self.lib.hosts.${hostName};
@@ -14,6 +18,7 @@ in {
       ../../modules/system/specialisations.nix
       ../../modules/system/gaming.nix
       ../../modules/system/homelab
+      ../../modules/system/hardware/power-management.nix
       ../../modules/system/sunshine.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
@@ -55,6 +60,27 @@ in {
     profiles.amdGpu = {
       enable = true;
       variant = "desktop";
+    };
+  };
+
+  # Wake-on-LAN on the wired ethernet interface
+  hardware.profiles.powerManagement = {
+    enable = true;
+    lanInterface = "eno1";
+  };
+
+  # Static LAN IP for predictable access from m920q
+  networking.useNetworkd = true;
+  networking.networkmanager.enable = lib.mkForce false;
+  systemd.network = {
+    enable = true;
+    networks."10-eno1" = {
+      matchConfig.Name = "eno1";
+      linkConfig.RequiredForOnline = "routable";
+      networkConfig.DHCP = "no";
+      address = ["192.168.178.3/24"];
+      gateway = ["192.168.178.1"];
+      dns = ["192.168.178.1"];
     };
   };
 

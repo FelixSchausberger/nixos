@@ -12,6 +12,7 @@ repos:
     rev: v0.13.0
     hooks:
       - id: yamlfmt
+        entry: yamlfmt
   # Temporarily disabled: prek uses rustls with outdated certificate roots preventing PyPI access
   # Re-enable once prek updates to use native-tls or updated webpki-roots
   # - repo: https://github.com/pre-commit/pre-commit-hooks

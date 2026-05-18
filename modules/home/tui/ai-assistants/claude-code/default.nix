@@ -86,11 +86,15 @@
   claudeStatusline = pkgs.writeShellScript "claude-statusline" (builtins.readFile ./statusline.sh);
 
   mcpJsonContent = builtins.toJSON {
-    mcpServers = lib.mapAttrs (_name: server: {
-      type = "stdio";
-      command = "${server.package}/bin/${server.command}";
-      inherit (server) args;
-    }) (lib.filterAttrs (_n: v: v.enabled) sharedMcp);
+    mcpServers = lib.mapAttrs (
+      _name: server:
+        {
+          type = "stdio";
+          command = "${server.package}/bin/${server.command}";
+          inherit (server) args;
+        }
+        // lib.optionalAttrs (server.env != {}) {inherit (server) env;}
+    ) (lib.filterAttrs (_n: v: v.enabled) sharedMcp);
   };
 in {
   home = {
@@ -106,28 +110,14 @@ in {
         lib.mapAttrs (_n: v: v.package) (lib.filterAttrs (_n: v: v.enabled) sharedMcp)
       ));
 
-    activation.createMcpJson = let
-      tokenPath = config.sops.secrets."github/token".path;
-    in
-      lib.hm.dag.entryAfter ["writeBoundary"] ''
-        if [ -w /per/etc/nixos ]; then
-          BASE_JSON='${mcpJsonContent}'
-          if [[ -f "${tokenPath}" ]]; then
-            GITHUB_TOKEN=$(cat "${tokenPath}")
-            $DRY_RUN_CMD printf '%s' "$BASE_JSON" | \
-              ${pkgs.jq}/bin/jq --arg token "$GITHUB_TOKEN" \
-                '.mcpServers.github.env = {"GITHUB_TOKEN": $token}' \
-              > /per/etc/nixos/.mcp.json
-            echo "Created /per/etc/nixos/.mcp.json for Claude Code MCP servers"
-          else
-            echo "Warning: GitHub token not found, MCP github server will not authenticate" >&2
-            $DRY_RUN_CMD printf '%s' "$BASE_JSON" > /per/etc/nixos/.mcp.json
-          fi
-          $DRY_RUN_CMD chmod 644 /per/etc/nixos/.mcp.json
-        else
-          echo "Warning: /per/etc/nixos/ is not writable, cannot create .mcp.json" >&2
-        fi
-      '';
+    activation.createMcpJson = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      if [ -w /per/etc/nixos ]; then
+        $DRY_RUN_CMD printf '%s' '${mcpJsonContent}' > /per/etc/nixos/.mcp.json
+        echo "Created /per/etc/nixos/.mcp.json for Claude Code MCP servers"
+      else
+        echo "Warning: /per/etc/nixos/ is not writable, cannot create .mcp.json" >&2
+      fi
+    '';
   };
 
   programs.gh = {

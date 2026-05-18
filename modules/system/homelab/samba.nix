@@ -64,8 +64,8 @@ in {
     systemd.services.samba-setpasswd = {
       description = "Set Samba password for ${defaults.system.user} from sops secret";
       wantedBy = ["multi-user.target"];
-      after = ["samba.service"];
-      requires = ["samba.service"];
+      after = ["samba-smbd.service"];
+      requires = ["samba-smbd.service"];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;

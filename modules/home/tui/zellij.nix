@@ -76,12 +76,13 @@ in {
         ReadCliPipes
         ReadApplicationState
     }
-    "https://github.com/YesYouKenSpace/zellij-smart-tabs/releases/download/v0.2.1/zellij-smart-tabs.wasm" {
-        ChangeApplicationState
-        ReadApplicationState
-        RunCommands
-    }
     PERMISSIONS_EOF
+
+    # Clean up stale session metadata older than 7 days to prevent "About Zellij" pane popup
+    session_dir="$HOME/.cache/zellij/contract_version_1/session_info"
+    if [ -d "$session_dir" ]; then
+      find "$session_dir" -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
+    fi
   '';
 
   programs.zellij = {
@@ -105,8 +106,8 @@ in {
         copy_on_select = true; # Automatically copy selected text via OSC 52
 
         # Session settings
-        session_serialization = false;
-        pane_viewport_serialization = false;
+        session_serialization = true;
+        pane_viewport_serialization = true;
 
         scrollback_editor = "${pkgs.helix}/bin/hx";
         auto_layout = true;
@@ -148,31 +149,11 @@ in {
           pipe_name "zjstatus_hints"
           hide_in_base_mode false
         }
-        smart-tabs location="https://github.com/YesYouKenSpace/zellij-smart-tabs/releases/download/v0.2.1/zellij-smart-tabs.wasm" {
-          format "{% if short_git_root %}{{ short_git_root }}{% else %}{{ short_dir }}{% endif %}{% if program %}  {{ program }}{% endif %}"
-          poll_interval "5"
-          debounce "0.2"
-          debug "false"
-          sub {
-            program {
-              "opencode-wrapped" "opencode"
-              "fish" ""
-            }
-            status {
-              "idle" ""
-              "running" ""
-              "pending" ""
-              "done" ""
-              "error" ""
-            }
-          }
-        }
       }
 
       load_plugins {
         zjstatus-hints
         zellij-attention
-        smart-tabs
       }
 
       keybinds clear-defaults=true {
@@ -240,9 +221,6 @@ in {
           bind "9" { GoToTab 9; SwitchToMode "Locked"; }
           bind "Tab" { ToggleTab; }
           bind "r" {
-            MessagePlugin "smart-tabs" {
-              name "set_focused_to_manual"
-            }
             SwitchToMode "RenameTab"
             TabNameInput 0
           }
@@ -252,9 +230,6 @@ in {
           bind "Esc" {
             UndoRenameTab
             SwitchToMode "tab"
-            MessagePlugin "smart-tabs" {
-              name "set_focused_to_managed"
-            }
           }
         }
 

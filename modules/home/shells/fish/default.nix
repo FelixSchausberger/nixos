@@ -218,25 +218,23 @@
       end
 
       # === SAFE ZELLIJ AUTO-START ===
-      # SSH logins attach to a named persistent session ("homelab") so that agent
-      # sessions survive disconnect and are immediately resumable from any device.
-      # exec is intentional for SSH: replacing fish means detaching from zellij
-      # cleanly ends the SSH connection while the session continues in the background.
-      #
-      # Local logins use the official auto-start method (safe, with fallback).
+      # Single named session model: attach if exists, create only if none exists.
+      # SSH connections skip zellij — local zellij acts as the outer multiplexer,
+      # avoiding nested sessions and mouse-capture conflicts.
       #
       # To enable: set -gx ZELLIJ_AUTO_START 1
       # To disable: set -e ZELLIJ_AUTO_START
-      #
-      # Official documentation: https://zellij.dev/documentation/integration.html
       if status is-interactive; and set -q ZELLIJ_AUTO_START; and not __emergency_check
-        # Run pre-flight checks before attempting auto-start
         if __zellij_preflight_check
           if not set -q ZELLIJ
-            # Local login: use official auto-start method (safe, with fallback)
-            # SSH connections are excluded: nested zellij sessions cause issues and
-            # zellij captures mouse events preventing terminal text selection
-            eval (zellij setup --generate-auto-start fish | string collect)
+            if set -q SSH_CONNECTION
+            else if set -q ZELLIJ_SESSION_NAME
+              zellij attach -c $ZELLIJ_SESSION_NAME
+              kill $fish_pid
+            else
+              zellij attach -c
+              kill $fish_pid
+            end
           end
         else
           echo "Zellij pre-flight checks failed - starting normal fish shell" >&2

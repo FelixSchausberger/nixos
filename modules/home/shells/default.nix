@@ -1,25 +1,48 @@
-{config, ...}: {
+{
+  config,
+  lib,
+  ...
+}: let
+  sudoAbbrExclusions = [
+    "pls"
+    "nixinfo"
+    "list-errors"
+    "rip"
+    "build"
+  ];
+
+  shellAbbrs = lib.mapAttrs (_n: v: {
+    position = "anywhere";
+    command = [
+      "sudo"
+      "pls"
+    ];
+    expansion = v;
+  }) (lib.filterAttrs (n: _: !lib.elem n sudoAbbrExclusions) config.home.shellAliases);
+in {
   imports = [
-    ./bash.nix # GNU Bourne-Again Shell, the de facto standard shell on Linux (for interactive use)
-    ./fish # Smart and user-friendly command line shell
-    ./bat.nix # A cat clone with syntax highlighting and Git integration
-    ./direnv.nix # A shell extension that manages your environment
-    ./eza.nix # A modern, maintained replacement for ls
-    ./fzf.nix # A command-line fuzzy finder written in Go
-    ./starship.nix # A minimal, blazing fast, and extremely customizable prompt
-    ./zoxide.nix # A fast cd command that learns your habits
+    ./bash.nix
+    ./fish
+    ./bat.nix
+    ./direnv.nix
+    ./eza.nix
+    ./fzf.nix
+    ./starship.nix
+    ./zoxide.nix
   ];
 
   home.shellAliases = {
-    bios = "sudo systemctl reboot --firmware-setup";
+    bios = "systemctl reboot --firmware-setup";
     build = "nix build -L";
     cp = "cp -rpv";
     list-errors = "journalctl -p err -b --output=cat | sort | uniq -c | sort -nr";
-    merge = "rsync -avhu --progress";
+    merge = "rsync -avhu --info=progress2 --partial --append-verify";
     nixinfo = "nix-shell -p nix-info --run 'nix-info -m'";
     pls = "sudo";
-    repair = "sudo nix-store --verify --check-contents --repair";
+    repair = "nix-store --verify --check-contents --repair";
     rip = "rip --graveyard /per/home/${config.home.username}/.local/share/graveyard";
     rsync = "rsync -avhP --no-inc-recursive";
   };
+
+  programs.fish.shellAbbrs = shellAbbrs;
 }

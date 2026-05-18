@@ -42,7 +42,10 @@ in {
       enable = true;
       enableBashIntegration = true;
       enableFishIntegration = true;
-      options = ["--alias" "f"];
+      options = [
+        "--alias"
+        "f"
+      ];
     };
   };
 
@@ -94,6 +97,9 @@ in {
 
     # Set PATH to include new generation packages
     export PATH="$newGenPath/home-path/bin:$PATH"
+
+    # Mark as activation context so health check skips tests that hang
+    export HM_ACTIVATION=1
 
     # Run health check with proper PATH - make it non-fatal (warnings only)
     if run ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then

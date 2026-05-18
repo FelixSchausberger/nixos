@@ -16,7 +16,13 @@
   features = {
     development = {
       enable = true;
-      languages = ["nix" "python" "go" "rust" "javascript"];
+      languages = [
+        "nix"
+        "python"
+        "go"
+        "rust"
+        "javascript"
+      ];
     };
   };
 
@@ -67,6 +73,8 @@
 
     # Environment variables
     sessionVariables = {
+      ZELLIJ_SESSION_NAME = "wsl";
+
       # Help with WSL display issues if X11 forwarding is used
       DISPLAY = ":0";
       # Optimize for WSL environment
