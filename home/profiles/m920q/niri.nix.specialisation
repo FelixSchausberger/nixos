@@ -30,35 +30,6 @@
   };
 
   home.packages = with pkgs; [
-    rustdesk
     moonlight-qt
   ];
-
-  # RustDesk daemon accepting incoming remote desktop connections.
-  # The relay server (hbbs/hbbr) runs as system services on this machine; client points to localhost.
-  # DISPLAY=:0 is required: rustdesk --service uses GTK which falls back to X11.
-  # xwayland-satellite provides the :0 display; UWSM does not export DISPLAY to the
-  # systemd user environment automatically.
-  modules.home.graphicalService.rustdesk = {
-    enable = true;
-    description = "RustDesk remote desktop daemon";
-    execStart = "${pkgs.rustdesk}/bin/rustdesk --service";
-    environment = {
-      DISPLAY = ":0";
-    };
-  };
-
-  # Key left empty — connection is secured by Tailscale; add the key from
-  # /per/var/lib/rustdesk/id_ed25519.pub for stricter relay server verification.
-  # Connect via Tailscale IP so the daemon discovers 100.105.37.12 as local-ip-addr.
-  # With local-ip-addr = ::1 (loopback), hbbs tells Windows to connect to ::1, which
-  # fails (it's Windows's own loopback). Connecting via the Tailscale IP makes the
-  # daemon register with its Tailscale-reachable address, enabling direct connections.
-  xdg.configFile."rustdesk/RustDesk2.toml".text = ''
-    [options]
-    custom-rendezvous-server = "100.105.37.12"
-    relay-server = "100.105.37.12"
-    api-server = ""
-    key = "VURTqDwC4fSo6XGDT4rwnjj2+obq+3whEZkYXL+6pM0=" # pragma: allowlist secret
-  '';
 }

@@ -99,29 +99,6 @@ in {
           ];
         };
       };
-
-      wifi = {
-        wms = null;
-        profile = "server-efficiency";
-        extraConfig = {
-          pkgs,
-          config,
-          ...
-        }: {
-          systemd.services.deploy-iwd-wifi = {
-            wantedBy = ["multi-user.target"];
-            after = ["sops-nix.service"];
-            before = ["iwd.service"];
-            serviceConfig = {
-              Type = "oneshot";
-              ExecStart =
-                "${pkgs.coreutils}/bin/install -m 0600 -o root -g root "
-                + "${config.sops.templates."wifi/iwd".path} "
-                + "/var/lib/iwd/PrettyFlyForAWiFi.psk";
-            };
-          };
-        };
-      };
     };
   };
 
@@ -307,15 +284,6 @@ in {
       # authKeyFile omitted — run `sudo tailscale up` after first boot to authenticate
       advertiseRoutes = ["192.168.178.0/24"];
       udpGROInterface = "eno1";
-    };
-
-    # Requires real domain names pointing to 116.204.198.109 — enable after DNS is configured
-    caddy.enable = false;
-
-    rustdesk = {
-      enable = true;
-      # Tailscale IP — advertised by hbbs so remote clients know where to reach hbbr
-      relayAddress = "100.105.37.12";
     };
 
     # Requires grafana secrets

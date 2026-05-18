@@ -21,3 +21,5 @@ builds:
     - nixosConfigurations.desktop
     # surface: full GUI + updated Hyprland stack exceeds Garnix ~8GB RAM evaluation limit
     - nixosConfigurations.surface
+    # m920q: Prometheus + Grafana + Docker + 2 specialisations exceed Garnix ~8GB RAM evaluation limit
+    - nixosConfigurations.m920q

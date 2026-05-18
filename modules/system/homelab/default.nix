@@ -6,8 +6,6 @@
     ./samba.nix
     ./tailscale.nix
     ./immich.nix
-    ./caddy.nix
-    ./rustdesk.nix
     ./monitoring.nix
     ./ssh-hardened.nix
   ];

@@ -2,7 +2,6 @@
 {
   adguard_enabled = true;
   adguard_port = 3000;
-  caddy_enabled = false;
   grafana_port = 3001;
   has_adguard_grafana_assertion = true;
   has_adguard_port_assertion = true;
