@@ -168,10 +168,12 @@ in {
 
   environment.systemPackages = lib.mkDefault (
     with pkgs; [
+      wakeonlan # Send magic packets to wake desktop from homelab
       powertop # CPU C-state residency, wakeups/sec, power estimation
       iotop # Per-process disk IO monitoring
       htop # Process monitoring (already included via btop but useful)
       lm_sensors # Temperature, voltage, fan speed via hwmon
+      immich-go # Bulk import tool for Immich
     ]
   );
 
@@ -338,12 +340,17 @@ in {
   modules.system.homelab = {
     adguardhome.enable = true;
     backup.enable = true;
-    samba.enable = true;
     immich = {
       enable = true;
       host = "0.0.0.0";
       openFirewall = true;
       dataPath = "/per/mnt/data/Media/Pictures";
+    };
+    nextcloud = {
+      enable = true;
+      host = "0.0.0.0";
+      openFirewall = true;
+      dataPath = "/per/mnt/data/nextcloud";
     };
     tailscale = {
       enable = true;

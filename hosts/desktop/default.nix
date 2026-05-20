@@ -84,6 +84,13 @@ in {
     };
   };
 
+  # Auto-import the games data pool (1TB WD Blue SN5000) on boot
+  boot.zfs.extraPools = ["dpool"];
+  fileSystems."/per/games" = {
+    device = "dpool/games";
+    fsType = "zfs";
+  };
+
   modules.system.homelab.tailscale = {
     enable = true;
     udpGROInterface = "eno1";

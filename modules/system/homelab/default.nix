@@ -4,9 +4,9 @@
   imports = [
     ./adguardhome.nix
     ./backup.nix
-    ./samba.nix
     ./tailscale.nix
     ./immich.nix
+    ./nextcloud.nix
     ./monitoring.nix
     ./ssh-hardened.nix
   ];

@@ -3,7 +3,8 @@
   pkgs,
   inputs,
   ...
-}: {
+}:
+{
   # Server home profile: TUI-only, SSH-accessible dev environment.
   # No WM configuration — GUI is handled by the niri system specialisation.
 
@@ -59,9 +60,6 @@
       dig
       wget
       curl
-
-      # File sharing management
-      samba # provides smbclient, smbpasswd, net
 
       # Remote coding from phone via SSH
       inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
