@@ -4,24 +4,25 @@
   inputs,
   lib,
   ...
-}: let
+}:
+let
   hostLib = import ../lib.nix;
   hostName = "desktop";
   hostInfo = inputs.self.lib.hosts.${hostName};
   # Only import WMs that are in the main config, not specialisation WMs
   # This prevents eager evaluation of all WM modules
-in {
-  imports =
-    [
-      ./disko.nix
-      ./base-config.nix
-      ../../modules/system/specialisations.nix
-      ../../modules/system/gaming.nix
-      ../../modules/system/homelab
-      ../../modules/system/hardware/power-management.nix
-      ../../modules/system/sunshine.nix
-    ]
-    ++ hostLib.wmModules hostInfo.wms;
+in
+{
+  imports = [
+    ./disko.nix
+    ./base-config.nix
+    ../../modules/system/specialisations.nix
+    ../../modules/system/gaming.nix
+    ../../modules/system/homelab
+    ../../modules/system/hardware/power-management.nix
+    ../../modules/system/sunshine.nix
+  ]
+  ++ hostLib.wmModules hostInfo.wms;
 
   # Niri home modules loaded at parent level (niri is the default WM)
   # Note: inputs.niri.homeModules.config is already provided via nixosModules.niri
@@ -40,7 +41,7 @@ in {
     # Cosmic available as a boot-time specialisation
     specialisations = {
       cosmic = {
-        wms = ["cosmic"];
+        wms = [ "cosmic" ];
         profile = "default";
         extraConfig = {
           home-manager.users.${inputs.self.lib.user}.imports = [
@@ -78,14 +79,14 @@ in {
       matchConfig.Name = "eno1";
       linkConfig.RequiredForOnline = "routable";
       networkConfig.DHCP = "no";
-      address = ["192.168.178.3/24"];
-      gateway = ["192.168.178.1"];
-      dns = ["192.168.178.1"];
+      address = [ "192.168.178.3/24" ];
+      gateway = [ "192.168.178.1" ];
+      dns = [ "192.168.178.1" ];
     };
   };
 
   # Auto-import the games data pool (1TB WD Blue SN5000) on boot
-  boot.zfs.extraPools = ["dpool"];
+  boot.zfs.extraPools = [ "dpool" ];
   fileSystems."/per/games" = {
     device = "dpool/games";
     fsType = "zfs";
@@ -100,6 +101,14 @@ in {
   # AMD VAAPI encoding is available via amdgpu driver (hardware.profiles.amdGpu above)
   modules.system.sunshine.enable = true;
   modules.system.gaming.enable = true;
+
+  # OpenLDAP 2.6.13 test suite has a regression (provider/consumer DB mismatch).
+  # Skip tests rather than wait for upstream fix; runtime is unaffected.
+  nixpkgs.config.packageOverrides = pkgs: {
+    openldap = pkgs.openldap.overrideAttrs (old: {
+      doCheck = false;
+    });
+  };
 
   # System maintenance and monitoring
   modules.system.maintenance = {

@@ -3,11 +3,9 @@
   lib,
   pkgs,
   ...
-}:
-let
+}: let
   cfg = config.modules.system.homelab.nextcloud;
-in
-{
+in {
   options.modules.system.homelab.nextcloud = {
     enable = lib.mkEnableOption "Nextcloud file sync and share server";
     dataPath = lib.mkOption {
@@ -59,7 +57,7 @@ in
 
     services.postgresql = {
       enable = true;
-      ensureDatabases = [ "nextcloud" ];
+      ensureDatabases = ["nextcloud"];
       ensureUsers = [
         {
           name = "nextcloud";
@@ -81,7 +79,7 @@ in
         listen = [
           {
             addr = cfg.host;
-            port = cfg.port;
+            inherit (cfg) port;
           }
         ];
       };
@@ -99,7 +97,7 @@ in
 
     services.nextcloud.datadir = cfg.dataPath;
 
-    networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.port ];
+    networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [cfg.port];
 
     environment.persistence."/per".directories = [
       "/var/lib/nextcloud"

@@ -3,8 +3,7 @@
   pkgs,
   inputs,
   ...
-}:
-{
+}: {
   # Server home profile: TUI-only, SSH-accessible dev environment.
   # No WM configuration — GUI is handled by the niri system specialisation.
 
