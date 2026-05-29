@@ -3,12 +3,13 @@
 {
   imports = [
     ./adguardhome.nix
+    ./backup.nix
+    ./immich.nix
+    ./monitoring.nix
+    ./nextcloud.nix
+    ./ntfy.nix
+    ./remote-control.nix
     ./samba.nix
     ./tailscale.nix
-    ./immich.nix
-    ./caddy.nix
-    ./rustdesk.nix
-    ./monitoring.nix
-    ./ssh-hardened.nix
   ];
 }

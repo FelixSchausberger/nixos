@@ -20,6 +20,7 @@
   device ? "/dev/disk/by-id/changeme",
   swapSize ? null,
   poolName ? "rpool",
+  ...
 }: let
   # Build partition list conditionally based on swapSize
   partitions =
@@ -143,6 +144,16 @@ in {
             mountpoint = "/home";
             options = {
               mountpoint = "/home";
+              "com.sun:auto-snapshot" = "true";
+            };
+          };
+
+          # Repositories (snapshots enabled)
+          "eyd/per/repos" = {
+            type = "zfs_fs";
+            mountpoint = "/per/repos";
+            options = {
+              mountpoint = "/per/repos";
               "com.sun:auto-snapshot" = "true";
             };
           };

@@ -12,7 +12,7 @@
         workspaces = [
           {
             name = "personal";
-            path = "/per/mnt/gdrive/Obsidian";
+            path = "/per/mnt/data/gdrive/Obsidian";
           }
           # Add more workspaces as needed:
           # {

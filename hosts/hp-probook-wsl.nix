@@ -1,3 +1,5 @@
+# Flake entrypoint for the WSL host profile.
+# Includes generated hardware metadata but keeps disko out of runtime imports.
 {lib, ...}: let
   importLib = import ../lib/import.nix {inherit lib;};
 in {

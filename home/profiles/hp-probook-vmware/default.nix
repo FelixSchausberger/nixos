@@ -30,28 +30,11 @@
     };
   };
 
-  # Enable OpenChamber with Cloudflare tunnel for remote AI coding access
-  # TODO: Fix openchamber package availability issue
-  # ai-assistants.opencode.openchamber = {
-  #   enable = true;
-  #   password = "vmware-dev";
-  #   enableCloudflare = true;
-  #   enableQrCode = true;
-  #   autoStart = false;
-  # };
-
   # Fix missing calendar configuration
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 
   # Home configuration for VMware VM
   programs = {
-    # Enable good morning message at 7am
-    claude-code.goodMorning = {
-      enable = true;
-      time = "07:00:00";
-      message = "Good morning! Ready to start the day.";
-    };
-
     # Enable direnv for project-specific environments
     direnv = {
       enable = true;
@@ -95,6 +78,8 @@
 
     # Environment variables for native Wayland
     sessionVariables = {
+      ZELLIJ_SESSION_NAME = "vmware";
+
       # Wayland backend preferences
       GDK_BACKEND = lib.mkDefault "wayland,x11";
       QT_QPA_PLATFORM = lib.mkDefault "wayland;xcb";

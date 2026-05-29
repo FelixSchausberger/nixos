@@ -19,19 +19,19 @@
 
   terminalPkg =
     if cfg.terminal == "ghostty"
-    then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then pkgs.ghostty
     else if cfg.terminal == "cosmic-term"
     then pkgs.cosmic-term
     else if cfg.terminal == "wezterm"
     then pkgs.wezterm
-    else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    else pkgs.ghostty;
 
   fileManagerPkg = pkgs.cosmic-files;
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
     ./animations.nix
-    ./ironbar.nix # Customizable gtk-layer-shell wlroots/sway bar written in Rust
+    ../shared/ironbar.nix
     ./keybinds.nix
     ./scratchpads.nix
     ./workspaces.nix
@@ -41,7 +41,7 @@ in {
     ../shared/satty.nix # Screenshot tool
     ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
     # Use shared compositor-agnostic modules with hyprland session target
-    (import ../shared/swww-coordinated.nix "hyprland-session.target") # Coordinated wallpaper system with blurred backgrounds
+    ../shared/awww-coordinated.nix # Coordinated wallpaper system with blurred backgrounds
     (import ../shared/wired.nix "hyprland-session.target") # Modern notification daemon configuration
     (import ../shared/wl-gammarelay.nix "hyprland-session.target") # Gamma control
     (import ../shared/themes.nix "hyprland-session.target") # Theme and appearance configuration
@@ -98,6 +98,11 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    wm.awww = {
+      enable = true;
+      sessionTarget = lib.mkDefault "hyprland-session.target";
+    };
+
     # Enable which-key for keybind discovery
     wm.which-key.enable = true;
 

@@ -1,3 +1,5 @@
+# System-side Hyprland session module integrated with shared Wayland platform settings.
+# Enabled only when hostConfig marks Hyprland active on GUI hosts.
 {
   inputs,
   pkgs,

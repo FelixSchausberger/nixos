@@ -16,7 +16,13 @@
   features = {
     development = {
       enable = true;
-      languages = ["nix" "python" "go" "rust" "javascript"];
+      languages = [
+        "nix"
+        "python"
+        "go"
+        "rust"
+        "javascript"
+      ];
     };
   };
 
@@ -43,13 +49,6 @@
   # WSL-specific home configuration
   # Focus on terminal applications and CLI tools
   programs = {
-    # Enable good morning message at 7am
-    claude-code.goodMorning = {
-      enable = true;
-      time = "07:00:00";
-      message = "Good morning! Ready to start the day.";
-    };
-
     # Enable direnv for project-specific environments
     direnv = {
       enable = true;
@@ -67,13 +66,6 @@
 
   # WSL-specific home configuration
   home = {
-    # WSL backup aliases (shell-agnostic)
-    shellAliases = {
-      wsl-backup = "sudo /per/etc/nixos/tools/scripts/wsl-backup-hpprobook.sh backup";
-      wsl-restore = "sudo /per/etc/nixos/tools/scripts/wsl-backup-hpprobook.sh restore";
-      wsl-backup-verify = "sudo /per/etc/nixos/tools/scripts/wsl-backup-hpprobook.sh verify";
-    };
-
     # WSL work-specific packages
     packages = with pkgs; [
       lazyssh # Terminal-based SSH manager
@@ -81,6 +73,8 @@
 
     # Environment variables
     sessionVariables = {
+      ZELLIJ_SESSION_NAME = "wsl";
+
       # Help with WSL display issues if X11 forwarding is used
       DISPLAY = ":0";
       # Optimize for WSL environment

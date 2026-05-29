@@ -10,6 +10,7 @@
       # };
       background = cosmicLib.cosmic.mkRON "enum" "Dark";
       expand_to_edges = true;
+      margin = 0;
       name = "Panel";
       opacity = 0.8;
       output = cosmicLib.cosmic.mkRON "enum" "All";

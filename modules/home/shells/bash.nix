@@ -95,12 +95,12 @@
         if [[ "$force_mode" == true ]]; then
           # Force mode: use real rm
           if [[ "$is_interactive" == true ]]; then
-            echo "🔥 Using force delete (real rm)"
+            echo "Using force delete (real rm)"
           fi
           command rm "$@"
         elif [[ "$is_interactive" == true ]]; then
           # Interactive mode: use safe rip with message
-          echo "🛡️  Using safe delete (rip) - files moved to graveyard"
+          echo "Using safe delete (rip) - files moved to graveyard"
           echo "   Use 'rm -f' for permanent deletion"
           rip --graveyard "/per/home/$(whoami)/.local/share/graveyard" "''${filtered_args[@]}"
         else
@@ -111,7 +111,7 @@
 
       # Emergency mode detection using shared function
       if __emergency_check; then
-        echo "🚨 Emergency shell mode active - staying in bash"
+        echo "Emergency shell mode active - staying in bash"
         echo "   Type 'emergency-help' for recovery options"
         echo "   Type 'emergency-off' to disable emergency mode"
         PS1='[EMERGENCY] \u@\h:\w\$ '
@@ -136,17 +136,17 @@
                     shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
                     exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
                   else
-                    echo "⚠️  fish configuration test failed - staying in bash"
+                    echo "fish configuration test failed - staying in bash" >&2
                     echo "   You can manually start fish with: fish --no-config"
                     PS1='\u@\h:\w\$ '
                   fi
                 else
-                  echo "⚠️  fish startup test failed - staying in bash"
+                  echo "fish startup test failed - staying in bash" >&2
                   echo "   You can manually start fish with: fish"
                   PS1='\u@\h:\w\$ '
                 fi
               else
-                echo "⚠️  fish version check failed or timed out - staying in bash"
+                echo "fish version check failed or timed out - staying in bash" >&2
                 echo "   You can manually start fish with: fish"
                 PS1='\u@\h:\w\$ '
               fi
@@ -157,18 +157,18 @@
                   shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
                   exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
                 else
-                  echo "⚠️  fish basic test failed - staying in bash"
+                  echo "fish basic test failed - staying in bash" >&2
                   echo "   You can manually start fish with: fish"
                   PS1='\u@\h:\w\$ '
                 fi
               else
-                echo "⚠️  fish version check failed - staying in bash"
+                echo "fish version check failed - staying in bash" >&2
                 echo "   You can manually start fish with: fish"
                 PS1='\u@\h:\w\$ '
               fi
             fi
           else
-            echo "⚠️  fish not found - staying in bash"
+            echo "fish not found - staying in bash" >&2
             PS1='\u@\h:\w\$ '
           fi
         else

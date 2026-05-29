@@ -1,10 +1,104 @@
 {
   pkgs,
   inputs,
+  lib,
   ...
 }: let
   inherit (inputs.self.lib) defaults;
+  catppuccin = inputs.self.lib.catppuccinColors.mocha;
 in {
+  xdg.configFile."zellij/layouts/default.kdl".text = ''
+    layout {
+      default_tab_template {
+        children
+        pane size=1 borderless=true {
+          plugin location="file://${pkgs.zjstatus}/bin/zjstatus.wasm" {
+            format_left   "{mode}"
+            format_center "{tabs}"
+            format_right  "{pipe_zjstatus_hints} {datetime}"
+            format_space  ""
+
+            pipe_zjstatus_hints_format "{output}"
+
+            border_enabled "false"
+            hide_frame_for_single_pane "false"
+
+            mode_normal      "#[bg=${catppuccin.green},fg=${catppuccin.base},bold] NORMAL "
+            mode_locked      "#[bg=${catppuccin.surface0},fg=${catppuccin.text}] LOCKED "
+            mode_tab         "#[bg=${catppuccin.blue},fg=${catppuccin.base},bold] TAB "
+            mode_pane        "#[bg=${catppuccin.mauve},fg=${catppuccin.base},bold] PANE "
+            mode_resize      "#[bg=${catppuccin.peach},fg=${catppuccin.base},bold] RESIZE "
+            mode_move        "#[bg=${catppuccin.yellow},fg=${catppuccin.base},bold] MOVE "
+            mode_scroll      "#[bg=${catppuccin.teal},fg=${catppuccin.base},bold] SCROLL "
+            mode_search      "#[bg=${catppuccin.red},fg=${catppuccin.base},bold] SEARCH "
+            mode_session     "#[bg=${catppuccin.pink},fg=${catppuccin.base},bold] SESSION "
+            mode_entersearch "#[bg=${catppuccin.red},fg=${catppuccin.base},bold] ENTERSEARCH "
+
+            tab_normal      "#[fg=${catppuccin.overlay1}] {name} "
+            tab_active      "#[fg=${catppuccin.text},bold] {name} "
+            tab_separator   "#[fg=${catppuccin.surface1}]|"
+
+            datetime         "#[fg=${catppuccin.subtext0}] {format}"
+            datetime_format  "%H:%M"
+            datetime_timezone "Europe/Vienna"
+          }
+        }
+      }
+    }
+  '';
+
+  home.activation.writeZellijPermissions = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    permissions_file="$HOME/.cache/zellij/permissions.kdl"
+    mkdir -p "$(dirname "$permissions_file")"
+    $DRY_RUN_CMD cat > "$permissions_file" << 'PERMISSIONS_EOF'
+    "${pkgs.zjstatus}/bin/zjstatus.wasm" {
+        RunCommands
+        ChangeApplicationState
+        ReadApplicationState
+    }
+    "${pkgs."zjstatus-hints"}/bin/zjstatus-hints.wasm" {
+        MessageAndLaunchOtherPlugins
+        ChangeApplicationState
+        ReadCliPipes
+        ReadApplicationState
+    }
+    "https://github.com/Nacho114/harpoon/releases/latest/download/harpoon.wasm" {
+        ReadApplicationState
+        ChangeApplicationState
+    }
+    "https://github.com/karimould/zellij-forgot/releases/latest/download/zellij_forgot.wasm" {
+        ReadApplicationState
+        ChangeApplicationState
+    }
+    "https://github.com/KiryuuLight/zellij-attention/releases/latest/download/zellij-attention.wasm" {
+        MessageAndLaunchOtherPlugins
+        ChangeApplicationState
+        ReadCliPipes
+        ReadApplicationState
+    }
+    PERMISSIONS_EOF
+
+    # Clean up stale session metadata older than 7 days to prevent "About Zellij" pane popup
+    session_dir="$HOME/.cache/zellij/contract_version_1/session_info"
+    if [ -d "$session_dir" ]; then
+      find "$session_dir" -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
+    fi
+  '';
+  systemd.user.services.zellij-main = {
+    Unit = {
+      Description = "Persistent Zellij main session";
+      After = ["network.target"];
+    };
+    Service = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.zellij}/bin/zellij attach --create-background main";
+      ExecStop = "${pkgs.zellij}/bin/zellij kill-session main";
+    };
+    Install = {
+      WantedBy = ["default.target"];
+    };
+  };
   programs.zellij = {
     enable = true;
 
@@ -13,19 +107,21 @@ in {
         theme = "catppuccin-mocha";
         default_shell = "fish";
         default_cwd = defaults.paths.homeDir;
+        default_mode = "Locked";
 
         # UI settings
         pane_frames = false;
         simplified_ui = true;
-        default_layout = "compact";
+        default_layout = "default";
+        show_startup_tip = false;
 
         # Mouse support
         mouse_mode = true;
         copy_on_select = true; # Automatically copy selected text via OSC 52
 
         # Session settings
-        session_serialization = false;
-        pane_viewport_serialization = false;
+        session_serialization = true;
+        pane_viewport_serialization = true;
 
         scrollback_editor = "${pkgs.helix}/bin/hx";
         auto_layout = true;
@@ -59,12 +155,19 @@ in {
       }
 
       plugins {
-        compact-bar location="zellij:compact-bar" {
-          tooltip "F1"
-        }
-
+        zjstatus location="file://${pkgs.zjstatus}/bin/zjstatus.wasm"
         harpoon location="https://github.com/Nacho114/harpoon/releases/latest/download/harpoon.wasm"
         forgot location="https://github.com/karimould/zellij-forgot/releases/latest/download/zellij_forgot.wasm"
+        zellij-attention location="https://github.com/KiryuuLight/zellij-attention/releases/latest/download/zellij-attention.wasm"
+        zjstatus-hints location="file://${pkgs."zjstatus-hints"}/bin/zjstatus-hints.wasm" {
+          pipe_name "zjstatus_hints"
+          hide_in_base_mode false
+        }
+      }
+
+      load_plugins {
+        zjstatus-hints
+        zellij-attention
       }
 
       keybinds clear-defaults=true {
@@ -131,6 +234,17 @@ in {
           bind "8" { GoToTab 8; SwitchToMode "Locked"; }
           bind "9" { GoToTab 9; SwitchToMode "Locked"; }
           bind "Tab" { ToggleTab; }
+          bind "r" {
+            SwitchToMode "RenameTab"
+            TabNameInput 0
+          }
+        }
+
+        renametab {
+          bind "Esc" {
+            UndoRenameTab
+            SwitchToMode "tab"
+          }
         }
 
         // Pane mode: Manage panes with Colemak-DH navigation (neio)

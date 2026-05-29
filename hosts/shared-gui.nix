@@ -1,3 +1,5 @@
+# Shared baseline for GUI-capable hosts.
+# Combines common host defaults, ZFS boot behavior, and system GUI module imports.
 {lib, ...}: {
   # Shared configuration for GUI hosts (desktop, surface, work machines)
   # This module provides common functionality for systems with desktop environments

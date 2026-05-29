@@ -20,7 +20,7 @@
           echo "  jj commit [-m]     - Create commit"
           echo "  jj sync            - Fetch and push"
           echo "  jj search          - Interactive file search"
-          echo "  jj ui              - Open lazyjj TUI"
+          echo "  jj ui              - Open jjui TUI"
           echo ""
           echo "Workflow commands:"
           echo "  jjbranch (jjb)     - Create feature branch (optional, for experimental work)"
@@ -33,7 +33,7 @@
           echo "  - Push with 'jj git push'"
           echo "  - Create feature branches (jjbranch) only for experimental work"
           echo ""
-          echo "Note: Use 'lazyjj' for visual TUI operations"
+          echo "Note: Use 'jj ui' for visual TUI operations"
           echo ""
           return 0
         end
@@ -50,8 +50,8 @@
           case search
             jj_search $flags
           case ui
-            # Launch lazyjj TUI
-            command lazyjj $flags
+            # Launch jjui TUI
+            command jjui $flags
           case '*'
             # Pass through to actual jj command
             command jj $subcommand $flags
@@ -138,7 +138,7 @@
             --preview-window=up:1)
 
         if test -z "$type"
-          echo "❌ No type selected, aborting"
+          echo "No type selected, aborting" >&2
           return 1
         end
 
@@ -147,13 +147,13 @@
         read -P "Enter description (lowercase, hyphens only): " description
 
         if test -z "$description"
-          echo "❌ No description provided, aborting"
+          echo "No description provided, aborting" >&2
           return 1
         end
 
         # Validate description format
         if not string match -qr '^[a-z0-9-]+$' "$description"
-          echo "❌ Invalid description format"
+          echo "Invalid description format" >&2
           echo "   Use lowercase letters, numbers, and hyphens only"
           return 1
         end
@@ -163,37 +163,72 @@
         set -l commit_msg "$type: "(string replace -a '-' ' ' "$description")
 
         echo ""
-        echo "📝 Creating branch: $branch_name"
-        echo "💬 Commit message: $commit_msg"
+        echo "Creating branch: $branch_name"
+        echo "Commit message: $commit_msg"
         echo ""
 
         # Create new change with description
         if not command jj new -m "$commit_msg"
-          echo "❌ Failed to create new change"
+          echo "Failed to create new change" >&2
           return 1
         end
 
         # Create bookmark
         if not command jj bookmark create "$branch_name"
-          echo "❌ Failed to create bookmark"
+          echo "Failed to create bookmark" >&2
           return 1
         end
 
         # Push to remote
         echo ""
-        echo "🚀 Pushing to remote..."
+        echo "Pushing to remote..."
         if not command jj git push --branch "$branch_name"
-          echo "❌ Failed to push to remote"
+          echo "Failed to push to remote" >&2
           return 1
         end
 
         echo ""
-        echo "✅ Branch created and pushed successfully!"
+        echo "Branch created and pushed successfully!"
         echo ""
         echo "Next steps:"
         echo "  1. Make your changes"
         echo "  2. Run 'jj describe' or 'jjdescribe' to update commit message"
         echo "  3. Run 'jjpush' to push and create PR (typically back to dev)"
+        echo ""
+      '';
+    };
+
+    jjwork = {
+      description = "Rebase onto main and create clean working commit (run before any work)";
+      body = ''
+        # Fetch latest from remote
+        echo "Fetching from remote..."
+        if not command jj git fetch
+          echo "Failed to fetch from remote" >&2
+          return 1
+        end
+
+        # Rebase working copy onto main
+        echo "Rebasing onto main..."
+        if not command jj rebase -d main --skip-unchanged
+          echo "Rebase failed" >&2
+          return 1
+        end
+
+        # Check if there's already an empty working copy commit
+        set -l is_empty (jj log -r '@' --no-graph -T 'empty' 2>/dev/null)
+        if test "$is_empty" = "true"
+          echo "Working copy is already empty, ready to go"
+        else
+          echo "Creating clean working commit..."
+          if not command jj new
+            echo "Failed to create new commit" >&2
+            return 1
+          end
+        end
+
+        echo ""
+        echo "Ready! Working copy is based on main."
         echo ""
       '';
     };
@@ -205,36 +240,51 @@
         set -l bookmark (command jj bookmark list 2>/dev/null | grep '^\*' | awk '{print $2}')
 
         if test -z "$bookmark"
-          echo "❌ No active bookmark found"
+          echo "No active bookmark found" >&2
           echo "   Create a branch first with 'jjbranch'"
           return 1
         end
 
+        # Run pre-push quality checks
+        echo "Running pre-push quality checks..."
+        nix fmt 2>/dev/null || true
+        prek run --all-files 2>/dev/null || true
+
         # Push changes
-        echo "🚀 Pushing changes..."
+        echo "Pushing changes..."
         if not command jj git push
-          echo "❌ Failed to push changes"
+          echo "Failed to push changes" >&2
           return 1
         end
 
         # Create PR with auto-merge label
         echo ""
-        echo "📋 Creating pull request with auto-merge..."
+        echo "Creating pull request with auto-merge..."
         if not command gh pr create --fill --label auto-merge
-          echo "❌ Failed to create PR"
+          echo "Failed to create PR" >&2
           echo "   You may need to create it manually"
           return 1
         end
 
         echo ""
-        echo "✅ Pull request created successfully!"
+        echo "Pull request created successfully!"
         echo ""
-        echo "🔄 CI pipeline will run automatically"
-        echo "✨ PR will auto-merge when all checks pass"
+        echo "CI pipeline will run automatically"
+        echo "PR will auto-merge when all checks pass"
         echo ""
         echo "View PR status:"
         echo "  gh pr view --web"
         echo ""
+      '';
+    };
+
+    jqs = {
+      description = "Run code simplifier and formatters on changed files";
+      body = ''
+        echo "Running code simplifier and formatters..."
+        nix fmt 2>/dev/null || true
+        prek run --all-files 2>/dev/null || true
+        echo "Done! Run 'jj diff --stat' to review changes."
       '';
     };
 
@@ -248,21 +298,23 @@
     jjdescribe = {
       description = "Update commit description with AI-powered suggestion";
       body = ''
-        echo "🤖 Generating commit message suggestion with lumen..."
+        echo "Generating commit message suggestion with lumen..."
         echo ""
 
         # Generate suggestion using lumen
-        set -l suggestion (${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen}/bin/lumen draft 2>/dev/null)
+        set -l suggestion (${
+          inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen
+        }/bin/lumen draft 2>/dev/null)
 
         if test -z "$suggestion"
-          echo "❌ Failed to generate suggestion"
+          echo "Failed to generate suggestion" >&2
           echo "   Falling back to manual describe"
           command jj describe
           return $status
         end
 
         # Display suggestion
-        echo "💡 Suggested commit message:"
+        echo "Suggested commit message:"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "$suggestion"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -284,9 +336,9 @@
             command jj describe -m "$suggestion"
             if test $status -eq 0
               echo ""
-              echo "✅ Commit description updated"
+              echo "Commit description updated"
             else
-              echo "❌ Failed to update description"
+              echo "Failed to update description" >&2
               return 1
             end
 
@@ -302,13 +354,13 @@
               command jj describe -m "$edited_msg"
               if test $status -eq 0
                 echo ""
-                echo "✅ Commit description updated"
+                echo "Commit description updated"
               else
-                echo "❌ Failed to update description"
+                echo "Failed to update description" >&2
                 return 1
               end
             else
-              echo "❌ Empty message, aborting"
+              echo "Empty message, aborting" >&2
               return 1
             end
 
@@ -317,11 +369,11 @@
             command jj describe
 
           case q Q
-            echo "❌ Cancelled"
+            echo "Cancelled" >&2
             return 0
 
           case '*'
-            echo "❌ Invalid option"
+            echo "Invalid option" >&2
             return 1
         end
       '';
@@ -338,8 +390,5 @@
     complete -c jjb -d "Alias for jjbranch"
     complete -c jjpush -d "Push and create PR with auto-merge"
     complete -c jjdescribe -d "Update description with AI suggestion"
-
-    # Add lazyjj alias for convenience
-    alias jjui="lazyjj"
   '';
 }

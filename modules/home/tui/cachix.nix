@@ -14,6 +14,8 @@
       Description = "Cachix watch-store daemon for automatic binary cache population";
       After = ["network-online.target"];
       Wants = ["network-online.target"];
+      StartLimitIntervalSec = 300;
+      StartLimitBurst = 10;
     };
 
     Service = {

@@ -92,7 +92,6 @@ in {
           }
         ];
 
-        # Websearch engines - moved to top level as per walker config format
         websearch = {
           engines = {
             google = "https://www.google.com/search?q={}";

@@ -29,7 +29,7 @@ first_line=$(echo "$commit_msg" | head -1)
 
 if ! echo "$first_line" | grep -qE "$pattern"; then
   echo ""
-  echo "❌ ERROR: Commit message doesn't follow conventional commits format"
+  echo "ERROR: Commit message doesn't follow conventional commits format"
   echo ""
   echo "Current message:"
   echo "  $first_line"

@@ -13,12 +13,12 @@
   # Helper to get terminal package for WM config
   getTerminalPkg = wmCfg:
     if wmCfg.terminal == "ghostty"
-    then inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default
+    then pkgs.ghostty
     else if wmCfg.terminal == "cosmic-term"
     then pkgs.cosmic-term
     else if wmCfg.terminal == "wezterm"
     then pkgs.wezterm
-    else inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    else pkgs.ghostty;
 
   # Build which-key menu structure for a specific WM
   buildWhichKeyConfig = wmType: let

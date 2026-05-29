@@ -1,3 +1,5 @@
+# Flake entrypoint for the desktop host.
+# Imports host defaults plus generated hardware data, while keeping disko install-only.
 {lib, ...}: let
   importLib = import ../lib/import.nix {inherit lib;};
 in {

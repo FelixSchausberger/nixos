@@ -43,7 +43,9 @@
     # Critical systemd services
     systemd_services = {
       # Network services
-      networkmanager = config.systemd.services.NetworkManager.enable or config.systemd.services.NetworkManager-wait-online.wantedBy or null;
+      networkmanager =
+        config.systemd.services.NetworkManager.enable
+          or config.systemd.services.NetworkManager-wait-online.wantedBy or null;
 
       # System services
       dbus = builtins.hasAttr "dbus" config.systemd.services;
@@ -60,4 +62,5 @@ in {
   surface = getCriticalPaths "surface" configs.surface.config;
   hp-probook-vmware = getCriticalPaths "hp-probook-vmware" configs.hp-probook-vmware.config;
   hp-probook-wsl = getCriticalPaths "hp-probook-wsl" configs.hp-probook-wsl.config;
+  m920q = getCriticalPaths "m920q" configs.m920q.config;
 }
