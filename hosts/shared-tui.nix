@@ -1,3 +1,5 @@
+# Shared baseline for TUI-only hosts such as WSL and headless systems.
+# Forces graphics defaults off while still allowing host-level overrides.
 {lib, ...}: {
   # Shared configuration for TUI-only hosts (WSL, headless, portable emergency)
   # This module provides common functionality for systems without GUI
@@ -8,9 +10,10 @@
   ];
 
   config = {
-    # Minimal hardware graphics configuration (for basic compatibility
-    hardware.graphics = lib.mkForce {
-      enable = false; # Disabled for TUI-only systems
+    # Overrides shared.nix mkDefault (priority 1000) without blocking host-level overrides.
+    # Plain assignments in host configs (priority 100) still take precedence.
+    hardware.graphics = lib.mkOverride 999 {
+      enable = false;
       enable32Bit = false;
     };
 

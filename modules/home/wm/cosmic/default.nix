@@ -8,7 +8,7 @@
     ./cosmic-shortcuts.nix
     ./cosmic-term.nix
     ./cosmic-wallpapers.nix
-    # swww-coordinated imported by hyprland only to avoid duplicate systemd service definitions
+    # awww-coordinated imported by hyprland only to avoid duplicate systemd service definitions
     (import ../shared/wl-gammarelay.nix "cosmic-session.target") # Screen color temperature manager
     ../shared/satty.nix # Screenshot tool
     ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
@@ -28,7 +28,6 @@
 
   programs = {
     cosmic-ext-ctl.enable = true; # CLI for COSMIC Desktop configuration management
-    cosmic-manager.enable = true; # Manage COSMIC desktop declaratively using home-manager
     cosmic-ext-tweaks.enable = true; # A tweaking tool for the COSMIC desktop
   };
 

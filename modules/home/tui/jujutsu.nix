@@ -11,7 +11,6 @@ in {
 
   home.packages = with pkgs; [
     jjui # A TUI for Jujutsu VCS
-    # lazyjj # Lazygit-style TUI for Jujutsu (commented out due to test failures)
   ];
 
   programs.jujutsu = {
@@ -32,6 +31,11 @@ in {
         e = ["edit"];
         s = ["show"];
         b = ["bookmark"];
+        w = [
+          "rebase"
+          "-d"
+          "main"
+        ]; # Rebase working copy onto main before starting work
       };
 
       # Automatically advance main bookmark when creating new commits

@@ -151,9 +151,9 @@ cmd_status() {
     local required_tools=("jq" "curl")  # Add tools your script needs
     for tool in "${required_tools[@]}"; do
         if command -v "$tool" >/dev/null 2>&1; then
-            echo "✓ $tool: available"
+            echo "$tool: available"
         else
-            echo "✗ $tool: missing"
+            echo "$tool: missing"
         fi
     done
 }

@@ -45,7 +45,7 @@ cd "$REPO_ROOT"
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 mkdir -p "$METRICS_DIR"
 
-echo "📊 Generating quality dashboard..."
+echo "Generating quality dashboard..."
 
 # Run all metric collection scripts
 echo "Collecting metrics..."
@@ -107,12 +107,12 @@ else
 fi
 
 # Determine overall health status
-overall_status="✅ PASS"
+overall_status="PASS"
 if [ "$critical_coverage" != "N/A" ] && [ "$critical_coverage" -lt 100 ]; then
-  overall_status="⚠️ NEEDS IMPROVEMENT"
+  overall_status="NEEDS IMPROVEMENT"
 fi
 if [ "$deadnix_issues" != "0" ] || [ "$statix_issues" != "0" ] || [ "$unused_modules" != "0" ]; then
-  overall_status="⚠️ NEEDS IMPROVEMENT"
+  overall_status="NEEDS IMPROVEMENT"
 fi
 
 # Generate dashboard
@@ -121,7 +121,7 @@ cat > "$OUTPUT_FILE" <<EOF
 
 Last updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-## 🎯 Overall Health: $overall_status
+## Overall Health: $overall_status
 
 ## Test Coverage
 
@@ -186,9 +186,9 @@ EOF
     size=$(jq -r '.closure_size_mb' "$file")
     limit=$(jq -r '.limit_mb' "$file")
 
-    status="✅"
+    status=""
     if (( $(echo "$size > $limit" | bc -l) )); then
-      status="❌"
+      status=""
     fi
 
     cat >> "$OUTPUT_FILE" <<EOF
@@ -243,7 +243,7 @@ This dashboard is automatically updated by CI on every commit.
 \`\`\`
 EOF
 
-echo "✅ Dashboard generated: $OUTPUT_FILE"
+echo "Dashboard generated: $OUTPUT_FILE"
 echo ""
 echo "View with: cat $OUTPUT_FILE"
 exit 0

@@ -1,0 +1,35 @@
+{pkgs, ...}: {
+  imports = [
+    ../../../modules/home/gui/browsers
+    ../../persistence.nix
+  ];
+
+  # m920q niri specialisation: minimal GUI config for occasional desktop use.
+  # Monitor auto-detection used since output names vary (HDMI-A-1, DP-1, etc.).
+
+  # agetty autologin (set in hosts/m920q/default.nix specialisation) logs in schausberger
+  # on tty1. Fish detects tty1 on login and starts the niri session via UWSM.
+  # exec replaces the fish process so UWSM becomes the session leader.
+  programs.fish.loginShellInit = ''
+    if test (tty) = /dev/tty1
+      exec uwsm start niri-uwsm.desktop
+    end
+  '';
+
+  wm.niri = {
+    enable = true;
+    browser = "zen";
+    terminal = "ghostty";
+    # VIRTUAL-1 is the vkms headless output; disable it in GUI mode so content stays on projector.
+    outputs = [
+      {
+        name = "VIRTUAL-1";
+        enable = false;
+      }
+    ];
+  };
+
+  home.packages = with pkgs; [
+    moonlight-qt
+  ];
+}

@@ -67,6 +67,10 @@ niri-rebuild:
 
 # === CODE QUALITY ===
 
+# Simplify staged changes via Claude Code CLI
+simplify:
+    git diff --cached | claude -p "Review the following diff and suggest simplifications: reduce nesting, remove debug artifacts, convert nested ternaries to if/else, remove obvious comments. Preserve all functionality and conditional logging. Output only the simplified file contents for files that need changes." --output-format text
+
 # Format all Nix files
 fmt:
     nix fmt
@@ -99,6 +103,63 @@ home-build:
     USERNAME=$(whoami)
     nix build .#nixosConfigurations.$HOSTNAME.config.home-manager.users.$USERNAME.home.activationPackage \
         --out-link result-home
+
+# Switch system specialisation temporarily (reverts on next reboot)
+# Uses /nix/var/nix/profiles/system (the latest deployed generation) so that:
+# - Newly rebuilt specialisations take effect without a reboot
+# - headless <-> specialisation cycles work without redeploying in between
+#   just activate niri -> just activate headless -> just activate niri -> ...
+# Usage: just activate list | headless | <name>
+activate NAME:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PROFILE=/nix/var/nix/profiles/system
+    MODE_FILE=/run/m920q-current-mode
+    HM_SERVICE="home-manager-$(whoami).service"
+    USERNAME=$(whoami)
+
+    wait_for_nix_daemon() {
+        timeout 30 bash -c 'until nix-daemon --version >/dev/null 2>&1; do sleep 0.5; done' 2>/dev/null || true
+    }
+
+    graceful_niri_exit() {
+        sudo -u "$USERNAME" DISPLAY= WAYLAND_DISPLAY= XDG_RUNTIME_DIR=/run/user/1000 niri msg quit 2>/dev/null || true
+        timeout 5 bash -c "while systemctl --user -M ${USERNAME}@ is-active niri.service 2>/dev/null; do sleep 0.5; done" || true
+    }
+
+    case "{{NAME}}" in
+        list)
+            echo "headless"
+            ls "$PROFILE/specialisation/" 2>/dev/null || true
+            ;;
+        headless)
+            wait_for_nix_daemon
+            if systemctl --user -M "${USERNAME}@" is-active niri.service 2>/dev/null; then
+                graceful_niri_exit
+            fi
+            sudo "$PROFILE/bin/switch-to-configuration" test
+            echo "headless" | sudo tee "$MODE_FILE" > /dev/null
+            sudo systemctl restart "$HM_SERVICE"
+            sudo systemctl restart getty@tty1.service
+            ;;
+        *)
+            wait_for_nix_daemon
+            sudo "$PROFILE/specialisation/{{NAME}}/bin/switch-to-configuration" test
+            echo "{{NAME}}" | sudo tee "$MODE_FILE" > /dev/null
+            sudo systemctl restart "$HM_SERVICE"
+            if [ "{{NAME}}" = "niri" ]; then
+                sudo systemctl start bluetooth.service
+                sudo systemctl restart getty@tty1.service
+            fi
+            ;;
+    esac
+
+# Shorthand aliases for common specialisation switches
+gui:
+    just activate niri
+
+tty:
+    just activate headless
 
 # === QUALITY MONITORING ===
 
@@ -143,7 +204,7 @@ dashboard:
 
 # Run all quality checks
 quality-check: coverage check-unused profile-eval check-closures
-    @echo "✅ All quality checks complete"
+    @echo "All quality checks complete"
 
 # === FLAKE MANAGEMENT ===
 

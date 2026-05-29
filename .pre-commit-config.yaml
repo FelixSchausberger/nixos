@@ -12,6 +12,7 @@ repos:
     rev: v0.13.0
     hooks:
       - id: yamlfmt
+        entry: yamlfmt
   # Temporarily disabled: prek uses rustls with outdated certificate roots preventing PyPI access
   # Re-enable once prek updates to use native-tls or updated webpki-roots
   # - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -105,3 +106,9 @@ repos:
         entry: pre-commit-hook-ensure-sops
         language: system
         files: ^secrets/secrets\.yaml$
+      - id: ai-simplify
+        name: AI code simplifier review
+        entry: "bash -c 'git diff origin/main...HEAD | claude -p \"Briefly flag any code that should be simplified: nesting, debug artifacts, nested ternaries, obvious comments. Be concise.\" --output-format text'"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false

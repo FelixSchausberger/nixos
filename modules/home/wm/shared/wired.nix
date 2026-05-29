@@ -1,3 +1,5 @@
+# Shared Wired notification daemon integration for Wayland sessions.
+# Binds service startup to the provided session target to avoid early-launch races.
 sessionTarget: {
   lib,
   pkgs,

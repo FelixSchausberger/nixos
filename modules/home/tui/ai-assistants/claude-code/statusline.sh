@@ -4,9 +4,8 @@
 # Optimized for performance and simplicity
 # Focus on: Nix env, git status, directory, model
 
-# Debug logging (enabled by default for debugging)
 DEBUG_LOG="/tmp/claude-statusline-debug.log"
-DEBUG_ENABLED="${CLAUDE_STATUSLINE_DEBUG:-true}"
+DEBUG_ENABLED="${CLAUDE_STATUSLINE_DEBUG:-false}"
 
 # Read JSON input from stdin
 input=$(cat)
@@ -30,15 +29,15 @@ transcript_path=$(echo "$input" | jq -r '.transcript_path // ""' 2>/dev/null || 
 # Simplified Nix Environment Detection
 get_nix_env_info() {
     # Check for flake.nix (highest priority for NixOS config)
-    [[ -f "flake.nix" ]] && echo "\033[1;94m✨flake\033[0m" && return
+    [[ -f "flake.nix" ]] && echo "\033[1;94mflake\033[0m" && return
 
     # Check active nix environments
-    [[ "$IN_NIX_SHELL" == "pure" ]] && echo "\033[1;94m❄️pure\033[0m" && return
-    [[ -n "$IN_NIX_SHELL" ]] && echo "\033[1;94m❄️shell\033[0m" && return
-    [[ -n "$DEVSHELL_ROOT" ]] && echo "\033[1;94m🛠️dev\033[0m" && return
+    [[ "$IN_NIX_SHELL" == "pure" ]] && echo "\033[1;94mnix-pure\033[0m" && return
+    [[ -n "$IN_NIX_SHELL" ]] && echo "\033[1;94mnix-shell\033[0m" && return
+    [[ -n "$DEVSHELL_ROOT" ]] && echo "\033[1;94mdev-shell\033[0m" && return
 
     # Check for nix files
-    [[ -f "shell.nix" || -f "default.nix" ]] && echo "\033[1;94m❄️nix\033[0m" && return
+    [[ -f "shell.nix" || -f "default.nix" ]] && echo "\033[1;94mnix\033[0m" && return
 }
 
 # Simplified Git Status - Single porcelain command

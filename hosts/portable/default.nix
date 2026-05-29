@@ -1,3 +1,5 @@
+# Portable recovery host: TUI-first system with ZFS+impermanence and hardware rescue tooling.
+# Includes a recovery specialisation for disk diagnostics and data recovery workflows.
 {
   config,
   inputs,

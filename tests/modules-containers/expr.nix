@@ -5,6 +5,7 @@
 in {
   # Test: Containers module is enabled
   containers_enabled = config.modules.system.containers.enable;
+  ssl_enabled = config.modules.system.ssl.enable;
 
   # Test: Docker is enabled
   docker_enabled = config.virtualisation.docker.enable;
@@ -21,4 +22,13 @@ in {
 
   # Test: Nix SSL certificate file set
   nix_ssl_cert = config.nix.settings.ssl-cert-file or null;
+
+  # Test: Container assertion is present
+  has_containers_ssl_assertion =
+    builtins.any (
+      assertion:
+        (assertion.message or "")
+        == "modules.system.containers.enable requires modules.system.ssl.enable because Docker environment uses modules.system.ssl.helpers.dockerEnv"
+    )
+    config.assertions;
 }

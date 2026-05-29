@@ -1,3 +1,5 @@
+# Shared keybinding schema consumed by both Hyprland and Niri home modules.
+# Centralizes directional/layout mapping so WM-specific modules only map actions.
 _: let
   # Directional key mappings for multi-layout support
   directions = {

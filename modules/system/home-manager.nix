@@ -1,16 +1,19 @@
-{inputs, ...}: {
+{
+  inputs,
+  lib,
+  ...
+}: let
+  user = "schausberger";
+in {
   imports = [
     inputs.home-manager.nixosModules.default
     inputs.nur.modules.nixos.default
-    # inputs.sops-nix.homeManagerModules.sops
   ];
 
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    # Use timestamped backups to prevent collisions
     backupFileExtension = "backup-$(date +%Y%m%d-%H%M%S)";
-    # Disabled for boot performance - enable when debugging
     verbose = false;
 
     extraSpecialArgs = {
@@ -20,20 +23,23 @@
     sharedModules = [
       inputs.sops-nix.homeManagerModules.sops
 
-      # Add activation script to improve logging and error detection
       {
         home.activation.logActivation = ''
-          $DRY_RUN_CMD echo "🔄 Home Manager activation started at $(date)"
+          $DRY_RUN_CMD echo "Home Manager activation started at $(date)"
           $DRY_RUN_CMD echo "   Generation: $newGenPath"
 
-          # Create a marker for successful activation
           if [[ ! -v DRY_RUN ]]; then
             echo "$(date): Home Manager activation completed successfully" >> ~/.local/state/home-manager-activation.log
-            # Create update marker for fish functions
             touch ~/.config/fish/.functions_updated || true
           fi
         '';
       }
     ];
+  };
+
+  systemd.services."home-manager-${user}" = {
+    after = ["nix-daemon.service"];
+    wants = ["nix-daemon.service"];
+    serviceConfig.TimeoutStartSec = lib.mkDefault "5m";
   };
 }

@@ -75,7 +75,7 @@
             export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
 
             # Add any environment setup needed for development
-            echo "🦀 Rust development environment ready!"
+            echo "Rust development environment ready!"
             echo "Available commands:"
             echo "  cargo run    - Run during development"
             echo "  cargo test   - Run tests"

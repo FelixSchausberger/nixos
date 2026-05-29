@@ -1,5 +1,7 @@
 {
-  # No additional function imports needed - using simple shell aliases and inline functions instead
+  imports = [
+    ./jj.nix
+  ];
 
   programs.fish.functions = {
     fish_prompt = {

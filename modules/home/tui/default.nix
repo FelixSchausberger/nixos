@@ -26,6 +26,8 @@ in {
     # ./spotify-player.nix # Terminal-based Spotify client with full feature parity
     ./typix.nix # Typst: A markup-based typesetting system
     ./zellij.nix # Terminal multiplexer with modern features
+    ./cachix.nix # Binary cache daemon for automatic cache population
+    ./vitals.nix # Vitals health monitoring daemon + CLI
   ];
 
   programs = {
@@ -40,7 +42,10 @@ in {
       enable = true;
       enableBashIntegration = true;
       enableFishIntegration = true;
-      options = ["--alias" "f"];
+      options = [
+        "--alias"
+        "f"
+      ];
     };
   };
 
@@ -56,6 +61,7 @@ in {
     iwd # Modern WiFi daemon (needed by impala)
     nix-diff # Tool to explain why two Nix derivations differ
     nix-inspect # Interactive TUI for inspecting nix configs
+    nix-olde # Show details about outdated packages in your NixOS system
     nix-tree # Interactively browse the dependency graph of Nix derivations
     ouch # A CLI for easily compressing and decompressing files and directories
     outfieldr # Fast TLDR client in Zig (34x faster than tealdeer, no certificate issues)
@@ -87,16 +93,19 @@ in {
   # Shell health check activation script
   # Runs after packages are linked to ensure they're available in PATH
   home.activation.shellHealthCheck = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    run echo "🏥 Running shell configuration health check..."
+    run echo "Running shell configuration health check..."
 
     # Set PATH to include new generation packages
     export PATH="$newGenPath/home-path/bin:$PATH"
 
+    # Mark as activation context so health check skips tests that hang
+    export HM_ACTIVATION=1
+
     # Run health check with proper PATH - make it non-fatal (warnings only)
     if run ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
-      run echo "✅ Shell health check passed"
+      run echo "Shell health check passed"
     else
-      run echo "⚠️  Shell health check found issues (non-fatal during activation)"
+      run echo "Shell health check found issues (non-fatal during activation)"
       run echo "   Review warnings above - system will still activate"
     fi
   '';

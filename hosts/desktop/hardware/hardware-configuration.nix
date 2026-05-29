@@ -13,11 +13,21 @@
 
   boot = {
     initrd = {
-      availableKernelModules = ["nvme" "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod"];
+      availableKernelModules = [
+        "nvme"
+        "xhci_pci"
+        "ahci"
+        "usb_storage"
+        "usbhid"
+        "sd_mod"
+      ];
       kernelModules = ["amdgpu"];
       supportedFilesystems = ["zfs"];
     };
-    kernelModules = ["amdgpu" "kvm-amd"];
+    kernelModules = [
+      "amdgpu"
+      "kvm-amd"
+    ];
     extraModulePackages = [];
   };
 
@@ -49,13 +59,18 @@
     "/boot" = {
       device = lib.mkDefault "/dev/disk/by-label/boot";
       fsType = "vfat";
-      options = ["fmask=0022" "dmask=0022"];
+      options = [
+        "fmask=0022"
+        "dmask=0022"
+      ];
       neededForBoot = true;
     };
 
-    "/per/mnt/2tb-ssd" = {
-      device = "/dev/sda1";
-      fsType = "ext4";
+    "/home/schausberger/repos" = {
+      device = "/per/repos";
+      fsType = "none";
+      options = ["bind"];
+      depends = ["/per/repos"];
     };
   };
 

@@ -68,12 +68,12 @@ check_closure() {
   local host="$1"
   local limit="${SIZE_LIMITS[$host]:-3000}"
 
-  echo "🔍 Checking closure size for: $host"
+  echo "Checking closure size for: $host"
 
   # Build the system toplevel
   if ! nix build --no-update-lock-file ".#nixosConfigurations.$host.config.system.build.toplevel" \
     -o "/tmp/closure-$host" 2>&1 | grep -v "copying path"; then
-    echo "❌ Failed to build $host configuration" >&2
+    echo "Failed to build $host configuration" >&2
     return 1
   fi
 
@@ -93,13 +93,13 @@ check_closure() {
 
     # Handle negative deltas (size decreased)
     if (( $(echo "$delta < 0" | bc -l) )); then
-      echo "  ✅ Size decreased by ${delta#-}% from baseline (${baseline}MB → ${closure_size}MB)"
+      echo "  Size decreased by ${delta#-}% from baseline (${baseline}MB → ${closure_size}MB)"
     elif (( $(echo "$delta > $MAX_DELTA_PERCENT" | bc -l) )); then
-      echo "  ❌ Size increased by ${delta}% from baseline (${baseline}MB → ${closure_size}MB)"
+      echo "  Size increased by ${delta}% from baseline (${baseline}MB → ${closure_size}MB)"
       echo "  Exceeds maximum delta of ${MAX_DELTA_PERCENT}%"
       return 1
     else
-      echo "  ✅ Size change: ${delta}% from baseline (within ${MAX_DELTA_PERCENT}% limit)"
+      echo "  Size change: ${delta}% from baseline (within ${MAX_DELTA_PERCENT}% limit)"
     fi
   else
     echo "  ℹ️  No baseline found, creating baseline: ${closure_size}MB"
@@ -108,7 +108,7 @@ check_closure() {
 
   # Check against absolute limit
   if (( $(echo "$closure_size > $limit" | bc -l) )); then
-    echo "  ❌ Closure size (${closure_size}MB) exceeds limit (${limit}MB)"
+    echo "  Closure size (${closure_size}MB) exceeds limit (${limit}MB)"
     return 1
   fi
 
@@ -123,7 +123,7 @@ check_closure() {
 }
 EOF
 
-  echo "  ✅ Closure size OK"
+  echo "  Closure size OK"
   echo ""
   return 0
 }
@@ -152,9 +152,9 @@ fi
 
 # Summary
 if [ ${#failed_hosts[@]} -gt 0 ]; then
-  echo "❌ Closure size check failed for: ${failed_hosts[*]}"
+  echo "Closure size check failed for: ${failed_hosts[*]}"
   exit 1
 fi
 
-echo "✅ All closure size checks passed"
+echo "All closure size checks passed"
 exit 0

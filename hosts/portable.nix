@@ -1,3 +1,5 @@
+# Flake entrypoint for the portable host.
+# Imports portable defaults and generated hardware data; disko remains install-time only.
 {lib, ...}: let
   importLib = import ../lib/import.nix {inherit lib;};
 in {

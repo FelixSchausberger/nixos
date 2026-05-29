@@ -102,6 +102,13 @@
       options = ["zfsutil"];
       neededForBoot = true;
     };
+
+    "/home/schausberger/repos" = {
+      device = "/per/repos";
+      fsType = "none";
+      options = ["bind"];
+      depends = ["/per/repos"];
+    };
   };
 
   # Dedicated encrypted swap partition (best practice for performance)

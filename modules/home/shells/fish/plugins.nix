@@ -30,8 +30,11 @@
                                   cp -r $src $out
                                   chmod -R +w $out
                                   # Fix plugin to check for wslpath before using it
-                                  sed -i 's|and command --search wslvar$|and command --search wslvar\n        and command --search wslpath|' $out/conf.d/done.fish
-                                  # Add fallback to absolute path if wslvar/wslpath fail
+                                  # wslvar is no longer available (wslu discontinued), use direct path
+                                  sed -i 's|and command --search wslvar$|and command --search wslpath|' $out/conf.d/done.fish
+                                  # Replace wslvar windir path with hardcoded Windows path
+                                  sed -i 's|wslpath (wslvar windir)/System32|wslpath -u "C:/Windows/System32"|' $out/conf.d/done.fish
+                                  # Add fallback to absolute path if wslpath fails
                                   perl -0pi -e 's|    if string length --quiet "\$powershell_exe"|    if not string length --quiet "\$powershell_exe"\n        and test -x /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\n        set -l powershell_exe /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\n    end\n\n    if string length --quiet "\$powershell_exe"|g' $out/conf.d/done.fish
 
                                   # Enhance notification messages to show more context

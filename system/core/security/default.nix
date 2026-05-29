@@ -3,8 +3,6 @@
     ./ssh.nix
   ];
 
-  # Sops configuration moved to modules/system/sops-common.nix for centralization
-
   security = {
     # Allow wayland lockers to unlock the screen
     pam.services = {
@@ -38,6 +36,4 @@
   services = {
     printing.browsed.enable = false; # Disable OpenPrinting CUPS vulnerabilities
   };
-
-  # Security-related persistence moved to ../persistence.nix for consolidation
 }

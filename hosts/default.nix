@@ -6,14 +6,7 @@
   # Import configuration toggle
   repoConfig = import ../config.nix;
 
-  # Select nixpkgs based on configuration
-  # To disable FlakeHub during installation, use: ln -sf config-installer.nix config.nix
-  pkgs =
-    if repoConfig.useDeterminateNix
-    then inputs.nixpkgs-flakehub
-    else inputs.nixpkgs;
-
-  inherit (pkgs.lib) nixosSystem optional;
+  inherit (inputs.nixpkgs.lib) nixosSystem optional;
 
   inherit (import ../system) desktop laptop server;
 
@@ -47,18 +40,22 @@
             networking.hostName = hostName;
             _module.args.hostName = hostName;
           }
-          (
-            _: {
-              home-manager = {
-                users.${inputs.self.lib.user}.imports = homeImports."${inputs.self.lib.user}@${hostName}";
-                extraSpecialArgs =
-                  specialArgs
-                  // {
-                    inherit hostName;
-                  };
-              };
-            }
-          )
+          (_: {
+            home-manager = {
+              users.${inputs.self.lib.user}.imports = homeImports."${inputs.self.lib.user}@${hostName}";
+              extraSpecialArgs =
+                specialArgs
+                // {
+                  inherit hostName;
+                  hostConfig =
+                    (inputs.self.lib.hosts.${hostName} or {})
+                    // {
+                      inherit (inputs.self.lib) user;
+                      inherit hostName;
+                    };
+                };
+            };
+          })
         ]
         # Conditionally include Determinate Nix module based on config
         ++ optional repoConfig.useDeterminateNix inputs.determinate.nixosModules.default

@@ -5,10 +5,10 @@ _: {
       # Emergency shell functions - systemd-based
       emergency-status() {
         if emergency-mode-check >/dev/null 2>&1; then
-          echo "🚨 System is in emergency mode"
+          echo "ERROR: System is in emergency mode"
           echo "   Use 'systemctl default' to exit emergency mode"
         else
-          echo "✅ System is in normal mode"
+          echo "System is in normal mode"
         fi
       }
 
@@ -34,10 +34,10 @@ _: {
       # Emergency shell functions - systemd-based
       function emergency-status
         if emergency-mode-check >/dev/null 2>&1
-          echo "🚨 System is in emergency mode"
+          echo "ERROR: System is in emergency mode"
           echo "   Use 'systemctl default' to exit emergency mode"
         else
-          echo "✅ System is in normal mode"
+          echo "System is in normal mode"
         end
       end
 

@@ -4,9 +4,12 @@
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
   auto_update_enabled = true;
-  has_gnome = false;
-  has_hyprland = true;
-  has_niri = false;
+  has_display_manager_gui_assertion = true;
+  has_gaming_gui_assertion = true;
+  has_niri = true;
+  has_steam_gamemode_assertion = true;
+  has_sunshine_gui_assertion = true;
+  has_sunshine_wms_assertion = true;
   hostname = "desktop";
   is_gui = true;
   maintenance_enabled = true;

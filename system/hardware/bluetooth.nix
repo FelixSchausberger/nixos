@@ -10,9 +10,6 @@ _: {
           ControllerMode = "dual"; # Explicitly set controller mode
           Experimental = true; # Show battery charge of bluetooth devices
           KernelExperimental = true; # Enable ISO sockets
-
-          # Modern headsets will generally try to connect using the A2DP profile
-          Enable = "Source,Sink,Media,Socket";
         };
       };
     };

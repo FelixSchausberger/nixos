@@ -9,9 +9,7 @@ set -euo pipefail
 
 # Read stdin and extract transcript path
 stdin=$(cat)
-echo "DEBUG: stdin = $stdin" >> /tmp/avoid-agreement-debug.log
 transcript_path=$(echo "$stdin" | jq -r ".transcript_path // empty")
-echo "DEBUG: transcript_path = $transcript_path" >> /tmp/avoid-agreement-debug.log
 
 # Exit gracefully if no transcript path is provided
 if [[ -z "$transcript_path" || ! -f "$transcript_path" ]]; then
@@ -35,7 +33,6 @@ while IFS= read -r item; do
     # Extract the text content and check first 80 characters for agreement phrases
     text=$(jq -r '.message.content[0].text // empty' <<< "$item")
     first_part="${text:0:80}"
-    echo "DEBUG: Checking text: $first_part" >> /tmp/avoid-agreement-debug.log
 
     # Check for various forms of reflexive agreement
     if [[ "$first_part" =~ [Yy]ou.*(right|correct) ]] || \

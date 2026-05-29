@@ -1,3 +1,5 @@
+# System-side Niri session module integrated with shared Wayland platform settings.
+# Enabled only when hostConfig marks Niri active on GUI hosts.
 {
   inputs,
   pkgs,

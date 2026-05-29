@@ -26,8 +26,8 @@
     luaLoader.enable = true;
 
     # Extra plugins
-    extraPlugins = with pkgs.vimPlugins; [
-      claude-code-nvim
+    extraPlugins = [
+      pkgs.vimPlugins.claude-code-nvim
     ];
 
     # Configure claude-code.nvim

@@ -16,6 +16,7 @@ in {
   ];
 
   documentation.dev.enable = true;
+  documentation.nixos.options.splitBuild = false;
 
   i18n = {
     defaultLocale = "en_US.UTF-8";
@@ -41,8 +42,6 @@ in {
       bindfs # FUSE filesystem for mounting a directory to another location
       xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks
     ];
-
-    # Persistence configuration moved to ./persistence.nix for better organization
   };
 
   services = {
@@ -74,7 +73,6 @@ in {
     # Build performance optimizations
     "kernel.sched_autogroup_enabled" = 0; # Better for build workloads
     "vm.max_map_count" = 1048576; # Help with large builds (default 65530)
-    "kernel.sched_migration_cost_ns" = 5000000; # Reduce CPU migration overhead
 
     # I/O scheduler optimizations
     "vm.page-cluster" = 0; # Disable read-ahead for SSDs

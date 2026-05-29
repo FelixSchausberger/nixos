@@ -5,7 +5,7 @@ rec {
   # System-wide defaults (apply to all hosts unless overridden)
   system = {
     # NixOS state version - determines compatibility with Home Manager releases
-    version = "25.11";
+    version = "26.05";
 
     # Default system architecture for all hosts
     architecture = "x86_64-linux";
@@ -35,7 +35,7 @@ rec {
     nixosConfig = "/per/etc/nixos";
 
     # Obsidian vault location
-    obsidianVault = "${homeDir}/Documents/Obsidian";
+    obsidianVault = "/per/mnt/data/gdrive/Obsidian";
 
     # Repositories directory
     repos = "/per/repos";
@@ -46,7 +46,7 @@ rec {
     # System mount directories
     mountDirs = {
       base = "/per/mnt";
-      gdrive = "/per/mnt/gdrive";
+      gdrive = "/per/mnt/data/gdrive";
     };
   };
 }
