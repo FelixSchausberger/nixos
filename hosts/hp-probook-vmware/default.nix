@@ -1,3 +1,5 @@
+# VMware workstation profile for the HP ProBook environment.
+# Mirrors physical-host defaults where possible while using VM-specific graphics and firmware behavior.
 {
   inputs,
   lib,
@@ -27,78 +29,11 @@ in {
     # Enable auto-login for VM convenience
     autoLogin = {
       enable = true;
-      user = "schausberger";
+      inherit (inputs.self.lib) user;
     };
   };
 
-  # Stylix theme management using Catppuccin Mocha
-  stylix = let
-    inherit (inputs.self.lib) fonts;
-    catppuccin = inputs.self.lib.catppuccinColors.mocha;
-  in {
-    enable = true;
-
-    # Use Catppuccin Mocha colors via base16 scheme
-    base16Scheme = {
-      base00 = catppuccin.base; # Default background
-      base01 = catppuccin.mantle; # Lighter background (status bars, line numbers)
-      base02 = catppuccin.surface0; # Selection background
-      base03 = catppuccin.surface1; # Comments, invisibles
-      base04 = catppuccin.surface2; # Dark foreground (status bars)
-      base05 = catppuccin.text; # Default foreground
-      base06 = catppuccin.subtext1; # Light foreground
-      base07 = catppuccin.subtext0; # Light background
-      base08 = catppuccin.red; # Variables, XML tags
-      base09 = catppuccin.peach; # Integers, booleans
-      base0A = catppuccin.yellow; # Classes, search text
-      base0B = catppuccin.green; # Strings
-      base0C = catppuccin.teal; # Support, regex
-      base0D = catppuccin.blue; # Functions, methods
-      base0E = catppuccin.mauve; # Keywords, storage
-      base0F = catppuccin.flamingo; # Deprecated, embedded
-    };
-
-    # Font configuration using centralized fonts
-    fonts = {
-      monospace = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
-        inherit (fonts.families.monospace) name;
-      };
-      sansSerif = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
-        inherit (fonts.families.sansSerif) name;
-      };
-      serif = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.merriweather;
-        inherit (fonts.families.serif) name;
-      };
-      sizes = {
-        applications = fonts.sizes.normal;
-        terminal = fonts.sizes.normal;
-        desktop = fonts.sizes.normal;
-        popups = fonts.sizes.normal;
-      };
-    };
-
-    # Cursor theme using centralized configuration
-    cursor = {
-      package = inputs.nixpkgs.legacyPackages.x86_64-linux.bibata-cursors;
-      inherit (fonts.cursor) name;
-      inherit (fonts.cursor) size;
-    };
-
-    # Enable targets for GUI apps
-    targets = {
-      # Console/TTY theming
-      console.enable = true;
-
-      # GUI applications
-      gtk.enable = true;
-
-      # Disable QT theming since we manage it manually via shared-environment.nix
-      qt.enable = false;
-    };
-  };
+  modules.system.stylix-catppuccin.enable = true;
 
   # Hardware configuration
   # Disable AMD GPU profile for VM (uses VMware graphics)
@@ -107,7 +42,10 @@ in {
   # Override video drivers for VMware and disable smartd for VM (VMware virtual disks don't support SMART)
   services = {
     xserver = {
-      videoDrivers = lib.mkForce ["vmware" "modesetting"];
+      videoDrivers = lib.mkForce [
+        "vmware"
+        "modesetting"
+      ];
       xkb = {
         layout = "de";
         variant = "";

@@ -1,3 +1,5 @@
+# WSL2 daily-driver host with NixOS userland, WSLg GUI support, and corporate CA integration.
+# Replaces unsupported bare-metal features (ZFS/bootloader) with WSL-safe equivalents.
 {
   inputs,
   lib,
@@ -14,7 +16,8 @@ in {
       ../shared-tui.nix
       inputs.nixos-wsl.nixosModules.default
       inputs.stylix.nixosModules.stylix
-      ../../modules/system/backup.nix
+      ../../modules/system/stylix-catppuccin.nix
+      ../../modules/system/wsl-integration.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
@@ -88,68 +91,7 @@ in {
       # user and system use defaults from lib/defaults.nix
     };
 
-    # Stylix configuration (PoC for TUI apps with Catppuccin theme)
-    stylix = let
-      inherit (inputs.self.lib) fonts;
-      catppuccin = inputs.self.lib.catppuccinColors.mocha;
-    in {
-      enable = true;
-
-      # Use Catppuccin Mocha colors via base16 scheme
-      base16Scheme = {
-        base00 = catppuccin.base; # Default background
-        base01 = catppuccin.mantle; # Lighter background (status bars, line numbers)
-        base02 = catppuccin.surface0; # Selection background
-        base03 = catppuccin.surface1; # Comments, invisibles
-        base04 = catppuccin.surface2; # Dark foreground (status bars)
-        base05 = catppuccin.text; # Default foreground
-        base06 = catppuccin.subtext1; # Light foreground
-        base07 = catppuccin.subtext0; # Light background
-        base08 = catppuccin.red; # Variables, XML tags
-        base09 = catppuccin.peach; # Integers, booleans
-        base0A = catppuccin.yellow; # Classes, search text
-        base0B = catppuccin.green; # Strings
-        base0C = catppuccin.teal; # Support, regex
-        base0D = catppuccin.blue; # Functions, methods
-        base0E = catppuccin.mauve; # Keywords, storage
-        base0F = catppuccin.flamingo; # Deprecated, embedded
-      };
-
-      # Font configuration using centralized fonts
-      fonts = {
-        monospace = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
-          inherit (fonts.families.monospace) name;
-        };
-        sansSerif = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
-          inherit (fonts.families.sansSerif) name;
-        };
-        serif = {
-          package = inputs.nixpkgs.legacyPackages.x86_64-linux.merriweather;
-          inherit (fonts.families.serif) name;
-        };
-        sizes = {
-          applications = fonts.sizes.normal;
-          terminal = fonts.sizes.normal;
-          desktop = fonts.sizes.normal;
-          popups = fonts.sizes.normal;
-        };
-      };
-
-      # Cursor theme using centralized configuration
-      cursor = {
-        package = inputs.nixpkgs.legacyPackages.x86_64-linux.bibata-cursors;
-        inherit (fonts.cursor) name;
-        inherit (fonts.cursor) size;
-      };
-
-      targets = {
-        console.enable = true;
-        gtk.enable = true;
-        qt.enable = false;
-      };
-    };
+    modules.system.stylix-catppuccin.enable = true;
 
     # WSL uses its own boot mechanism, disable systemd-boot from shared-gui.nix
     boot.loader.systemd-boot.enable = lib.mkForce false;
@@ -174,9 +116,9 @@ in {
     users.users.emergency = {
       isNormalUser = true;
       description = "Emergency recovery account";
-      shell = inputs.nixpkgs.legacyPackages.x86_64-linux.bash;
+      shell = pkgs.bash;
       extraGroups = ["wheel"]; # sudo access for recovery
-      hashedPassword = "$6$rounds=656000$cUk4Xh8KRvx9lTkN$OyVJ7QXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQXzXqZO5xFNPcGKP9XRQ";
+      hashedPasswordFile = config.sops.secrets."private/password-hash".path;
       home = "/home/emergency";
     };
 
@@ -186,23 +128,12 @@ in {
     };
 
     # Enable linger for default user
-    users.users.schausberger.linger = true;
+    users.users.${config.hostConfig.user}.linger = true;
 
     # Merged modules configuration
     modules.system = {
       containers.enable = true;
       wsl-integration.enable = true;
-      backup = {
-        enable = true;
-        backupDir = "D:/Backups/WSL-NixOS";
-        retention = {
-          fullBackups = 3;
-          incrementalDays = 30;
-        };
-        schedule = {
-          enable = false; # Disable systemd timer, use Windows Task Scheduler instead
-        };
-      };
       maintenance = {
         enable = true;
         autoUpdate.enable = false; # Disable auto-updates in WSL environment
@@ -224,7 +155,11 @@ in {
     # Network configuration optimized for WSL (high level)
     networking = {
       inherit hostName;
-      nameservers = ["8.8.8.8" "1.1.1.1" "8.8.4.4"];
+      nameservers = [
+        "8.8.8.8"
+        "1.1.1.1"
+        "8.8.4.4"
+      ];
       # Disable NetworkManager in WSL
       networkmanager.enable = lib.mkForce false;
     };
@@ -235,39 +170,6 @@ in {
         "NetworkManager-wait-online".enable = false;
         "systemd-networkd-wait-online".enable = lib.mkForce false;
         "smartd".enable = false;
-
-        # Create DRI devices for WSL2 GPU access
-        "wsl-dri-devices" = {
-          description = "Create DRI device nodes for WSL2";
-          wantedBy = ["multi-user.target"];
-          before = ["display-manager.service"];
-
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-          };
-
-          script = ''
-            # Create /dev/dri directory
-            mkdir -p /dev/dri
-
-            # Create render node with proper permissions
-            if [ ! -c /dev/dri/renderD128 ]; then
-              mknod -m 666 /dev/dri/renderD128 c 226 128
-            else
-              chmod 666 /dev/dri/renderD128
-            fi
-
-            # Create card0 device
-            if [ ! -c /dev/dri/card0 ]; then
-              mknod -m 666 /dev/dri/card0 c 226 0
-            else
-              chmod 666 /dev/dri/card0
-            fi
-
-            echo "Created DRI devices for WSL2"
-          '';
-        };
       };
 
       # WSL-specific system directories (override shared-tui paths)
@@ -288,10 +190,8 @@ in {
 
     # Environment packages and tools
     environment = {
-      systemPackages = with inputs.nixpkgs.legacyPackages.x86_64-linux; [
+      systemPackages = with pkgs; [
         nix-ld
-        wslu
-        powershell
 
         util-linux
         inetutils
@@ -313,7 +213,10 @@ in {
     nix = {
       settings = {
         auto-optimise-store = true;
-        experimental-features = ["nix-command" "flakes"];
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
         connect-timeout = lib.mkForce 10;
 
         # Use ESET-enhanced bundle (created by systemd service at boot)
@@ -335,7 +238,7 @@ in {
     # Configure nix-ld with GUI application dependencies for WSL2
     programs.nix-ld = {
       enable = true;
-      libraries = with inputs.nixpkgs.legacyPackages.x86_64-linux; [
+      libraries = with pkgs; [
         gtk3
         alsa-lib
         libx11

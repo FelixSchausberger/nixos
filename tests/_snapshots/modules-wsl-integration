@@ -2,7 +2,7 @@
 {
   has_wsl_cert_service = true;
   service_after = true;
-  service_description = "WSL Windows certificate integration setup";
+  service_description = "Refresh Windows certificates in WSL";
   service_type = "oneshot";
   service_user = "root";
   service_wanted_by = true;

@@ -1,6 +1,5 @@
 {pkgs, ...}: {
   home.packages = with pkgs; [
-    # Neovim with tree-sitter grammars (avoiding nixvim's tree-sitter-ada issue)
     (neovim.override {
       configure = {
         customRC = ''
@@ -71,37 +70,20 @@
           nnoremap <leader>yy :call OpenYaziHere()<CR>
         '';
 
-        packages.myVimPackage = with pkgs.vimPlugins; {
-          start = [
-            # Core plugins
-            vim-commentary
-            vim-surround
-            render-markdown-nvim
-
-            # Tree-sitter with specific grammars to avoid ada issue
-            (nvim-treesitter.withPlugins (p:
-              with p; [
-                bash
-                c
-                cpp
-                css
-                dockerfile
-                fish
-                go
-                html
-                javascript
-                json
-                lua
-                markdown
-                nix
-                python
-                rust
-                toml
-                typescript
-                vim
-                yaml
-              ]))
-          ];
+        packages.myVimPackage = {
+          start =
+            [
+              pkgs.vimPlugins.vim-commentary
+              pkgs.vimPlugins.vim-surround
+              pkgs.vimPlugins.render-markdown-nvim
+              pkgs.vimPlugins.nvim-treesitter
+            ]
+            ++ (
+              let
+                grammarFile = import ../../../lib/treesitter-grammars.nix;
+              in
+                map (name: pkgs.vimPlugins.nvim-treesitter-parsers.${name}) grammarFile
+            );
         };
       };
     })

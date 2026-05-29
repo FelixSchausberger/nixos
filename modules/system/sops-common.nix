@@ -1,45 +1,41 @@
 # Common sops-nix configuration shared across all hosts
-# Centralizes secrets definitions and templates to eliminate duplication
 {
   config,
   inputs,
+  lib,
+  repoConfig,
   ...
 }: let
   inherit (inputs.self.lib) defaults;
 in {
-  # Configure sops-nix for secrets management
   sops = {
-    # Default secrets file location
     defaultSopsFile = ../../secrets/secrets.yaml;
-
-    # Age key file location (from centralized defaults)
     age.keyFile = defaults.paths.sopsKeyFile;
-
-    # Disable SSH key fallback - only use the age key file
     age.sshKeyPaths = [];
     gnupg.sshKeyPaths = [];
 
-    # Common secrets used across all hosts
     secrets = {
-      # API tokens
       "claude/default" = {};
       "github/token" = {
         owner = defaults.system.user;
       };
       "cachix/token" = {};
 
-      # Cloud storage
-      "rclone/client-secret" = {};
-      "rclone/token" = {};
+      "rclone/client-secret" = {
+        owner = defaults.system.user;
+      };
+      "rclone/token" = {
+        owner = defaults.system.user;
+      };
 
-      # Bitwarden master password
       "bitwarden/master-password" = {};
 
-      # Private user information
       "private/email" = {};
       "private/password-hash" = {
         neededForUsers = true;
       };
+
+      "wifi/pretty-fly-for-a-wifi" = {};
     };
 
     # Create netrc file for nix GitHub and Cachix access
@@ -63,12 +59,46 @@ in {
     };
   };
 
-  # Ensure Nix uses the netrc file
-  nix.settings.netrc-file = config.sops.templates."nix/netrc".path;
+  # Standard Nix reads credentials directly from /etc/nix/netrc.
+  nix.settings = lib.mkIf (!repoConfig.useDeterminateNix) {
+    netrc-file = config.sops.templates."nix/netrc".path;
+  };
+
+  # Determinate Nixd owns nix.settings.netrc-file and expects /nix/var/determinate/netrc.
+  # Merge our sops-managed credentials into Determinate's effective netrc.
+  environment.etc."determinate/config.json" = lib.mkIf repoConfig.useDeterminateNix {
+    text = builtins.toJSON {
+      authentication.additionalNetrcSources = [
+        config.sops.templates."nix/netrc".path
+      ];
+    };
+    mode = "0644";
+  };
+
+  # WiFi environment file for NM ensureProfiles (envsubst substitution)
+  sops.templates."wifi/env" = {
+    content = "WIFI_PSK=${config.sops.placeholder."wifi/pretty-fly-for-a-wifi"}";
+    owner = defaults.system.user;
+    path = "/run/secrets/wifi/env";
+    mode = "0400";
+  };
+
+  # iwd network config for systemd-networkd-based WiFi (e.g., m920q specialisation)
+  sops.templates."wifi/iwd" = {
+    content = ''
+      [Security]
+      Passphrase=${config.sops.placeholder."wifi/pretty-fly-for-a-wifi"}
+
+      [Settings]
+      AutoConnect=true
+    '';
+    owner = "root";
+    group = "root";
+    mode = "0600";
+  };
 
   # Create system mount directories for rclone
   systemd.tmpfiles.rules = [
     "d ${defaults.paths.mountDirs.base} 0755 root root -"
-    "d ${defaults.paths.mountDirs.gdrive} 0755 root root -"
   ];
 }

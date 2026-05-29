@@ -5,13 +5,16 @@
   ...
 }: {
   # Server home profile: TUI-only, SSH-accessible dev environment.
-  # No WM configuration — GUI is handled by the niri-gui system specialisation.
+  # No WM configuration — GUI is handled by the niri system specialisation.
 
   features = {
     development = {
       enable = true;
       # Rust devshells work out of the box via direnv; no global toolchain needed
-      languages = ["nix" "rust"];
+      languages = [
+        "nix"
+        "rust"
+      ];
     };
   };
 
@@ -28,6 +31,16 @@
   };
 
   home = {
+    shellAliases = {
+      just = "just --justfile /per/etc/nixos/justfile --working-directory /per/etc/nixos";
+    };
+
+    sessionVariables = {
+      VITALS_URL = "http://127.0.0.1:8080";
+      EDITOR = "hx";
+      ZELLIJ_SESSION_NAME = "homelab";
+    };
+
     packages = with pkgs; [
       # System monitoring
       btop
@@ -37,6 +50,9 @@
       nethogs
       lsof
       smartmontools
+
+      # Power/CPU monitoring
+      linuxPackages.turbostat # Per-CPU frequency and C-state statistics
 
       # Network tools
       nmap
@@ -49,13 +65,13 @@
 
       # Remote coding from phone via SSH
       inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
-    ];
 
-    sessionVariables = {
-      EDITOR = "hx";
-    };
+      # Vitals health monitoring CLI
+      inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.cli
+    ];
   };
 
   # Required by some shared modules
+
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 }

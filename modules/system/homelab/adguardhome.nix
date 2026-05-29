@@ -1,70 +1,130 @@
 {
   config,
   lib,
-  pkgs,
   ...
-}: let
-  cfg = config.modules.system.homelab.adguardhome;
-in {
+}: {
   options.modules.system.homelab.adguardhome = {
     enable = lib.mkEnableOption "AdGuard Home DNS ad-blocker";
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 3000;
+      description = "Admin UI HTTP port";
+    };
     openFirewall = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Open firewall ports for DNS (53 TCP/UDP) and admin UI";
     };
-    adminUser = lib.mkOption {
-      type = lib.types.str;
-      default = "admin";
-      description = "AdGuard Home admin username";
-    };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf config.modules.system.homelab.adguardhome.enable {
+    assertions = [
+      {
+        assertion = config.modules.system.homelab.adguardhome.port != 53;
+        message = "AdGuard Home admin UI port must not be 53 (reserved for DNS service)";
+      }
+      {
+        assertion =
+          !config.modules.system.homelab.monitoring.enable
+          || config.modules.system.homelab.adguardhome.port
+          != config.modules.system.homelab.monitoring.grafanaPort;
+        message = "AdGuard Home admin UI port must differ from Grafana port when monitoring is enabled";
+      }
+    ];
+
+    # systemd-resolved binds a local DNS stub on port 53 by default.
+    # Disable it so AdGuardHome can listen on 0.0.0.0:53 for LAN clients.
+    services.resolved.settings.Resolve.DNSStubListener = false;
+
     services.adguardhome = {
       enable = true;
-      inherit (cfg) openFirewall;
+      inherit (config.modules.system.homelab.adguardhome) openFirewall;
       settings = {
         # Admin UI port — migrate to 80/443 via Caddy after initial setup
-        http.address = "0.0.0.0:3000";
+        http.address = "0.0.0.0:${toString config.modules.system.homelab.adguardhome.port}";
         dns = {
           upstream_dns = [
             "https://dns.cloudflare.com/dns-query"
             "https://dns.quad9.net/dns-query"
           ];
-          bootstrap_dns = ["9.9.9.9" "1.1.1.1"];
+          bootstrap_dns = [
+            "9.9.9.9"
+            "1.1.1.1"
+          ];
           bind_hosts = ["0.0.0.0"];
           port = 53;
         };
+        user_rules = [
+          # Windows NCSI — prevents "No Internet" indicator on Windows clients
+          "@@||msftconnecttest.com^"
+          "@@||msftncsi.com^"
+          "@@||ipv6.msftncsi.com^"
+
+          # macOS/iOS captive portal and connectivity detection
+          "@@||captive.apple.com^"
+          "@@||www.apple.com^"
+          "@@||gateway.icloud.com^"
+
+          # Android/Chrome OS connectivity checks
+          "@@||connectivitycheck.gstatic.com^"
+          "@@||connectivitycheck.android.com^"
+          "@@||clients1.google.com^"
+          "@@||clients3.google.com^"
+
+          # Windows Update
+          "@@||windowsupdate.microsoft.com^"
+          "@@||update.microsoft.com^"
+          "@@||download.microsoft.com^"
+
+          # Apple Software Update
+          "@@||swscan.apple.com^"
+          "@@||swquery.apple.com^"
+          "@@||swcdn.apple.com^"
+
+          # Mozilla update and experimentation
+          "@@||normandy.cdn.mozilla.net^"
+          "@@||aus5.mozilla.org^"
+
+          # Certificate revocation (OCSP/CRL) — blocking causes browser TLS errors
+          "@@||ocsp.digicert.com^"
+          "@@||ocsp.pki.goog^"
+          "@@||crl.microsoft.com^"
+          "@@||ssl-crl.microsoft.com^"
+
+          # Windows settings sync — misflagged by aggressive lists but functionally required
+          "@@||activity.windows.com^"
+          "@@||settings-win.data.microsoft.com^"
+        ];
       };
     };
 
-    # The NixOS adguardhome service declares StateDirectory = "AdGuardHome", which
-    # conflicts with impermanence's bind mount already in place at /var/lib/AdGuardHome.
-    # Clearing StateDirectory lets systemd skip its directory setup; the bind mount
-    # handles persistence instead.
-    systemd.services.adguardhome.serviceConfig.StateDirectory = lib.mkForce "";
-
-    sops.secrets."adguardhome/admin-password" = {owner = "root";};
-
-    systemd.services.adguardhome-setpasswd = {
-      description = "Configure AdGuard Home admin credentials from sops secret";
-      wantedBy = ["multi-user.target"];
-      after = ["adguardhome.service"];
-      requires = ["adguardhome.service"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = pkgs.writeShellScript "adguardhome-setpasswd" ''
-          password=$(cat ${config.sops.secrets."adguardhome/admin-password".path})
-          # POST to the setup wizard endpoint — no-op (returns 400) if already configured
-          ${pkgs.curl}/bin/curl -sf -X POST http://127.0.0.1:3000/control/install/configure \
-            -H "Content-Type: application/json" \
-            -d "{\"web\":{\"ip\":\"0.0.0.0\",\"port\":3000},\"dns\":{\"ip\":\"0.0.0.0\",\"port\":53},\"username\":\"${cfg.adminUser}\",\"password\":\"$password\"}" \
-            || true
-        '';
-      };
+    users.users.adguardhome = {
+      isSystemUser = true;
+      group = "adguardhome";
     };
+    users.groups.adguardhome = {};
+
+    # The upstream NixOS module sets DynamicUser=true, which creates a private-namespace
+    # bind mount at /var/lib/AdGuardHome. This conflicts with impermanence's bind mount
+    # already in place at that path ("Device or resource busy"), and the transient uid
+    # it creates cannot write to directories it doesn't own.
+    # A static user sidesteps both problems, matching the pattern used by rustdesk.nix.
+    systemd.services.adguardhome.serviceConfig = {
+      DynamicUser = lib.mkForce false;
+      User = lib.mkForce "adguardhome";
+      Group = lib.mkForce "adguardhome";
+    };
+
+    # The nixpkgs openFirewall option only opens port 3000 (admin UI).
+    # Port 53 must be opened explicitly for LAN DNS clients.
+    networking.firewall = {
+      allowedTCPPorts = [53];
+      allowedUDPPorts = [53];
+    };
+
+    systemd.tmpfiles.rules = [
+      "d /var/lib/AdGuardHome 0750 adguardhome adguardhome -"
+    ];
 
     environment.persistence."/per".directories = [
       "/var/lib/AdGuardHome"

@@ -151,7 +151,7 @@ in {
         mount --rbind /sys /mnt/sys 2>/dev/null || true
 
         echo
-        echo "✅ System successfully mounted at /mnt"
+        echo "System successfully mounted at /mnt"
         echo "Next steps:"
         echo "1. Enter system: nixos-enter"
         echo "2. Rebuild: nixos-rebuild switch --flake /mnt/per/etc/nixos#hostname"
@@ -227,9 +227,9 @@ in {
     echo "  1. Configure network (if needed): nmtui"
     echo "  2. Export GitHub token:"
     echo "     export NIX_CONFIG=\"access-tokens = github.com=YOUR_TOKEN\""
-    echo "  3. Install (specify your hostname):"
-    echo "     sudo nixos-rebuild switch --flake .#hp-probook-vmware"
-    echo "     (or: nh os switch .#hp-probook-vmware)"
+    echo "  3. Test install (specify your hostname):"
+    echo "     sudo nixos-rebuild test --flake .#hp-probook-vmware"
+    echo "     (or: nh os test .#hp-probook-vmware)"
     echo "  4. Reboot into your new system"
     echo
     echo "Alternative: Install via SSH from dev machine"
@@ -261,6 +261,7 @@ in {
       "networkmanager"
       "disk"
     ];
+    hashedPasswordFile = config.sops.secrets."private/password-hash".path;
   };
 
   users.users.${hostUser}.extraGroups = ["docker"];

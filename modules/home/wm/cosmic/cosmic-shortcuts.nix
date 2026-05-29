@@ -1,84 +1,81 @@
 {cosmicLib, ...}: let
-  # Directional key mappings for programmatic keybind generation
-  directions = {
-    left = {
-      colemak = "N";
-      arrow = "Left";
-      focusAction = "FocusLeft";
-      moveAction = "MoveLeft";
-      focusOutputAction = "FocusOutputLeft";
-      moveToOutputAction = "MoveToOutputLeft";
+  # Build a Focus/Move/SwitchOutput/MoveToOutput tuple action for a direction
+  mkDirAction = variant: dirStr:
+    cosmicLib.cosmic.mkRON "enum" {
+      inherit variant;
+      value = [(cosmicLib.cosmic.mkRON "enum" dirStr)];
     };
-    down = {
-      colemak = "E";
-      arrow = "Down";
-      focusAction = "FocusDown";
-      moveAction = "MoveDown";
-      focusOutputAction = "FocusOutputDown";
-      moveToOutputAction = "MoveToOutputDown";
-    };
-    up = {
-      colemak = "I";
-      arrow = "Up";
-      focusAction = "FocusUp";
-      moveAction = "MoveUp";
-      focusOutputAction = "FocusOutputUp";
-      moveToOutputAction = "MoveToOutputUp";
-    };
-    right = {
-      colemak = "O";
-      arrow = "Right";
-      focusAction = "FocusRight";
-      moveAction = "MoveRight";
-      focusOutputAction = "FocusOutputRight";
-      moveToOutputAction = "MoveToOutputRight";
-    };
-  };
 
-  # Generate shortcuts for a single direction with both input schemes
-  mkDirShortcut = modifier: dir: actionKey: description: let
-    keys = directions.${dir};
-    action = cosmicLib.cosmic.mkRON "enum" keys.${actionKey};
-  in [
+  # Generate focus + move shortcuts for a direction (Colemak key + arrow key)
+  mkDirShortcuts = colemakKey: arrowKey: dirStr: [
     {
-      inherit action;
-      key = "Super+${modifier}${keys.colemak}";
-      description = cosmicLib.cosmic.mkRON "optional" "${description} ${dir}";
+      action = mkDirAction "Focus" dirStr;
+      key = "Super+${colemakKey}";
     }
     {
-      inherit action;
-      key = "Super+${modifier}${keys.arrow}";
+      action = mkDirAction "Focus" dirStr;
+      key = "Super+${arrowKey}";
+    }
+    {
+      action = mkDirAction "Move" dirStr;
+      key = "Super+Ctrl+${colemakKey}";
+    }
+    {
+      action = mkDirAction "Move" dirStr;
+      key = "Super+Ctrl+${arrowKey}";
+    }
+    {
+      action = mkDirAction "SwitchOutput" dirStr;
+      key = "Super+Shift+${colemakKey}";
+    }
+    {
+      action = mkDirAction "SwitchOutput" dirStr;
+      key = "Super+Shift+${arrowKey}";
+    }
+    {
+      action = mkDirAction "MoveToOutput" dirStr;
+      key = "Super+Ctrl+Shift+${colemakKey}";
+    }
+    {
+      action = mkDirAction "MoveToOutput" dirStr;
+      key = "Super+Ctrl+Shift+${arrowKey}";
     }
   ];
+
+  mkSpawn = cmd:
+    cosmicLib.cosmic.mkRON "enum" {
+      variant = "Spawn";
+      value = [cmd];
+    };
+
+  mkSystem = action:
+    cosmicLib.cosmic.mkRON "enum" {
+      variant = "System";
+      value = [(cosmicLib.cosmic.mkRON "enum" action)];
+    };
 in {
   wayland.desktopManager.cosmic.shortcuts =
     [
-      # Application shortcuts
+      # Applications
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = ["cosmic-term"];
-          variant = "Spawn";
-        };
+        action = mkSpawn "cosmic-term";
         description = cosmicLib.cosmic.mkRON "optional" "Open Terminal";
         key = "Super+T";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = ["firefox"];
-          variant = "Spawn";
-        };
+        action = mkSpawn "firefox";
         description = cosmicLib.cosmic.mkRON "optional" "Open Browser";
         key = "Super+Return";
       }
+
+      # Window management
       {
         action = cosmicLib.cosmic.mkRON "enum" "Close";
         description = cosmicLib.cosmic.mkRON "optional" "Close window";
         key = "Super+Q";
       }
-
-      # Window management
       {
-        action = cosmicLib.cosmic.mkRON "enum" "Float";
+        action = cosmicLib.cosmic.mkRON "enum" "ToggleWindowFloating";
         description = cosmicLib.cosmic.mkRON "optional" "Toggle floating";
         key = "Super+Space";
       }
@@ -88,130 +85,76 @@ in {
         key = "Super+F";
       }
 
-      # Workspace navigation (U/I pattern)
+      # Workspace navigation
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-          variant = "SwitchWorkspace";
-        };
-        description = cosmicLib.cosmic.mkRON "optional" "Switch to workspace above";
+        action = cosmicLib.cosmic.mkRON "enum" "PreviousWorkspace";
+        description = cosmicLib.cosmic.mkRON "optional" "Previous workspace";
         key = "Super+U";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-          variant = "SwitchWorkspace";
-        };
+        action = cosmicLib.cosmic.mkRON "enum" "PreviousWorkspace";
         key = "Super+Prior";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-          variant = "SwitchWorkspace";
-        };
-        description = cosmicLib.cosmic.mkRON "optional" "Switch to workspace below";
+        action = cosmicLib.cosmic.mkRON "enum" "NextWorkspace";
+        description = cosmicLib.cosmic.mkRON "optional" "Next workspace";
         key = "Super+Shift+U";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-          variant = "SwitchWorkspace";
-        };
+        action = cosmicLib.cosmic.mkRON "enum" "NextWorkspace";
         key = "Super+Next";
       }
 
       # Move window to workspace
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-          variant = "MoveToWorkspace";
-        };
-        description = cosmicLib.cosmic.mkRON "optional" "Move to workspace above";
+        action = cosmicLib.cosmic.mkRON "enum" "MoveToPreviousWorkspace";
+        description = cosmicLib.cosmic.mkRON "optional" "Move to previous workspace";
         key = "Super+Ctrl+U";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Previous")];
-          variant = "MoveToWorkspace";
-        };
+        action = cosmicLib.cosmic.mkRON "enum" "MoveToPreviousWorkspace";
         key = "Super+Ctrl+Prior";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-          variant = "MoveToWorkspace";
-        };
-        description = cosmicLib.cosmic.mkRON "optional" "Move to workspace below";
+        action = cosmicLib.cosmic.mkRON "enum" "MoveToNextWorkspace";
+        description = cosmicLib.cosmic.mkRON "optional" "Move to next workspace";
         key = "Super+Ctrl+Shift+U";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Next")];
-          variant = "MoveToWorkspace";
-        };
+        action = cosmicLib.cosmic.mkRON "enum" "MoveToNextWorkspace";
         key = "Super+Ctrl+Next";
       }
 
-      # System shortcuts
+      # System
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "Launcher")];
-          variant = "System";
-        };
+        action = mkSystem "Launcher";
         description = cosmicLib.cosmic.mkRON "optional" "Open launcher";
         key = "Super+D";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "BrightnessUp")];
-          variant = "System";
-        };
+        action = mkSystem "BrightnessUp";
         key = "XF86MonBrightnessUp";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "BrightnessDown")];
-          variant = "System";
-        };
+        action = mkSystem "BrightnessDown";
         key = "XF86MonBrightnessDown";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "VolumeUp")];
-          variant = "System";
-        };
+        action = mkSystem "VolumeRaise";
         key = "XF86AudioRaiseVolume";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "VolumeDown")];
-          variant = "System";
-        };
+        action = mkSystem "VolumeLower";
         key = "XF86AudioLowerVolume";
       }
       {
-        action = cosmicLib.cosmic.mkRON "enum" {
-          value = [(cosmicLib.cosmic.mkRON "enum" "VolumeMute")];
-          variant = "System";
-        };
+        action = mkSystem "Mute";
         key = "XF86AudioMute";
       }
     ]
-    # Generated directional shortcuts (Colemak-DH + Arrow variants)
-    ++ (mkDirShortcut "" "left" "focusAction" "Focus window")
-    ++ (mkDirShortcut "" "down" "focusAction" "Focus window")
-    ++ (mkDirShortcut "" "up" "focusAction" "Focus window")
-    ++ (mkDirShortcut "" "right" "focusAction" "Focus window")
-    ++ (mkDirShortcut "Ctrl+" "left" "moveAction" "Move window")
-    ++ (mkDirShortcut "Ctrl+" "down" "moveAction" "Move window")
-    ++ (mkDirShortcut "Ctrl+" "up" "moveAction" "Move window")
-    ++ (mkDirShortcut "Ctrl+" "right" "moveAction" "Move window")
-    ++ (mkDirShortcut "Shift+" "left" "focusOutputAction" "Focus monitor")
-    ++ (mkDirShortcut "Shift+" "down" "focusOutputAction" "Focus monitor")
-    ++ (mkDirShortcut "Shift+" "up" "focusOutputAction" "Focus monitor")
-    ++ (mkDirShortcut "Shift+" "right" "focusOutputAction" "Focus monitor")
-    ++ (mkDirShortcut "Ctrl+Shift+" "left" "moveToOutputAction" "Move window to monitor")
-    ++ (mkDirShortcut "Ctrl+Shift+" "down" "moveToOutputAction" "Move window to monitor")
-    ++ (mkDirShortcut "Ctrl+Shift+" "up" "moveToOutputAction" "Move window to monitor")
-    ++ (mkDirShortcut "Ctrl+Shift+" "right" "moveToOutputAction" "Move window to monitor");
+    # Directional shortcuts: Colemak-DH (N/E/I/O) + arrows, Focus + Move + SwitchOutput + MoveToOutput
+    ++ (mkDirShortcuts "N" "Left" "Left")
+    ++ (mkDirShortcuts "E" "Down" "Down")
+    ++ (mkDirShortcuts "I" "Up" "Up")
+    ++ (mkDirShortcuts "O" "Right" "Right");
 }

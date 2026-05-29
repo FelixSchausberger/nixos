@@ -51,7 +51,7 @@ done
 cd "$REPO_ROOT"
 mkdir -p "$OUTPUT_DIR"
 
-echo "🔍 Profiling evaluation performance for: $HOST"
+echo "Profiling evaluation performance for: $HOST"
 echo ""
 
 # Measure evaluation time
@@ -67,12 +67,12 @@ if NIX_SHOW_STATS=1 nix eval --no-update-lock-file \
   eval_time=$(echo "$end_time - $start_time" | bc)
 
   echo ""
-  echo "✅ Evaluation completed in ${eval_time}s"
+  echo "Evaluation completed in ${eval_time}s"
 
   # Extract key statistics from NIX_SHOW_STATS output
   if grep -q "time elapsed" "$OUTPUT_DIR/eval-stats.log"; then
     echo ""
-    echo "📊 Evaluation Statistics:"
+    echo "Evaluation Statistics:"
     grep "time elapsed\|nr-attr-lookups\|nr-primop-calls" "$OUTPUT_DIR/eval-stats.log" || true
   fi
 
@@ -87,12 +87,12 @@ if NIX_SHOW_STATS=1 nix eval --no-update-lock-file \
 EOF
 
   echo ""
-  echo "📊 Metrics written to: $OUTPUT_DIR/eval-time.json"
+  echo "Metrics written to: $OUTPUT_DIR/eval-time.json"
 
   # Check threshold
   if (( $(echo "$eval_time > $THRESHOLD" | bc -l) )); then
     echo ""
-    echo "❌ Evaluation time (${eval_time}s) exceeds threshold (${THRESHOLD}s)"
+    echo "Evaluation time (${eval_time}s) exceeds threshold (${THRESHOLD}s)"
     echo ""
     echo "Consider:"
     echo "  • Check for heavy imports (nixpkgs imported multiple times)"
@@ -101,10 +101,10 @@ EOF
     exit 1
   fi
 
-  echo "✅ Evaluation time within threshold (${eval_time}s <= ${THRESHOLD}s)"
+  echo "Evaluation time within threshold (${eval_time}s <= ${THRESHOLD}s)"
   exit 0
 else
   echo ""
-  echo "❌ Evaluation failed"
+  echo "Evaluation failed"
   exit 1
 fi

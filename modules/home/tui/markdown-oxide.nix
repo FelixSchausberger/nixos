@@ -6,7 +6,7 @@
 
   # Shell alias for daily notes
   home.shellAliases = {
-    daily = "fish -c 'set -l today (date +%Y-%m-%d); set -l file /per/mnt/gdrive/Obsidian/work/magazino/daily/$today.md; mkdir -p (dirname $file); touch $file; hx $file'";
+    daily = "fish -c 'set -l today (date +%Y-%m-%d); set -l file /per/mnt/data/gdrive/Obsidian/work/magazino/daily/$today.md; mkdir -p (dirname $file); touch $file; hx $file'";
   };
 
   # Create configuration directory and file
@@ -38,7 +38,7 @@
       new_file_folder_path = ""
 
       # The folder for new daily notes
-      daily_notes_folder = "/per/mnt/gdrive/Obsidian/work/magazino/daily"
+      daily_notes_folder = "/per/mnt/data/gdrive/Obsidian/work/magazino/daily"
 
       # Whether markdown links should include an extension or not
       include_md_extension_md_link = false

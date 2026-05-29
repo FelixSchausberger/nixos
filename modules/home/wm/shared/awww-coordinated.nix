@@ -1,35 +1,39 @@
 # awww coordinated wallpaper daemon configuration
-# Proper HM module so it can be imported from both hyprland and niri modules
-# without duplicate service definitions (the module system deduplicates same-path imports).
-#
+# Options-based module: enabled and configured via wm.awww options.
 # graphical-session.target activates before WAYLAND_DISPLAY is set, causing
-# awww-daemon to default to wayland-0 and fail to connect. Each WM sets
-# wm.awww.sessionTarget to its compositor-specific session target instead.
+# awww-daemon to default to wayland-0 and fail to connect. Use a WM-specific
+# session target (e.g. niri-session.target) instead.
+#
+# This module should be imported once. Configure via:
+#   wm.awww.enable = true;
+#   wm.awww.sessionTarget = "<wm>-session.target";
 {
+  lib,
   config,
   pkgs,
-  lib,
   ...
-}: {
+}: let
+  cfg = config.wm.awww;
+in {
   options.wm.awww = {
     enable = lib.mkEnableOption "awww coordinated wallpaper daemon";
 
     sessionTarget = lib.mkOption {
       type = lib.types.str;
-      description = "Systemd session target the awww daemons bind to";
+      description = "Systemd user target to bind awww services to";
       example = "niri-session.target";
     };
   };
 
-  config = lib.mkIf config.wm.awww.enable {
+  config = lib.mkIf cfg.enable {
     home.packages = [pkgs.awww];
 
     # awww daemon for workspace wallpapers (default namespace)
     systemd.user.services.awww-wallpaper = {
       Unit = {
         Description = "awww daemon for workspace wallpapers";
-        After = [config.wm.awww.sessionTarget];
-        PartOf = [config.wm.awww.sessionTarget];
+        After = [cfg.sessionTarget];
+        PartOf = [cfg.sessionTarget];
         Wants = ["awww-wallpaper-init.service"];
       };
       Service = {
@@ -37,35 +41,39 @@
         ExecStart = "${pkgs.awww}/bin/awww-daemon";
         Restart = "on-failure";
       };
-      Install.WantedBy = [config.wm.awww.sessionTarget];
+      Install.WantedBy = [cfg.sessionTarget];
     };
 
     # awww daemon for blurred backdrop (backdrop namespace)
     systemd.user.services.awww-backdrop = {
       Unit = {
         Description = "awww daemon for Niri overview backdrop (blurred wallpapers)";
-        After = [config.wm.awww.sessionTarget];
-        PartOf = [config.wm.awww.sessionTarget];
+        After = [cfg.sessionTarget];
+        PartOf = [cfg.sessionTarget];
       };
       Service = {
         Type = "simple";
         ExecStart = "${pkgs.awww}/bin/awww-daemon --namespace backdrop";
         Restart = "on-failure";
       };
-      Install.WantedBy = [config.wm.awww.sessionTarget];
+      Install.WantedBy = [cfg.sessionTarget];
     };
 
     # Initialize both wallpapers on startup (synchronized)
     systemd.user.services.awww-wallpaper-init = {
       Unit = {
         Description = "Set initial synchronized wallpapers";
-        After = ["awww-wallpaper.service" "awww-backdrop.service"];
-        Requires = ["awww-wallpaper.service" "awww-backdrop.service"];
+        After = [
+          "awww-wallpaper.service"
+          "awww-backdrop.service"
+        ];
+        Requires = [
+          "awww-wallpaper.service"
+          "awww-backdrop.service"
+        ];
       };
       Service = {
         Type = "oneshot";
-        Restart = "on-failure";
-        RestartSec = "2s";
         ExecStart = let
           wallpaperName = config.wallpapers.defaultWallpaper;
           regularWallpaper = config.wallpapers.available.${wallpaperName};
@@ -73,20 +81,29 @@
           regularPath = "${config.wallpapers.wallpaperPath}/${regularWallpaper}";
           blurredPath = "${config.wallpapers.wallpaperPath}/${blurredWallpaper}";
           initScript = pkgs.writeShellScript "awww-init" ''
-            # Wait for default-namespace daemon socket to be ready
-            until ${pkgs.awww}/bin/awww query 2>/dev/null; do
-              sleep 0.1
-            done
+                          # Wait for default-namespace daemon socket to be ready
+                          until ${pkgs.awww}/bin/awww query 2>/dev/null; do
+                            ${pkgs.coreutils}/bin/sleep 0.1
+                          done
 
-            # Wait for backdrop-namespace daemon socket to be ready
+                          # Wait for backdrop-namespace daemon socket to be ready
             until ${pkgs.awww}/bin/awww query --namespace backdrop 2>/dev/null; do
-              sleep 0.1
-            done
+                          ${pkgs.coreutils}/bin/sleep 0.1
+                        done
 
-            # Set workspace wallpaper (default namespace)
-            ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none
-            # Set backdrop wallpaper (backdrop namespace)
-            ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none
+                          # Skip initialization when the daemon has no active outputs
+                          # yet (for example, virtual/headless-only startup).
+                          if [ -z "$(${pkgs.awww}/bin/awww query 2>/dev/null)" ]; then
+                            exit 0
+                          fi
+
+                          # Set workspace wallpaper (default namespace).
+                          if ! ${pkgs.awww}/bin/awww img ${regularPath} --transition-type none; then
+                            exit 0
+                          fi
+
+                          # Set backdrop wallpaper (backdrop namespace).
+                          ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none || true
           '';
         in "${initScript}";
       };
@@ -98,7 +115,9 @@
         Description = "Timer for rotating synchronized wallpapers";
       };
       Timer = {
-        OnActiveSec = "30m";
+        # Run shortly after session start to handle late-appearing outputs
+        # (e.g. DP monitors that come up after compositor initialization).
+        OnActiveSec = "20s";
         OnUnitActiveSec = "30m";
         Unit = "awww-wallpaper-rotate.service";
       };
@@ -122,18 +141,21 @@
 
             # Get paths for this wallpaper
             case "$random_name" in
-              ${lib.concatStringsSep "\n              " (map (name: ''
+              ${lib.concatStringsSep "\n              " (
+              map (name: ''
                 "${name}")
-                    regular="${wallpaperDir}/${config.wallpapers.available.${name}}"
-                    blurred="${wallpaperDir}/${config.wallpapers.availableBlurred.${name}}"
-                    ;;
+                  regular="${wallpaperDir}/${config.wallpapers.available.${name}}"
+                  blurred="${wallpaperDir}/${config.wallpapers.availableBlurred.${name}}"
+                  ;;
               '')
-              wallpaperNames)}
+              wallpaperNames
+            )}
             esac
 
-            # Update both wallpapers with fade transition
-            ${pkgs.awww}/bin/awww img "$regular" --transition-type fade --transition-duration 2
-            ${pkgs.awww}/bin/awww img --namespace backdrop "$blurred" --transition-type fade --transition-duration 2
+            # Update both wallpapers with fade transition. Skip quietly when no
+            # outputs are active.
+            ${pkgs.awww}/bin/awww img "$regular" --transition-type fade --transition-duration 2 || exit 0
+            ${pkgs.awww}/bin/awww img --namespace backdrop "$blurred" --transition-type fade --transition-duration 2 || true
           '';
         in "${rotateScript}";
       };

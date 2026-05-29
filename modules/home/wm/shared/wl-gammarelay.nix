@@ -1,3 +1,5 @@
+# Shared wl-gammarelay service wiring for color-temperature automation in Wayland sessions.
+# Uses session-target ordering so gamma control starts only after compositor availability.
 sessionTarget: {pkgs, ...}: {
   config = {
     # Provide package

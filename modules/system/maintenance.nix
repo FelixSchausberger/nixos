@@ -1,3 +1,5 @@
+# Scheduled maintenance orchestration for updates, health checks, and alerting.
+# Centralizes recurring host hygiene tasks under one opt-in module.
 {
   config,
   lib,
@@ -23,24 +25,25 @@
   };
 
   config = lib.mkIf config.modules.system.maintenance.enable {
+    modules.system.securityHardening.enable = lib.mkDefault true;
+
     systemd = {
       services = {
-        # Automated flake updates
         nixos-auto-update = lib.mkIf config.modules.system.maintenance.autoUpdate.enable {
           description = "Automatic NixOS flake update";
           script = ''
-            set -eu
+              set -eu
 
-            cd /per/etc/nixos
+              cd /per/etc/nixos
 
-            # Check if there are uncommitted changes
-            if [[ -n "$(${pkgs.git}/bin/git status --porcelain)" ]]; then
-              echo "Uncommitted changes detected, skipping auto-update"
-              exit 0
-            fi
+              # Check if there are uncommitted changes
+              if [[ -n "$(${pkgs.git}/bin/git status --porcelain)" ]]; then
+                echo "Uncommitted changes detected, skipping auto-update"
+                exit 0
+              fi
 
-            # Update flake inputs
-            ${pkgs.nix}/bin/nix flake update --commit-lock-file
+              # Update flake inputs
+              ${pkgs.nix}/bin/nix flake update --commit-lock-file
 
             # Test build (don't switch automatically for safety)
             ${pkgs.nix}/bin/nix build .#nixosConfigurations.$(hostname).config.system.build.toplevel --no-link
@@ -54,29 +57,50 @@
           };
         };
 
-        # System health monitoring
         system-health-check = lib.mkIf config.modules.system.maintenance.monitoring.enable {
           description = "System health monitoring";
           script = ''
             set -eu
 
+            ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              NTFY_URL="http://127.0.0.1:2586/homelab-alerts"
+              ntfy_send() {
+                ${pkgs.curl}/bin/curl -s -o /dev/null \
+                  -H "Title: $1" \
+                  -H "Priority: $2" \
+                  -H "Tags: $3" \
+                  -d "$4" \
+                  "$NTFY_URL" 2>/dev/null || true
+              }
+            ''}
+
             # Check for failed services
             failed_services=$(${pkgs.systemd}/bin/systemctl --failed --no-legend | wc -l)
             if [[ $failed_services -gt 0 ]]; then
+              failed_detail=$(${pkgs.systemd}/bin/systemctl --failed --no-legend)
               echo "WARNING: $failed_services failed services detected"
-              ${pkgs.systemd}/bin/systemctl --failed --no-legend
+              echo "$failed_detail"
+              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "Failed Services on $(hostname)" "high" "warning" "$failed_detail"
+            ''}
             fi
 
             # Check disk space
             root_usage=$(df / | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
             if [[ $root_usage -gt 90 ]]; then
               echo "WARNING: Root filesystem is $root_usage% full"
+              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "High Disk Usage on $(hostname)" "high" "warning" "Root filesystem is $root_usage% full"
+            ''}
             fi
 
             nix_usage=$(df /nix | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
             if [[ $nix_usage -gt 85 ]]; then
               echo "WARNING: Nix store is $nix_usage% full"
               echo "Consider running: clean"
+              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "High Nix Store Usage on $(hostname)" "high" "warning" "Nix store is $nix_usage% full"
+            ''}
             fi
 
             # Check for old generations
@@ -89,6 +113,9 @@
             mem_usage=$(${pkgs.procps}/bin/free | grep Mem | ${pkgs.gawk}/bin/awk '{printf "%.0f", $3/$2 * 100.0}')
             if [[ $mem_usage -gt 90 ]]; then
               echo "WARNING: Memory usage is $mem_usage%"
+              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "High Memory Usage on $(hostname)" "high" "warning" "Memory usage is $mem_usage%"
+            ''}
             fi
 
             # ZFS health check (if ZFS is available)
@@ -97,6 +124,9 @@
               if [[ "$zpool_status" != "all pools are healthy" ]]; then
                 echo "WARNING: ZFS pool health issues detected:"
                 echo "$zpool_status"
+                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "ZFS Pool Issue on $(hostname)" "urgent" "warning" "$zpool_status"
+            ''}
               fi
             fi
 
@@ -109,7 +139,6 @@
           };
         };
 
-        # Automated cleanup service
         nixos-cleanup = {
           description = "Automated NixOS cleanup";
           script = ''
@@ -126,8 +155,9 @@
             # Optimize store
             ${pkgs.nix}/bin/nix store optimise
 
-            # Clean temporary files
-            ${pkgs.systemd}/bin/systemd-tmpfiles --clean
+            # Clean temporary files while ignoring ephemeral roots that may not be
+            # attached in impermanence configurations.
+            ${pkgs.systemd}/bin/systemd-tmpfiles --clean --exclude-prefix=/tmp --exclude-prefix=/var/tmp --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd
 
             echo "Cleanup completed at $(date)"
           '';
@@ -169,51 +199,6 @@
           };
         };
       };
-    };
-
-    # Security hardening improvements
-    security = {
-      # Additional kernel hardening
-      forcePageTableIsolation = true;
-    };
-
-    # Additional sysctl security settings
-    # Note: Some settings like rp_filter, tcp_congestion_control, and default_qdisc
-    # are already configured in system/core/default.nix
-    boot.kernel.sysctl = {
-      # Network security improvements (new additions beyond system/core)
-      "net.ipv4.conf.all.log_martians" = 1; # Log suspicious packets
-      "net.ipv4.conf.default.log_martians" = 1;
-      "net.ipv4.conf.all.accept_source_route" = 0; # Reject source routing
-      "net.ipv4.conf.default.accept_source_route" = 0;
-      "net.ipv4.conf.all.accept_redirects" = 0; # Ignore ICMP redirects
-      "net.ipv4.conf.default.accept_redirects" = 0;
-      "net.ipv4.conf.all.secure_redirects" = 0; # Ignore secure ICMP redirects
-      "net.ipv4.conf.default.secure_redirects" = 0;
-      "net.ipv4.conf.all.send_redirects" = 0; # Don't send ICMP redirects
-      "net.ipv4.conf.default.send_redirects" = 0;
-      "net.ipv4.icmp_echo_ignore_broadcasts" = 1; # Ignore ICMP broadcasts
-      "net.ipv4.icmp_ignore_bogus_error_responses" = 1; # Ignore bogus ICMP error responses
-      "net.ipv4.tcp_syncookies" = 1; # Enable SYN flood protection
-      "net.ipv6.conf.all.accept_redirects" = 0; # IPv6: Ignore ICMP redirects
-      "net.ipv6.conf.default.accept_redirects" = 0;
-      "net.ipv6.conf.all.accept_source_route" = 0; # IPv6: Reject source routing
-      "net.ipv6.conf.default.accept_source_route" = 0;
-
-      # TCP performance and security
-      "net.ipv4.tcp_fastopen" = 3; # TCP Fast Open (client and server)
-
-      # Kernel security improvements
-      "kernel.dmesg_restrict" = 1; # Restrict dmesg access
-      "kernel.kexec_load_disabled" = 1; # Disable kexec
-      "kernel.unprivileged_bpf_disabled" = 1; # Disable unprivileged BPF
-      "kernel.yama.ptrace_scope" = 2; # Restrict ptrace access
-
-      # File system security
-      "fs.protected_hardlinks" = 1; # Prevent hardlink attacks
-      "fs.protected_symlinks" = 1; # Prevent symlink attacks
-      "fs.protected_fifos" = 2; # Protect FIFOs
-      "fs.protected_regular" = 2; # Protect regular files
     };
 
     # Log rotation improvements

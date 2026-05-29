@@ -67,16 +67,16 @@ fi
 # If prohibited command detected, provide guidance
 if contains_prohibited_command "$input_content"; then
     {
-        echo "🚫 REBUILD PREVENTION ACTIVATED"
+        echo "REBUILD PREVENTION ACTIVATED"
         echo
         echo "Claude Code has detected that you're attempting to run a PERMANENT system rebuild command."
         echo "According to your configuration guidelines, Claude should:"
         echo
-        echo "1. ❌ NEVER automatically run PERMANENT rebuild commands (switch/boot/deploy)"
-        echo "2. ✅ ALLOW temporary test commands (nixos-rebuild test, nh os test)"
-        echo "3. ✅ INFORM the user when a rebuild is necessary"
-        echo "4. ✅ WAIT for explicit user confirmation"
-        echo "5. ✅ SUGGEST the appropriate rebuild command"
+        echo "1. NEVER automatically run PERMANENT rebuild commands (switch/boot/deploy)"
+        echo "2. ALLOW temporary test commands (nixos-rebuild test, nh os test)"
+        echo "3. INFORM the user when a rebuild is necessary"
+        echo "4. WAIT for explicit user confirmation"
+        echo "5. SUGGEST the appropriate rebuild command"
         echo
         echo "Detected prohibited command pattern in:"
         echo "  $input_content"

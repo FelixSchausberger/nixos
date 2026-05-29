@@ -14,7 +14,7 @@
       list = [
         {
           ext = ".md";
-          path = "/mnt/gdrive/Obsidian";
+          path = "/per/mnt/data/gdrive/Obsidian";
           syntax = "markdown";
         }
       ];
