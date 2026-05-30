@@ -36,9 +36,8 @@
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
 
-    # Nixpkgs source (FlakeHub semver channel)
-    # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    # Nixpkgs source (tracks nixos-unstable for 26.11)
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Shared rust-overlay and flake-utils; all inputs that use them follow these
     # to avoid fetching and evaluating duplicate copies during flake evaluation
     rust-overlay = {

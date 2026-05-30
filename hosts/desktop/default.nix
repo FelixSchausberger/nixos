@@ -87,6 +87,19 @@ in {
 
   modules.system.ssh.enable = true;
 
+  # Allow remote power off from m920q without password prompt
+  security.sudo.extraRules = [
+    {
+      users = [inputs.self.lib.user];
+      commands = [
+        {
+          command = "/run/current-system/sw/bin/poweroff";
+          options = ["NOPASSWD"];
+        }
+      ];
+    }
+  ];
+
   modules.system.homelab.tailscale = {
     enable = true;
     udpGROInterface = "eno1";
@@ -107,6 +120,7 @@ in {
   # AMD VAAPI encoding is available via amdgpu driver (hardware.profiles.amdGpu above)
   modules.system.sunshine.enable = true;
   modules.system.gaming.enable = true;
+  modules.system.steam.autoStart = true;
 
   # OpenLDAP 2.6.13 test suite has a regression (provider/consumer DB mismatch).
   # Skip tests rather than wait for upstream fix; runtime is unaffected.

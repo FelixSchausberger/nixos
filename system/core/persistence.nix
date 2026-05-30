@@ -124,6 +124,12 @@
           mode = "0700";
         }
 
+        # SOPS age key for secret decryption
+        {
+          directory = ".config/sops";
+          mode = "0700";
+        }
+
         # GPG keys and trust database
         {
           directory = ".gnupg";

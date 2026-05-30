@@ -1,6 +1,7 @@
 {
   inputs,
   lib,
+  pkgs,
   ...
 }: let
   user = "schausberger";
@@ -40,6 +41,11 @@ in {
   systemd.services."home-manager-${user}" = {
     after = ["nix-daemon.service"];
     wants = ["nix-daemon.service"];
-    serviceConfig.TimeoutStartSec = lib.mkDefault "5m";
+    serviceConfig = {
+      TimeoutStartSec = lib.mkDefault "5m";
+      ExecStartPre = [
+        "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do [ -S /nix/var/nix/daemon-socket/socket ] && exit 0; sleep 1; done; exit 1'"
+      ];
+    };
   };
 }

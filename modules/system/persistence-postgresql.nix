@@ -17,7 +17,7 @@
     services.postgresql.settings = {
       wal_level = "replica";
       archive_mode = "on";
-      archive_command = "${pkgs.coreutils}/bin/cp %p /per/var/lib/postgresql/wal_archive/%f";
+      archive_command = "${pkgs.coreutils}/bin/cp %p /var/lib/postgresql/wal_archive/%f";
       max_wal_size = "2GB";
       min_wal_size = "512MB";
       checkpoint_completion_target = 0.9;

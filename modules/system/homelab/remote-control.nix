@@ -12,25 +12,31 @@
     import http.server
     import json
     import socket
+    import subprocess
     import threading
 
     DESKTOP_IP = "${cfg.desktopIp}"
+    DESKTOP_USER = "${cfg.desktopUser}"
     DESKTOP_MAC = bytes.fromhex("${desktopMac}")
     DESKTOP_CHECK_PORT = ${toString cfg.desktopCheckPort}
+    SUNSHINE_PORT = ${toString cfg.sunshinePort}
+    STEAM_PORT = ${toString cfg.steamRemotePlayPort}
     BROADCAST_IP = "${cfg.broadcastIp}"
     WOL_PORT = ${toString cfg.wolPort}
     LISTEN_PORT = ${toString cfg.port}
 
 
-    def desktop_online():
+    def check_port(host, port, timeout=2):
         try:
-            s = socket.create_connection(
-                (DESKTOP_IP, DESKTOP_CHECK_PORT), timeout=2
-            )
+            s = socket.create_connection((host, port), timeout=timeout)
             s.close()
             return True
         except (socket.timeout, ConnectionRefusedError, OSError):
             return False
+
+
+    def desktop_online():
+        return check_port(DESKTOP_IP, DESKTOP_CHECK_PORT)
 
 
     def wake_desktop():
@@ -41,16 +47,34 @@
         sock.close()
 
 
+    def poweroff_desktop():
+        try:
+            subprocess.run(
+                [
+                    "${pkgs.openssh}/bin/ssh",
+                    "-o", "StrictHostKeyChecking=accept-new",
+                    "-o", "ConnectTimeout=5",
+                    f"{DESKTOP_USER}@{DESKTOP_IP}",
+                    "sudo", "poweroff",
+                ],
+                timeout=10,
+                capture_output=True,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+
+
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path == "/api/status":
-                self._send_json(
-                    {
-                        "desktop": (
-                            "online" if desktop_online() else "offline"
-                        )
-                    }
-                )
+                online = desktop_online()
+                sunshine = check_port(DESKTOP_IP, SUNSHINE_PORT) if online else False
+                steam = check_port(DESKTOP_IP, STEAM_PORT) if online else False
+                self._send_json({
+                    "desktop": "online" if online else "offline",
+                    "sunshine": "running" if sunshine else "stopped",
+                    "steam": "running" if steam else "stopped",
+                })
             elif self.path == "/":
                 self._send_html(HTML)
             else:
@@ -60,6 +84,9 @@
             if self.path == "/api/wake":
                 threading.Thread(target=wake_desktop, daemon=True).start()
                 self._send_json({"status": "waking"})
+            elif self.path == "/api/poweroff":
+                threading.Thread(target=poweroff_desktop, daemon=True).start()
+                self._send_json({"status": "powering_off"})
             else:
                 self.send_error(404)
 
@@ -92,17 +119,24 @@
       .card{background:#16213e;border-radius:1rem;padding:2rem;width:100%;max-width:24rem;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
       h1{text-align:center;font-size:1.5rem;margin-bottom:0.5rem;color:#e94560}
       .subtitle{text-align:center;font-size:0.875rem;color:#889;margin-bottom:1.5rem}
-      .status{display:flex;align-items:center;gap:0.75rem;justify-content:center;margin-bottom:2rem;padding:0.75rem;border-radius:0.5rem;background:#0f3460}
+      .status-group{margin-bottom:1.5rem;padding:0.75rem;border-radius:0.5rem;background:#0f3460}
+      .status-row{display:flex;align-items:center;gap:0.75rem;padding:0.35rem 0}
+      .status-row+.status-row{border-top:1px solid rgba(255,255,255,0.08)}
       .dot{width:0.75rem;height:0.75rem;border-radius:50%;flex-shrink:0}
       .dot.online{background:#4ecca3;box-shadow:0 0 8px #4ecca3}
       .dot.offline{background:#e94560;box-shadow:0 0 8px #e94560}
+      .dot.stopped{background:#e94560;box-shadow:0 0 8px #e94560}
+      .dot.running{background:#4ecca3;box-shadow:0 0 8px #4ecca3}
+      .dot.unknown{background:#555;box-shadow:0 0 4px #555}
       .dot.waking{background:#ffd369;box-shadow:0 0 8px #ffd369;animation:pulse 0.6s ease-in-out infinite}
       @keyframes pulse{50%{opacity:0.3}}
+      .status-label{font-size:0.875rem;color:#ccc}
+      .status-label strong{color:#eee}
       button{width:100%;padding:1rem;border:none;border-radius:0.5rem;font-size:1rem;font-weight:600;cursor:pointer;background:#e94560;color:#fff;transition:background 0.15s;margin-bottom:0.75rem}
       button:hover{background:#d63851}
       button:disabled{opacity:0.4;cursor:not-allowed}
-      button.secondary{background:#0f3460}
-      button.secondary:hover{background:#1a4a8a}
+      button.danger{background:#a00}
+      button.danger:hover{background:#c22}
       .error{color:#e94560;text-align:center;margin-top:0.75rem;display:none;font-size:0.875rem}
     </style>
     </head>
@@ -110,12 +144,22 @@
     <div class="card">
       <h1>Remote Control</h1>
       <p class="subtitle">schausberger @ desktop</p>
-      <div class="status" id="status">
-        <span class="dot offline" id="dot"></span>
-        <span id="label">Checking...</span>
+      <div class="status-group" id="statusGroup">
+        <div class="status-row">
+          <span class="dot unknown" id="dotDesktop"></span>
+          <span class="status-label" id="labelDesktop">Desktop: checking...</span>
+        </div>
+        <div class="status-row">
+          <span class="dot unknown" id="dotSunshine"></span>
+          <span class="status-label" id="labelSunshine">Sunshine: --</span>
+        </div>
+        <div class="status-row">
+          <span class="dot unknown" id="dotSteam"></span>
+          <span class="status-label" id="labelSteam">Steam: --</span>
+        </div>
       </div>
       <button id="wakeBtn" onclick="wake()">Wake Desktop</button>
-      <button class="secondary" onclick="window.location.href='https://steamcommunity.com/id/schausberger'" target="_blank">Open Steam</button>
+      <button id="poweroffBtn" class="danger" onclick="poweroff()">Power Off</button>
       <div class="error" id="error"></div>
     </div>
     <script>
@@ -123,19 +167,23 @@
         try {
           const r = await fetch("/api/status");
           const d = await r.json();
-          const dot = document.getElementById("dot");
-          const label = document.getElementById("label");
-          dot.className = "dot " + d.desktop;
-          label.textContent = d.desktop === "online" ? "Desktop is online" : "Desktop is offline";
-          document.getElementById("wakeBtn").disabled = d.desktop === "online";
+          const online = d.desktop === "online";
+          document.getElementById("dotDesktop").className = "dot " + d.desktop;
+          document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> " + (online ? "online" : "offline");
+          document.getElementById("dotSunshine").className = "dot " + (online ? d.sunshine : "unknown");
+          document.getElementById("labelSunshine").innerHTML = "<strong>Sunshine</strong> " + (online ? d.sunshine : "--");
+          document.getElementById("dotSteam").className = "dot " + (online ? d.steam : "unknown");
+          document.getElementById("labelSteam").innerHTML = "<strong>Steam</strong> " + (online ? d.steam : "--");
+          document.getElementById("wakeBtn").disabled = online;
+          document.getElementById("poweroffBtn").disabled = !online;
         } catch(e) {
-          document.getElementById("label").textContent = "Connection error";
+          document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> connection error";
         }
       }
       async function wake() {
         document.getElementById("wakeBtn").disabled = true;
-        document.getElementById("dot").className = "dot waking";
-        document.getElementById("label").textContent = "Waking desktop...";
+        document.getElementById("dotDesktop").className = "dot waking";
+        document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> waking...";
         document.getElementById("error").style.display = "none";
         try {
           await fetch("/api/wake", { method: "POST" });
@@ -144,6 +192,20 @@
           document.getElementById("error").textContent = "Failed to send wake signal";
           document.getElementById("error").style.display = "block";
           document.getElementById("wakeBtn").disabled = false;
+        }
+      }
+      async function poweroff() {
+        if (!confirm("Power off the desktop?")) return;
+        document.getElementById("poweroffBtn").disabled = true;
+        document.getElementById("error").style.display = "none";
+        try {
+          await fetch("/api/poweroff", { method: "POST" });
+          document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> powering off...";
+          setTimeout(refresh, 5000);
+        } catch(e) {
+          document.getElementById("error").textContent = "Failed to send power off command";
+          document.getElementById("error").style.display = "block";
+          document.getElementById("poweroffBtn").disabled = false;
         }
       }
       refresh();
@@ -174,6 +236,12 @@ in {
       description = "IP address of the desktop to control";
     };
 
+    desktopUser = lib.mkOption {
+      type = lib.types.str;
+      default = "schausberger";
+      description = "Username on the desktop for SSH power off";
+    };
+
     desktopMac = lib.mkOption {
       type = lib.types.str;
       default = "10:ff:e0:e1:53:55";
@@ -184,6 +252,18 @@ in {
       type = lib.types.port;
       default = 22;
       description = "TCP port to probe when checking if desktop is online";
+    };
+
+    sunshinePort = lib.mkOption {
+      type = lib.types.port;
+      default = 47990;
+      description = "Sunshine HTTP port on the desktop for status checks";
+    };
+
+    steamRemotePlayPort = lib.mkOption {
+      type = lib.types.port;
+      default = 27036;
+      description = "Steam Remote Play port on the desktop for status checks";
     };
 
     broadcastIp = lib.mkOption {
@@ -219,14 +299,17 @@ in {
         "tailscale.service"
       ];
       wantedBy = ["multi-user.target"];
+      path = [pkgs.openssh];
       serviceConfig = {
         ExecStart = "${pkgs.python3}/bin/python3 ${webServer}";
         Restart = "always";
         RestartSec = "5";
-        DynamicUser = true;
+        DynamicUser = lib.mkForce false;
+        User = cfg.desktopUser;
+        Group = "users";
         PrivateTmp = true;
         ProtectSystem = "strict";
-        ProtectHome = true;
+        ProtectHome = "read-only";
         NoNewPrivileges = true;
         CapabilityBoundingSet = [
           "CAP_NET_BIND_SERVICE"
