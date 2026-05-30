@@ -177,7 +177,7 @@ in {
   # This is appended to the auto-generated file on activation
   home.activation.opencode-agents = lib.mkAfter ''
         AGENTS_FILE="$HOME/.config/opencode/AGENTS.md"
-        if [ -f "$AGENTS_FILE" ] && ! grep -q "jjwork" "$AGENTS_FILE"; then
+        if [ -f "$AGENTS_FILE" ] && [ -w "$AGENTS_FILE" ] && ! grep -q "jjwork" "$AGENTS_FILE"; then
           cat >> "$AGENTS_FILE" << 'AGENTS_EOF'
 
 

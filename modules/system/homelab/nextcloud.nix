@@ -15,7 +15,7 @@ in {
     };
     port = lib.mkOption {
       type = lib.types.port;
-      default = 8080;
+      default = 8081;
       description = "HTTP port for Nextcloud web UI";
     };
     host = lib.mkOption {
@@ -116,17 +116,24 @@ in {
       CPUQuota = "50%";
     };
 
+    systemd.services.nextcloud-update-plugins = {
+      after = ["postgresql.service"];
+      requires = ["postgresql.service"];
+    };
+
     systemd.services.nextcloud-setup = {
       after = [
         "systemd-tmpfiles-setup.service"
         "postgresql-setup.service"
       ];
       requires = ["postgresql-setup.service"];
+      unitConfig = {
+        StartLimitBurst = 3;
+        StartLimitIntervalSec = 60;
+      };
       serviceConfig = {
         Restart = "on-failure";
         RestartSec = 10;
-        StartLimitBurst = 3;
-        StartLimitIntervalSec = 60;
       };
     };
 

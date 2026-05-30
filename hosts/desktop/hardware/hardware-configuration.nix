@@ -50,6 +50,11 @@
       neededForBoot = true;
     };
 
+    "/per/repos" = {
+      device = "rpool/eyd/per/repos";
+      fsType = "zfs";
+    };
+
     "/home" = {
       device = "rpool/eyd/home";
       fsType = "zfs";

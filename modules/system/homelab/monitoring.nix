@@ -272,11 +272,13 @@ in {
         "prometheus.service"
       ];
       wants = ["prometheus.service"];
+      unitConfig = {
+        StartLimitBurst = 10;
+        StartLimitIntervalSec = 60;
+      };
       serviceConfig = {
         EnvironmentFile = config.sops.templates."grafana-env".path;
         RestartSec = "5s";
-        StartLimitBurst = 10;
-        StartLimitIntervalSec = 60;
         ExecStartPre = [
           "+${pkgs.bash}/bin/bash -c 'until ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString cfg.prometheusPort}/-/healthy > /dev/null 2>&1; do sleep 2; done'"
         ];
