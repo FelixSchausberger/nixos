@@ -6,6 +6,7 @@
 }: {
   options.modules.system.steam = {
     enable = lib.mkEnableOption "Steam gaming runtime";
+    autoStart = lib.mkEnableOption "Auto-start Steam on graphical login";
   };
 
   config = lib.mkIf config.modules.system.steam.enable {
@@ -17,6 +18,19 @@
     ];
 
     hardware.steam-hardware.enable = true;
+
+    systemd.user.services.steam-autostart = lib.mkIf config.modules.system.steam.autoStart {
+      description = "Steam Client Auto-start";
+      after = ["graphical-session.target"];
+      wants = ["graphical-session.target"];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${config.programs.steam.package}/bin/steam -silent";
+        Restart = "on-failure";
+        RestartSec = 10;
+      };
+      wantedBy = ["graphical-session.target"];
+    };
 
     programs.steam = {
       enable = true;

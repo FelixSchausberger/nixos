@@ -22,6 +22,11 @@ in {
           Port 443
           User git
           IdentityFile ~/.ssh/id_ed25519
+
+      # Desktop workstation (static LAN IP)
+      Host desktop
+          HostName 192.168.178.3
+          User schausberger
     '';
 
     packages = with pkgs; [
@@ -102,8 +107,12 @@ in {
       "http \"http://git.frequentis.frq/\"".sslVerify = false;
       "http \"https://git.frequentis.frq/\"".sslVerify = false;
       # GitHub authentication for Nix flake operations
-      "credential \"https://github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
-      "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
+      "credential \"https://github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${
+        config.sops.secrets."github/token".path
+      }); }; f";
+      "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${
+        config.sops.secrets."github/token".path
+      }); }; f";
     };
   };
 

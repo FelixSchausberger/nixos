@@ -103,6 +103,12 @@
       neededForBoot = true;
     };
 
+    "/per/repos" = {
+      device = "rpool/eyd/per/repos";
+      fsType = "zfs";
+      options = ["zfsutil"];
+    };
+
     "/home/schausberger/repos" = {
       device = "/per/repos";
       fsType = "none";
