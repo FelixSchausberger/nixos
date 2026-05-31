@@ -7,13 +7,9 @@
   home = {
     packages = with pkgs; [
       icu # Required for .NET globalization support (MCP servers)
-      # Create a 'code' symlink to vscodium/code executable
+      # Create a 'code' symlink to vscodium/codium executable
       (pkgs.writeShellScriptBin "code" ''
-        exec ${config.programs.vscode.package}/bin/${
-          if config.programs.vscode.package == pkgs.vscodium
-          then "codium"
-          else "code"
-        } "$@"
+        exec ${config.programs.vscodium.package}/bin/codium "$@"
       '')
     ];
 
@@ -28,7 +24,7 @@
     };
   };
 
-  programs.vscode = {
+  programs.vscodium = {
     enable = true;
     package = pkgs.vscodium; # pkgs.cursor
 
@@ -89,7 +85,11 @@
             "renderWhitespace" = "all";
 
             # Add vertical rulers at columns 79, 88, and 100 for code formatting guidelines
-            "rulers" = [79 88 100];
+            "rulers" = [
+              79
+              88
+              100
+            ];
             "smoothScrolling" = true;
 
             "tabSize" = 2;
@@ -275,7 +275,10 @@
   xdg.desktopEntries.code = {
     name = "Visual Studio Code";
     exec = "code %F";
-    categories = ["Development" "IDE"];
+    categories = [
+      "Development"
+      "IDE"
+    ];
     comment = "Code Editing. Optimized for Wayland.";
     # icon = "code";
     mimeType = [

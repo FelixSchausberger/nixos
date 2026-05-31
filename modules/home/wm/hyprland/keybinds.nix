@@ -111,8 +111,12 @@ in {
           "SHIFT, Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           "$mod SHIFT, Print, exec, ${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           # Utilities
-          "$mod, V, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules clipboard"
-          "$mod, period, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules emoji" # Emoji picker
+          "$mod, V, exec, ${
+            inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
+          }/bin/walker --modules clipboard"
+          "$mod, period, exec, ${
+            inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
+          }/bin/walker --modules emoji" # Emoji picker
 
           # Color picker
           "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${safeNotifyBin} 'Color picked' 'Copied to clipboard'"
@@ -128,10 +132,18 @@ in {
 
           # Window management extras
           "$mod, c, centerwindow"
-          "$mod, r, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cyclenext"
-          "$mod SHIFT, r, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch cycleprev"
-          "$mod, comma, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch togglesplit"
-          "$mod, period, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch pseudo"
+          "$mod, r, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl dispatch cyclenext"
+          "$mod SHIFT, r, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl dispatch cycleprev"
+          "$mod, comma, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl dispatch togglesplit"
+          "$mod, period, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl dispatch pseudo"
 
           # Window grouping
           "$mod, G, togglegroup"
@@ -141,8 +153,12 @@ in {
           "$mod SHIFT, P, pseudo"
 
           # Layout switching
-          "$mod CTRL, Space, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg orientationcycle"
-          "$mod ALT, Space, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl dispatch layoutmsg swapwithmaster"
+          "$mod CTRL, Space, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl dispatch layoutmsg orientationcycle"
+          "$mod ALT, Space, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl dispatch layoutmsg swapwithmaster"
 
           # Notification controls (Wired)
           "$mod, Escape, exec, ${safeNotifyBin} 'Test' 'Wired notification system'" # Test notification
@@ -150,7 +166,9 @@ in {
           "$mod CTRL, Escape, exec, systemctl --user restart wired" # Restart wired
 
           # System controls
-          "$mod CTRL, R, exec, ${inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland}/bin/hyprctl reload && ${safeNotifyBin} 'Hyprland' 'Configuration reloaded'"
+          "$mod CTRL, R, exec, ${
+            inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
+          }/bin/hyprctl reload && ${safeNotifyBin} 'Hyprland' 'Configuration reloaded'"
           "$mod CTRL, Q, exec, ${pkgs.systemd}/bin/systemctl --user restart hyprland"
 
           # Resize mode
@@ -179,14 +197,21 @@ in {
         ++ (mkDirBind "CTRL SHIFT" "right" "movewindow" "mon:${directions.right.hyprDir}")
         ++ (
           # Workspace bindings 1-10
-          builtins.concatLists (builtins.genList (x: let
-              ws = let c = (x + 1) / 10; in builtins.toString (x + 1 - (c * 10));
-            in [
-              "$mod, ${ws}, workspace, ${toString (x + 1)}"
-              "$mod SHIFT, ${ws}, movetoworkspace, ${toString (x + 1)}"
-              "$mod ALT, ${ws}, movetoworkspacesilent, ${toString (x + 1)}"
-            ])
-            10)
+          builtins.concatLists (
+            builtins.genList (
+              x: let
+                ws = let
+                  c = (x + 1) / 10;
+                in
+                  builtins.toString (x + 1 - (c * 10));
+              in [
+                "$mod, ${ws}, workspace, ${toString (x + 1)}"
+                "$mod SHIFT, ${ws}, movetoworkspace, ${toString (x + 1)}"
+                "$mod ALT, ${ws}, movetoworkspacesilent, ${toString (x + 1)}"
+              ]
+            )
+            10
+          )
         );
 
       # Mouse bindings
@@ -223,7 +248,9 @@ in {
         ", XF86WLAN, exec, ${pkgs.networkmanagerapplet}/bin/nm-connection-editor"
         ", XF86Bluetooth, exec, hypr-scratchpad bluetui"
         ", XF86Tools, exec, ${pkgs.gnome-control-center}/bin/gnome-control-center"
-        ", XF86Search, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker"
+        ", XF86Search, exec, ${
+          inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
+        }/bin/walker"
         ", XF86LaunchA, exec, ${cfg.fileManager}"
         ", XF86Explorer, exec, ${cfg.fileManager}"
 
@@ -246,54 +273,51 @@ in {
       ];
     };
 
-    # Enhanced resize submap with more options
-    wayland.windowManager.hyprland.extraConfig = ''
-      # Resize submap
-      submap = resize
-      # Arrow keys
-      binde = , right, resizeactive, 40 0
-      binde = , left, resizeactive, -40 0
-      binde = , up, resizeactive, 0 -40
-      binde = , down, resizeactive, 0 40
-
-      # Colemak-DH N/E/I/O keys
-      binde = , o, resizeactive, 40 0
-      binde = , n, resizeactive, -40 0
-      binde = , i, resizeactive, 0 -40
-      binde = , e, resizeactive, 0 40
-
-      # Fine adjustment (Shift for smaller steps)
-      binde = SHIFT, right, resizeactive, 10 0
-      binde = SHIFT, left, resizeactive, -10 0
-      binde = SHIFT, up, resizeactive, 0 -10
-      binde = SHIFT, down, resizeactive, 0 10
-      binde = SHIFT, o, resizeactive, 10 0
-      binde = SHIFT, n, resizeactive, -10 0
-      binde = SHIFT, i, resizeactive, 0 -10
-      binde = SHIFT, e, resizeactive, 0 10
-
-      # Big adjustment (Alt for larger steps)
-      binde = ALT, right, resizeactive, 100 0
-      binde = ALT, left, resizeactive, -100 0
-      binde = ALT, up, resizeactive, 0 -100
-      binde = ALT, down, resizeactive, 0 100
-      binde = ALT, o, resizeactive, 100 0
-      binde = ALT, n, resizeactive, -100 0
-      binde = ALT, i, resizeactive, 0 -100
-      binde = ALT, e, resizeactive, 0 100
-
-      # Presets
-      bind = , 1, resizeactive, exact 25% 25%
-      bind = , 2, resizeactive, exact 50% 50%
-      bind = , 3, resizeactive, exact 75% 75%
-      bind = , 4, resizeactive, exact 100% 100%
-
-      # Exit resize mode
-      bind = , escape, submap, reset
-      bind = , Return, submap, reset
-      bind = $mod, R, submap, reset
-
-      submap = reset
-    '';
+    # Resize submap via HM submaps option (lua-compatible)
+    wayland.windowManager.hyprland.submaps.resize = {
+      settings = {
+        bind = [
+          # Presets
+          ", 1, resizeactive, exact 25% 25%"
+          ", 2, resizeactive, exact 50% 50%"
+          ", 3, resizeactive, exact 75% 75%"
+          ", 4, resizeactive, exact 100% 100%"
+          # Exit resize mode
+          ", escape, submap, reset"
+          ", Return, submap, reset"
+          "$mod, R, submap, reset"
+        ];
+        binde = [
+          # Arrow keys
+          ", right, resizeactive, 40 0"
+          ", left, resizeactive, -40 0"
+          ", up, resizeactive, 0 -40"
+          ", down, resizeactive, 0 40"
+          # Colemak-DH N/E/I/O keys
+          ", o, resizeactive, 40 0"
+          ", n, resizeactive, -40 0"
+          ", i, resizeactive, 0 -40"
+          ", e, resizeactive, 0 40"
+          # Fine adjustment (Shift for smaller steps)
+          "SHIFT, right, resizeactive, 10 0"
+          "SHIFT, left, resizeactive, -10 0"
+          "SHIFT, up, resizeactive, 0 -10"
+          "SHIFT, down, resizeactive, 0 10"
+          "SHIFT, o, resizeactive, 10 0"
+          "SHIFT, n, resizeactive, -10 0"
+          "SHIFT, i, resizeactive, 0 -10"
+          "SHIFT, e, resizeactive, 0 10"
+          # Big adjustment (Alt for larger steps)
+          "ALT, right, resizeactive, 100 0"
+          "ALT, left, resizeactive, -100 0"
+          "ALT, up, resizeactive, 0 -100"
+          "ALT, down, resizeactive, 0 100"
+          "ALT, o, resizeactive, 100 0"
+          "ALT, n, resizeactive, -100 0"
+          "ALT, i, resizeactive, 0 -100"
+          "ALT, e, resizeactive, 0 100"
+        ];
+      };
+    };
   };
 }

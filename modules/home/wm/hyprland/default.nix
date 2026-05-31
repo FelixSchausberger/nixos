@@ -49,7 +49,11 @@ in {
   ];
 
   options.wm.hyprland = {
-    enable = lib.mkEnableOption "Hyprland window manager" // {default = true;};
+    enable =
+      lib.mkEnableOption "Hyprland window manager"
+      // {
+        default = true;
+      };
 
     terminal = lib.mkOption {
       type = lib.types.str;
@@ -84,13 +88,19 @@ in {
 
     scratchpad = {
       notesApp = lib.mkOption {
-        type = lib.types.enum ["obsidian" "basalt"];
+        type = lib.types.enum [
+          "obsidian"
+          "basalt"
+        ];
         default = "obsidian";
         description = "Notes application for scratchpad";
       };
 
       musicApp = lib.mkOption {
-        type = lib.types.enum ["spotify" "spotify-player"];
+        type = lib.types.enum [
+          "spotify"
+          "spotify-player"
+        ];
         default = "spotify";
         description = "Music application for scratchpad";
       };
@@ -124,8 +134,10 @@ in {
 
     wayland.windowManager.hyprland = {
       enable = true;
+      configType = "lua";
       package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-      portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+      portalPackage =
+        inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
       # hyprexpo disabled: hyprland-plugins (b85a56b9, Mar 11) predates the
       # IPassElement::type() API added in hyprland 0.54 (Mar 15). Re-enable once
       # upstream hyprland-plugins ships a compatible release.
@@ -217,6 +229,10 @@ in {
           swallow_regex = "^(${cfg.terminal})$";
           focus_on_activate = true;
           mouse_move_focuses_monitor = true;
+          # Disable background color for cleaner Sunshine capture
+          background_color = "rgb(1e1e2e)";
+          # New window takes over fullscreen for streaming games
+          new_window_takes_over_fullscreen = 2;
         };
 
         # Gesture configuration (replaces deprecated workspace_swipe options)
@@ -231,7 +247,10 @@ in {
         # };
 
         render = {
-          direct_scanout = lib.mkDefault true;
+          # Direct scanout bypasses the compositor for fullscreen apps,
+          # reducing latency for game streaming via Sunshine/Moonlight
+          direct_scanout = true;
+          explicit_sync = lib.mkDefault 2;
         };
 
         ecosystem = {

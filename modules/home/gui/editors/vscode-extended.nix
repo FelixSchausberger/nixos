@@ -4,7 +4,7 @@
   ...
 }: {
   config = lib.mkIf (config.features.development.enable or config.hostConfig.isGui) {
-    programs.vscode.profiles.default.userSettings = {
+    programs.vscodium.profiles.default.userSettings = {
       # Nix-specific settings
       "[nix]" = {
         "diagnostics" = {

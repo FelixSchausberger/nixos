@@ -74,7 +74,6 @@ in {
           enabled = lib.mkDefault true;
           size = 6;
           passes = 3;
-          new_optimizations = true;
 
           # Smooth blur transitions
           ignore_opacity = true;
