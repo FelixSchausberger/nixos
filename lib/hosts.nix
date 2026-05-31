@@ -4,9 +4,9 @@
 # GUI stack on TUI-only hosts.
 {
   desktop = {
-    wms = ["niri"]; # Default WM; Cosmic available via specialisation
+    wms = ["hyprland"]; # Default WM; Niri/Cosmic available via specialisation
     isGui = true;
-    description = "Desktop with Niri as default WM, Cosmic via specialisation";
+    description = "Desktop with Hyprland as default WM for headless Sunshine streaming";
   };
 
   surface = {

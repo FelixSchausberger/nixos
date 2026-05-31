@@ -16,7 +16,7 @@ in {
 
   # Test: Default window manager configuration
   wm_count = builtins.length config.hostConfig.wms;
-  has_niri = builtins.elem "niri" config.hostConfig.wms;
+  has_hyprland = builtins.elem "hyprland" config.hostConfig.wms;
 
   # Test: AMD GPU profile is enabled
   amd_gpu_enabled = config.hardware.profiles.amdGpu.enable;

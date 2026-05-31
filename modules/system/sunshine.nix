@@ -27,6 +27,10 @@ in {
       openFirewall = true;
       # CAP_SYS_ADMIN required for virtual input (keyboard/mouse capture)
       capSysAdmin = true;
+      # wlr capture mode for Hyprland headless display support
+      settings = {
+        capture = "wlr";
+      };
     };
 
     # uinput kernel module and udev rule for keyboard/mouse forwarding

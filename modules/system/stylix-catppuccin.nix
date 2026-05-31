@@ -61,19 +61,23 @@
     # Explicitly disable Qt styling at home-manager level
     # Stylix sets qt.enable = true even when targets.qt.enable = false
     home-manager.sharedModules = [
-      ({config, ...}: {
-        qt.enable = lib.mkForce false;
+      (
+        {config, ...}: {
+          qt.enable = lib.mkForce false;
+          # Disable Stylix release check on HM side (tracks unstable, not a fixed release)
+          stylix.enableReleaseChecks = false;
 
-        # Preserve Stylix-managed theme for GTK4 apps.
-        # As of home.stateVersion 26.05, gtk.gtk4.theme defaults to null instead
-        # of inheriting from config.gtk.theme — explicit assignment is required.
-        gtk.gtk4.theme = config.gtk.theme;
+          # Preserve Stylix-managed theme for GTK4 apps.
+          # As of home.stateVersion 26.05, gtk.gtk4.theme defaults to null instead
+          # of inheriting from config.gtk.theme — explicit assignment is required.
+          gtk.gtk4.theme = config.gtk.theme;
 
-        # Enable stylix theming for applications
-        stylix.targets = {
-          firefox.profileNames = ["default"];
-        };
-      })
+          # Enable stylix theming for applications
+          stylix.targets = {
+            firefox.profileNames = ["default"];
+          };
+        }
+      )
     ];
 
     stylix = let
@@ -83,6 +87,8 @@
       cursorPkg = config.modules.system.stylix-catppuccin.cursorPackage;
     in {
       enable = true;
+      # Disable release check — Stylix tracks nixos-unstable, not a fixed release
+      enableReleaseChecks = false;
 
       # Use Catppuccin Mocha colors via base16 scheme
       base16Scheme = {

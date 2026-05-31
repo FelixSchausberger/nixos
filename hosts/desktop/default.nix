@@ -1,5 +1,6 @@
-# Desktop workstation host: AMD gaming/rendering machine with Niri as default WM.
-# Keeps COSMIC as a boot-time specialisation and enables Sunshine for remote streaming.
+# Desktop workstation host: AMD gaming/rendering machine with Hyprland as default WM.
+# Hyprland supports headless outputs for Sunshine/Moonlight remote streaming.
+# Niri and COSMIC available via specialisations.
 {
   inputs,
   lib,
@@ -22,9 +23,9 @@ in {
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
-  # Niri home modules loaded at parent level (niri is the default WM)
+  # Hyprland home modules loaded at parent level (hyprland is the default WM)
   home-manager.users.${inputs.self.lib.user}.imports = [
-    ../../home/profiles/desktop/niri.nix.specialisation
+    ../../home/profiles/desktop/hyprland.nix
   ];
 
   hostConfig = {
@@ -33,6 +34,15 @@ in {
     inherit (hostInfo) wms;
 
     specialisations = {
+      niri = {
+        wms = ["niri"];
+        profile = "default";
+        extraConfig = {
+          home-manager.users.${inputs.self.lib.user}.imports = [
+            ../../home/profiles/desktop/niri.nix.specialisation
+          ];
+        };
+      };
       cosmic = {
         wms = ["cosmic"];
         profile = "default";
