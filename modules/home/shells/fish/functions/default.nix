@@ -1,6 +1,7 @@
 {
   imports = [
     ./jj.nix
+    ./vcs-aliases.nix
   ];
 
   programs.fish.functions = {
