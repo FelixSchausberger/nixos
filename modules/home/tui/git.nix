@@ -23,10 +23,6 @@ in {
           User git
           IdentityFile ~/.ssh/id_ed25519
 
-      # Desktop workstation (static LAN IP)
-      Host desktop
-          HostName 192.168.178.3
-          User schausberger
     '';
 
     packages = with pkgs; [
@@ -36,25 +32,9 @@ in {
       # graphite-cli # CLI that makes creating stacked git changes fast & intuitive
     ];
 
+    # Context-aware VCS aliases are now in fish/functions/vcs-aliases.nix
+    # gsearch remains here as a pure git command
     shellAliases = {
-      amend = "git commit --amend";
-      clone = "git clone";
-      fetch = "git fetch";
-      gap = "git add -p"; # --interactive
-      gaa = "git add .";
-      gcm = "git commit -m";
-      gst = "git status";
-      log = "git log --graph --abbrev-commit --all";
-      main = "git checkout main";
-      master = "git checkout master";
-      # prune = "git filter-branch --index-filter \"git rm -f --cached --ignore-unmatch $1/*\" --prune-empty --tag-name-filter cat -- --all"
-      pull = "git pull"; # --rebase origin main
-      push = "git push"; # origin main
-      rebase = "git rebase -i";
-      show = "git show";
-      undo = "git reset --soft HEAD~1";
-      redo = "git reset --hard HEAD@{1}";
-      ragequit = "sh -c 'git commit -am wip && shutdown -h now'";
       # https://junegunn.github.io/fzf/releases/0.63.0/
       gsearch =
         "git ls-files | fzf --style full --scheme path "
@@ -107,12 +87,8 @@ in {
       "http \"http://git.frequentis.frq/\"".sslVerify = false;
       "http \"https://git.frequentis.frq/\"".sslVerify = false;
       # GitHub authentication for Nix flake operations
-      "credential \"https://github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${
-        config.sops.secrets."github/token".path
-      }); }; f";
-      "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${
-        config.sops.secrets."github/token".path
-      }); }; f";
+      "credential \"https://github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
+      "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
     };
   };
 
