@@ -6,7 +6,7 @@
   auto_update_enabled = true;
   has_display_manager_gui_assertion = true;
   has_gaming_gui_assertion = true;
-  has_niri = true;
+  has_hyprland = true;
   has_steam_gamemode_assertion = true;
   has_sunshine_gui_assertion = true;
   has_sunshine_wms_assertion = true;

@@ -12,7 +12,11 @@ in {
   # Aesthetic options (borderRadius, gaps, blur, shadows) centralized in wm.shared.theme
   # This module only defines Hyprland-specific enable option
   options.wm.hyprland.theme = {
-    enable = lib.mkEnableOption "Hyprland theme configuration" // {default = true;};
+    enable =
+      lib.mkEnableOption "Hyprland theme configuration"
+      // {
+        default = true;
+      };
   };
 
   config = let
@@ -65,7 +69,6 @@ in {
             inherit (sharedTheme.blur) size;
             inherit (sharedTheme.blur) passes;
             enabled = true;
-            new_optimizations = true;
             ignore_opacity = true;
             noise = 0.1;
             contrast = 1.1;

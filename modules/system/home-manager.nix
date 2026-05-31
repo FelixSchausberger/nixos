@@ -16,13 +16,16 @@ in {
     useUserPackages = true;
     backupFileExtension = "backup-$(date +%Y%m%d-%H%M%S)";
     verbose = false;
-
+    # Disable release check — HM tracks nixos-unstable, not a fixed release
     extraSpecialArgs = {
       inherit inputs;
     };
 
     sharedModules = [
       inputs.sops-nix.homeManagerModules.sops
+
+      # Disable Nixpkgs release version check (HM and nixpkgs both track unstable)
+      {home.enableNixpkgsReleaseCheck = false;}
 
       {
         home.activation.logActivation = ''

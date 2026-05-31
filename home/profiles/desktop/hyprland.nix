@@ -12,12 +12,11 @@ in
     # Desktop-specific Hyprland configuration
     wm.hyprland = {
       # Monitor configuration for desktop setup
-      # Using auto-detection as default - can be overridden for specific multi-monitor setups
+      # Headless display pre-configured for Sunshine/Moonlight streaming (Pixel 9a: 1080x2400)
+      # Created dynamically via `hyprctl output create headless` on boot
       monitors = [
-        ",preferred,auto,1"
-        # Add specific monitor configs here if needed, e.g.:
-        # "DP-1,2560x1440@144,0x0,1"
-        # "HDMI-A-1,1920x1080@60,2560x0,1"
+        ",preferred,auto,1" # Real monitor (auto-detect when connected)
+        "HEADLESS-1,1920x1080@60,auto,1" # Virtual display for remote streaming
       ];
 
       # Desktop-specific application preferences
@@ -95,6 +94,17 @@ in
         # No need for manual LD_PRELOAD - gamemode daemon handles this
       ];
 
+      # Create headless output for Sunshine/Moonlight remote streaming
+      exec-once = ["hyprctl output create headless"];
+
+      # Streaming-optimized cursor settings
+      # Hide cursor on key press to reduce encoding overhead during gameplay
+      cursor = {
+        hide_on_key_press = true;
+        hide_on_touch = true;
+        no_hardware_cursors = false;
+      };
+
       # Desktop-specific window rules (including gaming)
       windowrulev2 = [
         # Steam - float dialogs/popups only
@@ -106,7 +116,7 @@ in
         "float,class:^(steam)$,title:^(Special Offers)$"
         "float,class:^(steam)$,title:^(Steam Cloud)$"
 
-        # Steam games - fullscreen and performance optimizations
+        # Steam games - fullscreen, disable effects for streaming performance
         "fullscreen,class:^(steam_app_).*"
         "immediate,class:^(steam_app_).*"
         "allowsinput,class:^(steam_app_).*"
@@ -122,22 +132,42 @@ in
         # Lutris
         "float,class:^(lutris)$,title:^(Lutris)$"
 
-        # Lutris games
+        # Lutris games - same streaming optimizations
         "fullscreen,class:^(lutris-wrapper)$"
         "immediate,class:^(lutris-wrapper)$"
         "allowsinput,class:^(lutris-wrapper)$"
+        "noborder,class:^(lutris-wrapper)$"
+        "noanim,class:^(lutris-wrapper)$"
+        "noblur,class:^(lutris-wrapper)$"
+        "noshadow,class:^(lutris-wrapper)$"
+        "opaque,class:^(lutris-wrapper)$"
         "idleinhibit focus,class:^(lutris-wrapper)$"
 
         # Bottles
         "float,class:^(com.usebottles.bottles)$,title:^(Bottles)$"
 
-        # Emulators
+        # Emulators - fullscreen with streaming optimizations
         "fullscreen,class:^(dolphin-emu)$"
         "fullscreen,class:^(PCSX2)$"
         "fullscreen,class:^(rpcs3)$"
         "immediate,class:^(dolphin-emu)$"
         "immediate,class:^(PCSX2)$"
         "immediate,class:^(rpcs3)$"
+        "noborder,class:^(dolphin-emu)$"
+        "noborder,class:^(PCSX2)$"
+        "noborder,class:^(rpcs3)$"
+        "noanim,class:^(dolphin-emu)$"
+        "noanim,class:^(PCSX2)$"
+        "noanim,class:^(rpcs3)$"
+        "noblur,class:^(dolphin-emu)$"
+        "noblur,class:^(PCSX2)$"
+        "noblur,class:^(rpcs3)$"
+        "noshadow,class:^(dolphin-emu)$"
+        "noshadow,class:^(PCSX2)$"
+        "noshadow,class:^(rpcs3)$"
+        "opaque,class:^(dolphin-emu)$"
+        "opaque,class:^(PCSX2)$"
+        "opaque,class:^(rpcs3)$"
         "idleinhibit focus,class:^(dolphin-emu)$"
         "idleinhibit focus,class:^(PCSX2)$"
         "idleinhibit focus,class:^(rpcs3)$"
@@ -145,6 +175,11 @@ in
         # Minecraft
         "fullscreen,class:^(Minecraft)$"
         "immediate,class:^(Minecraft)$"
+        "noborder,class:^(Minecraft)$"
+        "noanim,class:^(Minecraft)$"
+        "noblur,class:^(Minecraft)$"
+        "noshadow,class:^(Minecraft)$"
+        "opaque,class:^(Minecraft)$"
         "idleinhibit focus,class:^(Minecraft)$"
 
         # MangoHud settings
