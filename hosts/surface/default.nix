@@ -51,6 +51,15 @@ in {
 
   modules.system.stylix-catppuccin.enable = true;
 
+  modules.system.maintenance = {
+    enable = true;
+    monitoring = {
+      enable = true;
+      alerts = true;
+      ntfyUrl = "http://m920q:2586/homelab-alerts";
+    };
+  };
+
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel
   boot.kernelPackages = pkgs.lib.mkForce pkgs.linuxPackages;
