@@ -21,6 +21,11 @@
     monitoring = {
       enable = lib.mkEnableOption "system health monitoring";
       alerts = lib.mkEnableOption "health alert notifications";
+      ntfyUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:2586/homelab-alerts";
+        description = "ntfy URL for health alert notifications";
+      };
     };
   };
 
@@ -57,13 +62,17 @@
           };
         };
 
+        # Generic host-level health checks. Works on any NixOS host without
+        # Prometheus. homelab-alerter extends this with homelab-specific service
+        # monitoring (Nextcloud, Immich, AdGuard, Postgres, Node exporter) via
+        # Prometheus queries with cooldown and resolve notifications.
         system-health-check = lib.mkIf config.modules.system.maintenance.monitoring.enable {
           description = "System health monitoring";
           script = ''
             set -eu
 
             ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              NTFY_URL="http://127.0.0.1:2586/homelab-alerts"
+              NTFY_URL="${config.modules.system.maintenance.monitoring.ntfyUrl}"
               ntfy_send() {
                 ${pkgs.curl}/bin/curl -s -o /dev/null \
                   -H "Title: $1" \
@@ -165,6 +174,11 @@
             Type = "oneshot";
             User = "root";
             Group = "root";
+            # Defer to boot-critical services to avoid slow-boot vitals warnings
+            Nice = 19;
+            IOSchedulingClass = "idle";
+            TimeoutStartSec = 600;
+            DefaultDependencies = false;
           };
         };
       };
@@ -192,6 +206,7 @@
         nixos-cleanup = {
           description = "Timer for automated NixOS cleanup";
           wantedBy = ["timers.target"];
+          after = ["multi-user.target"];
           timerConfig = {
             OnCalendar = "weekly";
             Persistent = true;

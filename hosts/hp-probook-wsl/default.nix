@@ -18,6 +18,7 @@ in {
       inputs.stylix.nixosModules.stylix
       ../../modules/system/stylix-catppuccin.nix
       ../../modules/system/wsl-integration.nix
+      ../../modules/system/homelab/tailscale.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
@@ -134,6 +135,7 @@ in {
     modules.system = {
       containers.enable = true;
       wsl-integration.enable = true;
+      homelab.tailscale.enable = true;
       maintenance = {
         enable = true;
         autoUpdate.enable = false; # Disable auto-updates in WSL environment
@@ -192,6 +194,7 @@ in {
     environment = {
       systemPackages = with pkgs; [
         nix-ld
+        mosh
 
         util-linux
         inetutils

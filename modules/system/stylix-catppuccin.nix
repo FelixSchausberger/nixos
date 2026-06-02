@@ -89,6 +89,9 @@
       enable = true;
       # Disable release check — Stylix tracks nixos-unstable, not a fixed release
       enableReleaseChecks = false;
+      # Disable all auto-targets globally; enable required targets explicitly below.
+      # This avoids loading Stylix kmscon defaults that rely on removed nixpkgs options.
+      autoEnable = false;
 
       # Use Catppuccin Mocha colors via base16 scheme
       base16Scheme = {
@@ -149,6 +152,9 @@
 
         # Disable all Qt theming since we manage it manually via qt5ct/qt6ct
         qt.enable = false;
+
+        # Disabled: Stylix kmscon target uses removed nixpkgs API (extraConfig, fonts)
+        kmscon.enable = false;
       };
     };
   };

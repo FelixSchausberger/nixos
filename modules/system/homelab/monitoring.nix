@@ -318,30 +318,9 @@ in {
             }
           ]
           ++ [
-            {
-              name = "HighDiskUsage";
-              query = ''node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"} < 0.1'';
-              priority = "high";
-              message = "Root filesystem is more than 90% full";
-            }
-            {
-              name = "HighNixStoreUsage";
-              query = ''node_filesystem_avail_bytes{mountpoint="/nix",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/nix",fstype!="tmpfs"} < 0.15'';
-              priority = "high";
-              message = "Nix store is more than 85% full";
-            }
-            {
-              name = "HighMemoryUsage";
-              query = "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9";
-              priority = "high";
-              message = "System memory usage is above 90%";
-            }
-            {
-              name = "FailedSystemdUnits";
-              query = ''count(node_systemd_unit_state{state="failed"}) > 0'';
-              priority = "default";
-              message = "There are failed systemd units";
-            }
+            # Generic host checks (disk, memory, nix store, failed units) are
+            # handled by system-health-check. Only Prometheus-specific service
+            # monitoring belongs here.
             {
               name = "NodeExporterDown";
               query = ''up{job="node"} == 0'';

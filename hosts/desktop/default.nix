@@ -38,7 +38,9 @@ in {
         wms = ["niri"];
         profile = "default";
         extraConfig = {
+          imports = [../../modules/system/wm/niri.nix];
           home-manager.users.${inputs.self.lib.user}.imports = [
+            ../../modules/home/wm/niri/default.nix
             ../../home/profiles/desktop/niri.nix.specialisation
           ];
         };
@@ -47,6 +49,7 @@ in {
         wms = ["cosmic"];
         profile = "default";
         extraConfig = {
+          imports = [../../modules/system/wm/cosmic.nix];
           home-manager.users.${inputs.self.lib.user}.imports = [
             ../../modules/home/wm/cosmic
           ];
@@ -147,6 +150,7 @@ in {
     monitoring = {
       enable = true;
       alerts = true;
+      ntfyUrl = "http://m920q:2586/homelab-alerts";
     };
   };
 }

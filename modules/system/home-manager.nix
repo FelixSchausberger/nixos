@@ -47,7 +47,7 @@ in {
     serviceConfig = {
       TimeoutStartSec = lib.mkDefault "5m";
       ExecStartPre = [
-        "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do [ -S /nix/var/nix/daemon-socket/socket ] && exit 0; sleep 1; done; exit 1'"
+        "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 60); do systemctl is-active --quiet nix-daemon.service 2>/dev/null && exit 0; sleep 1; done; exit 1'"
       ];
     };
   };

@@ -49,10 +49,14 @@ in {
   inherit getExtensions;
 
   # Common language packs
-  languagePacks = ["de" "en-US"];
+  languagePacks = [
+    "de"
+    "en-US"
+  ];
 
-  # Common native messaging hosts
-  nativeMessagingHosts = [pkgs.firefoxpwa];
+  # firefoxpwa is currently broken on this nixpkgs pin (missing $out/lib/firefoxpwa
+  # during fixup). Disable it so Home Manager can build.
+  nativeMessagingHosts = [];
 
   # Common search configuration
   searchConfig = {
@@ -115,7 +119,9 @@ in {
     };
 
     "home manager" = {
-      urls = [{template = "https://home-manager-options.extranix.com/?query={searchTerms}&release=master";}];
+      urls = [
+        {template = "https://home-manager-options.extranix.com/?query={searchTerms}&release=master";}
+      ];
       icon = "https://nixos.org/favicon.ico";
       definedAliases = ["@hm"];
     };

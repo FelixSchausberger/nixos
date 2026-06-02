@@ -26,7 +26,7 @@
       echo "headless" > /run/m920q-hdmi-state
     fi
 
-    exec /run/current-system/sw/bin/systemctl start m920q-mode-switch.timer
+    exec /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
   '';
 
   modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
@@ -65,9 +65,9 @@
     fi
 
     if [[ "$desired_mode" == "niri" ]]; then
-      "$gui_switch" test
+      "$gui_switch" test || true
     else
-      "$headless_switch" test
+      "$headless_switch" test || true
     fi
 
     echo "$desired_mode" > "$mode_file"
@@ -185,6 +185,7 @@ in {
       iotop # Per-process disk IO monitoring
       htop # Process monitoring (already included via btop but useful)
       lm_sensors # Temperature, voltage, fan speed via hwmon
+      mosh # Mobile shell for remote access
     ]
   );
 
@@ -383,4 +384,13 @@ in {
   };
 
   modules.system.ssh.enable = true;
+
+  # Mosh (Mobile Shell) - UDP-based SSH alternative for resilient connections
+  # Survives IP roaming, packet loss, and network switches (e.g. train travel)
+  networking.firewall.allowedUDPPortRanges = [
+    {
+      from = 60000;
+      to = 61000;
+    }
+  ];
 }
