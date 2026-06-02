@@ -7,6 +7,10 @@
   safeNotifySend = import ../../lib/safe-notify-send.nix {inherit pkgs config lib;};
   safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 in {
+  imports = [
+    ../../../modules/home/wm/niri/default.nix
+  ];
+
   # Desktop-specific niri configuration
   wm.niri = {
     enable = true;

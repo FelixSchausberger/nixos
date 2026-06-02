@@ -1,14 +1,15 @@
 # System-side Hyprland session module integrated with shared Wayland platform settings.
 # Enabled only when hostConfig marks Hyprland active on GUI hosts.
 {
-  inputs,
   pkgs,
   lib,
   hostConfig,
   ...
 }: {
+  # Note: inputs.hyprland.nixosModules.default is intentionally NOT imported here.
+  # It bundles a kmscon module that uses removed nixpkgs API (extraConfig, fonts, autologinUser).
+  # Programs.hyprland is provided by nixpkgs instead.
   imports = [
-    inputs.hyprland.nixosModules.default
     ../session/default.nix
     ../session/hyprland.nix
     ./shared-environment.nix

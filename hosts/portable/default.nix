@@ -96,4 +96,13 @@ in {
   # Required for impermanence: filesystems must be mounted early in boot
   fileSystems."/per".neededForBoot = true;
   fileSystems."/home".neededForBoot = true;
+
+  modules.system.maintenance = {
+    enable = true;
+    monitoring = {
+      enable = true;
+      alerts = true;
+      ntfyUrl = "http://m920q:2586/homelab-alerts";
+    };
+  };
 }
