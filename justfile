@@ -114,7 +114,7 @@ activate NAME:
     #!/usr/bin/env bash
     set -euo pipefail
     PROFILE=/nix/var/nix/profiles/system
-    MODE_FILE=/run/m920q-current-mode
+    MODE_FILE=/run/$(hostname)-current-mode
     HM_SERVICE="home-manager-$(whoami).service"
     USERNAME=$(whoami)
 
@@ -160,6 +160,16 @@ gui:
 
 tty:
     just activate headless
+
+# Desktop mode aliases
+home:
+    just activate home
+
+away:
+    just activate headless
+
+desktop-status:
+    @cat /run/desktop-current-mode 2>/dev/null || echo "unknown"
 
 # === QUALITY MONITORING ===
 

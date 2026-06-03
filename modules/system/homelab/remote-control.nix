@@ -21,6 +21,13 @@
     DESKTOP_CHECK_PORT = ${toString cfg.desktopCheckPort}
     SUNSHINE_PORT = ${toString cfg.sunshinePort}
     STEAM_PORT = ${toString cfg.steamRemotePlayPort}
+    DISPLAY_MODE_CONTROL = ${
+      if cfg.enableDisplayModeControl
+      then "True"
+      else "False"
+    }
+    AWAY_MODE_COMMAND = ${builtins.toJSON cfg.desktopAwayModeCommand}
+    HOME_MODE_COMMAND = ${builtins.toJSON cfg.desktopHomeModeCommand}
     BROADCAST_IP = "${cfg.broadcastIp}"
     WOL_PORT = ${toString cfg.wolPort}
     LISTEN_PORT = ${toString cfg.port}
@@ -64,16 +71,66 @@
             pass
 
 
+    def run_display_mode_command(command):
+        if not DISPLAY_MODE_CONTROL:
+            return False
+        try:
+            result = subprocess.run(
+                [
+                    "${pkgs.openssh}/bin/ssh",
+                    "-o", "StrictHostKeyChecking=accept-new",
+                    "-o", "ConnectTimeout=5",
+                    f"{DESKTOP_USER}@{DESKTOP_IP}",
+                    command,
+                ],
+                timeout=15,
+                capture_output=True,
+                text=True,
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+
+
+    def get_display_mode():
+        if not DISPLAY_MODE_CONTROL:
+            return "unsupported"
+        try:
+            result = subprocess.run(
+                [
+                    "${pkgs.openssh}/bin/ssh",
+                    "-o", "StrictHostKeyChecking=accept-new",
+                    "-o", "ConnectTimeout=5",
+                    f"{DESKTOP_USER}@{DESKTOP_IP}",
+                    "sudo", "/run/current-system/sw/bin/desktop-display-mode", "status",
+                ],
+                timeout=10,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                return "unknown"
+            mode = result.stdout.strip().lower()
+            if mode in ["home", "away", "unknown"]:
+                return mode
+            return "unknown"
+        except (subprocess.TimeoutExpired, OSError):
+            return "unknown"
+
+
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path == "/api/status":
                 online = desktop_online()
                 sunshine = check_port(DESKTOP_IP, SUNSHINE_PORT) if online else False
                 steam = check_port(DESKTOP_IP, STEAM_PORT) if online else False
+                display_mode = get_display_mode() if online else "unknown"
                 self._send_json({
                     "desktop": "online" if online else "offline",
                     "sunshine": "running" if sunshine else "stopped",
                     "steam": "running" if steam else "stopped",
+                    "display_mode_control": DISPLAY_MODE_CONTROL,
+                    "display_mode": display_mode,
                 })
             elif self.path == "/":
                 self._send_html(HTML)
@@ -87,6 +144,12 @@
             elif self.path == "/api/poweroff":
                 threading.Thread(target=poweroff_desktop, daemon=True).start()
                 self._send_json({"status": "powering_off"})
+            elif self.path == "/api/mode/away":
+                success = run_display_mode_command(AWAY_MODE_COMMAND)
+                self._send_json({"status": "away_requested" if success else "away_failed", "ok": success})
+            elif self.path == "/api/mode/home":
+                success = run_display_mode_command(HOME_MODE_COMMAND)
+                self._send_json({"status": "home_requested" if success else "home_failed", "ok": success})
             else:
                 self.send_error(404)
 
@@ -127,6 +190,8 @@
       .dot.offline{background:#e94560;box-shadow:0 0 8px #e94560}
       .dot.stopped{background:#e94560;box-shadow:0 0 8px #e94560}
       .dot.running{background:#4ecca3;box-shadow:0 0 8px #4ecca3}
+      .dot.home{background:#4ecca3;box-shadow:0 0 8px #4ecca3}
+      .dot.away{background:#ffd369;box-shadow:0 0 8px #ffd369}
       .dot.unknown{background:#555;box-shadow:0 0 4px #555}
       .dot.waking{background:#ffd369;box-shadow:0 0 8px #ffd369;animation:pulse 0.6s ease-in-out infinite}
       @keyframes pulse{50%{opacity:0.3}}
@@ -150,6 +215,10 @@
           <span class="status-label" id="labelDesktop">Desktop: checking...</span>
         </div>
         <div class="status-row">
+          <span class="dot unknown" id="dotDisplayMode"></span>
+          <span class="status-label" id="labelDisplayMode">Display mode: --</span>
+        </div>
+        <div class="status-row">
           <span class="dot unknown" id="dotSunshine"></span>
           <span class="status-label" id="labelSunshine">Sunshine: --</span>
         </div>
@@ -159,6 +228,8 @@
         </div>
       </div>
       <button id="wakeBtn" onclick="wake()">Wake Desktop</button>
+      <button id="awayBtn" onclick="setAwayMode()">Switch To Virtual Display</button>
+      <button id="homeBtn" onclick="setHomeMode()">Switch To Physical Display</button>
       <button id="poweroffBtn" class="danger" onclick="poweroff()">Power Off</button>
       <div class="error" id="error"></div>
     </div>
@@ -174,10 +245,50 @@
           document.getElementById("labelSunshine").innerHTML = "<strong>Sunshine</strong> " + (online ? d.sunshine : "--");
           document.getElementById("dotSteam").className = "dot " + (online ? d.steam : "unknown");
           document.getElementById("labelSteam").innerHTML = "<strong>Steam</strong> " + (online ? d.steam : "--");
+          const mode = online ? (d.display_mode || "unknown") : "unknown";
           document.getElementById("wakeBtn").disabled = online;
           document.getElementById("poweroffBtn").disabled = !online;
+          const modeControlEnabled = !!d.display_mode_control;
+          document.getElementById("labelDisplayMode").innerHTML = modeControlEnabled
+            ? "<strong>Display mode</strong> " + mode
+            : "<strong>Display mode</strong> unsupported";
+          document.getElementById("dotDisplayMode").className = "dot " + (modeControlEnabled ? mode : "unknown");
+          document.getElementById("awayBtn").disabled = !online || !modeControlEnabled;
+          document.getElementById("homeBtn").disabled = !online || !modeControlEnabled;
+          document.getElementById("awayBtn").style.display = modeControlEnabled ? "block" : "none";
+          document.getElementById("homeBtn").style.display = modeControlEnabled ? "block" : "none";
         } catch(e) {
           document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> connection error";
+        }
+      }
+      async function setAwayMode() {
+        document.getElementById("awayBtn").disabled = true;
+        document.getElementById("error").style.display = "none";
+        try {
+          const r = await fetch("/api/mode/away", { method: "POST" });
+          const d = await r.json();
+          if (!d.ok) throw new Error("away failed");
+          setTimeout(refresh, 3000);
+        } catch(e) {
+          document.getElementById("error").textContent = "Failed to switch to virtual display";
+          document.getElementById("error").style.display = "block";
+        } finally {
+          setTimeout(refresh, 1000);
+        }
+      }
+      async function setHomeMode() {
+        document.getElementById("homeBtn").disabled = true;
+        document.getElementById("error").style.display = "none";
+        try {
+          const r = await fetch("/api/mode/home", { method: "POST" });
+          const d = await r.json();
+          if (!d.ok) throw new Error("home failed");
+          setTimeout(refresh, 3000);
+        } catch(e) {
+          document.getElementById("error").textContent = "Failed to switch to physical display";
+          document.getElementById("error").style.display = "block";
+        } finally {
+          setTimeout(refresh, 1000);
         }
       }
       async function wake() {
@@ -264,6 +375,24 @@ in {
       type = lib.types.port;
       default = 27036;
       description = "Steam Remote Play port on the desktop for status checks";
+    };
+
+    enableDisplayModeControl = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable remote switching between desktop home/away display modes";
+    };
+
+    desktopAwayModeCommand = lib.mkOption {
+      type = lib.types.str;
+      default = "sudo /run/current-system/sw/bin/desktop-display-mode away";
+      description = "Command executed via SSH on desktop to switch to virtual display mode";
+    };
+
+    desktopHomeModeCommand = lib.mkOption {
+      type = lib.types.str;
+      default = "sudo /run/current-system/sw/bin/desktop-display-mode home";
+      description = "Command executed via SSH on desktop to switch to physical display mode";
     };
 
     broadcastIp = lib.mkOption {

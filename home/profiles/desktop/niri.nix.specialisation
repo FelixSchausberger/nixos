@@ -7,17 +7,13 @@
   safeNotifySend = import ../../lib/safe-notify-send.nix {inherit pkgs config lib;};
   safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 in {
-  imports = [
-    ../../../modules/home/wm/niri/default.nix
-  ];
-
   # Desktop-specific niri configuration
   wm.niri = {
     enable = true;
     # Monitor configuration for desktop setup
     outputs = [
       {
-        name = "Virtual-1";
+        name = "VIRTUAL-1";
         mode = {
           width = 1920;
           height = 1200;
