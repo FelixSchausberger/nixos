@@ -1,5 +1,8 @@
 # Desktop workstation host: AMD gaming/rendering machine with Niri as default WM.
-# Uses DP hotplug to switch between home (physical monitor) and away (virtual display) modes.
+# Both VIRTUAL-1 and DP-3 are defined in the niri config. VIRTUAL-1 is always
+# enabled for Sunshine remote streaming. DP-3 starts disabled (off) and can be
+# toggled on/off via `desktop-display-mode` or the remote-control web UI.
+# niri natively handles DP hotplug, so no udev rules or specialisations needed.
 {
   inputs,
   lib,
@@ -11,84 +14,16 @@
   hostInfo = inputs.self.lib.hosts.${hostName};
   inherit (inputs.self.lib) user;
 
-  dpDetectScript = pkgs.writeShellScript "desktop-dp-detect" ''
-    set -euo pipefail
-
-    dp_status_files=(/sys/class/drm/*-DP-*/status)
-    if (( ''${#dp_status_files[@]} == 0 )); then
-      echo "away" > /run/desktop-dp-state
-      exec /run/current-system/sw/bin/systemctl restart desktop-mode-switch.timer
-    fi
-
-    if grep -qs connected "''${dp_status_files[@]}"; then
-      echo "home" > /run/desktop-dp-state
-    else
-      echo "away" > /run/desktop-dp-state
-    fi
-
-    exec /run/current-system/sw/bin/systemctl restart desktop-mode-switch.timer
-  '';
-
-  modeSwitchScript = pkgs.writeShellScript "desktop-mode-switch" ''
-    set -euo pipefail
-
-    exec 9>/run/desktop-mode-switch.lock
-    /run/current-system/sw/bin/flock -n 9 || exit 0
-
-    profile=/nix/var/nix/profiles/system
-    away_switch="$profile/bin/switch-to-configuration"
-    home_switch="$profile/specialisation/home/bin/switch-to-configuration"
-    hm_service="home-manager-${user}.service"
-    mode_file=/run/desktop-current-mode
-    state_file=/run/desktop-dp-state
-
-    timeout 30 bash -c 'until /run/current-system/sw/bin/nix-daemon --version >/dev/null 2>&1; do sleep 0.5; done' 2>/dev/null || true
-
-    if [[ ! -f "$state_file" ]]; then
-      exit 0
-    fi
-
-    desired_mode=$(cat "$state_file")
-
-    current_mode=""
-    if [[ -f "$mode_file" ]]; then
-      current_mode=$(cat "$mode_file")
-    fi
-
-    if [[ "$current_mode" == "$desired_mode" ]]; then
-      exit 0
-    fi
-
-    if [[ "$desired_mode" == "home" ]]; then
-      "$home_switch" test || true
-    else
-      "$away_switch" test || true
-    fi
-
-    echo "$desired_mode" > "$mode_file"
-
-    systemctl restart "$hm_service"
-    systemctl restart greetd.service
-  '';
-
   desktopDisplayModeScript = pkgs.writeShellScriptBin "desktop-display-mode" ''
     set -euo pipefail
-
-    profile=/nix/var/nix/profiles/system
-    hm_service="home-manager-${user}.service"
-
     case "''${1:-}" in
       away)
-        "$profile/bin/switch-to-configuration" test
+        niri msg output DP-3 off 2>/dev/null || true
         echo away > /run/desktop-current-mode
-        systemctl restart "$hm_service"
-        systemctl restart greetd.service
         ;;
       home)
-        "$profile/specialisation/home/bin/switch-to-configuration" test
+        niri msg output DP-3 on 2>/dev/null || true
         echo home > /run/desktop-current-mode
-        systemctl restart "$hm_service"
-        systemctl restart greetd.service
         ;;
       status)
         cat /run/desktop-current-mode 2>/dev/null || echo unknown
@@ -113,26 +48,17 @@ in {
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
-  # Niri home profile loaded at parent level (niri is the default WM)
-  home-manager.users.${inputs.self.lib.user}.imports = [
-    ../../home/profiles/desktop/niri.nix.specialisation
-  ];
-
   hostConfig = {
     inherit hostName;
     inherit (hostInfo) isGui;
     inherit (hostInfo) wms;
 
+    autoLogin = {
+      enable = true;
+      inherit (inputs.self.lib) user;
+    };
+
     specialisations = {
-      home = {
-        wms = ["niri"];
-        profile = "default";
-        extraConfig = {
-          home-manager.users.${inputs.self.lib.user}.imports = [
-            ../../home/profiles/desktop/niri-home.nix
-          ];
-        };
-      };
       cosmic = {
         wms = ["cosmic"];
         profile = "default";
@@ -197,36 +123,6 @@ in {
     zfs.extraPools = ["dpool"];
   };
 
-  systemd.services.desktop-dp-detect = {
-    description = "Detect DP hotplug and update desktop mode state";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = dpDetectScript;
-    };
-  };
-
-  systemd.timers.desktop-mode-switch = {
-    description = "Debounced desktop mode switch after DP hotplug";
-    wantedBy = ["multi-user.target"];
-    timerConfig = {
-      OnActiveSec = 10;
-      AccuracySec = "5s";
-    };
-  };
-
-  systemd.services.desktop-mode-switch = {
-    description = "Switch desktop mode from DP hotplug (debounced)";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = modeSwitchScript;
-      TimeoutStartSec = 120;
-    };
-  };
-
-  services.udev.extraRules = ''
-    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", ENV{DEVTYPE}=="drm_minor", RUN+="${pkgs.systemd}/bin/systemctl start desktop-dp-detect.service"
-  '';
-
   # fwupd metadata refresh intermittently exits with auth errors during activation,
   # which causes nh test activation to report failure despite successful rebuild.
   # Keep fwupd daemon available, but disable the auto-refresh unit/timer.
@@ -290,6 +186,9 @@ in {
       doCheck = false;
     });
   };
+
+  # Kill user processes immediately on shutdown instead of waiting 90s
+  services.logind.killUserProcesses = true;
 
   # System maintenance and monitoring
   modules.system.maintenance = {

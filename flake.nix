@@ -182,6 +182,7 @@
     # Desktop environments
     nixos-cosmic = {
       url = "github:lilyinstarlight/nixos-cosmic";
+      inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
     };
     hyprland = {

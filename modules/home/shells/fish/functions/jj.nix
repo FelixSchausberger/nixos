@@ -210,7 +210,7 @@
 
         # Rebase working copy onto main
         echo "Rebasing onto main..."
-        if not command jj rebase -d main --skip-unchanged
+        if not command jj rebase -d main
           echo "Rebase failed" >&2
           return 1
         end
