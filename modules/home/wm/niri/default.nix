@@ -366,14 +366,14 @@ in {
         XCURSOR_SIZE = "24";
       };
 
-      # Startup applications
-      # spawn-at-startup = [
-      # {command = ["${pkgs.avizo}/bin/avizo-service"];}
-      # {command = ["${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"];}
-      # {command = ["${pkgs.udiskie}/bin/udiskie" "--tray"];}
-      # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "text" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
-      # {command = ["${pkgs.wl-clipboard}/bin/wl-paste" "--type" "image" "--watch" "${pkgs.cliphist}/bin/cliphist" "store"];}
-      # ];
+      # Startup applications (disable DP-3 by default so Sunshine always captures VIRTUAL-1)
+      spawn-at-startup = lib.optional (lib.any (o: o.name == "DP-3") cfg.outputs) {
+        command = [
+          "${pkgs.bash}/bin/bash"
+          "-c"
+          "while ! ${pkgs.niri}/bin/niri msg output DP-3 off 2>/dev/null; do sleep 0.2; done"
+        ];
+      };
 
       # Cursor configuration
       cursor = {

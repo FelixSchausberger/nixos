@@ -27,7 +27,7 @@ in {
       openFirewall = true;
       # CAP_SYS_ADMIN required for virtual input (keyboard/mouse capture)
       capSysAdmin = true;
-      # wlr capture mode for Hyprland headless display support
+      # wlr capture mode for wlroots headless display support
       settings = {
         capture = "wlr";
         output_name = "VIRTUAL-1";

@@ -55,26 +55,7 @@
         sock.close()
 
 
-    def poweroff_desktop():
-        try:
-            subprocess.run(
-                [
-                    "${pkgs.openssh}/bin/ssh",
-                    "-o", "StrictHostKeyChecking=accept-new",
-                    "-o", "ConnectTimeout=5",
-                    f"{DESKTOP_USER}@{DESKTOP_IP}",
-                    "sudo", "poweroff",
-                ],
-                timeout=10,
-                capture_output=True,
-            )
-        except (subprocess.TimeoutExpired, OSError):
-            pass
-
-
-    def run_display_mode_command(command):
-        if not DISPLAY_MODE_CONTROL:
-            return False
+    def run_ssh_command(command, timeout=15):
         try:
             result = subprocess.run(
                 [
@@ -84,39 +65,27 @@
                     f"{DESKTOP_USER}@{DESKTOP_IP}",
                     command,
                 ],
-                timeout=15,
+                timeout=timeout,
                 capture_output=True,
                 text=True,
             )
-            return result.returncode == 0
+            return result.returncode == 0, result.stdout.strip()
         except (subprocess.TimeoutExpired, OSError):
-            return False
+            return False, ""
 
 
     def get_display_mode():
         if not DISPLAY_MODE_CONTROL:
             return "unsupported"
-        try:
-            result = subprocess.run(
-                [
-                    "${pkgs.openssh}/bin/ssh",
-                    "-o", "StrictHostKeyChecking=accept-new",
-                    "-o", "ConnectTimeout=5",
-                    f"{DESKTOP_USER}@{DESKTOP_IP}",
-                    "sudo", "/run/current-system/sw/bin/desktop-display-mode", "status",
-                ],
-                timeout=10,
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode != 0:
-                return "unknown"
-            mode = result.stdout.strip().lower()
-            if mode in ["home", "away", "unknown"]:
-                return mode
+        ok, mode = run_ssh_command(
+            "sudo /run/current-system/sw/bin/desktop-display-mode status", timeout=10
+        )
+        if not ok:
             return "unknown"
-        except (subprocess.TimeoutExpired, OSError):
-            return "unknown"
+        mode = mode.lower()
+        if mode in ["home", "away"]:
+            return mode
+        return "unknown"
 
 
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -142,15 +111,18 @@
             if self.path == "/api/wake":
                 threading.Thread(target=wake_desktop, daemon=True).start()
                 self._send_json({"status": "waking"})
-            elif self.path == "/api/poweroff":
-                threading.Thread(target=poweroff_desktop, daemon=True).start()
-                self._send_json({"status": "powering_off"})
-            elif self.path == "/api/mode/away":
-                success = run_display_mode_command(AWAY_MODE_COMMAND)
-                self._send_json({"status": "away_requested" if success else "away_failed", "ok": success})
-            elif self.path == "/api/mode/home":
-                success = run_display_mode_command(HOME_MODE_COMMAND)
-                self._send_json({"status": "home_requested" if success else "home_failed", "ok": success})
+            elif self.path == "/api/toggle":
+                online = desktop_online()
+                if not online:
+                    threading.Thread(target=wake_desktop, daemon=True).start()
+                    self._send_json({"action": "wake", "ok": True})
+                elif DISPLAY_MODE_CONTROL:
+                    mode = get_display_mode()
+                    cmd = AWAY_MODE_COMMAND if mode == "home" else HOME_MODE_COMMAND
+                    ok, _ = run_ssh_command(cmd)
+                    self._send_json({"action": "switch", "ok": ok})
+                else:
+                    self._send_json({"action": "none", "ok": False})
             else:
                 self.send_error(404)
 
@@ -198,11 +170,12 @@
       @keyframes pulse{50%{opacity:0.3}}
       .status-label{font-size:0.875rem;color:#ccc}
       .status-label strong{color:#eee}
-      button{width:100%;padding:1rem;border:none;border-radius:0.5rem;font-size:1rem;font-weight:600;cursor:pointer;background:#e94560;color:#fff;transition:background 0.15s;margin-bottom:0.75rem}
-      button:hover{background:#d63851}
-      button:disabled{opacity:0.4;cursor:not-allowed}
-      button.danger{background:#a00}
-      button.danger:hover{background:#c22}
+      button{width:100%;padding:1rem;border:none;border-radius:0.5rem;font-size:1rem;font-weight:600;cursor:pointer;color:#fff;transition:background 0.15s;margin-bottom:0.75rem}
+      button:hover{filter:brightness(0.9)}
+      button:disabled{opacity:0.4;cursor:not-allowed;filter:none}
+      .btn-wake{background:#e94560}
+      .btn-away{background:#2d6a4f}
+      .btn-home{background:#1d4ed8}
       .error{color:#e94560;text-align:center;margin-top:0.75rem;display:none;font-size:0.875rem}
     </style>
     </head>
@@ -228,17 +201,16 @@
           <span class="status-label" id="labelSteam">Steam: --</span>
         </div>
       </div>
-      <button id="wakeBtn" onclick="wake()">Wake Desktop</button>
-      <button id="awayBtn" onclick="setAwayMode()">Switch To Virtual Display</button>
-      <button id="homeBtn" onclick="setHomeMode()">Switch To Physical Display</button>
-      <button id="poweroffBtn" class="danger" onclick="poweroff()">Power Off</button>
+      <button id="actionBtn" class="btn-wake" onclick="toggle()">--</button>
       <div class="error" id="error"></div>
     </div>
     <script>
+      let currentState = {};
       async function refresh() {
         try {
           const r = await fetch("/api/status");
           const d = await r.json();
+          currentState = d;
           const online = d.desktop === "online";
           document.getElementById("dotDesktop").className = "dot " + d.desktop;
           document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> " + (online ? "online" : "offline");
@@ -247,84 +219,57 @@
           document.getElementById("dotSteam").className = "dot " + (online ? d.steam : "unknown");
           document.getElementById("labelSteam").innerHTML = "<strong>Steam</strong> " + (online ? d.steam : "--");
           const mode = online ? (d.display_mode || "unknown") : "unknown";
-          document.getElementById("wakeBtn").disabled = online;
-          document.getElementById("poweroffBtn").disabled = !online;
-          const modeControlEnabled = !!d.display_mode_control;
-          document.getElementById("labelDisplayMode").innerHTML = modeControlEnabled
+          const modeControl = !!d.display_mode_control;
+          document.getElementById("labelDisplayMode").innerHTML = modeControl
             ? "<strong>Display mode</strong> " + mode
             : "<strong>Display mode</strong> unsupported";
-          document.getElementById("dotDisplayMode").className = "dot " + (modeControlEnabled ? mode : "unknown");
-          document.getElementById("awayBtn").disabled = !online || !modeControlEnabled;
-          document.getElementById("homeBtn").disabled = !online || !modeControlEnabled;
-          document.getElementById("awayBtn").style.display = modeControlEnabled ? "block" : "none";
-          document.getElementById("homeBtn").style.display = modeControlEnabled ? "block" : "none";
+          document.getElementById("dotDisplayMode").className = "dot " + (modeControl ? mode : "unknown");
+          const btn = document.getElementById("actionBtn");
+          if (!online) {
+            btn.textContent = "Wake Desktop";
+            btn.className = "btn-wake";
+            btn.disabled = false;
+          } else if (modeControl && mode === "home") {
+            btn.textContent = "Switch to Virtual Display";
+            btn.className = "btn-away";
+            btn.disabled = false;
+          } else if (modeControl && mode === "away") {
+            btn.textContent = "Switch to Physical Display";
+            btn.className = "btn-home";
+            btn.disabled = false;
+          } else {
+            btn.textContent = "Desktop Online";
+            btn.className = "btn-wake";
+            btn.disabled = true;
+          }
         } catch(e) {
           document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> connection error";
         }
       }
-      async function setAwayMode() {
-        document.getElementById("awayBtn").disabled = true;
+      async function toggle() {
+        const btn = document.getElementById("actionBtn");
+        btn.disabled = true;
         document.getElementById("error").style.display = "none";
-        try {
-          const r = await fetch("/api/mode/away", { method: "POST" });
-          const d = await r.json();
-          if (!d.ok) throw new Error("away failed");
-          setTimeout(refresh, 3000);
-        } catch(e) {
-          document.getElementById("error").textContent = "Failed to switch to virtual display";
-          document.getElementById("error").style.display = "block";
-        } finally {
-          setTimeout(refresh, 1000);
+        const wasOffline = currentState.desktop !== "online";
+        if (wasOffline) {
+          document.getElementById("dotDesktop").className = "dot waking";
+          document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> waking...";
         }
-      }
-      async function setHomeMode() {
-        document.getElementById("homeBtn").disabled = true;
-        document.getElementById("error").style.display = "none";
         try {
-          const r = await fetch("/api/mode/home", { method: "POST" });
-          const d = await r.json();
-          if (!d.ok) throw new Error("home failed");
-          setTimeout(refresh, 3000);
+          await fetch("/api/toggle", { method: "POST" });
+          const delays = wasOffline ? [3, 6, 9, 12, 15, 20, 30] : [1, 3, 5];
+          delays.forEach(s => setTimeout(refresh, s * 1000));
         } catch(e) {
-          document.getElementById("error").textContent = "Failed to switch to physical display";
+          document.getElementById("error").textContent = "Action failed";
           document.getElementById("error").style.display = "block";
-        } finally {
-          setTimeout(refresh, 1000);
-        }
-      }
-      async function wake() {
-        document.getElementById("wakeBtn").disabled = true;
-        document.getElementById("dotDesktop").className = "dot waking";
-        document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> waking...";
-        document.getElementById("error").style.display = "none";
-        try {
-          await fetch("/api/wake", { method: "POST" });
-          [3, 6, 9, 12, 15, 20, 30].forEach(s => setTimeout(refresh, s * 1000));
-        } catch(e) {
-          document.getElementById("error").textContent = "Failed to send wake signal";
-          document.getElementById("error").style.display = "block";
-          document.getElementById("wakeBtn").disabled = false;
-        }
-      }
-      async function poweroff() {
-        if (!confirm("Power off the desktop?")) return;
-        document.getElementById("poweroffBtn").disabled = true;
-        document.getElementById("error").style.display = "none";
-        try {
-          await fetch("/api/poweroff", { method: "POST" });
-          document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> powering off...";
-          setTimeout(refresh, 5000);
-        } catch(e) {
-          document.getElementById("error").textContent = "Failed to send power off command";
-          document.getElementById("error").style.display = "block";
-          document.getElementById("poweroffBtn").disabled = false;
+          btn.disabled = false;
         }
       }
       refresh();
       setInterval(refresh, 15000);
     </script>
     </body>
-    </html>"""
+    </html>""";
 
 
     if __name__ == "__main__":
@@ -351,7 +296,7 @@ in {
     desktopUser = lib.mkOption {
       type = lib.types.str;
       default = "schausberger";
-      description = "Username on the desktop for SSH power off";
+      description = "Username on the desktop for SSH commands";
     };
 
     desktopMac = lib.mkOption {
