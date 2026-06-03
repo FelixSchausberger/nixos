@@ -131,7 +131,6 @@ in {
           home-manager.users.${inputs.self.lib.user}.imports = [
             ../../home/profiles/desktop/niri-home.nix
           ];
-          modules.system.sunshine.enable = lib.mkForce false;
         };
       };
       cosmic = {
