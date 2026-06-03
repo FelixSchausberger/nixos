@@ -40,12 +40,8 @@
           "console=tty0"
           # Fix EDID detection issues - force display detection
           "amdgpu.force_detect=1"
-          "drm.force_dp_encoder=true"
           "amdgpu.deep_color=1"
           "amdgpu.exp_hw_support=1"
-          # Virtual display for headless streaming (Sunshine/Moonlight)
-          # Creates a virtual CRTC so Sunshine can capture without a physical monitor
-          "amdgpu.virtual_display=0000:09:00.0,1"
           # USB stability improvements
           "usbcore.autosuspend=-1"
           "usb-storage.delay_use=0"

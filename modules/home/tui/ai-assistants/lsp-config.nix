@@ -17,12 +17,12 @@
   in
     lib.hm.dag.entryAfter ["writeBoundary"] ''
       # Create .lsp.json at /per/etc/nixos/ (project root) for Claude Code/OpenCode LSP servers
-      if [ -w /per/etc/nixos ]; then
+      if [ -w /per/etc/nixos ] && { [ ! -e /per/etc/nixos/.lsp.json ] || [ -w /per/etc/nixos/.lsp.json ]; }; then
         $DRY_RUN_CMD echo '${lspJsonContent}' > /per/etc/nixos/.lsp.json
         $DRY_RUN_CMD chmod 644 /per/etc/nixos/.lsp.json
         echo "Created /per/etc/nixos/.lsp.json for Claude Code/OpenCode LSP servers"
       else
-        echo "Warning: /per/etc/nixos/ is not writable, cannot create .lsp.json" >&2
+        echo "Warning: /per/etc/nixos/.lsp.json is not writable, cannot create .lsp.json" >&2
       fi
     '';
 }

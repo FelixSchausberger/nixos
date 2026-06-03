@@ -30,6 +30,7 @@ in {
       # wlr capture mode for Hyprland headless display support
       settings = {
         capture = "wlr";
+        output_name = "VIRTUAL-1";
       };
     };
 
