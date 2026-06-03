@@ -374,6 +374,7 @@ in {
     remoteControl = {
       enable = true;
       enableTailscaleServe = true;
+      enableDisplayModeControl = true;
     };
     samba.enable = true;
     tailscale = {

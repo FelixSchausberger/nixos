@@ -73,10 +73,9 @@ in
       # Use tuigreet for all window managers
       greetd = {
         enable = true;
-        # VT 2 avoids interference with systemd boot messages on VT 1
-        settings.terminal.vt = lib.mkForce 2;
+        useTextGreeter = true;
         settings.default_session = {
-          command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --user ${hostConfig.user} --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
+          command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
           user = "greeter";
         };
         settings.initial_session =
@@ -154,27 +153,6 @@ in
     };
 
     users.groups.greeter = {};
-
-    # Create runtime directory for greeter
-    systemd.tmpfiles.rules = [
-      "d /run/user/988 0700 greeter greeter -"
-    ];
-
-    systemd.services.greetd = {
-      environment = {
-        XDG_SESSION_CLASS = "greeter";
-        XDG_RUNTIME_DIR = "/run/user/988";
-      };
-      serviceConfig = {
-        # Claim the VT so tuigreet can access the terminal
-        StandardInput = "tty";
-        StandardOutput = "tty";
-        StandardError = "journal";
-        TTYReset = true;
-        TTYVHangup = true;
-        TTYVTDisallocate = true;
-      };
-    };
 
     boot.kernelParams = ["usbcore.autosuspend=-1"];
   }
