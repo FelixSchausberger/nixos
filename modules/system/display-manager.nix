@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  config,
   hostConfig,
   ...
 }: let
@@ -74,15 +75,18 @@ in
       greetd = {
         enable = true;
         useTextGreeter = true;
-        settings.default_session = {
-          command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
-          user = "greeter";
-        };
-        settings.initial_session =
-          lib.mkIf (hostConfig ? autoLogin && hostConfig.autoLogin ? enable && hostConfig.autoLogin.enable)
+        settings =
           {
-            command = autoLoginCommand;
-            user = hostConfig.autoLogin.user or hostConfig.user;
+            default_session = {
+              command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions /run/current-system/sw/share/wayland-sessions:/run/current-system/sw/share/xsessions --cmd '${autoLoginCommand}'";
+              user = "greeter";
+            };
+          }
+          // lib.optionalAttrs (config.hostConfig ? autoLogin && config.hostConfig.autoLogin ? enable && config.hostConfig.autoLogin.enable) {
+            initial_session = {
+              command = autoLoginCommand;
+              user = config.hostConfig.autoLogin.user or config.hostConfig.user;
+            };
           };
       };
 

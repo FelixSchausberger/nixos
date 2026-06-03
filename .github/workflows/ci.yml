@@ -86,7 +86,7 @@ jobs:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
       - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@v9
+        uses: DeterminateSystems/flakehub-cache-action@v3
       - name: Run prek hooks
         run: |
           echo "Running prek hooks on all files..."
