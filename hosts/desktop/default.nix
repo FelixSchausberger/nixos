@@ -111,7 +111,10 @@ in {
       networkConfig.DHCP = "no";
       address = ["192.168.178.3/24"];
       gateway = ["192.168.178.1"];
-      dns = ["192.168.178.1"];
+      dns = [
+        "192.168.178.2"
+        "192.168.178.1"
+      ];
     };
   };
 
@@ -188,7 +191,7 @@ in {
   };
 
   # Kill user processes immediately on shutdown instead of waiting 90s
-  services.logind.killUserProcesses = true;
+  services.logind.settings.Login.KillUserProcesses = true;
 
   # System maintenance and monitoring
   modules.system.maintenance = {

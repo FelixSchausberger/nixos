@@ -399,20 +399,14 @@ act pull_request --job security --dryrun        # Dry run specific job
 
 ### CI/CD Pipeline
 
-#### Garnix CI (Primary Build System)
+#### Build CI
 
-Garnix handles all heavy build operations:
+CI handles heavy build operations:
 
 - NixOS system configurations for all hosts
 - Custom package builds
 - Namaka snapshot tests
 - Multi-architecture support ready
-
-Garnix uses centralized signing for enhanced security, reducing cache poisoning risks compared to traditional binary caches.
-
-Configuration: `garnix.yaml`
-
-Setup: Install the Garnix GitHub App at https://garnix.io
 
 #### GitHub Actions (Validation & Security)
 
@@ -432,7 +426,6 @@ Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 
 - **Primary**: cache.nixos.org (official NixOS cache)
 - **Personal**: felixschausberger.cachix.org (custom builds)
-- **Garnix**: cache.garnix.io (shared CI builds with centralized signing)
 - **Community**: nix-community.cachix.org and project-specific caches
 
 All caches configured in `modules/system/nix.nix` with priority-based fallback.

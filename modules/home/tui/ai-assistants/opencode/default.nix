@@ -47,11 +47,14 @@ in {
     skills = sharedSkills;
 
     settings = {
-      model = "github-copilot/claude-sonnet-4.6";
-      small_model = "github-copilot/claude-sonnet-4.6";
+      model = "github-copilot/gpt-5-mini";
+      small_model = "github-copilot/gpt-5-mini";
       agent = {
-        plan.model = "github-copilot/claude-sonnet-4.6";
-        build.model = "github-copilot/gpt-5.3-codex";
+        explore.model = "github-copilot/gpt-5-mini";
+        general.model = "github-copilot/gpt-5-mini";
+        title.model = "github-copilot/gpt-5-mini";
+        summary.model = "github-copilot/gpt-5-mini";
+        compaction.model = "github-copilot/gpt-5-mini";
       };
       plugin = ["@slkiser/opencode-quota"];
       permission = {
@@ -144,7 +147,7 @@ in {
     ---
     description: Simplifies recently modified code while preserving exact behavior
     mode: subagent
-    model: github-copilot/claude-sonnet-4.6
+    model: github-copilot/gpt-5-mini
     permission:
       edit: allow
       bash: deny

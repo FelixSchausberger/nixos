@@ -2,7 +2,38 @@
   inputs,
   pkgs,
   ...
-}: {
+}: let
+  jjworkCmd = pkgs.writeShellApplication {
+    name = "jjwork";
+    runtimeInputs = [pkgs.jujutsu];
+    text = ''
+      set -euo pipefail
+
+      echo "Fetching from remote..."
+      jj git fetch
+
+      echo "Rebasing onto main..."
+      jj rebase -d main --skip-emptied
+
+      # Detect and warn about conflicts — never allow abandon or silent failure
+      if jj resolve --list 2>/dev/null | grep -q .; then
+        echo ""
+        echo "!! CONFLICTS DETECTED !!" >&2
+        echo "Resolve them with: jj resolve" >&2
+        jj resolve --list 2>/dev/null
+        echo ""
+        echo "After resolving, run: jj squash" >&2
+        exit 1
+      fi
+
+      echo ""
+      echo "Working copy is based on main. No conflicts detected."
+      echo ""
+    '';
+  };
+in {
+  home.packages = [jjworkCmd];
+
   programs.fish.functions = {
     # Jujutsu management commands
     jj = {
@@ -201,35 +232,8 @@
     jjwork = {
       description = "Rebase onto main and create clean working commit (run before any work)";
       body = ''
-        # Fetch latest from remote
-        echo "Fetching from remote..."
-        if not command jj git fetch
-          echo "Failed to fetch from remote" >&2
-          return 1
-        end
-
-        # Rebase working copy onto main
-        echo "Rebasing onto main..."
-        if not command jj rebase -d main
-          echo "Rebase failed" >&2
-          return 1
-        end
-
-        # Check if there's already an empty working copy commit
-        set -l is_empty (jj log -r '@' --no-graph -T 'empty' 2>/dev/null)
-        if test "$is_empty" = "true"
-          echo "Working copy is already empty, ready to go"
-        else
-          echo "Creating clean working commit..."
-          if not command jj new
-            echo "Failed to create new commit" >&2
-            return 1
-          end
-        end
-
-        echo ""
-        echo "Ready! Working copy is based on main."
-        echo ""
+        # Run the shell-agnostic wrapper so automation and non-fish shells behave the same.
+        command jjwork $argv
       '';
     };
 

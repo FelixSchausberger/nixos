@@ -88,9 +88,6 @@
         # Primary cache - fastest and most reliable
         "https://cache.nixos.org?priority=1"
 
-        # Garnix CI cache - high priority since our CI builds populate it
-        "https://cache.garnix.io?priority=3"
-
         # Very commonly used packages - high priority
         "https://nix-community.cachix.org?priority=5"
 
@@ -118,9 +115,6 @@
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-
-        # Garnix CI cache
-        "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
 
         # Project-specific caches
         "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="

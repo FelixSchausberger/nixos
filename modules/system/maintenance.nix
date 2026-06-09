@@ -170,15 +170,14 @@
 
             echo "Cleanup completed at $(date)"
           '';
+          unitConfig.DefaultDependencies = false;
           serviceConfig = {
             Type = "oneshot";
             User = "root";
             Group = "root";
-            # Defer to boot-critical services to avoid slow-boot vitals warnings
             Nice = 19;
             IOSchedulingClass = "idle";
             TimeoutStartSec = 600;
-            DefaultDependencies = false;
           };
         };
       };

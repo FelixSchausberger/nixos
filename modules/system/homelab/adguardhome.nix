@@ -32,9 +32,15 @@
       }
     ];
 
-    # systemd-resolved binds a local DNS stub on port 53 by default.
-    # Disable it so AdGuardHome can listen on 0.0.0.0:53 for LAN clients.
-    services.resolved.settings.Resolve.DNSStubListener = false;
+    # systemd-resolved acts as a resilient DNS proxy on port 53 for LAN clients.
+    # It forwards queries to AdGuard (on 127.0.0.1:5353) and falls back to
+    # public resolvers when AdGuard is unreachable (e.g. during rebuilds).
+    services.resolved.settings.Resolve = {
+      DNS = "127.0.0.1:5353";
+      FallbackDNS = "1.1.1.1 9.9.9.9";
+      DNSStubListenerExtra = "192.168.178.2";
+    };
+    # Keep DNSStubListener enabled (default) on 127.0.0.53 for local resolution.
 
     services.adguardhome = {
       enable = true;
@@ -51,8 +57,8 @@
             "9.9.9.9"
             "1.1.1.1"
           ];
-          bind_hosts = ["0.0.0.0"];
-          port = 53;
+          bind_hosts = ["127.0.0.1"];
+          port = 5353;
         };
         user_rules = [
           # Windows NCSI — prevents "No Internet" indicator on Windows clients
@@ -113,10 +119,12 @@
       DynamicUser = lib.mkForce false;
       User = lib.mkForce "adguardhome";
       Group = lib.mkForce "adguardhome";
+      Restart = lib.mkForce "on-failure";
+      RestartSec = lib.mkForce "5s";
     };
 
+    # Port 53 is now served by systemd-resolved's stub listener for LAN clients.
     # The nixpkgs openFirewall option only opens port 3000 (admin UI).
-    # Port 53 must be opened explicitly for LAN DNS clients.
     networking.firewall = {
       allowedTCPPorts = [53];
       allowedUDPPorts = [53];

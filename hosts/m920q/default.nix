@@ -26,7 +26,7 @@
       echo "headless" > /run/m920q-hdmi-state
     fi
 
-    exec /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
+    exec /run/current-system/sw/bin/systemctl start m920q-mode-switch.timer
   '';
 
   modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
@@ -65,9 +65,9 @@
     fi
 
     if [[ "$desired_mode" == "niri" ]]; then
-      "$gui_switch" test || true
+      "$gui_switch" test
     else
-      "$headless_switch" test || true
+      "$headless_switch" test
     fi
 
     echo "$desired_mode" > "$mode_file"
@@ -185,6 +185,13 @@ in {
     iotop # Per-process disk IO monitoring
     htop # Process monitoring (already included via btop but useful)
     lm_sensors # Temperature, voltage, fan speed via hwmon
+  ];
+
+  networking.firewall.allowedUDPPortRanges = [
+    {
+      from = 60000;
+      to = 60010;
+    }
   ];
 
   boot.kernelParams = lib.mkAfter [
@@ -367,12 +374,15 @@ in {
       enable = true;
       alerting.enable = true;
     };
-    nextcloud.enable = true;
+    nextcloud = {
+      enable = true;
+      host = "0.0.0.0";
+      openFirewall = true;
+    };
     ntfy.enable = true;
     remoteControl = {
       enable = true;
       enableTailscaleServe = true;
-      enableDisplayModeControl = true;
     };
     samba.enable = true;
     tailscale = {
@@ -383,13 +393,4 @@ in {
   };
 
   modules.system.ssh.enable = true;
-
-  # Mosh (Mobile Shell) - UDP-based SSH alternative for resilient connections
-  # Survives IP roaming, packet loss, and network switches (e.g. train travel)
-  networking.firewall.allowedUDPPortRanges = [
-    {
-      from = 60000;
-      to = 61000;
-    }
-  ];
 }
