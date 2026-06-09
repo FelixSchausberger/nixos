@@ -117,8 +117,13 @@ in {
     };
 
     systemd.services.nextcloud-update-plugins = {
-      after = ["postgresql.service"];
+      after = [
+        "postgresql.service"
+        "network-online.target"
+      ];
       requires = ["postgresql.service"];
+      wants = ["network-online.target"];
+      serviceConfig.TimeoutStartSec = 30;
     };
 
     systemd.services.nextcloud-setup = {
@@ -162,7 +167,7 @@ in {
     };
 
     systemd.tmpfiles.rules = let
-      aclRules = map (m: "a+ ${m.path} - - - - u:nextcloud:rx,d:u:nextcloud:rx") cfg.externalStorage;
+      aclRules = map (m: "a+ ${m.path} - - - - u:nextcloud:rwx,d:u:nextcloud:rwx") cfg.externalStorage;
     in
       [
         "d ${cfg.dataPath} 0750 nextcloud nextcloud -"
@@ -185,7 +190,7 @@ in {
         mountScripts = lib.concatStringsSep "\n" (
           map (m: ''
             echo "Configuring external storage: ${m.name} (${m.path})"
-            ${setfacl} -R -m u:nextcloud:rx,d:u:nextcloud:rx ${m.path}
+            ${setfacl} -R -m u:nextcloud:rwx,d:u:nextcloud:rwx ${m.path}
             ${occ} files_external:create \
               "${m.name}" \
               "local" \

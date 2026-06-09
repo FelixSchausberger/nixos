@@ -79,12 +79,17 @@
         # jj-starship integration (nixpkgs package)
         # Uses jj-cli crate for better performance than multiple jj invocations
         # Displays bookmarks, commit state, and file change metrics
+        # Uses sh shell (not jj-starship directly) because starship passes the
+        # entire when/command string as a single argument to the configured shell;
+        # sh reads it from stdin and executes it correctly.
         jj = {
-          command = "prompt";
-          format = "$output";
+          command = "${pkgs.jj-starship}/bin/jj-starship prompt";
+          format = "$output ";
           ignore_timeout = true;
-          shell = ["${pkgs.jj-starship}/bin/jj-starship"];
-          use_stdin = false;
+          shell = [
+            "sh"
+            "--norc"
+          ];
           when = "${pkgs.jj-starship}/bin/jj-starship detect";
         };
 

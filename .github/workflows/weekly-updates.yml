@@ -15,8 +15,8 @@ env:
     accept-flake-config = true
     ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
     # Optimized substituters for update workflow
-    extra-substituters = https://cache.nixos.org https://cache.garnix.io
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=
+    extra-substituters = https://cache.nixos.org
+    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
     # Cache robustness settings
     narinfo-cache-positive-ttl = 3600
     connect-timeout = 5
@@ -101,7 +101,7 @@ jobs:
 
             **Validation:**
             - Namaka snapshot checks run in this workflow
-            - Garnix CI validates flake evaluation and builds
+            - CI validates flake evaluation and builds
             - PR is auto-merged when required checks pass
 
             ---

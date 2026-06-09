@@ -1,7 +1,6 @@
 {
   inputs,
   lib,
-  pkgs,
   ...
 }: let
   user = "schausberger";
@@ -43,12 +42,9 @@ in {
 
   systemd.services."home-manager-${user}" = {
     after = ["nix-daemon.service"];
-    wants = ["nix-daemon.service"];
+    requires = ["nix-daemon.service"];
     serviceConfig = {
       TimeoutStartSec = lib.mkDefault "5m";
-      ExecStartPre = [
-        "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 60); do systemctl is-active --quiet nix-daemon.service 2>/dev/null && exit 0; sleep 1; done; exit 1'"
-      ];
     };
   };
 }

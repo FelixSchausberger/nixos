@@ -30,7 +30,7 @@
     socat # Socket communication for IPC
 
     # Qt/Theme support for better app integration
-    libsForQt5.qt5.qtwayland # Qt5 Wayland platform plugin
-    qt6.qtwayland # Qt6 Wayland platform plugin
+    qt5.qtwayland # Qt5 Wayland platform plugin
+    qt6Packages.qtwayland # Qt6 Wayland platform plugin
   ];
 }

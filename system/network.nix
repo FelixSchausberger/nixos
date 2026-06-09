@@ -17,4 +17,8 @@
       allowedTCPPorts = [22]; # SSH
     };
   };
+
+  # Global fallback DNS for all NixOS hosts via systemd-resolved.
+  # When all per-interface DNS servers are unreachable, resolved falls back here.
+  services.resolved.settings.Resolve.FallbackDNS = "1.1.1.1 9.9.9.9";
 }

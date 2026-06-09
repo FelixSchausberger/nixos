@@ -99,9 +99,7 @@
     # Systemd configuration for better Wayland integration
     systemd = {
       # Systemd user environment
-      user.extraConfig = ''
-        DefaultEnvironment="PATH=/run/current-system/sw/bin"
-      '';
+      user.settings.Manager.DefaultEnvironment = "PATH=/run/current-system/sw/bin";
 
       # X11 directory with sticky bit for xwayland-satellite
       tmpfiles.rules = [
