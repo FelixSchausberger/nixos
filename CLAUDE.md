@@ -222,10 +222,9 @@ For complete workflow details, see [README.md Development Workflow](README.md#de
 
 ### CI/CD Strategy
 
-The project uses hybrid CI/CD with Garnix (primary builds) and GitHub Actions (validation/security).
+The project uses CI/CD with GitHub Actions for validation and security.
 
 For complete CI/CD details, see [README.md Build and Deploy](README.md#build-and-deploy) → CI/CD Pipeline section:
-- Garnix CI configuration and build scope
 - GitHub Actions workflows
 - Binary cache setup and priorities
 - Auto-merge configuration

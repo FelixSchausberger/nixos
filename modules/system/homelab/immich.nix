@@ -56,6 +56,15 @@ in {
       owner = "immich";
     };
 
+    systemd.timers.immich-admin-setup = {
+      description = "Timer for Immich admin user creation (non-blocking)";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "2min";
+        OnUnitActiveSec = "1h";
+      };
+    };
+
     systemd.services.immich-admin-setup = {
       description = "Create Immich admin user from sops secret";
       after = [
@@ -63,25 +72,13 @@ in {
         "sops-nix.service"
       ];
       wants = ["immich-server.service"];
-      wantedBy = ["multi-user.target"];
       serviceConfig = {
         Type = "oneshot";
         User = "immich";
-        RemainAfterExit = true;
       };
       script = ''
         PASSWORD=$(cat ${config.sops.secrets."immich/admin-password".path})
         PORT=${toString cfg.port}
-
-        # Wait for immich-server to be ready before attempting sign-up
-        for i in $(seq 1 30); do
-          HEALTH=$(${lib.getExe pkgs.curl} -s -o /dev/null -w "%{http_code}" \
-            http://localhost:$PORT/api/server-info/version 2>/dev/null || echo "000")
-          if [ "$HEALTH" = "200" ]; then
-            break
-          fi
-          sleep 2
-        done
 
         HTTP_CODE=$(${lib.getExe pkgs.curl} -s -o /dev/null -w "%{http_code}" \
           -X POST http://localhost:$PORT/api/auth/admin-sign-up \
@@ -103,7 +100,6 @@ in {
         esac
       '';
     };
-
     systemd.tmpfiles.rules = [
       "d ${cfg.dataPath} 0700 immich immich -"
       "d ${cfg.dataPath}/backups 0700 immich immich -"

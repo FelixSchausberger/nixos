@@ -4,7 +4,6 @@
   nixConfig = {
     extra-substituters = [
       "https://cache.nixos.org"
-      "https://cache.garnix.io"
       "https://felixschausberger.cachix.org"
       "https://nix-community.cachix.org"
       "https://nixpkgs-unfree.cachix.org"
@@ -14,7 +13,6 @@
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
       "felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4="
@@ -209,7 +207,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vitals = {
-      url = "github:FelixSchausberger/vitals";
+      url = "github:FelixSchausberger/vitals/764778b9e39fb6f2d94bdf78a3509b53f9c05b3a";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
     };
