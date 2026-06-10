@@ -3,14 +3,11 @@
   pkgs,
   ...
 }: {
-  # WSL-specific profile with niri window manager support
+  # WSL headless profile: TUI-only work environment.
   imports = [
     ../../../modules/home/tui-only.nix
     ../../../modules/home/work/git.nix # Add work Git config
   ];
-
-  # Enable GUI theming for niri
-  theme.gui.enable = lib.mkForce true;
 
   # Feature-based configuration for WSL development environment
   features = {
@@ -25,23 +22,6 @@
       ];
     };
   };
-
-  # Niri configuration for WSL
-  wm.niri = {
-    enable = true; # Enable niri for WSL
-    terminal = "ghostty";
-    browser = "zen";
-    fileManager = "cosmic-files";
-
-    # WSL-specific: minimal scratchpad apps
-    scratchpad = {
-      musicApp = "spotify";
-      notesApp = "obsidian";
-    };
-  };
-
-  # Disable xwayland-satellite for Wayland-only setup (remove from auto-start)
-  # systemd.user.services.xwayland-satellite.Install.WantedBy = lib.mkForce [];
 
   # Fix missing calendar configuration that's causing evaluation errors
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
@@ -66,28 +46,14 @@
 
   # WSL-specific home configuration
   home = {
-    # WSL work-specific packages
     packages = with pkgs; [
-      lazyssh # Terminal-based SSH manager
+      lazyssh
+      mosh
     ];
 
-    # Environment variables
     sessionVariables = {
-      ZELLIJ_SESSION_NAME = "wsl";
-
-      # Help with WSL display issues if X11 forwarding is used
-      DISPLAY = ":0";
-      # Optimize for WSL environment
-      WSL_DISTRO_NAME = "nixos";
-
-      # WSL2/WSLg graphics optimization - use Wayland when niri is running
-      # These will be overridden by niri's Wayland session variables
-      GDK_BACKEND = lib.mkDefault "wayland,x11";
-      QT_QPA_PLATFORM = lib.mkDefault "wayland;xcb";
-
-      # Force niri to run nested inside the WSLg Wayland session
-      # NIRI_BACKEND = lib.mkDefault "winit";
-      # WINIT_UNIX_BACKEND = lib.mkDefault "wayland";
+      ZELLIJ_SESSION_NAME = "homelab-wsl";
+      EDITOR = "hx";
     };
   };
 }

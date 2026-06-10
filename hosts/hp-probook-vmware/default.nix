@@ -60,6 +60,7 @@ in {
   # System modules configuration
   modules.system = {
     containers.enable = true;
+    homelab.tailscale.enable = true;
     maintenance = {
       enable = true;
       autoUpdate.enable = true;

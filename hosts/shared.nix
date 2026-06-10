@@ -13,6 +13,7 @@ in {
     ../modules/system
     ../modules/system/sops-common.nix
     ../modules/system/wifi.nix
+    ../modules/system/homelab
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -44,6 +45,12 @@ in {
           type = lib.types.bool;
           default = false;
           description = "Whether this host enables a graphical session";
+        };
+
+        isWsl = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether this host runs inside Windows Subsystem for Linux (disables greetd and other bare-metal features)";
         };
 
         system = lib.mkOption {

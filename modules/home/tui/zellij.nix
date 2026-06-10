@@ -84,21 +84,27 @@ in {
       find "$session_dir" -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
     fi
   '';
-  systemd.user.services.zellij-main = {
-    Unit = {
-      Description = "Persistent Zellij main session";
-      After = ["network.target"];
-    };
-    Service = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = "${pkgs.zellij}/bin/zellij attach --create-background main";
-      ExecStop = "${pkgs.zellij}/bin/zellij kill-session main";
-    };
-    Install = {
-      WantedBy = ["default.target"];
-    };
-  };
+  # DISABLED: Background zellij session can interfere with interactive shell startup
+  # The service creates a persistent shell that may cause SIGCHLD handling issues
+  # To enable: Create ~/.config/zellij/AUTO_START_ENABLED
+  # Then: systemctl --user enable --now zellij-main.service
+  #
+  # systemd.user.services.zellij-main = {
+  #   Unit = {
+  #     Description = "Persistent Zellij main session";
+  #     After = ["network.target"];
+  #     ConditionPathExists = "%h/.config/zellij/AUTO_START_ENABLED";
+  #   };
+  #   Service = {
+  #     Type = "oneshot";
+  #     RemainAfterExit = true;
+  #     ExecStart = "${pkgs.zellij}/bin/zellij attach --create-background main";
+  #     ExecStop = "${pkgs.zellij}/bin/zellij kill-session main";
+  #   };
+  #   Install = {
+  #     WantedBy = ["default.target"];
+  #   };
+  # };
   programs.zellij = {
     enable = true;
 
