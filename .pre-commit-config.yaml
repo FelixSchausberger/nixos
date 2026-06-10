@@ -13,7 +13,6 @@ repos:
     hooks:
       - id: yamlfmt
         entry: yamlfmt
-  # Temporarily disabled: prek uses rustls with outdated certificate roots preventing PyPI access
   # Re-enable once prek updates to use native-tls or updated webpki-roots
   # - repo: https://github.com/pre-commit/pre-commit-hooks
   #   rev: v5.0.0
@@ -30,12 +29,15 @@ repos:
   #     - id: trailing-whitespace
   #     - id: check-case-conflict
   - repo: https://github.com/sirwart/ripsecrets
+    # Temporarily disabled: prek uses rustls with outdated certificate roots preventing PyPI access
+
     rev: v0.1.8
     hooks:
       - id: ripsecrets
         args: [--strict-ignore]
-  # Nix tools (local hooks using system binaries from nix shell)
   - repo: local
+    # Nix tools (local hooks using system binaries from nix shell)
+
     hooks:
       - id: taplo-format
         name: Taplo TOML formatter
@@ -78,8 +80,9 @@ repos:
         language: system
         files: ^modules/.*\.nix$
         pass_filenames: false
-  # Project-specific hooks
   - repo: local
+    # Project-specific hooks
+
     hooks:
       - id: conventional-commits
         name: Validate conventional commits

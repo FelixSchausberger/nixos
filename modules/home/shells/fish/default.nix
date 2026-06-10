@@ -76,7 +76,7 @@
       end
 
       # Enable zellij auto-start by default (can be disabled with ZELLIJ_AUTO_START=0)
-      set -gx ZELLIJ_AUTO_START 1
+      # set -gx ZELLIJ_AUTO_START 0  # DISABLED
 
       # Emergency shell functions - NixOS integrated
       ${(import ../emergency-functions.nix {inherit lib;}).emergencyShellFunctions.fish}
@@ -222,7 +222,7 @@
       # SSH connections skip zellij — local zellij acts as the outer multiplexer,
       # avoiding nested sessions and mouse-capture conflicts.
       #
-      # To enable: set -gx ZELLIJ_AUTO_START 1
+      # To enable: # set -gx ZELLIJ_AUTO_START 0  # DISABLED
       # To disable: set -e ZELLIJ_AUTO_START
       if status is-interactive; and set -q ZELLIJ_AUTO_START; and not __emergency_check
         if __zellij_preflight_check

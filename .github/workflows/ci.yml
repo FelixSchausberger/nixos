@@ -6,6 +6,7 @@ on:
     branches: [main]
   workflow_dispatch:
 # Permissions for security scanning
+
 permissions:
   actions: read
   contents: read
@@ -67,6 +68,7 @@ jobs:
           head: ${{ github.sha }}
         continue-on-error: true
   # Quick validation and linting (heavy builds handled by Garnix CI)
+
   validate:
     name: Quick Validation
     runs-on: ubuntu-latest
@@ -125,6 +127,7 @@ jobs:
           nix flake show
           echo "✅ Flake structure is valid"
   # Flake input health monitoring
+
   flake-health:
     name: Flake Input Health Check
     runs-on: ubuntu-latest
@@ -148,6 +151,7 @@ jobs:
           echo "Note: This check is advisory only and will not block CI"
           echo "To run locally: nix run github:DeterminateSystems/flake-checker"
   # Deployment readiness check
+
   deployment:
     name: Deployment Ready
     runs-on: ubuntu-latest

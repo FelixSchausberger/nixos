@@ -4,11 +4,37 @@
   pkgs,
   ...
 }: let
-  inherit (inputs.self.lib) personalInfo;
+  inherit (inputs.self.lib) personalInfo hosts user;
+
+  # Generate per-host SSH config entries from the canonical host registry
+  hostSections = builtins.concatStringsSep "\n" (builtins.map (name: let
+    h = hosts.${name};
+    hostName =
+      h.ip or name;
+  in ''
+    Host ${name}
+        HostName ${hostName}
+        User ${user}
+        IdentityFile ~/.ssh/id_ed25519
+  '') (builtins.attrNames hosts));
 in {
   home = {
     # Base SSH config managed by Home Manager (declarative)
     file.".ssh/config.d/base.conf".text = ''
+      # =============================================
+      # Global Defaults
+      # =============================================
+      Host *
+          ServerAliveInterval 60
+          ServerAliveCountMax 3
+          AddKeysToAgent yes
+          IdentitiesOnly yes
+
+      # =============================================
+      # Per-host entries (generated from lib/hosts.nix)
+      # =============================================
+      ${hostSections}
+
       # Corporate Frequentis Git server
       Host git.frequentis.frq
           HostName git.frequentis.frq

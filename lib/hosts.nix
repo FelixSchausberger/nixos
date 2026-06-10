@@ -6,7 +6,8 @@
   desktop = {
     wms = ["niri"]; # Default WM; COSMIC/Hyprland available via specialisation
     isGui = true;
-    description = "Desktop with Niri as default WM and DP-triggered home/away modes";
+    description = "Desktop with Hyprland as default WM for headless Sunshine streaming";
+    ip = "192.168.178.3";
   };
 
   surface = {
@@ -22,9 +23,10 @@
   };
 
   hp-probook-wsl = {
-    wms = ["niri"]; # WSL with niri WM support via WSLg
-    isGui = true; # Enable GUI support for WSLg
-    description = "WSL environment with Niri WM";
+    wms = [];
+    isGui = false;
+    isWsl = true; # WSL2 environment — disables greetd and bare-metal features
+    description = "WSL2 headless environment (TUI-only)";
   };
 
   hp-probook-vmware = {
@@ -37,5 +39,6 @@
     wms = [];
     isGui = false;
     description = "Lenovo ThinkCentre M920q homelab server (headless, niri-gui specialisation available)";
+    ip = "192.168.178.2";
   };
 }
