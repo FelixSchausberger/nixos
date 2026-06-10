@@ -16,8 +16,17 @@ in {
 
       "${defaults.system.user}" = {
         isNormalUser = true;
+        uid = 1000;
         description = defaults.personalInfo.name;
-        extraGroups = ["fuse" "networkmanager" "input" "video" "render" "wheel" "dialout"];
+        extraGroups = [
+          "fuse"
+          "networkmanager"
+          "input"
+          "video"
+          "render"
+          "wheel"
+          "dialout"
+        ];
         hashedPasswordFile = config.sops.secrets."private/password-hash".path;
         group = defaults.system.user;
         openssh.authorizedKeys.keys = [

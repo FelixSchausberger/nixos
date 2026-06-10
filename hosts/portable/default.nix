@@ -105,4 +105,7 @@ in {
       ntfyUrl = "http://m920q:2586/homelab-alerts";
     };
   };
+
+  # Tailscale for fixed reachability across networks (MagicDNS)
+  modules.system.homelab.tailscale.enable = true;
 }

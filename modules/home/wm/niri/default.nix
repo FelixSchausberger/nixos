@@ -45,6 +45,18 @@ in {
   options.wm.niri = {
     enable = lib.mkEnableOption "Niri window manager";
 
+    windowRules = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = [];
+      description = "Additional window rules for Niri";
+      example = [
+        {
+          matches = [{app-id = "^firefox$";}];
+          open-on-workspace = "3";
+        }
+      ];
+    };
+
     terminal = lib.mkOption {
       type = lib.types.str;
       default = "ghostty";
@@ -370,105 +382,107 @@ in {
       };
 
       # Window rules
-      window-rules = [
-        # Default rounded corners for all windows
-        {
-          geometry-corner-radius = {
-            top-left = 12.0;
-            top-right = 12.0;
-            bottom-right = 12.0;
-            bottom-left = 12.0;
-          };
-          clip-to-geometry = true;
-        }
-        {
-          matches = [
-            {title = "^Projector$";}
-            {title = "^UxPlay$";}
-          ];
-          open-fullscreen = true;
-        }
-        {
-          matches = [{app-id = "^scratchpad-.*";}];
-          default-column-width = {
-            proportion = 0.8;
-          };
-          open-on-output = "eDP-1";
-        }
-        {
-          matches = [{app-id = "^${cfg.browser}$";}];
-          open-on-workspace = "Browser";
-        }
-        {
-          matches = [{app-id = "^(code-url-handler|Code)$";}];
-          open-on-workspace = "Code";
-        }
-        {
-          matches = [{app-id = "^pavucontrol$";}];
-          default-column-width = {
-            fixed = 400;
-          };
-          open-on-output = "focused";
-        }
-        {
-          matches = [{app-id = "^it\\.mijorus\\.smile$";}];
-          default-column-width = {
-            fixed = 400;
-          };
-          open-on-output = "focused";
-        }
-        {
-          matches = [{app-id = "^org\\.gnome\\.Calculator$";}];
-          default-column-width = {
-            fixed = 400;
-          };
-          open-on-output = "focused";
-        }
-        {
-          matches = [{app-id = "^nm-connection-editor$";}];
-          default-column-width = {
-            fixed = 400;
-          };
-          open-on-output = "focused";
-        }
-        {
-          matches = [{title = "^Picture-in-Picture$";}];
-          default-column-width = {
-            fixed = 480;
-          };
-          open-on-output = "focused";
-        }
-        # Neovim mode-based border colors (title set via vim.opt.titlestring)
-        # NORMAL falls through to the Stylix default (base0D, blue)
-        {
-          matches = [{title = "\\[INSERT\\]";}];
-          border.active = {
-            color = "#a6e3a1";
-          };
-        }
-        {
-          matches = [
-            {title = "\\[VISUAL\\]";}
-            {title = "\\[V-LINE\\]";}
-            {title = "\\[V-BLOCK\\]";}
-          ];
-          border.active = {
-            color = "#cba6f7";
-          };
-        }
-        {
-          matches = [{title = "\\[COMMAND\\]";}];
-          border.active = {
-            color = "#fab387";
-          };
-        }
-        {
-          matches = [{title = "\\[REPLACE\\]";}];
-          border.active = {
-            color = "#f38ba8";
-          };
-        }
-      ];
+      window-rules =
+        [
+          # Default rounded corners for all windows
+          {
+            geometry-corner-radius = {
+              top-left = 12.0;
+              top-right = 12.0;
+              bottom-right = 12.0;
+              bottom-left = 12.0;
+            };
+            clip-to-geometry = true;
+          }
+          {
+            matches = [
+              {title = "^Projector$";}
+              {title = "^UxPlay$";}
+            ];
+            open-fullscreen = true;
+          }
+          {
+            matches = [{app-id = "^scratchpad-.*";}];
+            default-column-width = {
+              proportion = 0.8;
+            };
+            open-on-output = "eDP-1";
+          }
+          {
+            matches = [{app-id = "^${cfg.browser}$";}];
+            open-on-workspace = "Browser";
+          }
+          {
+            matches = [{app-id = "^(code-url-handler|Code)$";}];
+            open-on-workspace = "Code";
+          }
+          {
+            matches = [{app-id = "^pavucontrol$";}];
+            default-column-width = {
+              fixed = 400;
+            };
+            open-on-output = "focused";
+          }
+          {
+            matches = [{app-id = "^it\\.mijorus\\.smile$";}];
+            default-column-width = {
+              fixed = 400;
+            };
+            open-on-output = "focused";
+          }
+          {
+            matches = [{app-id = "^org\\.gnome\\.Calculator$";}];
+            default-column-width = {
+              fixed = 400;
+            };
+            open-on-output = "focused";
+          }
+          {
+            matches = [{app-id = "^nm-connection-editor$";}];
+            default-column-width = {
+              fixed = 400;
+            };
+            open-on-output = "focused";
+          }
+          {
+            matches = [{title = "^Picture-in-Picture$";}];
+            default-column-width = {
+              fixed = 480;
+            };
+            open-on-output = "focused";
+          }
+          # Neovim mode-based border colors (title set via vim.opt.titlestring)
+          # NORMAL falls through to the Stylix default (base0D, blue)
+          {
+            matches = [{title = "\\[INSERT\\]";}];
+            border.active = {
+              color = "#a6e3a1";
+            };
+          }
+          {
+            matches = [
+              {title = "\\[VISUAL\\]";}
+              {title = "\\[V-LINE\\]";}
+              {title = "\\[V-BLOCK\\]";}
+            ];
+            border.active = {
+              color = "#cba6f7";
+            };
+          }
+          {
+            matches = [{title = "\\[COMMAND\\]";}];
+            border.active = {
+              color = "#fab387";
+            };
+          }
+          {
+            matches = [{title = "\\[REPLACE\\]";}];
+            border.active = {
+              color = "#f38ba8";
+            };
+          }
+        ]
+        ++ cfg.windowRules;
 
       # Place awww backdrop surface behind workspace thumbnails in overview
       layer-rules = [

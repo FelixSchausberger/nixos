@@ -40,6 +40,12 @@
 
     # https://starship.rs/config/#prompt
     settings = {
+      # Nix shell indicator (replaces custom fish_prompt <nix-shell>)
+      nix_shell = {
+        format = "via [❄️ $symbol$state( \\($name\\))]($style) ";
+        style = "bold yellow";
+      };
+
       # Disable built-in git modules (replaced with conditional custom modules)
       git_branch.disabled = true;
       git_commit.disabled = true;

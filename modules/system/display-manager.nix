@@ -52,7 +52,7 @@
   #   )
   #   hostConfig.wms);
 in
-  lib.mkIf (hostConfig.wms != []) {
+  lib.mkIf (hostConfig.wms != [] && !(hostConfig.isWsl or false)) {
     assertions = [
       {
         assertion = hostConfig.isGui;

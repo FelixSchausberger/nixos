@@ -179,15 +179,13 @@ in {
     headless = true;
   };
 
-  environment.systemPackages = lib.mkDefault (
-    with pkgs; [
-      powertop # CPU C-state residency, wakeups/sec, power estimation
-      iotop # Per-process disk IO monitoring
-      htop # Process monitoring (already included via btop but useful)
-      lm_sensors # Temperature, voltage, fan speed via hwmon
-      mosh # Mobile shell for remote access
-    ]
-  );
+  environment.systemPackages = with pkgs; [
+    mosh # Mobile SSH with UDP roaming
+    powertop # CPU C-state residency, wakeups/sec, power estimation
+    iotop # Per-process disk IO monitoring
+    htop # Process monitoring (already included via btop but useful)
+    lm_sensors # Temperature, voltage, fan speed via hwmon
+  ];
 
   boot.kernelParams = lib.mkAfter [
     "zfs.zfs_arc_max=8589934592"

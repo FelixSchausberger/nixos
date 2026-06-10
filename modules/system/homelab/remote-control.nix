@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -343,7 +344,7 @@ in {
 
     desktopIp = lib.mkOption {
       type = lib.types.str;
-      default = "192.168.178.3";
+      default = inputs.self.lib.hosts.desktop.ip or "192.168.178.3";
       description = "IP address of the desktop to control";
     };
 

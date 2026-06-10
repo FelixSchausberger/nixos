@@ -1,4 +1,4 @@
-# WSL2 daily-driver host with NixOS userland, WSLg GUI support, and corporate CA integration.
+# WSL2 headless host with NixOS userland, corporate CA integration, and TUI tools.
 # Replaces unsupported bare-metal features (ZFS/bootloader) with WSL-safe equivalents.
 {
   inputs,
@@ -7,21 +7,18 @@
   pkgs,
   ...
 }: let
-  hostLib = import ../lib.nix;
   hostName = "hp-probook-wsl";
   hostInfo = inputs.self.lib.hosts.${hostName};
 in {
-  imports =
-    [
-      ../shared-tui.nix
-      inputs.nixos-wsl.nixosModules.default
-      inputs.stylix.nixosModules.stylix
-      ../../modules/system/stylix-catppuccin.nix
-      ../../modules/system/wsl-integration.nix
-      ../../modules/system/homelab/tailscale.nix
-    ]
-    ++ hostLib.wmModules hostInfo.wms;
-
+  imports = [
+    ../shared-tui.nix
+    inputs.nixos-wsl.nixosModules.default
+    inputs.stylix.nixosModules.stylix
+    ../../modules/system/stylix-catppuccin.nix
+    ../../modules/system/wsl-integration.nix
+    ../../modules/system/homelab/tailscale.nix
+    ../../modules/vitals.nix
+  ];
   config = {
     # Central WSL configuration (including mirrored networking + DNS)
     wsl = {
@@ -31,18 +28,20 @@ in {
       wslConf = {
         automount.root = "/mnt";
 
+        # Set to false to avoid Windows PATH pollution in Linux shells
+        # Windows binaries are still accessible via interop.includePath
+        # If you need Windows tools in PATH, set this to true
         interop.appendWindowsPath = false;
         interop.enabled = true;
 
         network.generateHosts = false; # Do not let WSL overwrite /etc/hosts
-        network.generateResolvConf = false;
+        network.generateResolvConf = true; # Let WSL generate /etc/resolv.conf for NAT-mode DNS
         network.hostname = hostName;
 
         user.default = config.hostConfig.user;
       };
 
       defaultUser = config.hostConfig.user;
-      startMenuLaunchers = true;
 
       # Enable interop for Windows binary execution
       interop.includePath = true;
@@ -50,8 +49,7 @@ in {
       # Integration with Docker Desktop disabled (using native docker)
       docker-desktop.enable = false;
 
-      # Enable GUI applications support through WSLg
-      useWindowsDriver = true;
+      # WSLg disabled — this is a headless/TUI-only environment
     };
 
     # ESET SSL Filter CA certificate from sops
@@ -94,6 +92,11 @@ in {
 
     modules.system.stylix-catppuccin.enable = true;
 
+    services.vitals = {
+      enable = true;
+      headless = true;
+    };
+
     # WSL uses its own boot mechanism, disable systemd-boot from shared-gui.nix
     boot.loader.systemd-boot.enable = lib.mkForce false;
     boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
@@ -107,11 +110,7 @@ in {
     # WSL uses ext4, not ZFS - disable persistence from system/core
     environment.persistence = lib.mkForce {};
 
-    # Override minimal profile settings for GUI support
-    xdg.mime.enable = lib.mkForce true;
-    xdg.icons.enable = lib.mkForce true;
-    xdg.autostart.enable = lib.mkForce true;
-    xdg.sounds.enable = lib.mkForce true;
+    # XDG not needed — headless TUI environment
 
     # Emergency recovery user - minimal shell, no customization
     users.users.emergency = {
@@ -123,12 +122,8 @@ in {
       home = "/home/emergency";
     };
 
-    # Enable systemd user session lingering
-    systemd.user.services.auto-start = {
-      enable = true;
-    };
-
-    # Enable linger for default user
+    # Enable user lingering for systemctl --user support (required for home-manager activation)
+    # Previously disabled due to SIGCHLD issues with the GUI shell wrapper; safe now that WSL is headless.
     users.users.${config.hostConfig.user}.linger = true;
 
     # Merged modules configuration
@@ -157,11 +152,8 @@ in {
     # Network configuration optimized for WSL (high level)
     networking = {
       inherit hostName;
-      nameservers = [
-        "8.8.8.8"
-        "1.1.1.1"
-        "8.8.4.4"
-      ];
+      # Static nameservers removed — WSL generates /etc/resolv.conf in NAT mode
+      nameservers = lib.mkForce [];
       # Disable NetworkManager in WSL
       networkmanager.enable = lib.mkForce false;
     };
@@ -177,25 +169,21 @@ in {
       # WSL-specific system directories (override shared-tui paths)
       tmpfiles.rules = let
         inherit (inputs.self.lib.defaults.system) user;
-        uid = "1000"; # schausberger user ID
+        uid = "1000"; # schausberger user ID (WSL base image UID)
       in [
         "d /home/${user}/mnt 0755 ${user} users -"
         "d /home/${user}/mnt/gdrive 0755 ${user} users -"
-        # Create XDG_RUNTIME_DIR for user session
+        # NOTE: XDG_RUNTIME_DIR is usually created automatically by systemd
+        # This is a fallback to ensure it exists for WSL edge cases
         "d /run/user/${uid} 0700 ${user} users -"
-        # Create /dev/dri directory and set permissions
-        "d /dev/dri 0755 root root -"
-        "c /dev/dri/renderD128 0666 root root - 226:128"
-        "c /dev/dri/card0 0666 root root - 226:0"
+        # Ensure sops key is readable by user (required for user-level sops-nix)
+        "Z /per/system/sops-key.txt 0644 root root -"
       ];
     };
 
     # Environment packages and tools
     environment = {
       systemPackages = with pkgs; [
-        nix-ld
-        mosh
-
         util-linux
         inetutils
         dnsutils
@@ -205,11 +193,7 @@ in {
         lsof
       ];
 
-      sessionVariables = {
-        # Ensure niri uses the nested winit backend inside WSLg instead of DRM/KMS
-        NIRI_BACKEND = "winit";
-        WINIT_UNIX_BACKEND = "wayland";
-      };
+      # No GUI session variables — headless TUI environment
     };
 
     # Nix configuration for WSL
@@ -238,47 +222,6 @@ in {
       config.http.sslCAInfo = "/run/ca-bundle-plus-eset.pem";
     };
 
-    # Configure nix-ld with GUI application dependencies for WSL2
-    programs.nix-ld = {
-      enable = true;
-      libraries = with pkgs; [
-        gtk3
-        alsa-lib
-        libx11
-        libxcb
-
-        stdenv.cc.cc
-        glib
-        zlib
-        fontconfig
-        freetype
-        cairo
-        pango
-        atk
-        gdk-pixbuf
-        libGL
-        dbus
-        nss
-        nspr
-        cups
-        libdrm
-        mesa
-        expat
-
-        pipewire
-        libpulseaudio
-
-        libxcomposite
-        libxdamage
-        libxrandr
-        libxscrnsaver
-        libxtst
-        libxkbcommon
-
-        libuuid
-        at-spi2-atk
-        at-spi2-core
-      ];
-    };
+    # nix-ld not needed — no GUI applications in headless TUI environment
   };
 }

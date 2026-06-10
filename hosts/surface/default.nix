@@ -94,4 +94,7 @@ in {
   # services.tlp.enable via lib.mkDefault (priority 1000), causing a merge conflict
   # in the power-saving specialisation. Surface manages power via power-profiles-daemon.
   services.tlp.enable = lib.mkForce false;
+
+  # Tailscale for fixed reachability across networks (MagicDNS)
+  modules.system.homelab.tailscale.enable = true;
 }

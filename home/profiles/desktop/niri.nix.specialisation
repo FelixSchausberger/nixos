@@ -3,10 +3,7 @@
   pkgs,
   lib,
   ...
-}: let
-  safeNotifySend = import ../../lib/safe-notify-send.nix {inherit pkgs config lib;};
-  safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
-in {
+}: {
   # Desktop-specific niri configuration
   wm.niri = {
     enable = true;
@@ -26,120 +23,61 @@ in {
         };
       }
     ];
-
-    # Desktop-specific application preferences
-    browser = "zen";
-    terminal = "ghostty";
-    fileManager = "cosmic-files";
-
-    # Desktop-specific scratchpad preferences
-    scratchpad = {
-      musicApp = "spotify"; # Full Spotify for desktop
-      notesApp = "obsidian"; # Full note-taking app
-    };
   };
 
-  wm.awww = {
-    enable = true;
-    sessionTarget = "niri-session.target";
-  };
+  # Window rules for various applications
+  wm.niri.windowRules = let
+    rule =
+      title: appId: extraConfig:
+        {
+          matches =
+            lib.optional (title != "") {
+              title = "^${lib.escapeRegex title}$";
+            }
+            ++ lib.optional (appId != "") {
+              "app-id" = "^${lib.escapeRegex appId}$";
+            };
+        }
+        // extraConfig;
+  in [
+    # Gaming: Steam, MangoHud, and game launchers - open on workspace 1
+    (rule "Steam" "steam" {open-on-workspace = "1";})
+    (rule "Steam Big Picture" "steam" {open-on-workspace = "1";})
+    (rule "" "steam" {open-on-workspace = "1";})
+    (rule "MangoHud" "mangohud" {open-on-workspace = "1";})
+    (rule "Lutris" "lutris" {open-on-workspace = "1";})
+    (rule "Heroic Games Launcher" "heroic" {open-on-workspace = "1";})
 
-  # Desktop-specific packages (gaming and productivity)
-  home.packages = with pkgs; [
-    # Core gaming
-    steam
-    lutris
-    bottles
+    # Moonlight streaming - fullscreen on workspace 1
+    (rule "Moonlight" "moonlight" {open-on-workspace = "1";})
 
-    # Performance monitoring and optimization
-    mangohud
-    goverlay
-    gamemode
-    gamescope
+    # Chat and communication - open on workspace 2
+    (rule "Discord" "discord" {open-on-workspace = "2";})
 
-    # Game launchers
-    prismlauncher # Minecraft
+    # Browsers - open on workspace 3
+    (rule "Zen Browser" "zen" {open-on-workspace = "3";})
+    (rule "Firefox" "firefox" {open-on-workspace = "3";})
 
-    # Emulation (temporarily disabled)
-    # Track upstream fixes:
-    # - dolphin-emu: Qt 6.10 incompatibility
-    # - pcsx2: Qt 6.10 incompatibility
-    # - rpcs3: strict-aliasing compilation errors
+    # Development tools - open on workspace 5
+    (rule "Code" "code" {open-on-workspace = "5";})
 
-    # Communication
-    discord
+    # File managers and utilities - open on current workspace
+    (rule "Nautilus" "nautilus" {open-on-workspace = "focused";})
+    (rule "org.gnome.Nautilus" "nautilus" {open-on-workspace = "focused";})
 
-    # Tools
-    winetricks
-    protontricks
-    steamtinkerlaunch
+    # Media players - open on workspace 7
+    (rule "mpv" "mpv" {open-on-workspace = "7";})
+    (rule "spotify" "spotify" {open-on-workspace = "7";})
   ];
 
-  # Gaming-specific systemd services
-  # Note: Steam auto-start disabled for boot performance
-  # Launch Steam manually via application menu or `steam` command
-  systemd.user.services = {};
+  # Gaming: tools and configurations for Moonlight streaming
+  home.packages = with pkgs; [
+    # Moonlight game streaming client
+    moonlight-qt
 
-  # Gaming configuration files
-  xdg.configFile = {
-    # MangoHud configuration
-    "MangoHud/MangoHud.conf".text = ''
-      # Performance monitoring
-      fps
-      frametime
-      cpu_temp
-      gpu_temp
-      cpu_power
-      gpu_power
-      ram
-      vram
-
-      # Position and appearance
-      position=top-left
-      width=400
-      height=200
-      font_size=16
-      background_alpha=0.4
-      alpha=0.8
-
-      # Data logging
-      output_folder=${config.home.homeDirectory}/Documents/Gaming/MangoHud
-      log_duration=60
-      autostart_log=0
-
-      # Networking
-      no_display=0
-
-      # Control
-      toggle_fps_limit=F1
-      toggle_logging=F2
-      reload_cfg=F4
-      upload_log=F5
-    '';
-
-    # GameMode configuration
-    "gamemode.ini".text = ''
-      [general]
-      renice=10
-      ioprio=4
-      inhibit_screensaver=1
-
-      [filter]
-      whitelist=steam
-      whitelist=lutris
-      whitelist=heroic
-      whitelist=prismlauncher
-
-      [gpu]
-      apply_gpu_optimisations=accept-responsibility
-      gpu_device=0
-      amd_performance_level=high
-
-      [custom]
-      start=${safeNotifyBin} "GameMode activated"
-      end=${safeNotifyBin} "GameMode deactivated"
-    '';
-  };
+    # MangoHud for FPS monitoring and performance overlay
+    mangohud
+  ];
 
   # Create gaming directories
   home.file = {
