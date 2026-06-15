@@ -6,10 +6,12 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   hostName = "hp-probook-wsl";
   hostInfo = inputs.self.lib.hosts.${hostName};
-in {
+in
+{
   imports = [
     ../shared-tui.nix
     inputs.nixos-wsl.nixosModules.default
@@ -50,6 +52,15 @@ in {
       docker-desktop.enable = false;
 
       # WSLg disabled — this is a headless/TUI-only environment
+
+      # Make grep available at /bin/grep during early boot
+      # nixos-wsl's systemd-shim scripts may call bare grep before full PATH is set
+      extraBin = [
+        {
+          src = "${pkgs.gnugrep}/bin/grep";
+          name = "grep";
+        }
+      ];
     };
 
     # ESET SSL Filter CA certificate from sops
@@ -62,9 +73,9 @@ in {
     # Runs after sops secrets are available, before nix-daemon starts
     systemd.services.eset-ca-bundle = {
       description = "Create CA bundle with ESET SSL Filter cert";
-      wantedBy = ["multi-user.target"];
-      before = ["nix-daemon.service"];
-      after = ["sops-nix.service"];
+      wantedBy = [ "multi-user.target" ];
+      before = [ "nix-daemon.service" ];
+      after = [ "sops-nix.service" ];
 
       serviceConfig = {
         Type = "oneshot";
@@ -102,13 +113,13 @@ in {
     boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
 
     # Disable ZFS configuration from boot-zfs.nix (WSL kernel doesn't support ZFS)
-    boot.supportedFilesystems = lib.mkForce ["ntfs"];
-    boot.zfs.extraPools = lib.mkForce [];
+    boot.supportedFilesystems = lib.mkForce [ "ntfs" ];
+    boot.zfs.extraPools = lib.mkForce [ ];
     services.zfs.autoScrub.enable = lib.mkForce false;
     services.zfs.autoSnapshot.enable = lib.mkForce false;
 
     # WSL uses ext4, not ZFS - disable persistence from system/core
-    environment.persistence = lib.mkForce {};
+    environment.persistence = lib.mkForce { };
 
     # XDG not needed — headless TUI environment
 
@@ -117,7 +128,7 @@ in {
       isNormalUser = true;
       description = "Emergency recovery account";
       shell = pkgs.bash;
-      extraGroups = ["wheel"]; # sudo access for recovery
+      extraGroups = [ "wheel" ]; # sudo access for recovery
       hashedPasswordFile = config.sops.secrets."private/password-hash".path;
       home = "/home/emergency";
     };
@@ -140,11 +151,11 @@ in {
         };
       };
       deploymentValidation = {
+        # /run/current-system/sw/bin/systemctl omitted: on WSL each boot is fresh,
+        # so /run/current-system is not available during pre-activation
         essentialPaths = [
           "/run/current-system/sw/bin/bash"
-          "/run/current-system/sw/bin/systemctl"
           "/nix/store"
-          # /etc/nixos removed - not applicable in WSL (config is at /per/etc/nixos)
         ];
       };
     };
@@ -153,7 +164,7 @@ in {
     networking = {
       inherit hostName;
       # Static nameservers removed — WSL generates /etc/resolv.conf in NAT mode
-      nameservers = lib.mkForce [];
+      nameservers = lib.mkForce [ ];
       # Disable NetworkManager in WSL
       networkmanager.enable = lib.mkForce false;
     };
@@ -164,21 +175,31 @@ in {
         "NetworkManager-wait-online".enable = false;
         "systemd-networkd-wait-online".enable = lib.mkForce false;
         "smartd".enable = false;
+
+        # home-manager activation takes ~9s on first boot and blocks
+        # multi-user.target via Before=systemd-user-sessions.service, which
+        # exceeds WSL's 10s boot timeout. Remove the Before constraint so it
+        # runs asynchronously without blocking the boot target.
+        home-manager-schausberger.before = lib.mkForce [ ];
       };
 
       # WSL-specific system directories (override shared-tui paths)
-      tmpfiles.rules = let
-        inherit (inputs.self.lib.defaults.system) user;
-        uid = "1000"; # schausberger user ID (WSL base image UID)
-      in [
-        "d /home/${user}/mnt 0755 ${user} users -"
-        "d /home/${user}/mnt/gdrive 0755 ${user} users -"
-        # NOTE: XDG_RUNTIME_DIR is usually created automatically by systemd
-        # This is a fallback to ensure it exists for WSL edge cases
-        "d /run/user/${uid} 0700 ${user} users -"
-        # Ensure sops key is readable by user (required for user-level sops-nix)
-        "Z /per/system/sops-key.txt 0644 root root -"
-      ];
+      tmpfiles.rules =
+        let
+          inherit (inputs.self.lib.defaults.system) user; # schausberger user ID (WSL base image UID)
+        in
+        [
+          "d /home/${user}/mnt 0755 ${user} users -"
+          "d /home/${user}/mnt/gdrive 0755 ${user} users -"
+          # NOTE: XDG_RUNTIME_DIR is usually created automatically by systemd
+          # This is a fallback to ensure it exists for WSL edge cases
+          # Ensure sops key is readable by user (required for user-level sops-nix)
+          "Z /per/system/sops-key.txt 0644 root root -"
+          # Provide tzdata at standard path for WSL compatibility
+          "L /usr/share/zoneinfo - - - - ${pkgs.tzdata}/share/zoneinfo"
+          # Adjust /var/empty permissions without failing on WSL (chmod not supported)
+          "z /var/empty 0555 root root -"
+        ];
     };
 
     # Environment packages and tools
@@ -223,5 +244,120 @@ in {
     };
 
     # nix-ld not needed — no GUI applications in headless TUI environment
+
+    # Deploy minimal WezTerm config to Windows so native WezTerm sees the WSL
+    # launch entries and SSH hosts. Only WSL-specific settings and launcher
+    # entries go here — visual preferences (color scheme, opacity, font, etc.)
+    # are Windows-side decisions and should not be dictated by Nix.
+    #
+    # SSH host labels and names are not sensitive — they match what is already
+    # in the Windows ~/.ssh/config which WezTerm reads for SSH domain resolution.
+    home-manager.users.${config.hostConfig.user} = {
+      xdg.configFile."wezterm/wezterm.lua".text = ''
+        local wezterm = require("wezterm")
+        local config = wezterm.config_builder()
+
+        -- Window sizing to avoid the tiny default window
+        config.initial_cols = 160
+        config.initial_rows = 48
+        config.font_size = 11.0
+
+        -- Default domain so new tabs open in WSL NixOS
+        config.default_domain = "WSL:NixOS"
+
+        -- Suppress auto-generated SSH domain entries from ~/.ssh/config.
+        -- Without this, WezTerm creates a launcher entry for every Host in
+        -- the SSH config (28 entries), flooding the launcher menu.
+        config.ssh_domains = {}
+
+        -- Add launcher on Ctrl+Shift+S (Ctrl+Shift+L is the debug overlay by default)
+        local keys = wezterm.gui.default_keys()
+        table.insert(keys, { key = "S", mods = "CTRL|SHIFT", action = wezterm.action.ShowLauncher })
+        config.keys = keys
+
+        -- Helper: SSH entry via native Windows cmd (no WSL hop).
+        -- Uses cmd.exe /k so the tab stays open after ssh exits.
+        local function ssh(label, host)
+          return { label = label, args = { "cmd.exe", "/k", "ssh", host } }
+        end
+
+        config.launch_menu = {
+          -- WSL entries: zellij and herdr run inside NixOS WSL.
+          -- sleep 0.2 lets WezTerm's ConPTY settle from its initial 80x24 to the
+          -- actual window dimensions before resize -q queries TIOCGWINSZ. Without
+          -- the sleep, resize -q reads the stale 80x24 and zellij starts at that
+          -- size with no subsequent SIGWINCH to correct it.
+          {
+            label = "WSL: Zellij",
+            args = {
+              "wsl.exe", "-d", "NixOS", "--",
+              "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
+              "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl",
+            },
+          },
+          {
+            label = "WSL: Herdr",
+            args = {
+              "wsl.exe", "-d", "NixOS", "--",
+              "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
+              -- sleep 0.2 gives the ConPTY time to settle so ratatui can enter
+              -- raw mode on a stable PTY (prevents ENXIO on tcsetattr).
+              "sleep 0.2; exec ${pkgs.herdr}/bin/herdr",
+            },
+          },
+
+          -- Private / homelab hosts
+          ssh("SSH: m920q",   "m920q"),
+          ssh("SSH: desktop", "desktop"),
+
+          -- Corporate: direct key-auth hosts (FVCS3)
+          ssh("SSH: fvcs3-cwp-001", "fvcs3-cwp-001"),
+          ssh("SSH: fvcs3-cwp-002", "fvcs3-cwp-002"),
+          ssh("SSH: fvcs3-cwp-003", "fvcs3-cwp-003"),
+          ssh("SSH: fvcs3-cwp-004", "fvcs3-cwp-004"),
+          ssh("SSH: fvcs3-app-002", "fvcs3-app-002"),
+
+          -- Corporate: direct key-auth hosts (FVCS4)
+          ssh("SSH: fvcs4-cwp-001", "fvcs4-cwp-001"),
+          ssh("SSH: fvcs4-cwp-002", "fvcs4-cwp-002"),
+          ssh("SSH: fvcs4-cwp-003", "fvcs4-cwp-003"),
+          ssh("SSH: fvcs4-cwp-004", "fvcs4-cwp-004"),
+          ssh("SSH: fvcs4-cwp-005", "fvcs4-cwp-005"),
+          ssh("SSH: fvcs4-cwp-006", "fvcs4-cwp-006"),
+
+          -- Corporate: jump hosts
+          ssh("SSH: fvcs-jh",  "fvcs-jh"),
+          ssh("SSH: jumphost", "jumphost"),
+
+          -- Corporate: interior hosts via jump host (ProxyCommand in ~/.ssh/config)
+          ssh("SSH: fvcs3-mgt-001", "fvcs3-mgt-001"),
+          ssh("SSH: fvcs3-mgt-002", "fvcs3-mgt-002"),
+          ssh("SSH: fvcs3-app-001", "fvcs3-app-001"),
+          ssh("SSH: fvcs3-mwp-001", "fvcs3-mwp-001"),
+          ssh("SSH: fvcs3-swp-001", "fvcs3-swp-001"),
+          ssh("SSH: fvcs4-mgt-001", "fvcs4-mgt-001"),
+          ssh("SSH: fvcs4-mgt-002", "fvcs4-mgt-002"),
+          ssh("SSH: fvcs4-app-001", "fvcs4-app-001"),
+          ssh("SSH: fvcs4-app-002", "fvcs4-app-002"),
+          ssh("SSH: fvcs4-mwp-001", "fvcs4-mwp-001"),
+          ssh("SSH: fvcs4-swp-001", "fvcs4-swp-001"),
+
+          -- Network gear (password auth)
+          ssh("SSH: faax10-sw1", "faax10-sw1"),
+        }
+
+        return config
+      '';
+
+      # Named with zz- prefix to run after writeBoundary (alphabetical ordering)
+      home.activation.zz-wezterm-windows-deploy = ''
+        WEZTERM_TARGET="/mnt/c/Users/SchausbergerF/.config/wezterm/wezterm.lua"
+
+        if [ -f "$HOME/.config/wezterm/wezterm.lua" ] && [ -d "/mnt/c/Users/SchausbergerF" ]; then
+          mkdir -p "$(dirname "$WEZTERM_TARGET")"
+          cp "$HOME/.config/wezterm/wezterm.lua" "$WEZTERM_TARGET"
+        fi
+      '';
+    };
   };
 }

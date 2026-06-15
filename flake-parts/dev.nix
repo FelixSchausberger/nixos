@@ -27,6 +27,7 @@
         jq # JSON processing for quality metric scripts
         just # Task runner for development workflows
         prettier
+        shellcheck # Shell script linting for pre-commit hooks
         pre-commit-hook-ensure-sops
         prek
         ssh-to-age

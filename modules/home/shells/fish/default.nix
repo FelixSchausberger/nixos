@@ -2,7 +2,8 @@
   pkgs,
   lib,
   ...
-}: {
+}:
+{
   imports = [
     ./functions
     ./plugins.nix
@@ -34,6 +35,14 @@
 
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
+
+      # === TERMINAL TYPE FALLBACK ===
+      # WSL starts the shell through systemd without a login manager,
+      # so TERM may be unset or dumb. Starship refuses to initialize
+      # when TERM=dumb, so set a sensible default.
+      if test -z "$TERM"; or test "$TERM" = "dumb"
+        set -gx TERM xterm-256color
+      end
 
       # === CRITICAL SAFETY: Early PATH Guard ===
       # Ensure PATH is set before loading plugins or initializing shell
@@ -76,10 +85,10 @@
       end
 
       # Enable zellij auto-start by default (can be disabled with ZELLIJ_AUTO_START=0)
-      # set -gx ZELLIJ_AUTO_START 0  # DISABLED
+      set -gx ZELLIJ_AUTO_START 1
 
       # Emergency shell functions - NixOS integrated
-      ${(import ../emergency-functions.nix {inherit lib;}).emergencyShellFunctions.fish}
+      ${(import ../emergency-functions.nix { inherit lib; }).emergencyShellFunctions.fish}
 
       function emergency-reset
         string pad --center --width 60 "Resetting shell to safe state"
@@ -170,7 +179,7 @@
         # if command -v jj >/dev/null 2>&1
         #   if jj --help >/dev/null 2>&1
         #     if not COMPLETE=fish jj | source 2>/dev/null
-        #       echo "⚠️  jj completions failed to load - continuing without jj completions"
+        #       echo "ΓÜá∩╕Å  jj completions failed to load - continuing without jj completions"
         #     end
         #   end
         # end
@@ -222,16 +231,35 @@
       # SSH connections skip zellij — local zellij acts as the outer multiplexer,
       # avoiding nested sessions and mouse-capture conflicts.
       #
-      # To enable: # set -gx ZELLIJ_AUTO_START 0  # DISABLED
-      # To disable: set -e ZELLIJ_AUTO_START
-      if status is-interactive; and set -q ZELLIJ_AUTO_START; and not __emergency_check
+      # resize -q runs immediately before zellij with a 100ms sleep to let the
+      # terminal emulator (Windows Terminal / WezTerm) settle its ConPTY dimensions
+      # after the initial 80x24 default. Without the sleep, zellij reads the PTY
+      # size before the emulator has sent the actual window dimensions.
+      #
+      # Cleanup: kill stale EXITED sessions on startup to prevent clutter
+      # from previous versions that used random session names.
+      if status is-interactive; and test "$ZELLIJ_AUTO_START" = 1; and not __emergency_check
         if __zellij_preflight_check
           if not set -q ZELLIJ
             if set -q SSH_CONNECTION
-            else if set -q ZELLIJ_SESSION_NAME
-              zellij attach -c $ZELLIJ_SESSION_NAME
-              kill $fish_pid
+              # SSH: skip zellij to avoid nested sessions
             else
+              # Kill stale exited sessions to prevent clutter
+              for line in (zellij list-sessions 2>/dev/null)
+                if string match -rq '\(EXITED' -- "$line"
+                  zellij kill-session (string split ' ' -- "$line")[1] 2>/dev/null
+                end
+              end
+
+              # Give the terminal emulator 100ms to send actual ConPTY dimensions,
+              # then query and apply them so zellij inherits the correct PTY size.
+              if not set -q INSIDE_EMACS
+                sleep 0.1
+                if command -v resize >/dev/null 2>&1
+                  resize -q 2>/dev/null | source 2>/dev/null
+                end
+              end
+
               zellij attach -c
               kill $fish_pid
             end

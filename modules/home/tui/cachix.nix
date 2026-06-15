@@ -12,7 +12,8 @@
   systemd.user.services.cachix-watch-store = {
     Unit = {
       Description = "Cachix watch-store daemon for automatic binary cache population";
-      After = ["network-online.target"];
+      # Wait for sops-nix to decrypt the cachix auth token before starting
+      After = ["network-online.target" "sops-nix.service"];
       Wants = ["network-online.target"];
       StartLimitIntervalSec = 300;
       StartLimitBurst = 10;

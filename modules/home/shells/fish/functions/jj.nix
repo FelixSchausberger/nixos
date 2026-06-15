@@ -238,15 +238,23 @@ in {
     };
 
     jjpush = {
-      description = "Push current branch and create PR with auto-merge";
+      description = "Push current change and create PR with auto-merge";
       body = ''
         # Get current bookmark
         set -l bookmark (command jj bookmark list 2>/dev/null | grep '^\*' | awk '{print $2}')
 
         if test -z "$bookmark"
-          echo "No active bookmark found" >&2
-          echo "   Create a branch first with 'jjbranch'"
-          return 1
+          # No bookmark — auto-create one from the commit description
+          set -l description (command jj log -r '@' -T 'description' 2>/dev/null | string trim)
+          if test -z "$description"; or test "$description" = "working copy"
+            echo "No commit message set. Use 'jj describe' or 'jjdescribe' first." >&2
+            return 1
+          end
+
+          # "feat: add widget" → "feat/add-widget"
+          set -l bookmark (echo "$description" | string replace -r '^([^:]+):\s*' '$1/' | string replace -a ' ' '-')
+          command jj bookmark set "$bookmark"
+          echo "Auto-created bookmark: $bookmark"
         end
 
         # Run pre-push quality checks

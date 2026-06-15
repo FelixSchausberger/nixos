@@ -197,18 +197,43 @@ For complete details, see [README.md Architecture](README.md#architecture):
 
 ### Version Control Strategy
 
-The project uses Jujutsu (jj) for version control with a main-branch workflow.
+The project uses Jujutsu (jj) for version control with a PR-based workflow.
 
-**AI agent requirement:** Use `jj` commands for commit and push workflows. Avoid using `git commit`/`git push` in normal operation.
+All changes to `main` go through pull requests with auto-merge — even for solo
+development. This ensures CI validates every change before it lands and keeps
+the weekly update workflow consistent.
+
+**Standard workflow (no feature branch needed):**
+```bash
+jjwork         # Fetch, rebase onto main, detect conflicts
+# ... make changes ...
+jjdescribe     # Describe the change with AI-assisted message
+jjpush         # Auto-creates bookmark, pushes, creates PR with auto-merge
+```
+
+**Feature branch workflow (experimental/larger changes):**
+```bash
+jjwork         # Fetch, rebase onto main
+jjbranch       # Create named feature branch (e.g. feat/add-widget)
+# ... make changes ...
+jjdescribe     # Describe the change
+jjpush         # Push branch and create PR
+```
+
+**AI agent requirement:** Use `jj` commands for all VCS operations. Avoid using
+`git commit`/`git push` in normal operation. `jjpush` auto-creates a bookmark
+from the commit description when none exists, converting `"feat: add widget"`
+to bookmark `feat/add-widget`.
 
 **CRITICAL: Always rebase before starting work.** Before making any changes, run:
 ```bash
 jjwork
 ```
-This fetches from remote, rebases the working copy onto `main`, and creates a clean empty commit. This prevents the working copy from diverging into orphan branches that create messy merge histories. Every AI agent session MUST start with `jjwork`.
+This fetches from remote, rebases the working copy onto `main`, and detects
+conflicts. Every AI agent session MUST start with `jjwork`.
 
 **Key Principles:**
-- Work happens on `main` by default for straightforward changes
+- All changes land on `main` via PRs with auto-merge label
 - Feature branches (via `jjbranch` helper) are optional for experimental work
 - Commit messages follow conventional commits format
 - Validation enforced via prek hook
