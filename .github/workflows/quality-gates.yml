@@ -10,9 +10,9 @@ jobs:
     name: Quality Metrics
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Nix
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -43,7 +43,7 @@ jobs:
             echo "QUALITY_COLOR=red" >> "$GITHUB_ENV"
           fi
       - name: Update Coverage Badge
-        uses: Schneegans/dynamic-badges-action@v1.7.0
+        uses: Schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: c9ae337c71e6379e6725776bed1a5f96
@@ -52,7 +52,7 @@ jobs:
           message: ${{ env.COVERAGE }}%
           color: ${{ env.COVERAGE >= 80 && 'brightgreen' || env.COVERAGE >= 60 && 'yellow' || 'orange' }}
       - name: Update Eval Time Badge
-        uses: Schneegans/dynamic-badges-action@v1.7.0
+        uses: Schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: c9ae337c71e6379e6725776bed1a5f96
@@ -61,7 +61,7 @@ jobs:
           message: ${{ env.EVAL_TIME }}s
           color: ${{ env.EVAL_TIME < 10 && 'brightgreen' || env.EVAL_TIME < 20 && 'yellow' || 'orange' }}
       - name: Update Quality Gates Badge
-        uses: Schneegans/dynamic-badges-action@v1.7.0
+        uses: Schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: c9ae337c71e6379e6725776bed1a5f96
