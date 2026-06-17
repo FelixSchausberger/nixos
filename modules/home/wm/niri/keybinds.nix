@@ -56,7 +56,13 @@ in {
         # ===== APPLICATION SHORTCUTS =====
         "Mod+T".action.spawn = "${terminalPkg}/bin/${cfg.terminal}";
 
-        "Mod+Shift+T".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.fish}/bin/fish" "-c" "set -gx ZELLIJ_AUTO_START 0; exec fish"];
+        "Mod+Shift+T".action.spawn = [
+          "${terminalPkg}/bin/${cfg.terminal}"
+          "-e"
+          "${pkgs.fish}/bin/fish"
+          "-c"
+          "set -gx ZELLIJ_AUTO_START 0; exec fish"
+        ];
 
         "Mod+D".action.spawn = "walker";
 
@@ -154,7 +160,9 @@ in {
 
         "Ctrl+Print".action.screenshot-screen = {};
 
-        "Alt+Print".action.screenshot-window = {};
+        "Alt+Print".action.screenshot-window = {
+          show-pointer = true;
+        };
 
         # ===== SYSTEM =====
         # Which-key keybind discovery (Mod+F1 = Help)
@@ -184,7 +192,10 @@ in {
         "Mod+Shift+P".action.power-off-monitors = {};
 
         # ===== LOCK SCREEN =====
-        "Super+Alt+L".action.spawn = ["loginctl" "lock-session"];
+        "Super+Alt+L".action.spawn = [
+          "loginctl"
+          "lock-session"
+        ];
 
         # ===== IDLE INHIBITOR =====
         "Mod+Z".action.spawn = ["stasis-toggle"];
@@ -192,7 +203,11 @@ in {
         # ===== OVERVIEW + IRONBAR TOGGLE =====
         # Using spawn workaround since Niri doesn't support multiple actions per keybind yet
         # Reference: https://github.com/YaLTeR/niri/issues/965
-        "Mod+Tab".action.spawn = ["bash" "-c" "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"];
+        "Mod+Tab".action.spawn = [
+          "bash"
+          "-c"
+          "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"
+        ];
       }
 
       # Generated directional keybinds (Colemak-DH canonical + Vim + Arrow variants)
