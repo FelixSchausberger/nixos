@@ -86,7 +86,7 @@ jobs:
           git commit -m "chore: weekly dependency update"
           git push --force-with-lease origin weekly-updates
       - name: Create or update PR
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: weekly-updates
