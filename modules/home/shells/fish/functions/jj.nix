@@ -104,10 +104,10 @@ in {
     jj_diff = {
       description = "Show jj diff";
       body = ''
-        if contains -- "--stat" $argv
-          command jj diff --stat $argv
-        else
+        if set -q argv[1]
           command jj diff $argv
+        else
+          command jj diff --stat
         end
       '';
     };

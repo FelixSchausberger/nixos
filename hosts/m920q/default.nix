@@ -75,9 +75,6 @@
     systemctl restart "$hm_service"
     systemctl restart getty@tty1.service
 
-    if [[ "$desired_mode" == "niri" ]]; then
-      systemctl start bluetooth.service
-    fi
   '';
 
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
@@ -221,7 +218,6 @@ in {
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
         dns = [
-          "127.0.0.1"
           "192.168.178.1"
         ];
         domains = ["local"];
@@ -299,7 +295,16 @@ in {
         ForwardToSyslog=no
       '';
     };
+
+    pipewire.wireplumber.extraConfig."10-disable-bluez" = {
+      "monitor.bluez.properties" = {
+        "bluez5.enabled" = false;
+      };
+    };
   };
+
+  # Bluetooth is unused on this host; disable to suppress wireplumber bluez5 warnings
+  hardware.bluetooth.enable = lib.mkForce false;
 
   systemd.services."getty@tty1" = lib.mkIf (!config.hostConfig.isGui) {
     serviceConfig.Restart = lib.mkForce "no";
@@ -373,6 +378,10 @@ in {
     monitoring = {
       enable = true;
       alerting.enable = true;
+    };
+    navidrome = {
+      enable = true;
+      openFirewall = true;
     };
     nextcloud = {
       enable = true;

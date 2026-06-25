@@ -88,6 +88,26 @@ in {
       https = false;
       configureRedis = true;
       autoUpdateApps.enable = true;
+
+      phpOptions = {
+        "opcache.memory_consumption" = "256";
+        "opcache.max_accelerated_files" = "20000";
+        "opcache.revalidate_freq" = "60";
+      };
+
+      poolSettings = {
+        "pm" = "dynamic";
+        "pm.max_children" = "20";
+        "pm.max_requests" = "500";
+        "pm.start_servers" = "4";
+        "pm.min_spare_servers" = "2";
+        "pm.max_spare_servers" = "6";
+      };
+    };
+
+    services.redis.servers.nextcloud.settings = {
+      maxmemory = "256mb";
+      maxmemory-policy = "allkeys-lru";
     };
 
     services.nginx = {
@@ -107,12 +127,12 @@ in {
     systemd.services.phpfpm-nextcloud.serviceConfig = {
       MemoryMax = "2G";
       MemoryHigh = "1.5G";
-      CPUQuota = "100%";
+      CPUQuota = "300%";
     };
 
     systemd.services.nextcloud-cron.serviceConfig = {
-      MemoryMax = "1G";
-      MemoryHigh = "768M";
+      MemoryMax = "512M";
+      MemoryHigh = "384M";
       CPUQuota = "50%";
     };
 
@@ -123,7 +143,11 @@ in {
       ];
       requires = ["postgresql.service"];
       wants = ["network-online.target"];
-      serviceConfig.TimeoutStartSec = 30;
+      serviceConfig = {
+        TimeoutStartSec = 180;
+        Nice = 19;
+        IOSchedulingClass = "idle";
+      };
     };
 
     systemd.services.nextcloud-setup = {
@@ -233,9 +257,13 @@ in {
       '';
     };
 
-    systemd.paths.nextcloud-scan-external = {
-      wantedBy = ["multi-user.target"];
-      pathConfig.PathModified = map (m: m.path) cfg.externalStorage;
+    systemd.timers.nextcloud-scan-external = {
+      description = "Periodic scan of Nextcloud external storage";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "5min";
+        OnUnitActiveSec = "15min";
+      };
     };
 
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [cfg.port];

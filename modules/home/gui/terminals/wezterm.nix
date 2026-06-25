@@ -17,7 +17,15 @@
         hide_tab_bar_if_only_one_tab = true,
 
         -- Adjust the window background opacity (0.0 to 1.0)
-        window_background_opacity = 0.3,
+        window_background_opacity = 0.75,
+
+        -- Padding matching ghostty configuration
+        window_padding = {
+          left = 16,
+          right = 16,
+          top = 16,
+          bottom = 16,
+        },
 
         -- temporary fix for Hyprland
         -- enable_wayland = false,
