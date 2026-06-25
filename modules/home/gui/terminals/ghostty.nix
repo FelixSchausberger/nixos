@@ -18,8 +18,9 @@
       # Window configuration
       window-decoration = false; # Keep minimal - no decorations
       gtk-titlebar = false; # No titlebar for minimal look
-      window-padding-x = 8;
-      window-padding-y = 8;
+      window-padding-x = 16;
+      window-padding-y = 16;
+      window-padding-color = "extend"; # Extend bg color into padding in alt-screen
 
       # Terminal behavior
       scrollback-limit = 100000; # 100k lines - maximum feasible for performance

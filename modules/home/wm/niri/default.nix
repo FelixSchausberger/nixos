@@ -247,6 +247,7 @@ in {
       "ghostty/config.ghostty".text = ''
         command = ${pkgs.fish}/bin/fish
         shell-integration = fish
+        background_blur = 1
       '';
     };
 
@@ -310,6 +311,15 @@ in {
         };
 
         workspace-auto-back-and-forth = true;
+      };
+
+      # Blur quality configuration (v26.04+)
+      blur = {
+        enable = true;
+        passes = 3;
+        offset = 1.0;
+        noise = 0.1;
+        saturation = 1.2;
       };
 
       # Layout configuration
@@ -384,7 +394,7 @@ in {
       # Window rules
       window-rules =
         [
-          # Default rounded corners for all windows
+          # Default rounded corners and popup blur for all windows
           {
             geometry-corner-radius = {
               top-left = 12.0;
@@ -393,6 +403,17 @@ in {
               bottom-left = 12.0;
             };
             clip-to-geometry = true;
+            popups = {
+              geometry-corner-radius = {
+                top-left = 12.0;
+                top-right = 12.0;
+                bottom-right = 12.0;
+                bottom-left = 12.0;
+              };
+              background-effect = {
+                blur = true;
+              };
+            };
           }
           {
             matches = [
@@ -484,11 +505,19 @@ in {
         ]
         ++ cfg.windowRules;
 
-      # Place awww backdrop surface behind workspace thumbnails in overview
+      # Layer rules for shell components
       layer-rules = [
+        # Place awww backdrop surface behind workspace thumbnails in overview
         {
           matches = [{namespace = "^awww-daemonbackdrop$";}];
           place-within-backdrop = true;
+        }
+        # Blur behind the Walker launcher
+        {
+          matches = [{namespace = "^launcher$";}];
+          background-effect = {
+            blur = true;
+          };
         }
       ];
 

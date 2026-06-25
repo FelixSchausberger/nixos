@@ -51,8 +51,8 @@
         # Check target pool has enough free space (abort early instead of crashing)
         avail=$(${pkgs.zfs}/bin/zfs get -Hpo value available bpool/backup/data 2>/dev/null || echo "0")
         if [ "$avail" -lt 1073741824 ]; then
-          echo "ERROR: bpool/backup/data has only $avail bytes available (< 1GB). Skipping backup."
-          exit 0
+          echo "ERROR: bpool/backup/data has only $avail bytes available (< 1GB). Aborting backup."
+          exit 1
         fi
       '';
       serviceConfig.WorkingDirectory = "-/";

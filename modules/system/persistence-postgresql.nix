@@ -21,6 +21,11 @@
       max_wal_size = "2GB";
       min_wal_size = "512MB";
       checkpoint_completion_target = 0.9;
+      shared_buffers = "2GB";
+      effective_cache_size = "8GB";
+      work_mem = "8MB";
+      maintenance_work_mem = "256MB";
+      max_connections = "50";
     };
 
     systemd.tmpfiles.rules = [
