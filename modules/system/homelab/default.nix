@@ -6,6 +6,7 @@
     ./backup.nix
     ./immich.nix
     ./monitoring.nix
+    ./navidrome.nix
     ./nextcloud.nix
     ./ntfy.nix
     ./remote-control.nix

@@ -67,7 +67,15 @@ in {
       enable = true;
       port = cfg.prometheusPort;
       listenAddress = "127.0.0.1";
-      retentionTime = "30d";
+      retentionTime = "14d";
+
+      extraFlags = [
+        "--storage.tsdb.wal-compression"
+      ];
+
+      globalConfig = {
+        scrape_interval = "30s";
+      };
 
       exporters.node = {
         enable = true;
@@ -99,6 +107,7 @@ in {
         [
           {
             job_name = "node";
+            scrape_interval = "30s";
             static_configs = [
               {
                 targets = ["127.0.0.1:${toString cfg.nodeExporterPort}"];
@@ -107,6 +116,7 @@ in {
           }
           {
             job_name = "postgres";
+            scrape_interval = "30s";
             static_configs = [
               {
                 targets = ["127.0.0.1:9187"];
@@ -117,6 +127,7 @@ in {
         ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
           {
             job_name = "nextcloud-exporter";
+            scrape_interval = "60s";
             static_configs = [
               {
                 targets = ["127.0.0.1:9205"];
@@ -127,6 +138,7 @@ in {
         ++ lib.optionals config.modules.system.homelab.immich.enable [
           {
             job_name = "immich";
+            scrape_interval = "60s";
             static_configs = [
               {
                 targets = ["127.0.0.1:${toString config.modules.system.homelab.immich.port}"];
@@ -138,6 +150,7 @@ in {
         ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
           {
             job_name = "adguard";
+            scrape_interval = "60s";
             static_configs = [
               {
                 targets = ["127.0.0.1:${toString config.modules.system.homelab.adguardhome.port}"];
@@ -149,6 +162,7 @@ in {
         ++ lib.optionals hasAppTargets [
           {
             job_name = "blackbox";
+            scrape_interval = "60s";
             metrics_path = "/probe";
             params.module = ["http_2xx"];
             static_configs = [{targets = blackboxTargets;}];

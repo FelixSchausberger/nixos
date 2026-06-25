@@ -60,6 +60,16 @@
           bind_hosts = ["127.0.0.1"];
           port = 5353;
         };
+        querylog.enabled = true;
+        querylog.interval = "7d";
+        querylog.size_memory = 1000;
+        filtering.response_ttl_secs = 86400;
+        caching = {
+          enabled = true;
+          ttl_min_secs = 300;
+          ttl_max_secs = 86400;
+          size = 524288;
+        };
         user_rules = [
           # Windows NCSI — prevents "No Internet" indicator on Windows clients
           "@@||msftconnecttest.com^"

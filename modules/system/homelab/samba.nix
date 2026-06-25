@@ -27,12 +27,18 @@ in {
           "netbios name" = "m920q";
           "security" = "user";
           # Performance tuning for gigabit LAN
-          "socket options" = "TCP_NODELAY IPTOS_LOWDELAY";
+          "server min protocol" = "SMB2_02";
+          "socket options" = "TCP_NODELAY IPTOS_LOWDELAY SO_RCVBUF=262144 SO_SNDBUF=262144";
           "read raw" = "yes";
           "write raw" = "yes";
           "oplocks" = "yes";
+          # ZFS doesn't implement kernel oplocks — disabling prevents EBUSY
+          "kernel oplocks" = "no";
           "max xmit" = "65535";
           "getwd cache" = "yes";
+          "aio read size" = "1048576";
+          "aio write size" = "1048576";
+          "min receivefile size" = "16384";
           # macOS compatibility
           "vfs objects" = "catia fruit streams_xattr";
           "fruit:metadata" = "stream";
@@ -48,6 +54,7 @@ in {
           "create mask" = "0644";
           "directory mask" = "0755";
           "valid users" = "@sambashare";
+          "force group" = "sambashare";
           "vfs objects" = "catia fruit streams_xattr recycle";
           "recycle:repository" = ".recycle";
           "recycle:keeptree" = "yes";
@@ -79,8 +86,15 @@ in {
     users.groups.sambashare = {};
     users.users.${defaults.system.user}.extraGroups = ["sambashare"];
 
-    systemd.tmpfiles.rules = [
-      "d ${config.modules.system.homelab.samba.dataPath} 0775 root sambashare -"
+    systemd.tmpfiles.rules = let
+      inherit (config.modules.system.homelab.samba) dataPath;
+    in [
+      "d ${dataPath} 0775 root sambashare -"
+      # Allow sambashare group full access + default ACL for new files
+      "a+ ${dataPath} - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      # Same ACLs on the Obsidian vault and Documents (Nextcloud-exposed dirs)
+      "a+ ${dataPath}/Obsidian - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${dataPath}/Documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
     ];
 
     environment.persistence."/per".directories = [
