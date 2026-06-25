@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Copy dashboard files
         run: |
           mkdir -p _site
@@ -49,7 +49,7 @@ jobs:
             echo '{"timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
           fi
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
   deploy:
     name: Deploy to Pages
     environment:
@@ -60,4 +60,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
