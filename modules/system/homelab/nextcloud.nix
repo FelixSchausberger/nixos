@@ -231,6 +231,8 @@ in {
         echo "Scanning files into Nextcloud file cache..."
         ADMIN_USER=$(${occ} user:list 2>/dev/null | head -1 | grep -oP '-\s+\K\S+' || echo "admin")
         ${occ} files:scan "$ADMIN_USER" 2>&1 || true
+        echo "Cleaning up orphaned file cache entries..."
+        ${occ} files:cleanup 2>&1 || true
         echo "Nextcloud external storage configured."
       '';
     };
@@ -263,6 +265,34 @@ in {
       timerConfig = {
         OnBootSec = "5min";
         OnUnitActiveSec = "15min";
+      };
+    };
+
+    systemd.services.nextcloud-cleanup = {
+      description = "Clean up orphaned Nextcloud file cache entries";
+      after = ["nextcloud-setup.service"];
+      serviceConfig = {
+        Type = "oneshot";
+      };
+      script = let
+        occ = lib.getExe config.services.nextcloud.occ;
+      in ''
+        set -euo pipefail
+        echo "Running Nextcloud database maintenance..."
+        ${occ} maintenance:repair 2>&1 || true
+        echo "Cleaning up orphaned file cache entries..."
+        ${occ} files:cleanup 2>&1 || true
+        echo "Nextcloud cleanup complete."
+      '';
+    };
+
+    systemd.timers.nextcloud-cleanup = {
+      description = "Weekly Nextcloud file cache cleanup";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnCalendar = "weekly";
+        Persistent = true;
+        RandomizedDelaySec = "1h";
       };
     };
 
