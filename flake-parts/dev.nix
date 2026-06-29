@@ -2,8 +2,9 @@
   self,
   inputs,
   ...
-}: {
-  perSystem = {pkgs, ...}: {
+}:
+{
+  perSystem = { pkgs, ... }: {
     checks = inputs.namaka.lib.load {
       src = ../tests;
       inputs = {
@@ -38,8 +39,11 @@
 
       name = "nixos-config";
 
+      # Only install pre-commit hooks in interactive shells, not CI
       shellHook = ''
-        prek install
+        if [ -z "${"CI:-"}" ]; then
+          prek install
+        fi
       '';
     };
 

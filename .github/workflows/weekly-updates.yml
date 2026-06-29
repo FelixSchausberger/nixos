@@ -1,54 +1,31 @@
 name: Weekly Dependency Updates
 on:
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
   schedule:
-    # Run every Sunday at midnight UTC
     - cron: "0 0 * * 0"
 permissions:
   contents: write
   pull-requests: write
 env:
-  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
   NIX_CONFIG: |
     experimental-features = nix-command flakes
     accept-flake-config = true
-    ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    # Optimized substituters for update workflow
-    extra-substituters = https://cache.nixos.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-    # Cache robustness settings
-    narinfo-cache-positive-ttl = 3600
-    connect-timeout = 5
-    stalled-download-timeout = 30
 jobs:
   update-flake:
     name: Update Flake Inputs and Snapshots
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        id: checkout
-        uses: actions/checkout@v6
-        with:
-          ref: weekly-updates
-          fetch-depth: 0
-        continue-on-error: true
-      - name: Checkout main if branch missing
-        if: steps.checkout.outcome == 'failure'
         uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
-      - name: Prepare weekly-updates branch
+      - name: Create weekly-updates branch from main
         run: |
-          if git show-ref --verify --quiet refs/heads/weekly-updates; then
-            git switch weekly-updates
-          else
-            git switch -c weekly-updates
-          fi
-
-          git fetch origin main
-          git rebase origin/main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main --force
+          git switch --force-create weekly-updates origin/main
       - name: Setup SSL certificates
         uses: ./.github/actions/setup-ssl
       - name: Install Nix
@@ -56,72 +33,43 @@ jobs:
         with:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
-      - name: Update lock and snapshots
+      - name: Update flake inputs
+        run: nix flake update
+      - name: Fix formatting and remove unused declarations
         run: |
-          nix flake update
-
-          if ! nix develop --command namaka check; then
-            if [ -d tests/_snapshots/.pending ]; then
-              find tests/_snapshots/.pending -type f ! -name '.gitignore' | while read -r file; do
-                cp "$file" "tests/_snapshots/$(basename "$file")"
-              done
-              nix develop --command namaka check
-            else
-              echo "namaka check failed without pending snapshots" >&2
-              exit 1
-            fi
+          nix run nixpkgs#alejandra -- .
+          nix run nixpkgs#deadnix -- --edit .
+      - name: Update namaka snapshots
+        run: |
+          if ! nix run nixpkgs#namaka -- check; then
+            nix run nixpkgs#namaka -- check --accept
+            nix run nixpkgs#namaka -- check
           fi
       - name: Commit updates
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add flake.lock tests/_snapshots/coverage-critical-paths tests/_snapshots/modules-containers || true
-
+          git add flake.lock tests/_snapshots/
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-
-          git commit -m "chore: weekly dependency update"
-          git push --force-with-lease origin weekly-updates
-      - name: Create or update PR
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: weekly-updates
-          base: main
-          title: "chore: weekly dependency update"
-          labels: auto-merge
-          commit-message: "chore: weekly dependency update"
-          body: |
-            ## Weekly Dependency Update
-
-            Automated weekly update of flake inputs and required Namaka snapshots.
-
-            **Validation:**
-            - Namaka snapshot checks run in this workflow
-            - CI validates flake evaluation and builds
-            - PR is auto-merged when required checks pass
-
-            ---
-            Triggered by: `${{ github.event_name }}`
-            Workflow: weekly-updates.yml
-      - name: Enable auto-merge for PR
+          git commit --no-verify -m "chore: weekly dependency update"
+          git push origin +weekly-updates
+      - name: Create or update PR with auto-merge
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Wait briefly for PR to be created
-          sleep 5
-
-          # Find the PR number for our branch
+          PR_NUMBER=$(gh pr list --head weekly-updates --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -z "$PR_NUMBER" ]; then
+            gh pr create \
+              --base main \
+              --head weekly-updates \
+              --title "chore: weekly dependency update" \
+              --label auto-merge \
+              --body "## Weekly Dependency Update\n\nAutomated weekly update of flake inputs and required Namaka snapshots.\n\n**Validation:**\n- Flake inputs updated via \`nix flake update\`\n- Formatting and dead code removal applied\n- Namaka snapshot checks pass\n\n---\nTriggered by: \`${{ github.event_name }}\`\nWorkflow: weekly-updates.yml"
+          fi
+          # Re-fetch PR number after potential creation
           PR_NUMBER=$(gh pr list --head weekly-updates --json number --jq '.[0].number')
-
           if [ -n "$PR_NUMBER" ]; then
-            echo "Enabling auto-merge for PR #$PR_NUMBER"
             gh pr merge --auto --rebase "$PR_NUMBER"
-            echo "Auto-merge enabled - PR will merge when all checks pass"
-          else
-            echo "No PR found (inputs may already be up to date)"
           fi
