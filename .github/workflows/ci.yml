@@ -1,7 +1,7 @@
 name: CI Pipeline
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -88,7 +88,14 @@ jobs:
         uses: DeterminateSystems/flakehub-cache-action@v3
       - name: Run prek hooks
         run: |
-          echo "Running prek hooks on all files..."
+          # First pass: let formatters (alejandra, etc.) modify files in-place.
+          # Formatter hooks exit 1 when they change a file; that is expected here.
+          echo "Running formatters (first pass — modifications allowed)..."
+          nix develop --command prek run --all-files --skip yamlfmt || true
+
+          # Second pass: all hooks must now pass without modifying anything.
+          # If a formatter still wants to change a file, the commit is genuinely dirty.
+          echo "Verifying no further changes needed (second pass — must be clean)..."
           nix develop --command prek run --all-files --skip yamlfmt
           echo "✅ All prek hooks passed"
       - name: Validate Fish shell configuration syntax

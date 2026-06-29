@@ -1,7 +1,6 @@
-# Desktop workstation host: AMD gaming/rendering machine with Niri as default WM.
-# Both VIRTUAL-1 and DP-3 are defined in the niri config. VIRTUAL-1 is always
-# enabled for Sunshine remote streaming. DP-3 starts disabled (off) and can be
-# toggled on/off via `desktop-display-mode` or the remote-control web UI.
+# Desktop workstation host: AMD gaming/rendering machine with Niri as the only WM.
+# Virtual-1 (vkms) is always enabled for Sunshine remote streaming.
+# DP-3 starts disabled and can be toggled via `desktop-display-mode`.
 # niri natively handles DP hotplug, so no udev rules or specialisations needed.
 {
   inputs,
@@ -39,7 +38,6 @@ in {
     [
       ./disko.nix
       ./base-config.nix
-      ../../modules/system/specialisations.nix
       ../../modules/system/gaming.nix
       ../../modules/system/homelab
       ../../modules/system/hardware/power-management.nix
@@ -56,29 +54,6 @@ in {
     autoLogin = {
       enable = true;
       inherit (inputs.self.lib) user;
-    };
-
-    specialisations = {
-      cosmic = {
-        wms = ["cosmic"];
-        profile = "default";
-        extraConfig = {
-          imports = [../../modules/system/wm/cosmic.nix];
-          home-manager.users.${inputs.self.lib.user}.imports = [
-            ../../modules/home/wm/cosmic
-          ];
-        };
-      };
-      hyprland = {
-        wms = ["hyprland"];
-        profile = "default";
-        extraConfig = {
-          imports = [../../modules/system/wm/hyprland.nix];
-          home-manager.users.${inputs.self.lib.user}.imports = [
-            ../../home/profiles/desktop/hyprland.nix
-          ];
-        };
-      };
     };
   };
 

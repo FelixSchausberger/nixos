@@ -52,6 +52,11 @@ in {
           desc = "Open Terminal (Safe Mode)";
           niriOnly = true;
         };
+        herdr = {
+          key = "A";
+          desc = "Open AI Agent Terminal (herdr)";
+          niriOnly = true;
+        };
         launcher = {
           key = "D";
           desc = "Application Launcher (walker)";

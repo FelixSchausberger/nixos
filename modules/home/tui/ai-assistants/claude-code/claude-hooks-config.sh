@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # All variables are intentionally exported for sourcing scripts
 
 # Claude Code hooks configuration file
 # Copy this to your project root as .claude-hooks-config.sh and customize as needed

@@ -119,7 +119,7 @@ in {
         pane_frames = false;
         simplified_ui = true;
         default_layout = "default";
-        show_startup_tip = false;
+        show_startup_tips = false;
 
         # Mouse support
         mouse_mode = true;
@@ -127,7 +127,7 @@ in {
 
         # Session settings
         session_serialization = true;
-        pane_viewport_serialization = true;
+        disable_session_metadata = true;
 
         scrollback_editor = "${pkgs.helix}/bin/hx";
         auto_layout = true;

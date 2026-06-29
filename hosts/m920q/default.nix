@@ -74,7 +74,6 @@
 
     systemctl restart "$hm_service"
     systemctl restart getty@tty1.service
-
   '';
 
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
@@ -93,7 +92,6 @@ in {
       ../boot-zfs.nix
       ../../modules/system/specialisations.nix
       ../../modules/system/homelab
-      ../../modules/system/ssh.nix
       ../../modules/system/hardware/power-management.nix
       ../../modules/system/media-client.nix
       ../../modules/system/airplay-receiver.nix
@@ -177,11 +175,12 @@ in {
   };
 
   environment.systemPackages = with pkgs; [
-    mosh # Mobile SSH with UDP roaming
+    wakeonlan # Send magic packets to wake desktop from homelab
     powertop # CPU C-state residency, wakeups/sec, power estimation
     iotop # Per-process disk IO monitoring
     htop # Process monitoring (already included via btop but useful)
     lm_sensors # Temperature, voltage, fan speed via hwmon
+    immich-go # Bulk import tool for Immich
   ];
 
   networking.firewall.allowedUDPPortRanges = [
@@ -218,6 +217,7 @@ in {
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
         dns = [
+          "127.0.0.1"
           "192.168.178.1"
         ];
         domains = ["local"];
@@ -387,6 +387,7 @@ in {
       enable = true;
       host = "0.0.0.0";
       openFirewall = true;
+      dataPath = "/per/mnt/data/nextcloud";
     };
     ntfy.enable = true;
     remoteControl = {
@@ -399,7 +400,6 @@ in {
       advertiseRoutes = ["192.168.178.0/24"];
       udpGROInterface = "eno1";
     };
+    ssh.enable = true;
   };
-
-  modules.system.ssh.enable = true;
 }
