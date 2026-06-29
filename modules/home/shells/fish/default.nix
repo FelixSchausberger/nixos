@@ -2,8 +2,7 @@
   pkgs,
   lib,
   ...
-}:
-{
+}: {
   imports = [
     ./functions
     ./plugins.nix
@@ -88,7 +87,7 @@
       set -gx ZELLIJ_AUTO_START 1
 
       # Emergency shell functions - NixOS integrated
-      ${(import ../emergency-functions.nix { inherit lib; }).emergencyShellFunctions.fish}
+      ${(import ../emergency-functions.nix {inherit lib;}).emergencyShellFunctions.fish}
 
       function emergency-reset
         string pad --center --width 60 "Resetting shell to safe state"

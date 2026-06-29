@@ -6,12 +6,10 @@
   config,
   pkgs,
   ...
-}:
-let
+}: let
   hostName = "hp-probook-wsl";
   hostInfo = inputs.self.lib.hosts.${hostName};
-in
-{
+in {
   imports = [
     ../shared-tui.nix
     inputs.nixos-wsl.nixosModules.default
@@ -73,9 +71,9 @@ in
     # Runs after sops secrets are available, before nix-daemon starts
     systemd.services.eset-ca-bundle = {
       description = "Create CA bundle with ESET SSL Filter cert";
-      wantedBy = [ "multi-user.target" ];
-      before = [ "nix-daemon.service" ];
-      after = [ "sops-nix.service" ];
+      wantedBy = ["multi-user.target"];
+      before = ["nix-daemon.service"];
+      after = ["sops-nix.service"];
 
       serviceConfig = {
         Type = "oneshot";
@@ -113,13 +111,13 @@ in
     boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
 
     # Disable ZFS configuration from boot-zfs.nix (WSL kernel doesn't support ZFS)
-    boot.supportedFilesystems = lib.mkForce [ "ntfs" ];
-    boot.zfs.extraPools = lib.mkForce [ ];
+    boot.supportedFilesystems = lib.mkForce ["ntfs"];
+    boot.zfs.extraPools = lib.mkForce [];
     services.zfs.autoScrub.enable = lib.mkForce false;
     services.zfs.autoSnapshot.enable = lib.mkForce false;
 
     # WSL uses ext4, not ZFS - disable persistence from system/core
-    environment.persistence = lib.mkForce { };
+    environment.persistence = lib.mkForce {};
 
     # XDG not needed — headless TUI environment
 
@@ -128,7 +126,7 @@ in
       isNormalUser = true;
       description = "Emergency recovery account";
       shell = pkgs.bash;
-      extraGroups = [ "wheel" ]; # sudo access for recovery
+      extraGroups = ["wheel"]; # sudo access for recovery
       hashedPasswordFile = config.sops.secrets."private/password-hash".path;
       home = "/home/emergency";
     };
@@ -164,7 +162,7 @@ in
     networking = {
       inherit hostName;
       # Static nameservers removed — WSL generates /etc/resolv.conf in NAT mode
-      nameservers = lib.mkForce [ ];
+      nameservers = lib.mkForce [];
       # Disable NetworkManager in WSL
       networkmanager.enable = lib.mkForce false;
     };
@@ -180,26 +178,24 @@ in
         # multi-user.target via Before=systemd-user-sessions.service, which
         # exceeds WSL's 10s boot timeout. Remove the Before constraint so it
         # runs asynchronously without blocking the boot target.
-        home-manager-schausberger.before = lib.mkForce [ ];
+        home-manager-schausberger.before = lib.mkForce [];
       };
 
       # WSL-specific system directories (override shared-tui paths)
-      tmpfiles.rules =
-        let
-          inherit (inputs.self.lib.defaults.system) user; # schausberger user ID (WSL base image UID)
-        in
-        [
-          "d /home/${user}/mnt 0755 ${user} users -"
-          "d /home/${user}/mnt/gdrive 0755 ${user} users -"
-          # NOTE: XDG_RUNTIME_DIR is usually created automatically by systemd
-          # This is a fallback to ensure it exists for WSL edge cases
-          # Ensure sops key is readable by user (required for user-level sops-nix)
-          "Z /per/system/sops-key.txt 0644 root root -"
-          # Provide tzdata at standard path for WSL compatibility
-          "L /usr/share/zoneinfo - - - - ${pkgs.tzdata}/share/zoneinfo"
-          # Adjust /var/empty permissions without failing on WSL (chmod not supported)
-          "z /var/empty 0555 root root -"
-        ];
+      tmpfiles.rules = let
+        inherit (inputs.self.lib.defaults.system) user; # schausberger user ID (WSL base image UID)
+      in [
+        "d /home/${user}/mnt 0755 ${user} users -"
+        "d /home/${user}/mnt/gdrive 0755 ${user} users -"
+        # NOTE: XDG_RUNTIME_DIR is usually created automatically by systemd
+        # This is a fallback to ensure it exists for WSL edge cases
+        # Ensure sops key is readable by user (required for user-level sops-nix)
+        "Z /per/system/sops-key.txt 0644 root root -"
+        # Provide tzdata at standard path for WSL compatibility
+        "L /usr/share/zoneinfo - - - - ${pkgs.tzdata}/share/zoneinfo"
+        # Adjust /var/empty permissions without failing on WSL (chmod not supported)
+        "z /var/empty 0555 root root -"
+      ];
     };
 
     # Environment packages and tools
@@ -292,7 +288,7 @@ in
             args = {
               "wsl.exe", "-d", "NixOS", "--",
               "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
-              "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl",
+              "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl", # nocheck: dangerous-shell-patterns
             },
           },
           {

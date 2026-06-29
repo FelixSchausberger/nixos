@@ -232,6 +232,16 @@ jjwork
 This fetches from remote, rebases the working copy onto `main`, and detects
 conflicts. Every AI agent session MUST start with `jjwork`.
 
+**CRITICAL: `jjpush` only pushes from `main`.** The `jjpush` command enforces
+that the current change is a descendant of `main`. If it isn't, push is blocked.
+This prevents the root cause of lost work: accidentally pushing to a stale branch
+that diverged from `main`. If `jjpush` refuses, run `jjwork` first.
+
+**Single-branch policy:** Only one long-lived branch exists: `main`. Every other
+branch is ephemeral — created by `jjpush` or `jjbranch`, immediately goes through
+CI, and is auto-merged. Never manually push to `weekly-updates` or any other
+named branch. The weekly-updates workflow manages that branch automatically.
+
 **Key Principles:**
 - All changes land on `main` via PRs with auto-merge label
 - Feature branches (via `jjbranch` helper) are optional for experimental work

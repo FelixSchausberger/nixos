@@ -39,8 +39,11 @@
 
       name = "nixos-config";
 
+      # Only install pre-commit hooks in interactive shells, not CI
       shellHook = ''
-        prek install
+        if [ -z "''${CI:-}" ]; then
+          prek install
+        fi
       '';
     };
 

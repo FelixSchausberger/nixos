@@ -26,6 +26,19 @@
         exit 1
       fi
 
+      # Verify that the working copy is now a descendant of main.
+      # If not, the rebase may have moved @ to a stale branch instead of on top of main.
+      main_in_ancestors=$(jj log -r 'ancestors(@) & main' -T 'change_id' 2>/dev/null | tr -d '[:space:]')
+      if [ -z "$main_in_ancestors" ]; then
+        echo ""
+        echo "WARNING: working copy parent is not main after rebase." >&2
+        echo "Current ancestry:" >&2
+        jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+        echo "" >&2
+        echo "To fix: jj rebase -d main" >&2
+        exit 1
+      fi
+
       echo ""
       echo "Working copy is based on main. No conflicts detected."
       echo ""
@@ -240,6 +253,19 @@ in {
     jjpush = {
       description = "Push current change and create PR with auto-merge";
       body = ''
+        # Guard: refuse to push if current change is not descended from main.
+        # This prevents accidentally pushing to a branch that diverges from main,
+        # which is the root cause of losing work on stale branches.
+        set -l main_in_ancestors (command jj log -r 'ancestors(@) & main' -T 'change_id' 2>/dev/null | string trim)
+        if test -z "$main_in_ancestors"
+          echo "Error: current change is not based on main." >&2
+          echo "Run 'jjwork' first to rebase onto main." >&2
+          echo "" >&2
+          echo "Current ancestry:" >&2
+          command jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+          return 1
+        end
+
         # Get current bookmark
         set -l bookmark (command jj bookmark list 2>/dev/null | grep '^\*' | awk '{print $2}')
 

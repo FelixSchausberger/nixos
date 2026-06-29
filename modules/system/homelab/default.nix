@@ -11,6 +11,7 @@
     ./ntfy.nix
     ./remote-control.nix
     ./samba.nix
+    ./ssh-hardened.nix
     ./tailscale.nix
   ];
 }
