@@ -266,8 +266,8 @@ in {
           return 1
         end
 
-        # Get current bookmark
-        set -l bookmark (command jj bookmark list 2>/dev/null | grep '^\*' | awk '{print $2}')
+        # Get first bookmark on working copy (jj bookmark list -r @ outputs "name: ..." format)
+        set -l bookmark (command jj bookmark list -r @ 2>/dev/null | awk '{print $1}' | string trim --chars=':')
 
         if test -z "$bookmark"
           # No bookmark — auto-create one from the commit description
