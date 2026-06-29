@@ -75,7 +75,6 @@ for module in "${all_modules[@]}"; do
   # Search for imports of this module
   # Look for both full path and relative imports
   module_name="$(basename "$module" .nix)"
-  module_dir="$(dirname "$module_rel")"
 
   # Patterns to search for:
   # 1. Full path: ./modules/system/foo.nix or ../modules/system/foo.nix

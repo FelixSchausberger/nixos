@@ -10,7 +10,6 @@
       "https://pre-commit-hooks.cachix.org"
       "https://yazi.cachix.org"
       "https://claude-code.cachix.org"
-      "https://niri-epireyn.cachix.org"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
@@ -20,7 +19,6 @@
       "pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc="
       "yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA="
       "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk="
-      "niri-epireyn.cachix.org-1:tlVyFN7CtsDT+ZcLPS+ekFWeT1X6X4OqvWqbBMyIzFA="
     ];
     # Cache robustness settings
     narinfo-cache-positive-ttl = 3600; # 1 hour for R2 presigned URLs
@@ -36,8 +34,9 @@
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
 
-    # Nixpkgs source (tracks nixos-unstable for 26.11)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Nixpkgs source (FlakeHub semver channel)
+    # See: https://docs.determinate.systems/flakehub/concepts/semver#nixpkgs
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
     # Shared rust-overlay and flake-utils; all inputs that use them follow these
     # to avoid fetching and evaluating duplicate copies during flake evaluation
     rust-overlay = {
@@ -151,6 +150,10 @@
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.flake-utils.follows = "flake-utils";
     };
+    herdr = {
+      url = "github:ogulcancelik/herdr";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     zjstatus = {
       url = "github:dj95/zjstatus";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -182,13 +185,9 @@
     # Desktop environments
     nixos-cosmic = {
       url = "github:lilyinstarlight/nixos-cosmic";
-      inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
     };
-    hyprland = {
-      url = "github:hyprwm/Hyprland/879711988cc703856d5135edfb6938de3846cb35"; # Pin: kmscon module broken on latest
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    hyprland.url = "github:hyprwm/Hyprland";
     hyprland-plugins = {
       url = "github:hyprwm/hyprland-plugins";
       inputs.hyprland.follows = "hyprland";
@@ -209,7 +208,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vitals = {
-      url = "github:FelixSchausberger/vitals/764778b9e39fb6f2d94bdf78a3509b53f9c05b3a";
+      url = "github:FelixSchausberger/vitals";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
     };
