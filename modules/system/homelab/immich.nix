@@ -40,16 +40,19 @@ in {
       environment.IMMICH_METRICS = "true";
     };
 
+    # Thumbnail serving is CPU-bound; 3 cores prevents request queuing under load.
+    # Memory limits sized for 16GB host leaving headroom for ZFS ARC and other services.
     systemd.services.immich-server.serviceConfig = {
-      MemoryMax = "2G";
-      MemoryHigh = "1.5G";
-      CPUQuota = "100%";
-    };
-
-    systemd.services.immich-machine-learning.serviceConfig = {
       MemoryMax = "4G";
       MemoryHigh = "3G";
-      CPUQuota = "150%";
+      CPUQuota = "300%";
+    };
+
+    # ML inference runs during photo analysis, not during normal browsing.
+    systemd.services.immich-machine-learning.serviceConfig = {
+      MemoryMax = "6G";
+      MemoryHigh = "5G";
+      CPUQuota = "200%";
     };
 
     sops.secrets."immich/admin-password" = {

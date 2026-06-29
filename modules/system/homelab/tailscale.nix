@@ -42,17 +42,14 @@ in {
       enable = true;
       inherit (cfg) authKeyFile;
       openFirewall = true;
+      # Enables IP forwarding sysctls and correct rpfilter rules for subnet routing.
+      # rpfilter fix prevents asymmetric routes from dropping subnet-routed packets.
+      useRoutingFeatures = lib.mkIf (cfg.advertiseRoutes != [] || cfg.exitNode) "server";
       extraUpFlags =
         lib.optionals cfg.exitNode ["--advertise-exit-node"]
         ++ lib.optionals (cfg.advertiseRoutes != []) [
           "--advertise-routes=${lib.concatStringsSep "," cfg.advertiseRoutes}"
         ];
-    };
-
-    # Required for subnet routing and exit node functionality
-    boot.kernel.sysctl = lib.mkIf (cfg.advertiseRoutes != [] || cfg.exitNode) {
-      "net.ipv4.conf.all.forwarding" = true;
-      "net.ipv6.conf.all.forwarding" = true;
     };
 
     # Improves UDP forwarding throughput for Tailscale when interface is specified
