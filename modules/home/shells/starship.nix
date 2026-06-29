@@ -42,7 +42,7 @@
     settings = {
       # Nix shell indicator (replaces custom fish_prompt <nix-shell>)
       nix_shell = {
-        format = "via [❄️ $symbol$state( \\($name\\))]($style) ";
+        format = "via [❄️ $state( \\($name\\))]($style) ";
         style = "bold yellow";
       };
 

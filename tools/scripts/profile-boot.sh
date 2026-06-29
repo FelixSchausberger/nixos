@@ -90,6 +90,7 @@ graphical_s=$(systemd-analyze critical-chain graphical.target 2>/dev/null \
 
 # Top N services from blame list
 # Format: "  1.234s unit-name.service"
+# shellcheck disable=SC1078,SC1079,SC2026  # awk program with single quotes; shellcheck false positive
 blame_json=$(systemd-analyze blame 2>/dev/null \
   | head -n "$TOP_N" \
   | awk '{

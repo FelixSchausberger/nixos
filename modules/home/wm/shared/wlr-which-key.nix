@@ -126,6 +126,8 @@
               then "${terminalPkg}/bin/${terminalBin}"
               else if name == "terminal-safe"
               then "${terminalPkg}/bin/${terminalBin} -e ${pkgs.fish}/bin/fish -c 'set -gx ZELLIJ_AUTO_START 0; exec fish'"
+              else if name == "herdr"
+              then "${terminalPkg}/bin/${terminalBin} -e ${pkgs.herdr}/bin/herdr"
               else if name == "launcher"
               then "walker"
               else if name == "close"

@@ -1,0 +1,114 @@
+name: Stale Branch Warning
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+jobs:
+  check-stale-branches:
+    name: Warn About Unmerged Branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure stale-branch label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "stale-branch" \
+            --repo "$REPO" \
+            --color "d93f0b" \
+            --description "Branch open beyond ephemeral threshold" \
+            2>/dev/null || true
+      - name: Check for stale branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          STALE_DAYS: "3"
+        run: |
+          STALE_REPORT=""
+          CUTOFF_DATE=$(date -d "-${STALE_DAYS} days" --iso-8601=seconds)
+
+          # List all remote branches except the persistent ones (main, weekly-updates)
+          BRANCHES=$(gh api "repos/${REPO}/branches" --paginate \
+            --jq '.[].name' | grep -vxF "main" | grep -vxF "weekly-updates" || true)
+
+          if [ -z "$BRANCHES" ]; then
+            echo "No ephemeral branches found."
+            exit 0
+          fi
+
+          for branch in $BRANCHES; do
+            # Get the last commit date on this branch
+            LAST_COMMIT=$(gh api "repos/${REPO}/branches/${branch}" \
+              --jq '.commit.commit.committer.date' 2>/dev/null || echo "")
+
+            if [ -z "$LAST_COMMIT" ]; then
+              continue
+            fi
+
+            # Skip branches newer than the stale threshold
+            if [[ "$LAST_COMMIT" > "$CUTOFF_DATE" ]]; then
+              continue
+            fi
+
+            # Check if there is an open PR for this branch
+            PR_INFO=$(gh pr list --repo "$REPO" --head "$branch" --state open \
+              --json number,title,createdAt,url \
+              --jq '.[0] // empty' 2>/dev/null || echo "")
+
+            if [ -n "$PR_INFO" ]; then
+              PR_NUM=$(echo "$PR_INFO" | jq -r '.number')
+              PR_TITLE=$(echo "$PR_INFO" | jq -r '.title')
+              PR_URL=$(echo "$PR_INFO" | jq -r '.url')
+              PR_CREATED=$(echo "$PR_INFO" | jq -r '.createdAt')
+              STALE_REPORT="${STALE_REPORT}\n- Branch \`${branch}\`: open PR [#${PR_NUM} ${PR_TITLE}](${PR_URL}) since ${PR_CREATED}"
+            else
+              # Branch with no open PR is even more concerning
+              STALE_REPORT="${STALE_REPORT}\n- Branch \`${branch}\`: **no open PR** (last commit: ${LAST_COMMIT})"
+            fi
+          done
+
+          if [ -z "$STALE_REPORT" ]; then
+            echo "No stale branches found (all ephemeral branches are younger than ${STALE_DAYS} days or have no activity)."
+
+            # Close any existing stale-branch issue if everything is clean
+            ISSUE=$(gh issue list --repo "$REPO" --label "stale-branch" --state open \
+              --json number --jq '.[0].number' 2>/dev/null || echo "")
+            if [ -n "$ISSUE" ]; then
+              gh issue close "$ISSUE" --repo "$REPO" \
+                --comment "All stale branches resolved. Closing automatically."
+            fi
+            exit 0
+          fi
+
+          BODY="## Stale Branch Warning
+
+          The following branches have been open for more than **${STALE_DAYS} days** without merging.
+
+          All feature branches should be ephemeral: they go through CI and auto-merge immediately.
+          A branch sitting open means either CI is blocked or the PR needs attention.
+
+          $(echo -e "$STALE_REPORT")
+
+          ---
+          _This issue is automatically updated daily. It closes when all stale branches are resolved._"
+
+          # Update existing open issue or create a new one
+          EXISTING=$(gh issue list --repo "$REPO" --label "stale-branch" --state open \
+            --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "Updating existing stale-branch issue #${EXISTING}"
+            gh issue edit "$EXISTING" --repo "$REPO" --body "$BODY"
+            gh issue comment "$EXISTING" --repo "$REPO" \
+              --body "Updated: $(date --iso-8601=seconds)"
+          else
+            echo "Creating new stale-branch issue"
+            gh issue create --repo "$REPO" \
+              --title "Stale branches require attention" \
+              --label "stale-branch" \
+              --body "$BODY"
+          fi

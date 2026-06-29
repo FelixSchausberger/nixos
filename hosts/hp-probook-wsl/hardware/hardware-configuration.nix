@@ -12,26 +12,8 @@
   # Set the host platform for nixpkgs
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  # Graphics support for WSL GUI applications
-  hardware = {
-    # Enable OpenGL for GUI applications
-    graphics = {
-      enable = true;
-      enable32Bit = true;
-    };
-
-    # Enable all firmware for better hardware support
-    enableAllFirmware = true;
-  };
-
-  # GPU acceleration environment variables for WSLg
-  # Required for Mesa D3D12 driver to find Windows GPU stack libraries
-  environment.sessionVariables = {
-    LD_LIBRARY_PATH = ["/run/opengl-driver/lib"];
-    GALLIUM_DRIVER = "d3d12";
-    MESA_LOADER_DRIVER_OVERRIDE = "d3d12";
-    LIBGL_DRIVERS_PATH = "/run/opengl-driver/lib/dri";
-  };
+  # Enable all firmware for better hardware support
+  hardware.enableAllFirmware = true;
 
   # Virtualization settings managed in modules/system/containers.nix
   # (Docker configuration optimized for boot performance)

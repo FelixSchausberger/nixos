@@ -64,6 +64,9 @@ in {
           "set -gx ZELLIJ_AUTO_START 0; exec fish"
         ];
 
+        # Open terminal with herdr for AI agent sessions
+        "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.herdr}/bin/herdr"];
+
         "Mod+D".action.spawn = "walker";
 
         # ===== WINDOW MANAGEMENT =====

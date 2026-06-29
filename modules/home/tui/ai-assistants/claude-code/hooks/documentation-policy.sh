@@ -27,7 +27,7 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
 
 # Convert to relative path from repo root for pattern matching
 if [[ "$target_file" == "$repo_root"* ]]; then
-	rel_path="${target_file#$repo_root/}"
+	rel_path="${target_file#"$repo_root"/}"
 else
 	rel_path="$target_file"
 fi

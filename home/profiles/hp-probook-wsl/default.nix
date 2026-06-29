@@ -49,6 +49,10 @@
     packages = with pkgs; [
       lazyssh
       mosh
+      # resize from xterm: reliable terminal size query via escape sequences
+      # on WSL+systemd the pty initializes at 80x24; resize asks the terminal
+      # emulator for actual dimensions and sets stty accordingly
+      xterm
     ];
 
     sessionVariables = {

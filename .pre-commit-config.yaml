@@ -45,6 +45,11 @@ repos:
         language: system
         files: \.toml$
         pass_filenames: true
+      - id: shellcheck
+        name: Shellcheck - shell script linting
+        entry: shellcheck
+        language: system
+        files: \.sh$
       - id: actionlint
         name: GitHub Actions workflow linter
         entry: actionlint

@@ -109,6 +109,11 @@ in {
     end
   '';
 
+  # herdr integration plugin — reports lifecycle state and session identity
+  # for herdr's agent-aware sidebar and session restore (see herdr integration docs)
+  xdg.configFile."opencode/plugins/herdr-agent-state.js".text =
+    builtins.readFile ./herdr-agent-state.js;
+
   xdg.configFile."opencode/plugins/zellij-attention.js".text = ''
     export const ZellijAttentionPlugin = async ({ $ }) => {
       const paneId = process.env.ZELLIJ_PANE_ID;

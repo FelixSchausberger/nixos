@@ -30,7 +30,7 @@ in {
       # wlr capture mode for wlroots headless display support
       settings = {
         capture = "wlr";
-        output_name = "VIRTUAL-1";
+        output_name = "Virtual-1";
       };
     };
 
