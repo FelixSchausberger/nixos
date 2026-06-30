@@ -12,8 +12,26 @@
       echo "Fetching from remote..."
       jj git fetch
 
-      echo "Rebasing onto main..."
-      jj rebase -d main --skip-emptied
+      # Warn if local main bookmark has diverged from origin — this indicates a commit
+      # was made directly to the local main bookmark instead of going through a PR.
+      local_main=$(jj log -r 'main' -T 'commit_id' 2>/dev/null | tr -d '[:space:]') || true
+      remote_main=$(jj log -r 'main@origin' -T 'commit_id' 2>/dev/null | tr -d '[:space:]') || true
+      if [ -n "$local_main" ] && [ -n "$remote_main" ] && [ "$local_main" != "$remote_main" ]; then
+        echo ""
+        echo "WARNING: local 'main' has diverged from 'main@origin'." >&2
+        echo "  local  main:         $local_main" >&2
+        echo "  main@origin:         $remote_main" >&2
+        echo "This usually means a commit was made directly to main instead of via PR." >&2
+        echo "Create a PR branch for that commit before continuing:" >&2
+        echo "  jj bookmark set feat/my-change -r main" >&2
+        echo "  jj git push --branch feat/my-change" >&2
+        echo ""
+      fi
+
+      # Rebase onto the remote main, not the local bookmark.
+      # Using main@origin prevents silently rebasing onto a stale local main.
+      echo "Rebasing onto main@origin..."
+      jj rebase -d 'main@origin' --skip-emptied
 
       # Detect and warn about conflicts — never allow abandon or silent failure
       if jj resolve --list 2>/dev/null | grep -q .; then
@@ -26,21 +44,21 @@
         exit 1
       fi
 
-      # Verify that the working copy is now a descendant of main.
+      # Verify that the working copy is now a descendant of main@origin.
       # If not, the rebase may have moved @ to a stale branch instead of on top of main.
-      main_in_ancestors=$(jj log -r 'ancestors(@) & main' -T 'change_id' 2>/dev/null | tr -d '[:space:]')
+      main_in_ancestors=$(jj log -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | tr -d '[:space:]')
       if [ -z "$main_in_ancestors" ]; then
         echo ""
-        echo "WARNING: working copy parent is not main after rebase." >&2
+        echo "WARNING: working copy parent is not main@origin after rebase." >&2
         echo "Current ancestry:" >&2
-        jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+        jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
         echo "" >&2
-        echo "To fix: jj rebase -d main" >&2
+        echo "To fix: jj rebase -d 'main@origin'" >&2
         exit 1
       fi
 
       echo ""
-      echo "Working copy is based on main. No conflicts detected."
+      echo "Working copy is based on main@origin. No conflicts detected."
       echo ""
     '';
   };
@@ -253,16 +271,16 @@ in {
     jjpush = {
       description = "Push current change and create PR with auto-merge";
       body = ''
-        # Guard: refuse to push if current change is not descended from main.
-        # This prevents accidentally pushing to a branch that diverges from main,
-        # which is the root cause of losing work on stale branches.
-        set -l main_in_ancestors (command jj log -r 'ancestors(@) & main' -T 'change_id' 2>/dev/null | string trim)
+        # Guard: refuse to push if current change is not descended from main@origin.
+        # Checking main@origin (not the local bookmark) prevents silently pushing
+        # work that diverged from the actual remote main due to local bookmark drift.
+        set -l main_in_ancestors (command jj log -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | string trim)
         if test -z "$main_in_ancestors"
-          echo "Error: current change is not based on main." >&2
-          echo "Run 'jjwork' first to rebase onto main." >&2
+          echo "Error: current change is not based on main@origin." >&2
+          echo "Run 'jjwork' first to rebase onto main@origin." >&2
           echo "" >&2
           echo "Current ancestry:" >&2
-          command jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+          command jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
           return 1
         end
 
