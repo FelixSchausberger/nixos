@@ -37,6 +37,13 @@ in {
           "fetch"
         ];
       };
+
+      # Disable auto-advancing the main bookmark on local jj new/commit operations.
+      # main must only advance via jj git fetch (i.e. after a PR merges on origin).
+      # Allowing auto-advance was the root cause of local main drifting ahead of origin/main.
+      experimental-advance-branches = {
+        enabled-branches = [];
+      };
     };
   };
 }
