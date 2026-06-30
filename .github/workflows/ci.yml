@@ -43,7 +43,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Run Trivy vulnerability scanner
@@ -74,7 +74,7 @@ jobs:
     if: github.event_name != 'schedule'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Setup SSL certificates
@@ -139,7 +139,7 @@ jobs:
     if: github.event_name != 'schedule'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Check flake inputs
         uses: DeterminateSystems/flake-checker-action@v12
         with:

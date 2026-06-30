@@ -28,14 +28,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: weekly-updates
           fetch-depth: 0
         continue-on-error: true
       - name: Checkout main if branch missing
         if: steps.checkout.outcome == 'failure'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
