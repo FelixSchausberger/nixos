@@ -10,8 +10,7 @@
 in {
   sops = {
     defaultSopsFile = ../../secrets/secrets.yaml;
-    age.keyFile = defaults.paths.sopsKeyFile;
-    age.sshKeyPaths = [];
+    age.sshKeyPaths = ["/per/home/${defaults.system.user}/.ssh/id_ed25519"];
     gnupg.sshKeyPaths = [];
 
     secrets = {

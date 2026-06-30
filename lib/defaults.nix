@@ -40,9 +40,6 @@ rec {
     # Repositories directory
     repos = "/per/repos";
 
-    # Sops age key location
-    sopsKeyFile = "/per/system/sops-key.txt";
-
     # System mount directories
     mountDirs = {
       base = "/per/mnt";

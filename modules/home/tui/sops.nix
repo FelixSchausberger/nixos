@@ -18,9 +18,9 @@
     SOPS_EDITOR = "nvim --clean";
   };
 
-  # Minimal sops config - use same key as system
+  # Use personal SSH key (same key material as .sops.yaml)
   sops = {
-    age.keyFile = "/per/system/sops-key.txt";
+    age.sshKeyPaths = ["/home/schausberger/.ssh/id_ed25519"];
     defaultSopsFile = "${inputs.self}/secrets/secrets.yaml";
     defaultSopsFormat = "yaml";
   };
