@@ -156,6 +156,16 @@ in {
     environment.systemPackages = with pkgs; [
     ];
 
+    # WSL has no virtual consoles — mask vconsole to prevent udev-triggered failures
+    systemd.services.systemd-vconsole-setup.enable = lib.mkForce false;
+
+    # systemd-resolved not needed; WSL manages /etc/resolv.conf in NAT mode
+    services.resolved.enable = lib.mkForce false;
+
+    # WSL terminates without clean systemd shutdown, which corrupts persistent journals.
+    # Volatile storage avoids corruption and is appropriate since WSL state is ephemeral.
+    services.journald.storage = "volatile";
+
     home-manager.users.${hostConfig.user} = {
       programs.fish.shellAliases = {
         import-win-certs = "sudo ${importWindowsCerts}";
