@@ -1519,11 +1519,11 @@
         "xwayland-satellite-unstable": "xwayland-satellite-unstable"
       },
       "locked": {
-        "lastModified": 1782900262,
-        "narHash": "sha256-IYzqgreHHHv0C27AQdOE/9PUnlJothIUJQQDD4zn030=",
+        "lastModified": 1782813347,
+        "narHash": "sha256-oqk6IR36aoeRUjU0Tb9vK4shHfI8QyoabMugMM2QW7s=",
         "owner": "epireyn",
         "repo": "niri-flake",
-        "rev": "7007897a299091d74c283b38e1d63213511fa5f0",
+        "rev": "350668eca0bbc657bc5721e0a90f3707e269f021",
         "type": "github"
       },
       "original": {
