@@ -249,6 +249,7 @@ in {
     # SSH host labels and names are not sensitive — they match what is already
     # in the Windows ~/.ssh/config which WezTerm reads for SSH domain resolution.
     home-manager.users.${config.hostConfig.user} = {
+      # nocheck: dangerous-shell-patterns
       xdg.configFile."wezterm/wezterm.lua".text = ''
         local wezterm = require("wezterm")
         local config = wezterm.config_builder()
@@ -288,7 +289,8 @@ in {
             args = {
               "wsl.exe", "-d", "NixOS", "--",
               "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
-              "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl", # nocheck: dangerous-shell-patterns
+              # nocheck: dangerous-shell-patterns
+              "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl",
             },
           },
           {

@@ -32,22 +32,34 @@ for file in "$@"; do
 	[ -f "$file" ] || continue
 
 	for pattern in "${DANGEROUS_PATTERNS[@]}"; do
-		# grep -n for matching lines, then exclude suppressed lines
-		matches=$(grep -n "$pattern" "$file" 2>/dev/null |
-			grep -v "nocheck: dangerous-shell-patterns" || true)
+		# Find matching lines with line numbers
+		while IFS=: read -r line_num content; do
+			[ -z "$line_num" ] && continue
 
-		if [ -n "$matches" ]; then
-			echo "$matches"
+			# Skip if this line has an inline suppression
+			if echo "$content" | grep -q "nocheck: dangerous-shell-patterns"; then
+				continue
+			fi
+
+			# Skip if the preceding line has a suppression comment
+			if [ "$line_num" -gt 1 ]; then
+				prev_line=$(sed -n "$((line_num - 1))p" "$file")
+				if echo "$prev_line" | grep -q "nocheck: dangerous-shell-patterns"; then
+					continue
+				fi
+			fi
+
+			echo "${line_num}:${content}"
 			echo "Dangerous pattern found in $file:"
 			echo "   Pattern: '$pattern'"
 			echo "   Using 'exec' with terminal multiplexers causes shell lockouts!"
 			echo "   Use official integration method instead:"
 			echo "      eval (zellij setup --generate-auto-start fish | string collect)"
-			echo "   To suppress a false positive, append to the line:"
+			echo "   To suppress a false positive, put on the line before:"
 			echo "      # nocheck: dangerous-shell-patterns"
 			echo ""
 			found_issues=true
-		fi
+		done < <(grep -n "$pattern" "$file" 2>/dev/null || true)
 	done
 done
 
