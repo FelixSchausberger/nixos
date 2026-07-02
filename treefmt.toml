@@ -12,7 +12,8 @@ command = "markdownlint"
 options = ["--fix"]
 includes = ["*.md"]
 
-[formatter.trailing-whitespace]
-command = "trailing-whitespace-fixer"
-includes = ["*"]
-excludes = ["*.patch"]
+# trailing-whitespace-fixer not available in dev shell PATH; would require adding to dev shell
+# [formatter.trailing-whitespace]
+# command = "trailing-whitespace-fixer"
+# includes = ["*"]
+# excludes = ["*.patch"]
