@@ -376,6 +376,11 @@ in {
       host = "0.0.0.0";
       openFirewall = true;
       dataPath = "/per/mnt/data/Media/Pictures";
+      # thumbs and encoded-video are latency-sensitive (served on every timeline scroll).
+      # Placing them on NVMe (rpool/eyd/per) avoids random-read stalls on the SMR SATA dpool.
+      # Originals stay on dpool where sequential read performance is acceptable.
+      thumbsPath = "/per/immich/thumbs";
+      encodedVideoPath = "/per/immich/encoded-video";
     };
     monitoring = {
       enable = true;
@@ -391,10 +396,16 @@ in {
       openFirewall = true;
       dataPath = "/per/mnt/data/nextcloud";
     };
+    caddyProxy = {
+      enable = true;
+      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+    };
     ntfy.enable = true;
     remoteControl = {
       enable = true;
-      enableTailscaleServe = true;
+      # Tailscale Serve replaced by Caddy reverse proxy; caddyProxy handles
+      # the HTTPS endpoint at remote-control.m920q.tailf2f0ca.ts.net.
+      enableTailscaleServe = false;
     };
     samba.enable = true;
     tailscale = {

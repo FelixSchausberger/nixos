@@ -50,7 +50,7 @@ in {
       bindsTo = ["graphical-session.target"];
       wantedBy = ["graphical-session.target"];
       serviceConfig = {
-        ExecStart = "${pkgs.uxplay}/bin/uxplay -vs waylandsink -as pulsesink -n Projector -nh";
+        ExecStart = "${pkgs.uxplay}/bin/uxplay -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
         EnvironmentFile = "-%t/uwsm/env_session.conf";
         Restart = "on-failure";
         RestartSec = 5;
