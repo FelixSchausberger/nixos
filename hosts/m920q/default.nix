@@ -74,6 +74,9 @@
 
     systemctl restart "$hm_service"
     systemctl restart getty@tty1.service
+    if [[ "$desired_mode" == "niri" ]]; then
+      systemctl start bluetooth.service
+    fi
   '';
 
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
@@ -217,7 +220,6 @@ in {
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
         dns = [
-          "127.0.0.1"
           "192.168.178.1"
         ];
         domains = ["local"];
