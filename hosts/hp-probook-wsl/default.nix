@@ -9,6 +9,8 @@
 }: let
   hostName = "hp-probook-wsl";
   hostInfo = inputs.self.lib.hosts.${hostName};
+  # nocheck: dangerous-shell-patterns
+  zellijCmd = "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl";
 in {
   imports = [
     ../shared-tui.nix
@@ -194,7 +196,7 @@ in {
         # Provide tzdata at standard path for WSL compatibility
         "L /usr/share/zoneinfo - - - - ${pkgs.tzdata}/share/zoneinfo"
         # Adjust /var/empty permissions without failing on WSL (chmod not supported)
-        "z /var/empty 0555 root root -"
+        "Z /var/empty 0555 root root -"
       ];
     };
 
@@ -267,81 +269,94 @@ in {
         -- the SSH config (28 entries), flooding the launcher menu.
         config.ssh_domains = {}
 
-        -- Add launcher on Ctrl+Shift+S (Ctrl+Shift+L is the debug overlay by default)
-        local keys = wezterm.gui.default_keys()
-        table.insert(keys, { key = "S", mods = "CTRL|SHIFT", action = wezterm.action.ShowLauncher })
-        config.keys = keys
+        -- Add launcher on Ctrl+Shift+S scoped to only our launch_menu entries
+        -- (excludes built-in domains, workspaces, key-assignment commands, etc.)
+        -- FUZZY activates type-to-filter directly; useful with many SSH hosts.
+        if wezterm.gui then
+          local keys = wezterm.gui.default_keys()
+          table.insert(keys, {
+            key = "S", mods = "CTRL|SHIFT",
+            action = wezterm.action.ShowLauncherArgs {
+              flags = "FUZZY|LAUNCH_MENU_ITEMS",
+            },
+          })
+          config.keys = keys
+        end
 
         -- Helper: SSH entry via native Windows cmd (no WSL hop).
-        -- Uses cmd.exe /k so the tab stays open after ssh exits.
+        -- domain="local" is required: without it WezTerm inherits the window's
+        -- default domain (WSL:NixOS) and tries to exec cmd.exe inside Linux.
         local function ssh(label, host)
-          return { label = label, args = { "cmd.exe", "/k", "ssh", host } }
+          return {
+            label  = label,
+            domain = { DomainName = "local" },
+            args   = { "cmd.exe", "/k", "ssh", host },
+          }
         end
 
         config.launch_menu = {
-          -- WSL entries: zellij and herdr run inside NixOS WSL.
-          -- sleep 0.2 lets WezTerm's ConPTY settle from its initial 80x24 to the
-          -- actual window dimensions before resize -q queries TIOCGWINSZ. Without
-          -- the sleep, resize -q reads the stale 80x24 and zellij starts at that
-          -- size with no subsequent SIGWINCH to correct it.
+          -- ── WSL ──────────────────────────────────────────────────────────
+          -- sleep 0.2 lets WezTerm's ConPTY settle from its initial 80x24 to
+          -- the actual window dimensions before resize -q queries TIOCGWINSZ.
           {
-            label = "WSL: Zellij",
-            args = {
+            label  = "WSL: Zellij",
+            domain = { DomainName = "local" },
+            args   = {
               "wsl.exe", "-d", "NixOS", "--",
               "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
-              # nocheck: dangerous-shell-patterns
-              "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl",
+              "${zellijCmd}",
             },
           },
           {
-            label = "WSL: Herdr",
-            args = {
+            label  = "WSL: Herdr",
+            domain = { DomainName = "local" },
+            args   = {
               "wsl.exe", "-d", "NixOS", "--",
               "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
-              -- sleep 0.2 gives the ConPTY time to settle so ratatui can enter
-              -- raw mode on a stable PTY (prevents ENXIO on tcsetattr).
               "sleep 0.2; exec ${pkgs.herdr}/bin/herdr",
             },
           },
 
-          -- Private / homelab hosts
-          ssh("SSH: m920q",   "m920q"),
-          ssh("SSH: desktop", "desktop"),
+          -- ── Windows ──────────────────────────────────────────────────────
+          { label = "Windows: CMD",        domain = { DomainName = "local" }, args = { "cmd.exe" } },
+          { label = "Windows: PowerShell", domain = { DomainName = "local" }, args = { "powershell.exe", "-NoLogo" } },
 
-          -- Corporate: direct key-auth hosts (CORP3)
-          ssh("SSH: corp3-cwp-001", "corp3-cwp-001"),
-          ssh("SSH: corp3-cwp-002", "corp3-cwp-002"),
-          ssh("SSH: corp3-cwp-003", "corp3-cwp-003"),
-          ssh("SSH: corp3-cwp-004", "corp3-cwp-004"),
-          ssh("SSH: corp3-app-002", "corp3-app-002"),
+          -- ── Private / homelab ────────────────────────────────────────────
+          ssh("Private: m920q",   "m920q"),
+          ssh("Private: desktop", "desktop"),
 
-          -- Corporate: direct key-auth hosts (CORP4)
-          ssh("SSH: corp4-cwp-001", "corp4-cwp-001"),
-          ssh("SSH: corp4-cwp-002", "corp4-cwp-002"),
-          ssh("SSH: corp4-cwp-003", "corp4-cwp-003"),
-          ssh("SSH: corp4-cwp-004", "corp4-cwp-004"),
-          ssh("SSH: corp4-cwp-005", "corp4-cwp-005"),
-          ssh("SSH: corp4-cwp-006", "corp4-cwp-006"),
+          -- ── Jump hosts ───────────────────────────────────────────────────
+          ssh("Jumphost: corp-jh",  "corp-jh"),
+          ssh("Jumphost: jumphost", "jumphost"),
 
-          -- Corporate: jump hosts
-          ssh("SSH: corp-jh",  "corp-jh"),
-          ssh("SSH: jumphost", "jumphost"),
+          -- ── Switches ─────────────────────────────────────────────────────
+          ssh("Switch: corp10-sw1", "corp10-sw1"),
 
-          -- Corporate: interior hosts via jump host (ProxyCommand in ~/.ssh/config)
-          ssh("SSH: corp3-mgt-001", "corp3-mgt-001"),
-          ssh("SSH: corp3-mgt-002", "corp3-mgt-002"),
-          ssh("SSH: corp3-app-001", "corp3-app-001"),
-          ssh("SSH: corp3-mwp-001", "corp3-mwp-001"),
-          ssh("SSH: corp3-swp-001", "corp3-swp-001"),
-          ssh("SSH: corp4-mgt-001", "corp4-mgt-001"),
-          ssh("SSH: corp4-mgt-002", "corp4-mgt-002"),
-          ssh("SSH: corp4-app-001", "corp4-app-001"),
-          ssh("SSH: corp4-app-002", "corp4-app-002"),
-          ssh("SSH: corp4-mwp-001", "corp4-mwp-001"),
-          ssh("SSH: corp4-swp-001", "corp4-swp-001"),
+          -- ── CORP3 ────────────────────────────────────────────────────────
+          ssh("CORP3: cwp-001", "corp3-cwp-001"),
+          ssh("CORP3: cwp-002", "corp3-cwp-002"),
+          ssh("CORP3: cwp-003", "corp3-cwp-003"),
+          ssh("CORP3: cwp-004", "corp3-cwp-004"),
+          ssh("CORP3: app-001", "corp3-app-001"),
+          ssh("CORP3: app-002", "corp3-app-002"),
+          ssh("CORP3: mgt-001", "corp3-mgt-001"),
+          ssh("CORP3: mgt-002", "corp3-mgt-002"),
+          ssh("CORP3: mwp-001", "corp3-mwp-001"),
+          ssh("CORP3: swp-001", "corp3-swp-001"),
 
-          -- Network gear (password auth)
-          ssh("SSH: corp10-sw1", "corp10-sw1"),
+          -- ── CORP4 ────────────────────────────────────────────────────────
+          ssh("CORP4: cwp-001", "corp4-cwp-001"),
+          ssh("CORP4: cwp-002", "corp4-cwp-002"),
+          ssh("CORP4: cwp-003", "corp4-cwp-003"),
+          ssh("CORP4: cwp-004", "corp4-cwp-004"),
+          ssh("CORP4: cwp-005", "corp4-cwp-005"),
+          ssh("CORP4: cwp-006", "corp4-cwp-006"),
+          ssh("CORP4: app-001", "corp4-app-001"),
+          ssh("CORP4: app-002", "corp4-app-002"),
+          ssh("CORP4: mgt-001", "corp4-mgt-001"),
+          ssh("CORP4: mgt-002", "corp4-mgt-002"),
+          ssh("CORP4: mwp-001", "corp4-mwp-001"),
+          ssh("CORP4: swp-001", "corp4-swp-001"),
         }
 
         return config

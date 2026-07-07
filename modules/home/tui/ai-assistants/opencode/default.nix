@@ -37,7 +37,7 @@ in {
       mcp-nixos
       mcp-language-server
       # Formatters
-      nixfmt
+      alejandra
       rustfmt
       taplo
     ];
@@ -108,11 +108,6 @@ in {
       set -gx OLLAMA_API_KEY (cat ${config.sops.secrets."ollama/api-key".path})
     end
   '';
-
-  # herdr integration plugin — reports lifecycle state and session identity
-  # for herdr's agent-aware sidebar and session restore (see herdr integration docs)
-  xdg.configFile."opencode/plugins/herdr-agent-state.js".text =
-    builtins.readFile ./herdr-agent-state.js;
 
   xdg.configFile."opencode/plugins/zellij-attention.js".text = ''
     export const ZellijAttentionPlugin = async ({ $ }) => {

@@ -1,8 +1,7 @@
 name: Weekly Dependency Updates
 on:
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
   schedule:
-    # Run every Sunday at midnight UTC
     - cron: "0 0 * * 0"
 permissions:
   contents: write
@@ -14,10 +13,8 @@ env:
     experimental-features = nix-command flakes
     accept-flake-config = true
     ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    # Optimized substituters for update workflow
     extra-substituters = https://cache.nixos.org
     extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-    # Cache robustness settings
     narinfo-cache-positive-ttl = 3600
     connect-timeout = 5
     stalled-download-timeout = 30
@@ -27,28 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        id: checkout
-        uses: actions/checkout@v7
-        with:
-          ref: weekly-updates
-          fetch-depth: 0
-        continue-on-error: true
-      - name: Checkout main if branch missing
-        if: steps.checkout.outcome == 'failure'
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - name: Prepare weekly-updates branch
+      - name: Create fresh weekly-updates branch
         run: |
-          if git show-ref --verify --quiet refs/heads/weekly-updates; then
-            git switch weekly-updates
-          else
-            git switch -c weekly-updates
-          fi
-
-          git fetch origin main
-          git rebase origin/main
+          git branch -D weekly-updates 2>/dev/null || true
+          git switch -c weekly-updates
       - name: Setup SSL certificates
         uses: ./.github/actions/setup-ssl
       - name: Install Nix
@@ -58,7 +41,10 @@ jobs:
             ${{ env.NIX_CONFIG }}
       - name: Update lock and snapshots
         run: |
-          nix flake update
+          if ! nix flake update; then
+            echo "nix flake update failed - input sources may be unreachable" >&2
+            exit 1
+          fi
 
           if ! nix develop --command namaka check; then
             if [ -d tests/_snapshots/.pending ]; then
@@ -71,20 +57,6 @@ jobs:
               exit 1
             fi
           fi
-      - name: Commit updates
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add flake.lock tests/_snapshots/coverage-critical-paths tests/_snapshots/modules-containers || true
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git commit -m "chore: weekly dependency update"
-          git push --force-with-lease origin weekly-updates
       - name: Create or update PR
         uses: peter-evans/create-pull-request@v8
         with:
@@ -107,21 +79,3 @@ jobs:
             ---
             Triggered by: `${{ github.event_name }}`
             Workflow: weekly-updates.yml
-      - name: Enable auto-merge for PR
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Wait briefly for PR to be created
-          sleep 5
-
-          # Find the PR number for our branch
-          PR_NUMBER=$(gh pr list --head weekly-updates --json number --jq '.[0].number')
-
-          if [ -n "$PR_NUMBER" ]; then
-            echo "Enabling auto-merge for PR #$PR_NUMBER"
-            gh pr merge --auto --rebase "$PR_NUMBER"
-            echo "Auto-merge enabled - PR will merge when all checks pass"
-          else
-            echo "No PR found (inputs may already be up to date)"
-          fi
