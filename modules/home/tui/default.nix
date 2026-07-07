@@ -54,6 +54,7 @@ in {
     cacert # CA certificates for TLS connections
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     fclones # Efficient Duplicate File Finder and Remover
+    gh # GitHub CLI - pull requests, issues, releases, and more
     lan-mouse # Software KVM switch for sharing mouse and keyboard over network
     lazyjournal # TUI for journalctl, file system logs, as well as Docker and Podman containers
     lstr # Fast, minimalist directory tree viewer written in Rust

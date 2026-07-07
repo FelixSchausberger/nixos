@@ -24,7 +24,6 @@
       inputs.nur.overlays.default
       # Custom overlay for TUI-specific packages
       (final: prev: {
-        herdr = inputs.herdr.packages.${prev.stdenv.hostPlatform.system}.default;
         zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
         "zjstatus-hints" = inputs.zjstatus-hints.packages.${prev.stdenv.hostPlatform.system}.default;
         helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
