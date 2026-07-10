@@ -226,17 +226,19 @@
       end
 
       # === SAFE ZELLIJ AUTO-START ===
-      # Single named session model: attach if exists, create only if none exists.
+      # Single named session "homelab-wsl" on all startup paths.
       # SSH connections skip zellij — local zellij acts as the outer multiplexer,
       # avoiding nested sessions and mouse-capture conflicts.
       #
-      # resize -q runs immediately before zellij with a 100ms sleep to let the
-      # terminal emulator (Windows Terminal / WezTerm) settle its ConPTY dimensions
-      # after the initial 80x24 default. Without the sleep, zellij reads the PTY
-      # size before the emulator has sent the actual window dimensions.
+      # "attach --create" is avoided: it panics when the server considers the
+      # session "current" (race condition on shutdown/reconnect). Instead,
+      # list-sessions is checked explicitly and the session is either attached
+      # or created as a new session. The two subcommands never race.
       #
-      # Cleanup: kill stale EXITED sessions on startup to prevent clutter
-      # from previous versions that used random session names.
+      # zellij is not exec'd — if it exits or crashes, fish resumes as a plain
+      # shell rather than closing the tab/window.
+      #
+      # Cleanup: kill stale EXITED sessions on startup to prevent clutter.
       if status is-interactive; and test "$ZELLIJ_AUTO_START" = 1; and not __emergency_check
         if __zellij_preflight_check
           if not set -q ZELLIJ
@@ -250,17 +252,12 @@
                 end
               end
 
-              # Give the terminal emulator 100ms to send actual ConPTY dimensions,
-              # then query and apply them so zellij inherits the correct PTY size.
-              if not set -q INSIDE_EMACS
-                sleep 0.1
-                if command -v resize >/dev/null 2>&1
-                  resize -q 2>/dev/null | source 2>/dev/null
-                end
+              if zellij list-sessions --no-formatting 2>/dev/null | string match -rq '^homelab-wsl\b'
+                zellij attach homelab-wsl
+              else
+                zellij --session homelab-wsl
               end
-
-              zellij attach -c
-              kill $fish_pid
+              # zellij exited (normally or via crash) — fish continues as plain shell
             end
           end
         else

@@ -207,16 +207,15 @@ For VMware/VirtualBox VMs, use nixos-anywhere instead of building a custom ISO.
 This automatically:
 
 - Connects via SSH using your pre-configured keys (no password needed)
-- Copies sops key from executing host to `/per/system/sops-key.txt` on target
-- Copies SSH keys for age key derivation
+- Copies SSH keys from executing host to target for sops decryption and GitHub auth
 - Installs NixOS with disko configuration
 - Clones repository to `/per/etc/nixos` on target
-- Validates installation succeeded
+- Validates installation succeeds
 
 **Prerequisites:**
 
 - Custom ISO built with `nix build .#installer-iso-minimal`
-- Sops key exists at `/per/system/sops-key.txt` on the host executing the command
+- SSH key at `~/.ssh/id_ed25519` on the host executing the command
 - VM booted with custom ISO
 
 **What's pre-configured in the custom ISO:**
@@ -229,7 +228,7 @@ This automatically:
 **Troubleshooting:**
 
 - If SSH fails: Verify custom ISO was built with latest config containing your SSH key
-- If sops key missing: Ensure `/per/system/sops-key.txt` exists on your dev machine
+- If SSH key missing: Ensure `~/.ssh/id_ed25519` exists on your dev machine
 - If repo clone fails: Manually clone with `ssh root@<vm-ip> "git clone https://github.com/FelixSchausberger/nixos.git /per/etc/nixos"`
 
 #### Alternative: Standard ISO with Manual Setup
@@ -279,10 +278,11 @@ For manual control or custom configurations:
 4. **Post-installation setup** (manual only)
 
    ```bash
-   # Copy sops key
-   scp /per/system/sops-key.txt root@<vm-ip>:/per/system/sops-key.txt
+# Copy SSH keys (used by sops for secret decryption)
+    scp ~/.ssh/id_ed25519 root@<vm-ip>:/per/home/schausberger/.ssh/id_ed25519
+    scp ~/.ssh/id_ed25519.pub root@<vm-ip>:/per/home/schausberger/.ssh/id_ed25519.pub
 
-   # Clone repository
+    # Clone repository
    ssh root@<vm-ip> "git clone https://github.com/FelixSchausberger/nixos.git /per/etc/nixos"
    ```
 

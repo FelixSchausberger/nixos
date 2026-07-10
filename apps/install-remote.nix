@@ -14,11 +14,10 @@
           echo "Prerequisites:" >&2
           echo "  - Target booted with custom NixOS ISO (installer-iso-minimal)" >&2
           echo "  - SSH access to target as root (uses authorized_keys from ISO)" >&2
-          echo "  - Sops key at /per/system/sops-key.txt on executing host" >&2
           echo "  - SSH keys at ~/.ssh/id_ed25519 on executing host" >&2
           echo "" >&2
           echo "The script will:" >&2
-          echo "  1. Copy sops key and SSH keys to target" >&2
+          echo "  1. Copy SSH keys to target" >&2
           echo "  2. Set up GitHub authentication" >&2
           echo "  3. Run disko partitioning" >&2
           echo "  4. Install NixOS" >&2
@@ -29,22 +28,22 @@
 
         HOSTNAME="$1"
         TARGET_IP="$2"
-        SOPS_KEY="/per/system/sops-key.txt"
         REPO_URL="https://github.com/FelixSchausberger/nixos.git"
         SSH_OPTS="-o StrictHostKeyChecking=accept-new"
 
-        if [[ ! -f "$SOPS_KEY" ]]; then
-          echo "Error: Sops key not found at $SOPS_KEY" >&2
+        if [[ ! -f ~/.ssh/id_ed25519 ]]; then
+          echo "Error: SSH key not found at ~/.ssh/id_ed25519" >&2
           exit 1
         fi
 
         echo "Decrypting GitHub token from sops secrets..."
-        export SOPS_AGE_KEY_FILE="$SOPS_KEY"
+        SOPS_AGE_KEY=$(ssh-to-age -private-key -i ~/.ssh/id_ed25519)
+        export SOPS_AGE_KEY
         GITHUB_TOKEN=$(${pkgs.sops}/bin/sops -d secrets/secrets.yaml | ${pkgs.yq}/bin/yq -r '.github.token')
 
         if [[ -z "$GITHUB_TOKEN" || "$GITHUB_TOKEN" == "null" ]]; then
           echo "Error: Failed to decrypt GitHub token from secrets/secrets.yaml" >&2
-          echo "Please ensure the sops key is correct and secrets.yaml contains github.token" >&2
+          echo "Please ensure the SSH key matches what .sops.yaml expects and secrets.yaml contains github.token" >&2
           exit 1
         fi
 
@@ -77,11 +76,9 @@
         trap "rm -rf '$TMPDIR'" EXIT
 
         echo "Preparing installation files..."
-        mkdir -p "$TMPDIR/per/system"
-        cp "$SOPS_KEY" "$TMPDIR/per/system/sops-key.txt"
-        chmod 400 "$TMPDIR/per/system/sops-key.txt"
+        mkdir -p "$TMPDIR/per"
 
-        # Copy SSH keys if they exist (for sops age key derivation and GitHub auth)
+        # Copy SSH keys for GitHub auth and sops decryption on first boot
         copy_ssh_keys() {
           local dest="$1"
           mkdir -p "$dest"
@@ -104,7 +101,7 @@
           chmod 644 "$TMPDIR/per/home/schausberger/.config/git/config"
         fi
 
-        echo "Copying sops key and SSH keys to target..."
+        echo "Copying SSH keys and configuration files to target..."
         rsync -az -e "ssh $SSH_OPTS" "$TMPDIR/" "root@$TARGET_IP:/"
 
         # Known_hosts needed for SSH git operations during install
@@ -123,14 +120,6 @@
         ssh $SSH_OPTS "root@$TARGET_IP" "cd /tmp/nixos-config && nix --extra-experimental-features 'nix-command flakes' run --no-update-lock-file git+ssh://git@github.com/nix-community/disko -- --mode disko ./hosts/$HOSTNAME/disko.nix"
 
         ssh $SSH_OPTS "root@$TARGET_IP" "git config --global --add safe.directory /tmp/nixos-config"
-
-        # Copy sops key to persistent ZFS /per dataset (disko mounts it under /mnt)
-        # Must happen after disko so /mnt/per exists
-        echo "Placing sops key on persistent storage..."
-        ssh $SSH_OPTS "root@$TARGET_IP" \
-          "mkdir -p /mnt/per/system && chmod 700 /mnt/per/system && \
-           cat > /mnt/per/system/sops-key.txt && chmod 400 /mnt/per/system/sops-key.txt" \
-          < "$SOPS_KEY"
 
         # Activate swap partition created by disko to prevent OOM during build.
         # The live ISO boots without swap. Disko creates an 8GB swap partition
@@ -221,5 +210,5 @@
         echo "  ssh schausberger@$TARGET_IP"
         echo "  cd /per/etc/nixos && sudo nixos-rebuild switch --flake .#$HOSTNAME"
   ''}";
-  meta.description = "Remote NixOS installation with sops key and repo cloning";
+  meta.description = "Remote NixOS installation with SSH key auth and repo cloning";
 }
