@@ -8,26 +8,16 @@
   catppuccin = inputs.self.lib.catppuccinColors.mocha;
 
   # Segment background colors
-  bgUsername = catppuccin.mauve;
-  bgDir = catppuccin.surface1;
   bgVcs = catppuccin.sapphire;
   bgLang = catppuccin.surface2;
   bgTime = catppuccin.surface0;
-
-  # Separator styles:  with fg = left segment bg, bg = right segment bg
-  sepUsrDir = "bg:${bgDir} fg:${bgUsername}";
-  sepDirVcs = "bg:${bgVcs} fg:${bgDir}";
-  sepVcsLang = "bg:${bgLang} fg:${bgVcs}";
-  sepLangTime = "bg:${bgTime} fg:${bgLang}";
-  endTime = "fg:${bgTime}";
+  # Separator styles (not used)
 in {
   programs.bash = {
     enable = true;
 
     bashrcExtra = ''
-      # Safe starship initialization with emergency mode support
       if ! emergency-mode-check >/dev/null 2>&1; then
-        # Only initialize starship in interactive shells with proper terminal
         if [[ $- == *i* ]] && [[ "$TERM" != "dumb" ]]; then
           if command -v starship >/dev/null 2>&1; then
             if starship --help >/dev/null 2>&1; then
@@ -53,35 +43,18 @@ in {
 
     settings = {
       # https://starship.rs/config/#prompt
-      format = "$username[](${sepUsrDir})$directory[](${sepDirVcs})$custom[](${sepVcsLang})$nodejs$rust$golang$python[](${sepLangTime})$time[ ](${endTime})$nix_shell$character";
+      format = "$username in $hostname in $directory via $nix_shell $custom$line_break$character";
       command_timeout = 3000;
 
       # Nix shell indicator
       nix_shell = {
-        format = "via [❄️ $state( \\($name\\))]($style) ";
+        format = "[❄️ $state( \\($name\\))]($style) ";
         style = "bold yellow";
       };
 
-      # Username segment
-      username = {
-        format = "[  $user ](bg:${bgUsername} fg:${catppuccin.base})";
-        show_always = true;
-      };
+      # Username segment (see simplified username below)
 
-      # Directory segment with folder icon substitutions
-      directory = {
-        style = "fg:${catppuccin.text} bg:${bgDir}";
-        format = "[ $path ]($style)";
-        truncation_length = 3;
-        truncation_symbol = "…/";
-        substitutions = {
-          "Documents" = "󰈙 ";
-          "Downloads" = " ";
-          "Music" = "󰝚 ";
-          "Pictures" = " ";
-          "dev" = "󰅨 ";
-        };
-      };
+      # Directory segment is defined later with simplified settings
 
       # Time display
       time = {
@@ -91,10 +64,7 @@ in {
         format = "[ 󰥔 $time ]($style)";
       };
 
-      # Prompt symbol
-      character = {
-        success_symbol = "[\\$](bold ${catppuccin.sapphire}) ";
-      };
+      # Prompt symbol (customized below)
 
       # Language modules with shared segment background
       nodejs = {
@@ -116,6 +86,30 @@ in {
         symbol = "";
         style = "fg:${catppuccin.pink} bg:${bgLang}";
         format = "[ $symbol ($version) ]($style)";
+      };
+
+      cmd_duration = {
+        min_time = 500;
+        style = "bold dimmed fg:${catppuccin.overlay0}";
+        format = "[⏱ $duration]($style) ";
+        show_milliseconds = true;
+      };
+
+      hostname = {
+        disabled = false;
+        format = "[🌐 $hostname](bold dimmed)";
+        ssh_only = false;
+      };
+
+      directory = {
+        style = "bold cyan";
+        format = "[$path]($style)";
+        truncation_length = 1;
+        truncation_symbol = "…/";
+      };
+
+      character = {
+        success_symbol = "[❯](bold green)";
       };
 
       custom = {
@@ -141,8 +135,8 @@ in {
         vitals = lib.mkIf (!(hostConfig.isGui or false)) {
           when = "curl -sf http://127.0.0.1:8080/ > /dev/null 2>&1";
           shell = ["bash"];
-          style = "bold green bg:${bgVcs}";
-          format = "[$output]($style) ";
+          style = "bold green";
+          format = "[$output]($style)";
           command = ''
             curl -sf http://127.0.0.1:8080/score 2>/dev/null | jq -r '[.score, .delta_1h] | @tsv' 2>/dev/null | while IFS=$'\t' read -r score delta; do score=$(printf '%.1f' "$score"); if [ -n "$delta" ] && [ "$delta" != "null" ] && [ "$delta" != "0" ]; then sign=$(echo "$delta" | jq -r 'if . > 0 then "↑" else "↓" end'); mag=$(printf '%.1f' "$(echo "$delta" | jq -r 'abs')"); echo "$score $sign$mag"; else echo "$score"; fi; done
           '';

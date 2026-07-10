@@ -10,7 +10,10 @@
   hostName = "hp-probook-wsl";
   hostInfo = inputs.self.lib.hosts.${hostName};
   # nocheck: dangerous-shell-patterns
-  zellijCmd = "sleep 0.2; resize -q 2>/dev/null | source 2>/dev/null; exec zellij attach --create homelab-wsl";
+  # "attach --create" is avoided (panics when server considers the session current).
+  # Fish one-liner: check list-sessions, then attach or create. No exec — if zellij
+  # exits or crashes, the fish shell (and the WezTerm tab) stays open.
+  zellijCmd = "if zellij list-sessions --no-formatting 2>/dev/null | string match -rq '^homelab-wsl\\b'; zellij attach homelab-wsl; else; zellij --session homelab-wsl; end";
 in {
   imports = [
     ../shared-tui.nix
@@ -121,6 +124,9 @@ in {
     # WSL uses ext4, not ZFS - disable persistence from system/core
     environment.persistence = lib.mkForce {};
 
+    # WSL has no /per dataset — sops reads SSH key from real home path
+    sops.age.sshKeyPaths = lib.mkForce ["/home/schausberger/.ssh/id_ed25519"];
+
     # XDG not needed — headless TUI environment
 
     # Emergency recovery user - minimal shell, no customization
@@ -191,13 +197,36 @@ in {
         "d /home/${user}/mnt/gdrive 0755 ${user} users -"
         # NOTE: XDG_RUNTIME_DIR is usually created automatically by systemd
         # This is a fallback to ensure it exists for WSL edge cases
-        # Ensure sops key is readable by user (required for user-level sops-nix)
-        "Z /per/system/sops-key.txt 0644 root root -"
         # Provide tzdata at standard path for WSL compatibility
         "L /usr/share/zoneinfo - - - - ${pkgs.tzdata}/share/zoneinfo"
         # Adjust /var/empty permissions without failing on WSL (chmod not supported)
-        "Z /var/empty 0555 root root -"
+        # NOTE: tmpfiles operations on WSL may fail due to missing filesystem
+        # features. We avoid duplicate rules here and perform a best-effort chmod
+        # from a oneshot service below.
       ];
+    };
+
+    # Ensure essential tools are available early during WSL activation so
+    # activation scripts that call bare binaries (systemctl, grep) don't fail.
+    system.activationScripts.wsl-early-bin = lib.stringAfter ["users"] ''
+      mkdir -p /bin
+      ln -sf ${pkgs.gnugrep}/bin/grep /bin/grep
+      ln -sf ${pkgs.systemd}/bin/systemctl /bin/systemctl
+    '';
+
+    # Best-effort permissions hardening for /var/empty on WSL. We attempt the
+    # chmod but never fail the boot if it is unsupported by the underlying fs.
+    systemd.services.var-empty-perms = {
+      description = "Best-effort /var/empty permission hardening (WSL)";
+      after = ["systemd-tmpfiles-setup.service"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        ${pkgs.coreutils}/bin/chmod 0555 /var/empty || true
+      '';
     };
 
     # Environment packages and tools
@@ -261,6 +290,11 @@ in {
         config.initial_rows = 48
         config.font_size = 11.0
 
+        -- Prevent WezTerm from trying to resize the OS window when font size changes.
+        -- When the window is maximized this attempt always fails (logged as a warning),
+        -- and can cause Zellij to receive stale PTY dimensions at startup.
+        config.adjust_window_size_when_changing_font_size = false
+
         -- Default domain so new tabs open in WSL NixOS
         config.default_domain = "WSL:NixOS"
 
@@ -298,6 +332,8 @@ in {
           -- ── WSL ──────────────────────────────────────────────────────────
           -- sleep 0.2 lets WezTerm's ConPTY settle from its initial 80x24 to
           -- the actual window dimensions before resize -q queries TIOCGWINSZ.
+          -- Without the sleep, resize -q reads the stale 80x24 and zellij starts at that
+          -- size with no subsequent SIGWINCH to correct it.
           {
             label  = "WSL: Zellij",
             domain = { DomainName = "local" },
