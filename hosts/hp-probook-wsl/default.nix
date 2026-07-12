@@ -10,10 +10,57 @@
   hostName = "hp-probook-wsl";
   hostInfo = inputs.self.lib.hosts.${hostName};
   # nocheck: dangerous-shell-patterns
-  # "attach --create" is avoided (panics when server considers the session current).
-  # Fish one-liner: check list-sessions, then attach or create. No exec — if zellij
-  # exits or crashes, the fish shell (and the WezTerm tab) stays open.
-  zellijCmd = "if zellij list-sessions --no-formatting 2>/dev/null | string match -rq '^homelab-wsl\\b'; zellij attach homelab-wsl; else; zellij --session homelab-wsl; end";
+  # nocheck: dangerous-shell-patterns
+  # "attach --create" panics when the server considers the session current.
+  # list-sessions --no-formatting avoids ANSI codes in the match.
+  # Attaching to a "(current)" session also panics — the (current) check skips that.
+  # No exec — if zellij exits or crashes, the WezTerm tab stays open with fish.
+  # Uses only single-quoted strings so the value embeds safely in a Lua double-quoted string.
+  zellijCmd = ''
+    set -l zs (zellij list-sessions --no-formatting 2>/dev/null | string match -r '^homelab-wsl\b.*'); \
+    if test (count $zs) -gt 0; \
+      if not string match -rq '\(current\)' -- $zs; \
+        zellij attach homelab-wsl; \
+      end; \
+    else; \
+      zellij --session homelab-wsl; \
+    end'';
+
+  # Catppuccin Mocha color scheme for WezTerm, generated from the repo's color
+  # definitions. Used instead of the built-in scheme name for robustness.
+  weztermColors = let
+    c = inputs.self.lib.catppuccinColors.mocha;
+  in ''
+    config.colors = {
+      foreground = "${c.text}";
+      background = "${c.base}";
+      cursor_bg = "${c.rosewater}";
+      cursor_border = "${c.rosewater}";
+      cursor_fg = "${c.base}";
+      selection_bg = "${c.surface0}";
+      selection_fg = "${c.text}";
+      ansi = {
+        "${c.surface1}";
+        "${c.red}";
+        "${c.green}";
+        "${c.yellow}";
+        "${c.blue}";
+        "${c.mauve}";
+        "${c.teal}";
+        "${c.subtext1}";
+      };
+      brights = {
+        "${c.surface2}";
+        "${c.red}";
+        "${c.green}";
+        "${c.yellow}";
+        "${c.blue}";
+        "${c.mauve}";
+        "${c.teal}";
+        "${c.subtext0}";
+      };
+    };
+  '';
 in {
   imports = [
     ../shared-tui.nix
@@ -272,10 +319,8 @@ in {
 
     # nix-ld not needed — no GUI applications in headless TUI environment
 
-    # Deploy minimal WezTerm config to Windows so native WezTerm sees the WSL
-    # launch entries and SSH hosts. Only WSL-specific settings and launcher
-    # entries go here — visual preferences (color scheme, opacity, font, etc.)
-    # are Windows-side decisions and should not be dictated by Nix.
+    # Deploy WezTerm config to Windows with WSL launch entries, SSH hosts,
+    # Catppuccin Mocha color scheme, and frosted-glass semi-transparency.
     #
     # SSH host labels and names are not sensitive — they match what is already
     # in the Windows ~/.ssh/config which WezTerm reads for SSH domain resolution.
@@ -297,6 +342,19 @@ in {
 
         -- Default domain so new tabs open in WSL NixOS
         config.default_domain = "WSL:NixOS"
+
+        ${weztermColors}
+
+        -- Semi-transparent background for frosted glass effect on Windows DWM
+        config.window_background_opacity = 0.85
+
+        -- Padding matching shared terminal module configuration
+        config.window_padding = {
+          left = 16,
+          right = 16,
+          top = 16,
+          bottom = 16,
+        }
 
         -- Suppress auto-generated SSH domain entries from ~/.ssh/config.
         -- Without this, WezTerm creates a launcher entry for every Host in
@@ -340,7 +398,7 @@ in {
             args   = {
               "wsl.exe", "-d", "NixOS", "--",
               "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
-              "${zellijCmd}",
+              [[${zellijCmd}]],
             },
           },
           {
