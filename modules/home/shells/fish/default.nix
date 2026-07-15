@@ -241,19 +241,27 @@
       # Cleanup: kill stale EXITED sessions on startup to prevent clutter.
       if status is-interactive; and test "$ZELLIJ_AUTO_START" = 1; and not __emergency_check
         if __zellij_preflight_check
-          if not set -q ZELLIJ
+          # ZELLIJ_SESSION_NAME is set by Zellij inside any active session.
+          # ZELLIJ is NOT set by Zellij (guard on that variable is ineffective).
+          if not set -q ZELLIJ_SESSION_NAME
             if set -q SSH_CONNECTION
               # SSH: skip zellij to avoid nested sessions
             else
               # Kill stale exited sessions to prevent clutter
-              for line in (zellij list-sessions 2>/dev/null)
-                if string match -rq '\(EXITED' -- "$line"
+              for line in (zellij list-sessions --no-formatting 2>/dev/null)
+                if string match -rq '\[EXITED\]' -- "$line"
                   zellij kill-session (string split ' ' -- "$line")[1] 2>/dev/null
                 end
               end
 
-              if zellij list-sessions --no-formatting 2>/dev/null | string match -rq '^homelab-wsl\b'
-                zellij attach homelab-wsl
+              # Check whether homelab-wsl exists AND is not the current session.
+              # Attaching to the current session panics; skip zellij entirely in that case.
+              set -l session_line (zellij list-sessions --no-formatting 2>/dev/null | string match -r '^homelab-wsl\b.*')
+              if test -n "$session_line"
+                if not string match -rq '\(current\)' -- "$session_line"
+                  zellij attach homelab-wsl
+                end
+                # session is current — already inside zellij, do nothing
               else
                 zellij --session homelab-wsl
               end

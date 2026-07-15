@@ -27,6 +27,14 @@ in {
   };
 
   nixpkgs.overlays = [
+    # Prevent stale nixfmt-classic/nixfmt-rfc-style aliases from throwing.
+    # These were removed from nixpkgs and converted to throwing aliases in
+    # version 0.1.1031299. Something in the ISO evaluation chain still
+    # accesses them transitively.
+    (final: _prev: {
+      nixfmt-classic = final.nixfmt;
+      nixfmt-rfc-style = final.nixfmt;
+    })
     # ceph uses python311, which in current nixpkgs triggers sphinx-9.1.0 evaluation.
     # sphinx-9.1.0 dropped Python 3.11 support, causing evaluation failure during CI.
     # The installer does not need ceph-enabled qemu.

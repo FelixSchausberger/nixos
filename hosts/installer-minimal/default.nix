@@ -9,6 +9,28 @@
   repoPath = inputs.self;
   authorizedKeysFile = ../installer/authorized_keys;
   hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
+
+  # nixos-wizard references pkgs.nixfmt-classic in its postInstall, which was
+  # removed from nixpkgs and now throws. Patch the derivation to skip that.
+  nixos-wizard-patched = let
+    raw = inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  in
+    raw.overrideAttrs (_old: {
+      postInstall = ''
+        wrapProgram $out/bin/nixos-wizard \
+          --prefix PATH : ${pkgs.lib.makeBinPath [
+          inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}.disko
+          pkgs.bat
+          pkgs.nixfmt-rfc-style
+          pkgs.nixfmt
+          pkgs.util-linux
+          pkgs.gawk
+          pkgs.gnugrep
+          pkgs.gnused
+          pkgs.ntfs3g
+        ]}
+      '';
+    });
 in {
   imports = [
     (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
@@ -25,7 +47,22 @@ in {
     wms = [];
   };
 
+  # Disable aliases to prevent transitive access to throwing aliases
+  # (nixfmt-classic) during ISO evaluation. Provide redirects via overlays
+  # for any packages/scripts that still reference the old names.
+  # Disable aliases to isolate from removed alias evaluation that would
+  # break CI (nixfmt-classic was removed in current nixpkgs).
+  nixpkgs.config = {
+    allowAliases = false;
+  };
+
+  # Provide redirects for deprecated package names that downstream code
+  # may still reference directly from this pkgs set.
   nixpkgs.overlays = [
+    (final: _prev: {
+      nixfmt-classic = final.nixfmt;
+      nixfmt-rfc-style = final.nixfmt;
+    })
     # ceph uses python311, which in current nixpkgs triggers sphinx-9.1.0 evaluation.
     # sphinx-9.1.0 dropped Python 3.11 support, causing evaluation failure during CI.
     # The installer does not need ceph-enabled qemu.
@@ -156,7 +193,7 @@ in {
       tmux
     ])
     ++ [
-      inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default
+      nixos-wizard-patched
     ];
 
   environment.sessionVariables = {
