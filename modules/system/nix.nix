@@ -18,7 +18,7 @@
       # Keep aliases enabled - required for deprecated packages still using old names
       # Note: Some aliases like wrapGAppsHook have been converted to throw errors
       # and cannot be overridden via overlays due to evaluation order
-      allowAliases = true;
+      # allowAliases = true; # disabled for now - see https://github.com/NixOS/nixpkgs/pull/...
     };
     overlays = [
       inputs.nur.overlays.default
