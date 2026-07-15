@@ -11,10 +11,10 @@ rustPlatform.buildRustPackage rec {
     owner = "thomasschafer";
     repo = "scooter.hx";
     rev = "refs/heads/main";
-    hash = "sha256-gwQVCOa7ll5yx4T9hgVtuehxf7IF+rbIO9EahU6BfzY=";
+    hash = "sha256-N3EsZD4IbqlrrxlRDy4CcIz61yJu8Lv1P24Zxxva7pw=";
   };
 
-  cargoHash = "sha256-dGpQXUr+Ny2Kq3S75Qksluy3H8ajec+jsOf/0elSkVs=";
+  cargoHash = "sha256-wBQnWYdzRe6xsZZrFDHQoWBy535eQKoje+USopHTa00=";
 
   # Build only the library
   cargoBuildFlags = ["--lib"];
