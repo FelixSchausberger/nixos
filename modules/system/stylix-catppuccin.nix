@@ -67,6 +67,10 @@
           # Disable Stylix release check on HM side (tracks unstable, not a fixed release)
           stylix.enableReleaseChecks = false;
 
+          # Home-manager 25.05+ deprecates relying on stylix's cursor config to
+          # implicitly enable cursor generation. Must be explicit.
+          home.pointerCursor.enable = true;
+
           # Preserve Stylix-managed theme for GTK4 apps.
           # As of home.stateVersion 26.05, gtk.gtk4.theme defaults to null instead
           # of inheriting from config.gtk.theme — explicit assignment is required.

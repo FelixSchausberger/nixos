@@ -64,7 +64,7 @@
       };
       backup = {
         type = "disk";
-        device = "/dev/disk/by-id/ata-SanDisk_Extreme_Portable_SSD_20521E804590";
+        device = "/dev/disk/by-id/usb-Micron_CT4000X10PROSSD9_2419E8CE9042-0:0";
         content = {
           type = "gpt";
           partitions.backup = {

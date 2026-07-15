@@ -193,8 +193,8 @@
           <span class="status-label" id="labelDisplayMode">Display mode: --</span>
         </div>
         <div class="status-row">
-          <span class="dot unknown" id="dotSunshine"></span>
-          <span class="status-label" id="labelSunshine">Sunshine: --</span>
+          <span class="dot unknown" id="dotMoonshine"></span>
+          <span class="status-label" id="labelMoonshine">Moonshine: --</span>
         </div>
         <div class="status-row">
           <span class="dot unknown" id="dotSteam"></span>
@@ -214,8 +214,8 @@
           const online = d.desktop === "online";
           document.getElementById("dotDesktop").className = "dot " + d.desktop;
           document.getElementById("labelDesktop").innerHTML = "<strong>Desktop</strong> " + (online ? "online" : "offline");
-          document.getElementById("dotSunshine").className = "dot " + (online ? d.sunshine : "unknown");
-          document.getElementById("labelSunshine").innerHTML = "<strong>Sunshine</strong> " + (online ? d.sunshine : "--");
+          document.getElementById("dotMoonshine").className = "dot " + (online ? d.sunshine : "unknown");
+          document.getElementById("labelMoonshine").innerHTML = "<strong>Moonshine</strong> " + (online ? d.sunshine : "--");
           document.getElementById("dotSteam").className = "dot " + (online ? d.steam : "unknown");
           document.getElementById("labelSteam").innerHTML = "<strong>Steam</strong> " + (online ? d.steam : "--");
           const mode = online ? (d.display_mode || "unknown") : "unknown";
@@ -313,8 +313,8 @@ in {
 
     sunshinePort = lib.mkOption {
       type = lib.types.port;
-      default = 47990;
-      description = "Sunshine HTTP port on the desktop for status checks";
+      default = 47989;
+      description = "Moonshine HTTP port on the desktop for status checks";
     };
 
     steamRemotePlayPort = lib.mkOption {
