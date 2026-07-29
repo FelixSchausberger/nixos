@@ -69,6 +69,11 @@
       # Enable programmable completion
       shopt -s progcomp 2>/dev/null || true
 
+      # IRIS autocomplete assistant (fish-like suggestions for bash)
+      if command -v iris >/dev/null 2>&1; then
+        alias i="iris"
+      fi
+
       # Emergency shell functions - NixOS integrated
       ${(import ./emergency-functions.nix {inherit lib;}).emergencyShellFunctions.bash}
 

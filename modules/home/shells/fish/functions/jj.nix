@@ -284,21 +284,33 @@ in {
           return 1
         end
 
-        # Get first bookmark on working copy (jj bookmark list -r @ outputs "name: ..." format)
-        set -l bookmark (command jj bookmark list -r @ 2>/dev/null | awk '{print $1}' | string trim --chars=':')
+        # Search ancestors for an existing bookmark — handles the case where @ is an empty
+        # working copy with the bookmark on its parent commit.
+        set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
 
         if test -z "$bookmark"
           # No bookmark — auto-create one from the commit description
-          set -l description (command jj log -r '@' -T 'description' 2>/dev/null | string trim)
-          if test -z "$description"; or test "$description" = "working copy"
+          set -l change_id (command jj log -r '@' -T 'change_id' 2>/dev/null | string trim)
+          set -l description (command jj log -r "$change_id" -T 'description' 2>/dev/null | string trim)
+          if test -z "$description"
             echo "No commit message set. Use 'jj describe' or 'jjdescribe' first." >&2
             return 1
           end
 
           # "feat: add widget" → "feat/add-widget"
           set -l bookmark (echo "$description" | string replace -r '^([^:]+):\s*' '$1/' | string replace -a ' ' '-')
+          if not string match -qr '^[a-zA-Z0-9][a-zA-Z0-9/._-]*$' "$bookmark"
+            printf "Invalid bookmark name: '%s'. Set manually with 'jj bookmark set <name>'.\n" "$bookmark" >&2
+            return 1
+          end
           command jj bookmark set "$bookmark"
           echo "Auto-created bookmark: $bookmark"
+        else
+          # Auto-squash empty working copy into bookmarked parent
+          set -l is_empty (command jj log -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | string trim)
+          if test "$is_empty" = "true"
+            command jj squash 2>/dev/null || true
+          end
         end
 
         # Run pre-push quality checks
@@ -316,7 +328,7 @@ in {
         # Create PR with auto-merge label
         echo ""
         echo "Creating pull request with auto-merge..."
-        if not command gh pr create --fill --label auto-merge
+        if not command gh pr create --fill --label auto-merge --head "$bookmark"
           echo "Failed to create PR" >&2
           echo "   You may need to create it manually"
           return 1

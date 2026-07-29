@@ -20,13 +20,13 @@
       exit 0
     fi
 
-    if grep -qs connected "''${hdmi_status_files[@]}"; then
+    if grep -qsx "connected" "''${hdmi_status_files[@]}"; then
       echo "niri" > /run/m920q-hdmi-state
     else
       echo "headless" > /run/m920q-hdmi-state
     fi
 
-    exec /run/current-system/sw/bin/systemctl start m920q-mode-switch.timer
+    exec /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
   '';
 
   modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
@@ -35,14 +35,14 @@
     exec 9>/run/m920q-mode-switch.lock
     /run/current-system/sw/bin/flock -n 9 || exit 0
 
-    profile=/nix/var/nix/profiles/system
-    headless_switch="$profile/bin/switch-to-configuration"
-    gui_switch="$profile/specialisation/niri/bin/switch-to-configuration"
+    current_system=/run/current-system
+    headless_switch="$current_system/bin/switch-to-configuration"
+    gui_switch="$current_system/specialisation/niri/bin/switch-to-configuration"
     hm_service="home-manager-${user}.service"
     mode_file=/run/m920q-current-mode
     state_file=/run/m920q-hdmi-state
 
-    timeout 30 bash -c 'until /run/current-system/sw/bin/nix-daemon --version >/dev/null 2>&1; do sleep 0.5; done' 2>/dev/null || true
+    timeout 30 ${pkgs.bash}/bin/bash -c 'until /run/current-system/sw/bin/nix-daemon --version >/dev/null 2>&1; do sleep 0.5; done' 2>/dev/null || true
 
     if [[ ! -f "$state_file" ]]; then
       exit 0
@@ -113,8 +113,14 @@ in {
       niri = {
         wms = ["niri"];
         profile = "default";
-        extraConfig = {pkgs, ...}: {
-          imports = [../../modules/system/wm/niri.nix];
+        extraConfig = {
+          pkgs,
+          lib,
+          ...
+        }: {
+          imports = [
+            ../../modules/system/wm/niri.nix
+          ];
 
           modules.system.airplayReceiver.enable = true;
 
@@ -177,14 +183,18 @@ in {
     headless = true;
   };
 
-  environment.systemPackages = with pkgs; [
-    wakeonlan # Send magic packets to wake desktop from homelab
-    powertop # CPU C-state residency, wakeups/sec, power estimation
-    iotop # Per-process disk IO monitoring
-    htop # Process monitoring (already included via btop but useful)
-    lm_sensors # Temperature, voltage, fan speed via hwmon
-    immich-go # Bulk import tool for Immich
-  ];
+  environment.systemPackages = with pkgs;
+    [
+      wakeonlan # Send magic packets to wake desktop from homelab
+      powertop # CPU C-state residency, wakeups/sec, power estimation
+      iotop # Per-process disk IO monitoring
+      htop # Process monitoring (already included via btop but useful)
+      lm_sensors # Temperature, voltage, fan speed via hwmon
+      immich-go # Bulk import tool for Immich
+    ]
+    ++ [
+      inputs.iris.packages.${pkgs.stdenv.hostPlatform.system}.iris
+    ];
 
   networking.firewall.allowedUDPPortRanges = [
     {
@@ -219,9 +229,6 @@ in {
         networkConfig.DHCP = "no";
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
-        dns = [
-          "192.168.178.1"
-        ];
         domains = ["local"];
       };
     };
@@ -261,7 +268,7 @@ in {
   };
 
   services.udev.extraRules = ''
-    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", ENV{DEVTYPE}=="drm_minor", RUN+="${pkgs.systemd}/bin/systemctl start m920q-hdmi-detect.service"
+    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="${pkgs.systemd}/bin/systemctl start m920q-hdmi-detect.service"
   '';
 
   systemd.services.nix-daemon.serviceConfig.KillMode = lib.mkForce "control-group";
@@ -370,12 +377,30 @@ in {
 
   modules.system.homelab = {
     adguardhome.enable = true;
-    backup.enable = true;
+    backup = {
+      enable = true;
+      sanoidDatasets."dpool/data" = {
+        hourly = 24;
+        daily = 7;
+        weekly = 4;
+        monthly = 12;
+        yearly = 1;
+      };
+      syncoidCommands."dpool-data-to-bpool-backup" = {
+        source = "dpool/data";
+        target = "bpool/backup/data";
+      };
+    };
     immich = {
       enable = true;
       host = "0.0.0.0";
       openFirewall = true;
       dataPath = "/per/mnt/data/Media/Pictures";
+      # thumbs and encoded-video are latency-sensitive (served on every timeline scroll).
+      # Placing them on NVMe (rpool/eyd/per) avoids random-read stalls on the SMR SATA dpool.
+      # Originals stay on dpool where sequential read performance is acceptable.
+      thumbsPath = "/per/immich/thumbs";
+      encodedVideoPath = "/per/immich/encoded-video";
     };
     monitoring = {
       enable = true;
@@ -391,10 +416,16 @@ in {
       openFirewall = true;
       dataPath = "/per/mnt/data/nextcloud";
     };
+    caddyProxy = {
+      enable = true;
+      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+    };
     ntfy.enable = true;
     remoteControl = {
       enable = true;
-      enableTailscaleServe = true;
+      # Tailscale Serve replaced by Caddy reverse proxy; caddyProxy handles
+      # the HTTPS endpoint at remote-control.m920q.tailf2f0ca.ts.net.
+      enableTailscaleServe = false;
     };
     samba.enable = true;
     tailscale = {
