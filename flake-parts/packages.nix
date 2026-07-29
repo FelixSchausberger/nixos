@@ -19,8 +19,14 @@
       # Editor with Steel plugin support
       scooter-hx = pkgs.callPackage ../pkgs/scooter-hx {};
 
+      # SSH connection manager
+      dssh = pkgs.callPackage ../pkgs/dssh {};
+
       # Applications
       quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
+
+      # IRIS shell autocomplete assistant
+      iris = inputs.iris.packages.${pkgs.stdenv.hostPlatform.system}.iris;
 
       # Vitals health monitoring (from local vitals repo)
       vitals-daemon = inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.daemon;

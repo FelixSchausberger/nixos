@@ -32,15 +32,15 @@
       }
     ];
 
-    # systemd-resolved acts as a resilient DNS proxy on port 53 for LAN clients.
-    # It forwards queries to AdGuard (on 127.0.0.1:5353) and falls back to
-    # public resolvers when AdGuard is unreachable (e.g. during rebuilds).
+    # AdGuard directly serves LAN clients on port 53 (IPv4).
+    # systemd-resolved handles local m920q resolution and IPv6 LAN DNS,
+    # forwarding to AdGuard on 127.0.0.1:53.
+    # FallbackDNS kicks in for the m920q itself when AdGuard is unreachable.
     services.resolved.settings.Resolve = {
-      DNS = "127.0.0.1:5353";
+      DNS = "127.0.0.1:53";
       FallbackDNS = "1.1.1.1 9.9.9.9";
-      DNSStubListenerExtra = "192.168.178.2";
+      DNSStubListenerExtra = "fd50:5bc:d390:0:ea6a:64ff:fe9f:a050";
     };
-    # Keep DNSStubListener enabled (default) on 127.0.0.53 for local resolution.
 
     services.adguardhome = {
       enable = true;
@@ -57,8 +57,8 @@
             "9.9.9.9"
             "1.1.1.1"
           ];
-          bind_hosts = ["127.0.0.1"];
-          port = 5353;
+          bind_hosts = ["127.0.0.1" "192.168.178.2"];
+          port = 53;
         };
         querylog.enabled = true;
         querylog.interval = "7d";
@@ -133,8 +133,7 @@
       RestartSec = lib.mkForce "5s";
     };
 
-    # Port 53 is now served by systemd-resolved's stub listener for LAN clients.
-    # The nixpkgs openFirewall option only opens port 3000 (admin UI).
+    # Port 53 is served directly by AdGuard Home for LAN clients.
     networking.firewall = {
       allowedTCPPorts = [53];
       allowedUDPPorts = [53];

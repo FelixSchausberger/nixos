@@ -8,8 +8,6 @@
   has_gaming_gui_assertion = true;
   has_hyprland = false;
   has_steam_gamemode_assertion = true;
-  has_sunshine_gui_assertion = true;
-  has_sunshine_wms_assertion = true;
   hostname = "desktop";
   is_gui = true;
   maintenance_enabled = true;

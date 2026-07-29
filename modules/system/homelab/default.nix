@@ -4,6 +4,7 @@
   imports = [
     ./adguardhome.nix
     ./backup.nix
+    ./caddy-proxy.nix
     ./immich.nix
     ./monitoring.nix
     ./navidrome.nix

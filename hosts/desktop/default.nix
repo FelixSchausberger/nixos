@@ -1,7 +1,7 @@
 # Desktop workstation host: AMD gaming/rendering machine with Niri as the only WM.
-# Virtual-1 (vkms) is always enabled for Sunshine remote streaming.
-# DP-3 starts disabled and can be toggled via `desktop-display-mode`.
-# niri natively handles DP hotplug, so no udev rules or specialisations needed.
+# Moonshine provides headless game streaming in isolated Wayland compositors,
+# eliminating the need for virtual outputs (vkms/Virtual-1).
+# DP-3 can be toggled via `desktop-display-mode` for power saving.
 {
   inputs,
   lib,
@@ -41,7 +41,8 @@ in {
       ../../modules/system/gaming.nix
       ../../modules/system/homelab
       ../../modules/system/hardware/power-management.nix
-      ../../modules/system/sunshine.nix
+      inputs.moonshine.nixosModules.default
+      ../../modules/system/moonshine.nix
       ../../modules/system/ssh.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
@@ -94,11 +95,8 @@ in {
   };
 
   boot = {
-    # Virtual output for away mode and streaming without occupying physical GPU connectors
-    kernelModules = ["vkms"];
-
-    # Auto-import the games data pool (1TB WD Blue SN5000) on boot
-    zfs.extraPools = ["dpool"];
+    # Auto-import the games data pool (1TB WD Blue SN5000) and USB backup pool (1TB SanDisk Extreme) on boot
+    zfs.extraPools = ["dpool" "bpool"];
   };
 
   # fwupd metadata refresh intermittently exits with auth errors during activation,
@@ -151,9 +149,9 @@ in {
     27036
   ];
 
-  # Sunshine game streaming for remote access via Moonlight
-  # AMD VAAPI encoding is available via amdgpu driver (hardware.profiles.amdGpu above)
-  modules.system.sunshine.enable = true;
+  # Moonshine game streaming for remote access via Moonlight
+  # Isolated compositor per stream; no virtual outputs needed
+  modules.system.moonshine.enable = true;
   modules.system.gaming.enable = true;
   modules.system.steam.autoStart = true;
 
@@ -177,5 +175,26 @@ in {
       alerts = true;
       ntfyUrl = "http://m920q:2586/homelab-alerts";
     };
+  };
+
+  modules.system.homelab.backup = {
+    enable = true;
+    syncoidInterval = "weekly";
+    syncoidCommands = {
+      "desktop-home-to-bpool" = {
+        source = "rpool/eyd/home";
+        target = "bpool/desktop/home";
+      };
+      "desktop-per-to-bpool" = {
+        source = "rpool/eyd/per";
+        target = "bpool/desktop/per";
+      };
+    };
+  };
+
+  fileSystems."/per/mnt/backup" = {
+    device = "bpool/desktop";
+    fsType = "zfs";
+    neededForBoot = false;
   };
 }
