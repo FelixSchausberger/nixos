@@ -76,18 +76,39 @@ in {
         adminpassFile = config.sops.secrets."nextcloud/admin-password".path;
       };
       settings = {
-        trusted_domains = [
-          "nextcloud.local"
-          "localhost"
-          "127.0.0.1"
-          "192.168.178.2"
-          "100.105.37.12"
-        ];
+        trusted_domains =
+          [
+            "nextcloud.local"
+            "localhost"
+            "127.0.0.1"
+            "192.168.178.2"
+            "100.105.37.12"
+          ]
+          # Allow access via the Caddy Tailscale reverse proxy when enabled.
+          ++ lib.optionals config.modules.system.homelab.caddyProxy.enable [
+            config.modules.system.homelab.caddyProxy.tailnetDomain
+          ];
+
+        # When Caddy serves Nextcloud at /nextcloud, these settings ensure
+        # Nextcloud generates correct URLs and WebDAV paths. overwriteprotocol
+        # forces HTTPS since Caddy terminates TLS and Nextcloud sees plain HTTP.
+        overwritewebroot = lib.mkIf config.modules.system.homelab.caddyProxy.enable "/nextcloud";
+        overwriteprotocol = lib.mkIf config.modules.system.homelab.caddyProxy.enable "https";
       };
       maxUploadSize = "16G";
       https = false;
       configureRedis = true;
       autoUpdateApps.enable = true;
+
+      extraApps = {
+        inherit
+          (pkgs.nextcloud33Packages.apps)
+          calendar
+          contacts
+          tasks
+          ;
+      };
+      extraAppsEnable = true;
 
       phpOptions = {
         "opcache.memory_consumption" = "256";
@@ -107,7 +128,9 @@ in {
 
     services.redis.servers.nextcloud.settings = {
       maxmemory = "256mb";
-      maxmemory-policy = "allkeys-lru";
+      # noeviction ensures Redis never silently drops file-lock keys under memory pressure.
+      # allkeys-lru would evict active locks, causing Obsidian save conflicts.
+      "maxmemory-policy" = "noeviction";
     };
 
     services.nginx = {
@@ -210,7 +233,16 @@ in {
       };
       script = let
         occ = lib.getExe config.services.nextcloud.occ;
+        jq = lib.getExe' pkgs.jq "jq";
         setfacl = lib.getExe' pkgs.acl "setfacl";
+        deleteExisting = ''
+          echo "Removing all existing external storage mounts..."
+          ${occ} files_external:list --output json \
+            | ${jq} -r '.[].mount_id' \
+            | while read -r id; do
+                ${occ} files_external:delete "$id" --yes
+              done
+        '';
         mountScripts = lib.concatStringsSep "\n" (
           map (m: ''
             echo "Configuring external storage: ${m.name} (${m.path})"
@@ -219,7 +251,7 @@ in {
               "${m.name}" \
               "local" \
               "null::null" \
-              -c datadir="${m.path}" || true
+              -c datadir="${m.path}"
           '')
           cfg.externalStorage
         );
@@ -227,10 +259,10 @@ in {
         set -euo pipefail
         echo "Enabling files_external app..."
         ${occ} app:enable files_external
+        ${deleteExisting}
         ${mountScripts}
         echo "Scanning files into Nextcloud file cache..."
-        ADMIN_USER=$(${occ} user:list 2>/dev/null | head -1 | grep -oP '-\s+\K\S+' || echo "admin")
-        ${occ} files:scan "$ADMIN_USER" 2>&1 || true
+        ${occ} files:scan admin 2>&1 || true
         echo "Cleaning up orphaned file cache entries..."
         ${occ} files:cleanup 2>&1 || true
         echo "Nextcloud external storage configured."
@@ -264,7 +296,8 @@ in {
       wantedBy = ["timers.target"];
       timerConfig = {
         OnBootSec = "5min";
-        OnUnitActiveSec = "15min";
+        # 1h reduces file-lock contention during active Obsidian editing sessions.
+        OnUnitActiveSec = "1h";
       };
     };
 

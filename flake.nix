@@ -247,6 +247,15 @@
       inputs.home-manager.follows = "home-manager";
     };
 
+    # Game streaming (headless Moonlight server)
+    moonshine.url = "github:hgaiser/moonshine";
+
+    # Shell autocomplete assistant (fish-like completions for bash)
+    iris = {
+      url = "github:versenilvis/IRIS";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Themes
     stylix = {
       url = "github:danth/stylix";

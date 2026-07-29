@@ -1,7 +1,9 @@
 keys:
   - &user age1njfl602md7qt36zg957elj8y2xjhcvr0s2pwyxegw64ut6cjzulqs9azj8 # ssh-to-age -i ~/.ssh/id_ed25519.pub
+  - &nixos age1n099w4jalj7myx87cy7ld6hjcy38u6tsml9nyzrhz6hhceruepjs7xlh46 # age-keygen for /per/system/sops-key.txt
 creation_rules:
   - path_regex: secrets/[^/]+\.(json|yaml|yml)$
     key_groups:
       - age:
           - *user
+          - *nixos

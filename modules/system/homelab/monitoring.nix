@@ -93,6 +93,21 @@ in {
           "thermal_zone"
         ];
       };
+      exporters.fritz = {
+        enable = true;
+        port = 9787;
+        listenAddress = "127.0.0.1";
+        settings.devices = [
+          {
+            name = "Fritz!Box 4050";
+            # Direct LAN IP — more reliable than fritz.box DNS
+            hostname = "192.168.178.1";
+            username = "prometheus";
+            password_file = config.sops.secrets."fritzbox/password".path;
+          }
+        ];
+      };
+
       scrapeConfigs = let
         hasAppTargets =
           config.modules.system.homelab.immich.enable || config.modules.system.homelab.nextcloud.enable;
@@ -120,6 +135,17 @@ in {
             static_configs = [
               {
                 targets = ["127.0.0.1:9187"];
+              }
+            ];
+          }
+          {
+            job_name = "fritz";
+            scrape_interval = "60s";
+            # Fritz!Box TR-064 queries are slow; 60s prevents overloading the device
+            scrape_timeout = "45s";
+            static_configs = [
+              {
+                targets = ["127.0.0.1:9787"];
               }
             ];
           }
@@ -230,6 +256,15 @@ in {
           }
         ];
 
+        dashboards.settings.providers = [
+          {
+            name = "fritz";
+            type = "file";
+            disableDeletion = true;
+            options.path = ./fritz-dashboard.json;
+          }
+        ];
+
         # Grafana alerting contact point and notification policy
         alerting.contactPoints.settings = lib.mkIf cfg.alerting.enable {
           apiVersion = 1;
@@ -274,6 +309,7 @@ in {
     sops.secrets = {
       "grafana/admin-password".owner = "grafana";
       "grafana/secret-key".owner = "grafana";
+      "fritzbox/password".owner = "fritz-exporter";
     };
     sops.templates."grafana-env" = {
       content = "GF_SECURITY_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}";
@@ -335,6 +371,13 @@ in {
             # Generic host checks (disk, memory, nix store, failed units) are
             # handled by system-health-check. Only Prometheus-specific service
             # monitoring belongs here.
+            {
+              name = "FritzboxWanDown";
+              # fritz_upnp_uptime_seconds drops to 0 when WAN connection is lost
+              query = "fritz_upnp_uptime_seconds == 0";
+              priority = "urgent";
+              message = "Fritz!Box WAN connection is down (uptime = 0)";
+            }
             {
               name = "NodeExporterDown";
               query = ''up{job="node"} == 0'';

@@ -2,7 +2,10 @@
 # Used by hosts that need nixos-wizard or other packages with dependency issues
 _: {
   nixpkgs.overlays = [
-    (_final: prev: {
+    (final: prev: {
+      # niri-stable's libdisplay-info-sys v0.3.0 requires libdisplay-info < 0.4.0
+      niri = prev.niri.override {libdisplay-info = final.libdisplay-info_0_2;};
+
       # python-lsp-server has flaky tests that fail in CI, disable them
       python312Packages = prev.python312Packages.overrideScope (
         _: pyprev: {
