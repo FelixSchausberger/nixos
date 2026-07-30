@@ -44,6 +44,7 @@ in {
       inputs.moonshine.nixosModules.default
       ../../modules/system/moonshine.nix
       ../../modules/system/ssh.nix
+      ../../modules/system/nixpkgs-overlays.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
