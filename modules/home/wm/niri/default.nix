@@ -381,7 +381,7 @@ in {
         command = [
           "${pkgs.bash}/bin/bash"
           "-c"
-          "while ! ${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable}/bin/niri msg output DP-3 off 2>/dev/null; do sleep 0.2; done"
+          "while ! ${pkgs.niri}/bin/niri msg output DP-3 off 2>/dev/null; do sleep 0.2; done"
         ];
       };
 
