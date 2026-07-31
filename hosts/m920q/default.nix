@@ -59,6 +59,19 @@
       exit 0
     fi
 
+    # Re-verify live HDMI hardware before committing the switch; the state file
+    # may be stale if a detect run raced with a previous activation.
+    hdmi_status_files=(/sys/class/drm/*-HDMI-A-*/status)
+    actual_mode="headless"
+    if (( ''${#hdmi_status_files[@]} > 0 )) && grep -qsx "connected" "''${hdmi_status_files[@]}"; then
+      actual_mode="niri"
+    fi
+
+    if [[ "$actual_mode" != "$desired_mode" ]]; then
+      echo "$actual_mode" > "$state_file"
+      exit 0
+    fi
+
     if [[ "$current_mode" == "niri" ]]; then
       sudo -u ${user} DISPLAY= WAYLAND_DISPLAY= XDG_RUNTIME_DIR=/run/user/1000 /run/current-system/sw/bin/niri msg quit 2>/dev/null || true
       timeout 5 bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
@@ -74,8 +87,18 @@
 
     systemctl restart "$hm_service"
     systemctl restart getty@tty1.service
-    if [[ "$desired_mode" == "niri" ]]; then
-      systemctl start bluetooth.service
+
+    # Re-evaluate after the (slow) switch: if hardware state changed while the
+    # lock was held, schedule a corrective switch once the lock is released.
+    hdmi_status_files=(/sys/class/drm/*-HDMI-A-*/status)
+    actual_mode="headless"
+    if (( ''${#hdmi_status_files[@]} > 0 )) && grep -qsx "connected" "''${hdmi_status_files[@]}"; then
+      actual_mode="niri"
+    fi
+
+    if [[ "$actual_mode" != "$desired_mode" ]]; then
+      echo "$actual_mode" > "$state_file"
+      /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
     fi
   '';
 
