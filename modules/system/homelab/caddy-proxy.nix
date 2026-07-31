@@ -14,6 +14,25 @@
       reverse_proxy http://127.0.0.1:${toString upstreamPort}
     }
   '';
+
+  # CalDAV/CardDAV clients and Nextcloud's service discovery probe the
+  # .well-known endpoints at the site root; with Nextcloud served under a
+  # sub-path these must redirect into it. nginx handles this natively for
+  # nextcloud.local, Caddy does not.
+  mkWellKnownRedirects = path: ''
+    handle /.well-known/carddav {
+      redir ${path}/remote.php/dav permanent
+    }
+    handle /.well-known/caldav {
+      redir ${path}/remote.php/dav permanent
+    }
+    handle /.well-known/host-meta {
+      redir ${path}/public.php?service=host-meta permanent
+    }
+    handle /.well-known/host-meta.json {
+      redir ${path}/public.php?service=host-meta-json permanent
+    }
+  '';
 in {
   options.modules.system.homelab.caddyProxy = {
     enable = lib.mkEnableOption "Caddy reverse proxy for Tailscale-accessible homelab services";
@@ -124,6 +143,9 @@ in {
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
           + lib.optionalString cfg.remoteControl (mkRoute "remote-control" hl.remoteControl.port)
+          # .well-known redirects win over the Immich catch-all below: Caddy
+          # routes to the handle whose path matcher is the longest match.
+          + lib.optionalString cfg.nextcloud (mkWellKnownRedirects "/nextcloud")
           # Immich is served at root via a catch-all handle (lower priority than handle_path
           # blocks above). Tailscale only issues certs for the exact MagicDNS hostname, not
           # subdomains, so a dedicated virtualHost is not possible without external DNS.
