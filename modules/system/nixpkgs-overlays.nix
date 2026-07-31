@@ -15,6 +15,15 @@ _: {
         }
       );
 
+      # poetry 2.4.1 has flaky test_executor tests that fail in the nix sandbox
+      python314Packages = prev.python314Packages.overrideScope (
+        _: pyprev: {
+          poetry = pyprev.poetry.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+        }
+      );
+
       # aioboto3/aiobotocore tests fail with aiohttp 3.13+ due to "Duplicate 'Server' header"
       # in moto's mock server. Disable checks until upstream fixes the compatibility.
       python313Packages = prev.python313Packages.overrideScope (
