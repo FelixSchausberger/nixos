@@ -35,9 +35,15 @@
     exec 9>/run/m920q-mode-switch.lock
     /run/current-system/sw/bin/flock -n 9 || exit 0
 
-    current_system=/run/current-system
-    headless_switch="$current_system/bin/switch-to-configuration"
-    gui_switch="$current_system/specialisation/niri/bin/switch-to-configuration"
+    # The base toplevel is the one carrying specialisation/niri; a leaf
+    # toplevel's own switch-to-configuration re-activates itself, so the base
+    # path is recorded at base activation time and used for both directions.
+    base_toplevel=$(cat /run/m920q-base-toplevel 2>/dev/null || true)
+    if [[ ! -d "$base_toplevel/specialisation/niri" ]]; then
+      base_toplevel=/run/current-system
+    fi
+    headless_switch="$base_toplevel/bin/switch-to-configuration"
+    gui_switch="$base_toplevel/specialisation/niri/bin/switch-to-configuration"
     hm_service="home-manager-${user}.service"
     mode_file=/run/m920q-current-mode
     state_file=/run/m920q-hdmi-state
@@ -74,7 +80,7 @@
 
     if [[ "$current_mode" == "niri" ]]; then
       sudo -u ${user} DISPLAY= WAYLAND_DISPLAY= XDG_RUNTIME_DIR=/run/user/1000 /run/current-system/sw/bin/niri msg quit 2>/dev/null || true
-      timeout 5 bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
+      timeout 5 ${pkgs.bash}/bin/bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
     fi
 
     if [[ "$desired_mode" == "niri" ]]; then
@@ -271,6 +277,13 @@ in {
       ExecStart = hdmiDetectScript;
     };
   };
+
+  # Records the base toplevel path so mode-switch can switch back to headless
+  # even when /run/current-system currently points at the niri leaf. Runs only
+  # in the base (headless) config; the niri leaf must not overwrite it.
+  system.activationScripts.m920q-base-toplevel = lib.mkIf (!config.hostConfig.isGui) (lib.stringAfter ["specialfs"] ''
+    echo "$systemConfig" > /run/m920q-base-toplevel
+  '');
 
   systemd.timers.m920q-mode-switch = {
     description = "Debounced M920q mode switch after HDMI hotplug";

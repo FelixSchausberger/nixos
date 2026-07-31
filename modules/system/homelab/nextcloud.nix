@@ -65,6 +65,11 @@ in {
     services.nextcloud = {
       enable = true;
       hostName = "nextcloud.local";
+      # Pinned to nextcloud33 for the staged upgrade path on this pre-26.11
+      # install: NixOS requires one major version step at a time. After 33 has
+      # run successfully, bump to `pkgs.nextcloud34`; `occ upgrade` runs
+      # automatically during activation. nextcloud33 is removed from nixpkgs
+      # once unsupported upstream.
       package = pkgs.nextcloud33;
       datadir = cfg.dataPath;
       config = {
@@ -91,9 +96,19 @@ in {
 
         # When Caddy serves Nextcloud at /nextcloud, these settings ensure
         # Nextcloud generates correct URLs and WebDAV paths. overwriteprotocol
-        # forces HTTPS since Caddy terminates TLS and Nextcloud sees plain HTTP.
+        # forces HTTPS since Caddy terminates TLS and Nextcloud sees plain HTTP;
+        # overwrite.cli.url keeps occ-generated URLs (notifications, link
+        # shares) pointing at the public Tailscale address.
         overwritewebroot = lib.mkIf config.modules.system.homelab.caddyProxy.enable "/nextcloud";
         overwriteprotocol = lib.mkIf config.modules.system.homelab.caddyProxy.enable "https";
+        overwrite.cli.url =
+          lib.mkIf config.modules.system.homelab.caddyProxy.enable
+          "https://${config.modules.system.homelab.caddyProxy.tailnetDomain}/nextcloud/";
+
+        # Run maintenance (DB migrations, scans) outside active hours.
+        maintenance_window_start = 1;
+        # Route Nextcloud's PHP log to journald (journalctl -t Nextcloud).
+        log_type = "systemd";
       };
       maxUploadSize = "16G";
       https = false;
@@ -101,8 +116,10 @@ in {
       autoUpdateApps.enable = true;
 
       extraApps = {
+        # Apps follow the configured package version, so a Nextcloud major
+        # upgrade only requires changing `services.nextcloud.package`.
         inherit
-          (pkgs.nextcloud33Packages.apps)
+          (config.services.nextcloud.package.packages.apps)
           calendar
           contacts
           tasks

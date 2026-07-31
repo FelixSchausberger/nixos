@@ -57,6 +57,23 @@
         exit 1
       fi
 
+      # Garbage-collect leftover local bookmarks whose remote branch no longer
+      # exists on origin. With delete-branch-on-merge, a missing @origin ref
+      # means the PR was merged or the branch was removed; the commits stay
+      # reachable in history, so dropping the pointer is safe. The current
+      # bookmark and main are always kept.
+      current_bookmark=$(jj bookmark list -r '@' 2>/dev/null | grep -E '^[^ :]+:' | sed 's/:.*//' | head -1) || true
+      echo "Cleaning up leftover bookmarks..."
+      for bm in $(jj bookmark list 2>/dev/null | grep -E '^[^ :]+:' | sed 's/:.*//'); do
+        [ "$bm" = "main" ] && continue
+        [ "$bm" = "$current_bookmark" ] && continue
+        if ! jj bookmark list --all "$bm" 2>/dev/null | grep -q '^  @origin'; then
+          if jj bookmark delete "$bm" 2>/dev/null; then
+            echo "  deleted leftover bookmark: $bm"
+          fi
+        fi
+      done
+
       echo ""
       echo "Working copy is based on main@origin. No conflicts detected."
       echo ""
