@@ -53,6 +53,7 @@ in {
     basalt # Modern shell written in Rust with a focus on portability and performance
     cacert # CA certificates for TLS connections
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
+    dssh # Dead-simple SSH connection manager CLI and TUI
     fclones # Efficient Duplicate File Finder and Remover
     gh # GitHub CLI - pull requests, issues, releases, and more
     lan-mouse # Software KVM switch for sharing mouse and keyboard over network

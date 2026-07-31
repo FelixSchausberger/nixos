@@ -2,10 +2,7 @@
 # Used by hosts that need nixos-wizard or other packages with dependency issues
 _: {
   nixpkgs.overlays = [
-    (final: prev: {
-      # niri-stable's libdisplay-info-sys v0.3.0 requires libdisplay-info < 0.4.0
-      niri = prev.niri.override {libdisplay-info = final.libdisplay-info_0_2;};
-
+    (_final: prev: {
       # python-lsp-server has flaky tests that fail in CI, disable them
       python312Packages = prev.python312Packages.overrideScope (
         _: pyprev: {
@@ -16,13 +13,9 @@ _: {
       );
 
       # poetry 2.4.1 has flaky test_executor tests that fail in the nix sandbox
-      python314Packages = prev.python314Packages.overrideScope (
-        _: pyprev: {
-          poetry = pyprev.poetry.overridePythonAttrs (_: {
-            doCheck = false;
-          });
-        }
-      );
+      poetry = prev.poetry.overridePythonAttrs (_: {
+        doCheck = false;
+      });
 
       # aioboto3/aiobotocore tests fail with aiohttp 3.13+ due to "Duplicate 'Server' header"
       # in moto's mock server. Disable checks until upstream fixes the compatibility.

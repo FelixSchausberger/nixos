@@ -28,6 +28,7 @@
         "zjstatus-hints" = inputs.zjstatus-hints.packages.${prev.stdenv.hostPlatform.system}.default;
         helix-steel-modules = final.callPackage ../../pkgs/helix-steel-modules {};
         scooter-hx = final.callPackage ../../pkgs/scooter-hx {};
+        dssh = final.callPackage ../../pkgs/dssh {};
       })
     ];
   };
