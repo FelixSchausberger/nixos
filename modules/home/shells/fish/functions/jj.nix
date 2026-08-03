@@ -306,16 +306,18 @@ in {
         set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
 
         if test -z "$bookmark"
-          # No bookmark — auto-create one from the commit description
+          # No bookmark — auto-create one from the commit description's first line.
+          # Resolve @ via change_id so the description is read from the actual change
+          # even when @ is an empty working copy.
           set -l change_id (command jj log -r '@' -T 'change_id' 2>/dev/null | string trim)
-          set -l description (command jj log -r "$change_id" -T 'description' 2>/dev/null | string trim)
-          if test -z "$description"
+          set -l first_line (command jj log -r "$change_id" -T 'description.first_line()' 2>/dev/null | string trim)
+          if test -z "$first_line"; or test "$first_line" = "working copy"
             echo "No commit message set. Use 'jj describe' or 'jjdescribe' first." >&2
             return 1
           end
 
           # "feat: add widget" → "feat/add-widget"
-          set -l bookmark (echo "$description" | string replace -r '^([^:]+):\s*' '$1/' | string replace -a ' ' '-')
+          set -l bookmark (echo "$first_line" | string replace -r '^([^:]+):\s*' '$1/' | string replace -a ' ' '-' | string replace -ar '[^a-zA-Z0-9/_-]' "" | string trim)
           if not string match -qr '^[a-zA-Z0-9][a-zA-Z0-9/._-]*$' "$bookmark"
             printf "Invalid bookmark name: '%s'. Set manually with 'jj bookmark set <name>'.\n" "$bookmark" >&2
             return 1
@@ -335,8 +337,9 @@ in {
         nix fmt 2>/dev/null || true
         prek run --all-files 2>/dev/null || true
 
-        # Push changes
+        # Push changes (track remote first if needed)
         echo "Pushing changes..."
+        command jj bookmark track "$bookmark" --remote=origin 2>/dev/null || true
         if not command jj git push
           echo "Failed to push changes" >&2
           return 1

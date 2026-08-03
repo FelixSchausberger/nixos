@@ -14,6 +14,8 @@
     legacyPackages = pkgs;
 
     packages = {
+      jj-lsp = pkgs.callPackage ../pkgs/jj-lsp {};
+
       lumen = pkgs.callPackage ../pkgs/lumen {};
 
       # Editor with Steel plugin support

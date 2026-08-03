@@ -1,18 +1,26 @@
-{pkgs, ...}: {
-  home.packages = with pkgs; [
-    alejandra # Uncompromising Nix Code Formatter
-    lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
+{
+  inputs,
+  pkgs,
+  ...
+}: {
+  home.packages = with pkgs;
+    [
+      alejandra # Uncompromising Nix Code Formatter
+      lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
 
-    # Core language servers
-    vscode-langservers-extracted # HTML/CSS/JSON LSPs
-    yaml-language-server # YAML LSP
-    bash-language-server # Bash LSP
+      # Core language servers
+      vscode-langservers-extracted # HTML/CSS/JSON LSPs
+      yaml-language-server # YAML LSP
+      bash-language-server # Bash LSP
 
-    # Core formatters
-    shfmt # Shell script formatter
-    taplo # TOML formatter
-    yamlfmt # YAML formatter
-  ];
+      # Core formatters
+      shfmt # Shell script formatter
+      taplo # TOML formatter
+      yamlfmt # YAML formatter
+    ]
+    ++ [
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-lsp # Conflict resolution LSP for jj
+    ];
 
   programs.helix.languages = {
     language-server = {
@@ -39,6 +47,10 @@
             };
           };
         };
+      };
+
+      jj-lsp = {
+        command = "jj-lsp";
       };
 
       markdown-oxide = {
@@ -80,7 +92,7 @@
         auto-format = true;
         file-types = ["nix"];
         formatter.command = "alejandra";
-        language-servers = ["lsp-ai"];
+        language-servers = ["lsp-ai" "jj-lsp"];
       }
       {
         name = "markdown";

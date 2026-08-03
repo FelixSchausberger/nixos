@@ -137,6 +137,7 @@
         language-servers = [
           "rust-analyzer"
           "lsp-ai"
+          "jj-lsp"
         ];
         debugger = {
           name = "lldb-dap";
