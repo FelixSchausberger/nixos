@@ -9,11 +9,15 @@ in {
     ../shells/fish/functions/jj.nix
   ];
 
-  home.packages = with pkgs; [
-    gh # GitHub CLI — needed by jjpush for PR creation
-    jjui # A TUI for Jujutsu VCS
-    # lazyjj # Lazygit-style TUI for Jujutsu (commented out due to test failures)
-  ];
+  home.packages = with pkgs;
+    [
+      gh # GitHub CLI — needed by jjpush for PR creation
+      jjui # A TUI for Jujutsu VCS
+      # lazyjj # Lazygit-style TUI for Jujutsu (commented out due to test failures)
+    ]
+    ++ [
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-lsp # Conflict resolution LSP for jj
+    ];
 
   programs.jujutsu = {
     enable = true;
