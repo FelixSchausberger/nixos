@@ -19,6 +19,10 @@ in {
     gui.enable = lib.mkDefault false; # GUI themes disabled by default
   };
 
+  # Required by home-manager's contacts module (no default upstream);
+  # relative path is resolved against homeDirectory
+  accounts.contact.basePath = lib.mkDefault ".local/share/contacts";
+
   # Basic home configuration
   home = {
     username = lib.mkDefault defaults.system.user;

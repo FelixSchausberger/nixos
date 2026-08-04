@@ -34,6 +34,7 @@
         ClientAliveCountMax = 3;
         X11Forwarding = false;
         PrintMotd = false;
+        AcceptEnv = ["COLORTERM"];
         Ciphers = [
           "chacha20-poly1305@openssh.com"
           "aes256-gcm@openssh.com"
