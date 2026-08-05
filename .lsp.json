@@ -1,1 +1,6 @@
-{"nix":{"command":"/nix/store/kiy3qpqz2j695l7hnshscmdjxqb5w7r0-nixd-2.9.2/bin/nixd","extensionToLanguage":{".nix":"nix"}}}
+{
+  "nix": {
+    "command": "/nix/store/kiy3qpqz2j695l7hnshscmdjxqb5w7r0-nixd-2.9.2/bin/nixd",
+    "extensionToLanguage": { ".nix": "nix" }
+  }
+}

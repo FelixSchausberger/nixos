@@ -5,7 +5,8 @@ includes = ["*.nix"]
 [formatter.prettier]
 command = "prettier"
 options = ["--tab-width", "2", "--write"]
-includes = ["*.json", "*.toml", "*.yaml", "*.yml"]
+# TOML excluded: prettier has no TOML parser; taplo (pre-commit hook) covers it.
+includes = ["*.json", "*.yaml", "*.yml"]
 
 [formatter.markdownlint]
 command = "markdownlint"
