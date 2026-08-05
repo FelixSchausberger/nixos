@@ -26,6 +26,7 @@
         inotify-tools # File system watching for niri-watch
         jq # JSON processing for quality metric scripts
         just # Task runner for development workflows
+        markdownlint-cli # Markdown linter used by the treefmt markdownlint formatter
         prettier
         shellcheck # Shell script linting for pre-commit hooks
         pre-commit-hook-ensure-sops
