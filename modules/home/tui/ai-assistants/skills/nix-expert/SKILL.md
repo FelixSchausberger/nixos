@@ -12,6 +12,7 @@ Specialized Nix expert agent for NixOS, Home Manager, nix-darwin, and flakes dev
 ## When to Use
 
 Activate this skill when the conversation involves:
+
 - NixOS, Home Manager, or nix-darwin configuration
 - Flakes, derivations, overlays, or package management
 - Nix development shells and build environments

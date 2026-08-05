@@ -71,7 +71,7 @@ Fix any evaluation or build errors.
 
 Generate a conventional commit message from the diff. Follow the format:
 
-```
+```text
 type(scope): description
 
 - bullet points for notable changes
@@ -96,7 +96,7 @@ This pushes changes and creates a GitHub PR with the auto-merge label.
 ## Git → jj Reference
 
 | Git | jj |
-|---|---|
+| --- | --- |
 | `git status` | `jj status` |
 | `git diff` | `jj diff` |
 | `git log --graph` | `jj log --graph` |

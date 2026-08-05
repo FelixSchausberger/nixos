@@ -9,11 +9,13 @@ This repository provides **two installer ISO variants** optimized for different 
 ### Minimal ISO (Fast Rebuilds)
 
 **Build command:**
+
 ```bash
 nix build .#installer-iso-minimal
 ```
 
 **Characteristics:**
+
 - **Size**: ~1.5GB (65% smaller than full)
 - **Build time**: 10-15 minutes with cache
 - **Use for**: Testing installation scripts, development iteration
@@ -27,11 +29,13 @@ nix build .#installer-iso-minimal
 ### Full ISO (Comprehensive)
 
 **Build command:**
+
 ```bash
 nix build .#installer-iso-full
 ```
 
 **Characteristics:**
+
 - **Size**: ~4.2GB
 - **Build time**: 20-30 minutes with cache
 - **Use for**: Actual system installations, recovery operations
@@ -46,7 +50,7 @@ nix build .#installer-iso-full
 ### Which Should I Use?
 
 | Scenario | Recommended ISO |
-|----------|----------------|
+| ---------- | ---------------- |
 | Testing disko configurations | Minimal |
 | Developing install-nixos script | Minimal |
 | Quick VM installation testing | Minimal |
@@ -81,12 +85,14 @@ sudo dd if=result/iso/nixos-minimal-*.iso of=/dev/sdX bs=4M status=progress conv
 ### USB Drive (Windows)
 
 Use tools like:
-- Rufus: https://rufus.ie/
-- balenaEtcher: https://www.balena.io/etcher/
+
+- Rufus: <https://rufus.ie/>
+- balenaEtcher: <https://www.balena.io/etcher/>
 
 ### VMware
 
 Mount the ISO directly in VMware Workstation Pro:
+
 1. Create new VM
 2. Choose "Installer disc image file (iso)"
 3. Browse to the ISO file
@@ -101,9 +107,11 @@ Mount the ISO directly in VMware Workstation Pro:
 ## Network Setup
 
 ### Wired Connection
+
 Wired connections should work automatically via DHCP.
 
 ### WiFi Setup
+
 ```bash
 # Use NetworkManager TUI
 nmtui
@@ -136,6 +144,7 @@ install-nixos
 ```
 
 Follow the prompts to:
+
 1. Select target disk
 2. Choose host configuration
 3. Confirm installation
@@ -176,6 +185,7 @@ nix run 'github:nix-community/disko#disko-install' -- \
 ## What Gets Installed
 
 The `install-nixos` script:
+
 1. **Partitions** the disk using the disko configuration
 2. **Formats** filesystems (ZFS/ext4/btrfs depending on host)
 3. **Mounts** all filesystems at `/mnt`
@@ -187,6 +197,7 @@ The `install-nixos` script:
 After installation completes:
 
 1. **Reboot**:
+
    ```bash
    reboot
    ```
@@ -194,6 +205,7 @@ After installation completes:
 2. **Remove installation media** when prompted
 
 3. **First boot setup**:
+
    ```bash
    # Set user password
    passwd schausberger
@@ -207,6 +219,7 @@ After installation completes:
 ### Installation Fails
 
 Check the disko configuration:
+
 ```bash
 cat /per/etc/nixos/hosts/<hostname>/disko/disko.nix
 ```
@@ -229,6 +242,7 @@ dhcpcd <interface>
 ### VMware: BIOS vs UEFI
 
 If installation fails in VMware, ensure VM firmware is set to **UEFI**:
+
 - VM Settings → Options → Boot Options → Firmware Type → UEFI
 
 ### Disk Not Found
@@ -252,9 +266,10 @@ The installer includes these helper scripts:
 ## Documentation
 
 Full documentation available:
-- Installation Guide: https://github.com/FelixSchausberger/nixos/wiki/Installation
-- Secret Management: https://github.com/FelixSchausberger/nixos/wiki/Secret-Management
-- Emergency Recovery: https://github.com/FelixSchausberger/nixos/wiki/Emergency-Recovery
+
+- Installation Guide: <https://github.com/FelixSchausberger/nixos/wiki/Installation>
+- Secret Management: <https://github.com/FelixSchausberger/nixos/wiki/Secret-Management>
+- Emergency Recovery: <https://github.com/FelixSchausberger/nixos/wiki/Emergency-Recovery>
 
 ## Adding SSH Keys
 
@@ -268,7 +283,8 @@ cat ~/.ssh/id_ed25519.pub > /per/etc/nixos/hosts/installer/authorized_keys
 nix build .#installer-iso
 ```
 
-**Note**: The `authorized_keys` file is gitignored for security. Each user must create their own before building the ISO.
+**Note**: The `authorized_keys` file is gitignored for security. Each user
+must create their own before building the ISO.
 
 ## Customization
 
@@ -280,6 +296,7 @@ The installer configuration is in `hosts/installer/default.nix`. You can:
 - Customize ISO name via `image.fileName`
 
 After making changes, rebuild:
+
 ```bash
 nix build .#installer-iso
 ```
