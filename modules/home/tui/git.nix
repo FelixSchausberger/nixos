@@ -29,6 +29,7 @@ in {
           ServerAliveCountMax 3
           AddKeysToAgent yes
           IdentitiesOnly yes
+          SendEnv COLORTERM
 
       # =============================================
       # Per-host entries (generated from lib/hosts.nix)
