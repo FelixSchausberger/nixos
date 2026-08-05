@@ -22,7 +22,7 @@
       inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-lsp # Conflict resolution LSP for jj
     ];
 
-  programs.helix.languages = {
+  programs.nhx.languages = {
     language-server = {
       lsp-ai = {
         command = "lsp-ai";

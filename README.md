@@ -168,10 +168,26 @@ nh os test                                       # Temporary testing
 nh os build                                      # Build without activating
 
 # Aliases available in shell
-deploy                                           # First nh os test, then switch
-update                                           # First nh update test, then switch
+deploy                                           # First nh os build, guard, test, then switch
+update                                           # Update inputs, guard, test, then switch
 clean                                            # Clean old generations
 history                                          # View generation history
+```
+
+### Downgrade Guard
+
+Deploys and updates are protected by `tools/scripts/guard-downgrades.sh`,
+which compares the currently active system against the freshly built toplevel
+and blocks the deployment if any package would be downgraded. This prevents
+the rolling nixpkgs semver channel or divergent per-host lock files from
+silently regressing versions.
+
+Override to allow downgrades deliberately (for pinned versions):
+
+```bash
+ALLOW_DOWNGRADE=1 deploy                                   # Allow all downgrades
+ALLOW_DOWNGRADES="pkg1 pkg2" deploy                        # Allow specific packages
+just guard-build                                           # Check current host without switching
 ```
 
 ### Quick VM Installation with nixos-anywhere (Recommended)
@@ -436,6 +452,21 @@ Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 
 All caches configured in `modules/system/nix.nix` with priority-based
 fallback.
+
+The personal cache is populated automatically: the `cachix-push.yml` workflow
+builds every host configuration (system toplevel + home activation) on push to
+main and pushes the closures to `felixschausberger.cachix.org`. Hosts then
+substitute these prebuilt closures instead of rebuilding them, so deployments
+only download and activate.
+
+Requires the `CACHIX_AUTH_TOKEN` GitHub secret (add once):
+`cachix authtoken`, then add the token to repository secrets.
+
+To populate manually from any machine:
+
+```bash
+just build-push-cache
+```
 
 ## Additional Documentation
 

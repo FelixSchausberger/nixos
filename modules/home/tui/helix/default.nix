@@ -1,10 +1,10 @@
 {
   config,
-  lib,
-  pkgs,
+  inputs,
   ...
 }: {
   imports = [
+    inputs.nhx.homeManagerModules.nhx # Declarative Helix config with Steel plugin support
     ./dprint.nix # Code formatting platform written in Rust
     ./languages-core.nix
     ./languages-extended.nix
@@ -14,10 +14,19 @@
     hn = "hx /per/etc/nixos";
   };
 
-  programs.helix = {
+  # nhx does not provide programs.helix.defaultEditor; replicate its effect.
+  # STEEL_HOME must match nhx's cog link target (~/.local/share/steel): steel
+  # would otherwise prefer an existing ~/.steel directory and never find the
+  # declaratively installed cogs.
+  home.sessionVariables = {
+    EDITOR = "hx";
+    VISUAL = "hx";
+    STEEL_HOME = "${config.home.homeDirectory}/.local/share/steel";
+  };
+
+  programs.nhx = {
     enable = true;
-    defaultEditor = true;
-    package = pkgs.steelix;
+    # Uses pkgs.steelix by default (Helix fork with Steel plugin support)
 
     settings = {
       editor = {
@@ -39,7 +48,9 @@
           wrap-indicator = "";
         };
       };
-      theme = lib.mkDefault "catppuccin_mocha";
+      # nhx.settings is types.attrs, so mkDefault would leak the raw override
+      # object into the TOML ([theme] table). Use a plain value.
+      theme = "catppuccin_mocha";
       keys = {
         insert = {
           esc = ["collapse_selection" "normal_mode"];
@@ -108,33 +119,21 @@
         };
       };
     };
-  };
 
-  home.sessionVariables.STEEL_COGS = "$HOME/.local/share/steel/cogs:${pkgs.scooter-hx}/lib/helix-plugins/scooter";
+    steel.enable = true;
 
-  # Steel plugin system configuration
-  home.file.".config/helix/init.scm".text = ''
-    ;; Helix Steel initialization
-    ;; Load scooter plugin
-    (require "scooter/scooter.scm")
-  '';
-
-  # Symlink scooter plugin files to Steel's cogs directory
-  home.file.".steel/cogs/scooter" = {
-    source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter";
-    recursive = true;
-  };
-
-  home.file.".steel/cogs/ui" = {
-    source = "${pkgs.scooter-hx}/lib/helix-plugins/ui";
-    recursive = true;
-  };
-
-  # Helix generates Steel modules into this directory at runtime
-  home.file.".steel/cogs/helix/.keep".text = "";
-
-  # Steel searches for dylibs in ~/.steel/native/
-  home.file.".steel/native/libscooter_hx.so" = {
-    source = "${pkgs.scooter-hx}/lib/helix-plugins/scooter/libscooter_hx.so";
+    # Plugin derivations are symlinked into $STEEL_HOME/cogs by nhx.
+    # Set enable = true to also add the (require ...) to init.scm.
+    plugins = {
+      scooter.enable = true;
+      juju.enable = true;
+      notify.enable = true;
+      breadcrumbs.enable = true;
+      steel-pty = {
+        enable = true;
+        # Entrypoint is term.scm, not the default steel-pty/steel-pty.scm
+        requirePath = "steel-pty/term.scm";
+      };
+    };
   };
 }
