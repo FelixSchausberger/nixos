@@ -76,29 +76,22 @@ Each host defines:
 ### Jujutsu Workflow (Recommended)
 
 ```bash
-# Create feature branch with conventional commit format
-jjbranch
-# → Interactive: Select type (feat/fix/chore/docs/test/refactor/perf)
-# → Enter description (e.g., "optimize-ci-pipeline")
-# → Creates branch: feat/optimize-ci-pipeline
-# → Commits: "feat: optimize ci pipeline"
-# → Pushes to remote automatically
+# Start a session (fetch, rebase onto main, detect conflicts)
+jjwork
 
 # Make changes (jj automatically tracks them)
 # Edit files...
 
-# Update commit description if needed
-jj describe
+# Update commit description with AI assistance
+jjdescribe
 
 # Push and create PR with auto-merge
 jjpush
+# → Auto-creates a bookmark from the commit description
 # → Pushes changes
 # → Creates PR with auto-merge label
 # → CI runs automatically
 # → Auto-merges when all checks pass ✅
-
-# Aliases available:
-# jjb  - Shorthand for jjbranch
 ```
 
 ### Git Workflow (Traditional)
