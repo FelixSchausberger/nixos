@@ -79,8 +79,93 @@
       echo ""
     '';
   };
+
+  jjpushCmd = pkgs.writeShellApplication {
+    name = "jjpush";
+    runtimeInputs = [pkgs.jujutsu pkgs.gh];
+    text = ''
+      set -euo pipefail
+
+      # Guard: refuse to push if the current change is not descended from
+      # main@origin. Checking main@origin (not the local bookmark) prevents
+      # silently pushing work that diverged from the actual remote main due
+      # to local bookmark drift.
+      if [ -z "$(jj log -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | tr -d '[:space:]')" ]; then
+        echo "Error: current change is not based on main@origin." >&2
+        echo "Run 'jjwork' first to rebase onto main@origin." >&2
+        echo "" >&2
+        echo "Current ancestry:" >&2
+        jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+        exit 1
+      fi
+
+      # Search ancestors for an existing feature bookmark. The main bookmark
+      # always sits on the parent commit after a rebase, so it is excluded;
+      # otherwise the auto-create branch below would never trigger.
+      bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main")' -T 'name' 2>/dev/null | head -1 | tr -d '[:space:]')"
+
+      if [ -z "$bookmark" ]; then
+        # No feature bookmark — auto-create one from the commit description's
+        # first line. Resolve @ via change_id so the description is read from
+        # the actual change even when @ is an empty working copy.
+        change_id="$(jj log -r '@' -T 'change_id' 2>/dev/null | tr -d '[:space:]')"
+        first_line="$(jj log -r "$change_id" -T 'description.first_line()' 2>/dev/null | tr -d '[:space:]')"
+        if [ -z "$first_line" ] || [ "$first_line" = "working copy" ]; then
+          echo "No commit message set. Use 'jj describe' or 'jjdescribe' first." >&2
+          exit 1
+        fi
+
+        # "feat: add widget" → "feat/add-widget"
+        # "feat(homelab): add X" → "feat/homelab-add-X"
+        bookmark="$(printf '%s' "$first_line" | sed -E 's/^([a-z]+)\(([^)]*)\):/\1\/\2/; s/^([a-z]+):[[:space:]]*/\1\//; s/ /-/g; s/[^a-zA-Z0-9_/-]//g')"
+        if ! printf '%s' "$bookmark" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9/._-]*$'; then
+          printf "Invalid bookmark name: '%s'. Set manually with 'jj bookmark set <name>'.\n" "$bookmark" >&2
+          exit 1
+        fi
+        jj bookmark set "$bookmark"
+        echo "Auto-created bookmark: $bookmark"
+      else
+        # Auto-squash empty working copy into the bookmarked parent.
+        if [ "$(jj log -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')" = "true" ]; then
+          jj squash 2>/dev/null || true
+        fi
+      fi
+
+      # Run pre-push quality checks (best-effort; a broken formatter must not block push).
+      echo "Running pre-push quality checks..."
+      nix fmt 2>/dev/null || true
+      prek run --all-files 2>/dev/null || true
+
+      # Push changes (track the remote branch first if needed).
+      echo "Pushing changes..."
+      jj bookmark track "$bookmark" --remote=origin 2>/dev/null || true
+      if ! jj git push; then
+        echo "Failed to push changes" >&2
+        exit 1
+      fi
+
+      # Create PR with auto-merge label.
+      echo ""
+      echo "Creating pull request with auto-merge..."
+      if ! gh pr create --fill --label auto-merge --head "$bookmark"; then
+        echo "Failed to create PR" >&2
+        echo "   You may need to create it manually"
+        exit 1
+      fi
+
+      echo ""
+      echo "Pull request created successfully!"
+      echo ""
+      echo "CI pipeline will run automatically"
+      echo "PR will auto-merge when all checks pass"
+      echo ""
+      echo "View PR status:"
+      echo "  gh pr view --web"
+      echo ""
+    '';
+  };
 in {
-  home.packages = [jjworkCmd];
+  home.packages = [jjworkCmd jjpushCmd];
 
   programs.fish.functions = {
     # Jujutsu management commands
@@ -288,81 +373,8 @@ in {
     jjpush = {
       description = "Push current change and create PR with auto-merge";
       body = ''
-        # Guard: refuse to push if current change is not descended from main@origin.
-        # Checking main@origin (not the local bookmark) prevents silently pushing
-        # work that diverged from the actual remote main due to local bookmark drift.
-        set -l main_in_ancestors (command jj log -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | string trim)
-        if test -z "$main_in_ancestors"
-          echo "Error: current change is not based on main@origin." >&2
-          echo "Run 'jjwork' first to rebase onto main@origin." >&2
-          echo "" >&2
-          echo "Current ancestry:" >&2
-          command jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
-          return 1
-        end
-
-        # Search ancestors for an existing bookmark — handles the case where @ is an empty
-        # working copy with the bookmark on its parent commit.
-        set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
-
-        if test -z "$bookmark"
-          # No bookmark — auto-create one from the commit description's first line.
-          # Resolve @ via change_id so the description is read from the actual change
-          # even when @ is an empty working copy.
-          set -l change_id (command jj log -r '@' -T 'change_id' 2>/dev/null | string trim)
-          set -l first_line (command jj log -r "$change_id" -T 'description.first_line()' 2>/dev/null | string trim)
-          if test -z "$first_line"; or test "$first_line" = "working copy"
-            echo "No commit message set. Use 'jj describe' or 'jjdescribe' first." >&2
-            return 1
-          end
-
-          # "feat: add widget" → "feat/add-widget"
-          set -l bookmark (echo "$first_line" | string replace -r '^([^:]+):\s*' '$1/' | string replace -a ' ' '-' | string replace -ar '[^a-zA-Z0-9/_-]' "" | string trim)
-          if not string match -qr '^[a-zA-Z0-9][a-zA-Z0-9/._-]*$' "$bookmark"
-            printf "Invalid bookmark name: '%s'. Set manually with 'jj bookmark set <name>'.\n" "$bookmark" >&2
-            return 1
-          end
-          command jj bookmark set "$bookmark"
-          echo "Auto-created bookmark: $bookmark"
-        else
-          # Auto-squash empty working copy into bookmarked parent
-          set -l is_empty (command jj log -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | string trim)
-          if test "$is_empty" = "true"
-            command jj squash 2>/dev/null || true
-          end
-        end
-
-        # Run pre-push quality checks
-        echo "Running pre-push quality checks..."
-        nix fmt 2>/dev/null || true
-        prek run --all-files 2>/dev/null || true
-
-        # Push changes (track remote first if needed)
-        echo "Pushing changes..."
-        command jj bookmark track "$bookmark" --remote=origin 2>/dev/null || true
-        if not command jj git push
-          echo "Failed to push changes" >&2
-          return 1
-        end
-
-        # Create PR with auto-merge label
-        echo ""
-        echo "Creating pull request with auto-merge..."
-        if not command gh pr create --fill --label auto-merge --head "$bookmark"
-          echo "Failed to create PR" >&2
-          echo "   You may need to create it manually"
-          return 1
-        end
-
-        echo ""
-        echo "Pull request created successfully!"
-        echo ""
-        echo "CI pipeline will run automatically"
-        echo "PR will auto-merge when all checks pass"
-        echo ""
-        echo "View PR status:"
-        echo "  gh pr view --web"
-        echo ""
+        # Run the shell-agnostic wrapper so automation and non-fish shells behave the same.
+        command jjpush $argv
       '';
     };
 
