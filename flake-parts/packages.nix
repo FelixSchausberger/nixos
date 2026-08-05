@@ -24,6 +24,9 @@
       # SSH connection manager
       dssh = pkgs.callPackage ../pkgs/dssh {};
 
+      # Prometheus exporter for AdGuard Home
+      adguard-exporter = pkgs.callPackage ../pkgs/adguard-exporter {};
+
       # Applications
       quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
 

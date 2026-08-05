@@ -1,6 +1,8 @@
 {
   config,
+  inputs,
   lib,
+  pkgs,
   ...
 }: {
   options.modules.system.homelab.adguardhome = {
@@ -9,6 +11,11 @@
       type = lib.types.port;
       default = 3000;
       description = "Admin UI HTTP port";
+    };
+    exporterPort = lib.mkOption {
+      type = lib.types.port;
+      default = 9618;
+      description = "Prometheus exporter HTTP port (localhost only)";
     };
     openFirewall = lib.mkOption {
       type = lib.types.bool;
@@ -146,5 +153,46 @@
     environment.persistence."/per".directories = [
       "/var/lib/AdGuardHome"
     ];
+
+    # Prometheus exporter: AdGuard 0.107 (nixpkgs's latest) has no native
+    # /metrics endpoint, so scrape the REST API via adguard-exporter.
+    users.users.adguard-exporter = {
+      isSystemUser = true;
+      group = "adguard-exporter";
+    };
+    users.groups.adguard-exporter = {};
+
+    sops.secrets."adguard/password" = {
+      owner = "adguard-exporter";
+    };
+    sops.templates."adguard-exporter-env" = {
+      content = ''
+        ADGUARD_SERVERS=http://127.0.0.1:${toString config.modules.system.homelab.adguardhome.port}
+        ADGUARD_USERNAMES=admin
+        ADGUARD_PASSWORDS=${config.sops.placeholder."adguard/password"}
+        PORT=${toString config.modules.system.homelab.adguardhome.exporterPort}
+        INTERVAL=30s
+      '';
+      owner = "adguard-exporter";
+      group = "adguard-exporter";
+      mode = "0400";
+    };
+
+    systemd.services.adguard-exporter = {
+      description = "AdGuard Home Prometheus exporter";
+      after = ["adguardhome.service" "sops-nix.service"];
+      wants = ["adguardhome.service"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        User = "adguard-exporter";
+        Group = "adguard-exporter";
+        EnvironmentFile = config.sops.templates."adguard-exporter-env".path;
+        Restart = "on-failure";
+        RestartSec = "5s";
+      };
+      script = ''
+        exec ${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.adguard-exporter}/bin/adguard-exporter
+      '';
+    };
   };
 }
