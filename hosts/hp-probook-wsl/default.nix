@@ -69,6 +69,7 @@ in {
     ../../modules/system/stylix-catppuccin.nix
     ../../modules/system/wsl-integration.nix
     ../../modules/system/homelab/tailscale.nix
+    ../../modules/system/nixpkgs-overlays.nix # Disable flaky python-lsp-server/scipy checks
     ../../modules/vitals.nix
   ];
   config = {
@@ -325,6 +326,9 @@ in {
     # SSH host labels and names are not sensitive — they match what is already
     # in the Windows ~/.ssh/config which WezTerm reads for SSH domain resolution.
     home-manager.users.${config.hostConfig.user} = {
+      # Deploy Windows Terminal settings (incl. dssh profile) to the Windows side
+      tui.windows-terminal.enable = true;
+
       # nocheck: dangerous-shell-patterns
       xdg.configFile."wezterm/wezterm.lua".text = ''
         local wezterm = require("wezterm")
@@ -457,6 +461,10 @@ in {
       '';
 
       # Named with zz- prefix to run after writeBoundary (alphabetical ordering)
+      home.sessionVariables = {
+        COLORTERM = "truecolor";
+      };
+
       home.activation.zz-wezterm-windows-deploy = ''
         WEZTERM_TARGET="/mnt/c/Users/SchausbergerF/.config/wezterm/wezterm.lua"
 

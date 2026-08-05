@@ -268,11 +268,47 @@ in {
         end
       '';
     };
+
+    prst = {
+      description = "View current change's PR status without opening a browser";
+      body = ''
+        set -l pr_ref $argv[1]
+        if test -z "$pr_ref"
+          set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
+          if test -z "$bookmark"
+            echo "No bookmark on the current change. Pass a PR number or branch explicitly." >&2
+            return 1
+          end
+          set pr_ref $bookmark
+        end
+        command gh pr view $pr_ref $argv[2..]
+      '';
+    };
+
+    prweb = {
+      description = "Open current change's PR in the browser";
+      body = ''
+        set -l pr_ref $argv[1]
+        if test -z "$pr_ref"
+          set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
+          if test -z "$bookmark"
+            echo "No bookmark on the current change. Pass a PR number or branch explicitly." >&2
+            return 1
+          end
+          set pr_ref $bookmark
+        end
+        command gh pr view --web $pr_ref
+      '';
+    };
   };
 
   programs.fish.interactiveShellInit = ''
     # Completions for workflow commands (jj itself uses its vendored dynamic completions)
     complete -c jjpush -d "Push and create PR with auto-merge"
     complete -c jjdescribe -d "Update description with AI suggestion"
+
+    # PR status completions
+    complete -c prst -d "View current change's PR status"
+    complete -c prweb -d "Open current change's PR in browser"
   '';
 }
