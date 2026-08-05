@@ -179,7 +179,7 @@ in {
             scrape_interval = "60s";
             static_configs = [
               {
-                targets = ["127.0.0.1:${toString config.modules.system.homelab.adguardhome.port}"];
+                targets = ["127.0.0.1:${toString config.modules.system.homelab.adguardhome.exporterPort}"];
               }
             ];
             metrics_path = "/metrics";
@@ -362,7 +362,9 @@ in {
           ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
             {
               name = "AdGuardDown";
-              query = ''up{job="adguard"} == 0'';
+              # up covers exporter liveness; adguard_running covers AdGuard itself
+              # responding through the exporter's own scraping.
+              query = ''up{job="adguard"} == 0 or adguard_running == 0'';
               priority = "urgent";
               message = "AdGuard Home DNS server is not responding";
             }

@@ -28,7 +28,6 @@
         #   insert = "bar";
         #   select = "underline";
         # };
-        true-color = true;
         lsp.display-messages = true;
         mouse = false;
         shell = [
@@ -61,6 +60,10 @@
             q = ":quit";
             space = "file_picker";
             W = ":lsp-workspace-command"; # LSP workspace commands
+            c = ":sh cargo check";
+            b = ":sh cargo build";
+            r = ":sh cargo run";
+            t = ":sh cargo test";
           };
 
           # Colemak-DH: hjkl -> neio

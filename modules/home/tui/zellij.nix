@@ -47,6 +47,19 @@ in {
     }
   '';
 
+  xdg.configFile."zellij/layouts/rust.kdl".text = ''
+    layout {
+      pane split_direction="vertical" {
+        // Editor on top, cargo watch terminal on the bottom.
+        // Launch with `zellij --layout rust` from a Rust project directory.
+        pane command="hx"
+        pane command="cargo" {
+          args "watch"
+        }
+      }
+    }
+  '';
+
   home.activation.writeZellijPermissions = lib.hm.dag.entryAfter ["writeBoundary"] ''
     permissions_file="$HOME/.cache/zellij/permissions.kdl"
     mkdir -p "$(dirname "$permissions_file")"

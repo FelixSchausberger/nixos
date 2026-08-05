@@ -254,7 +254,14 @@ in {
     networks = {
       "10-eno1" = {
         matchConfig.Name = "eno1";
-        linkConfig.RequiredForOnline = "routable";
+        # Fritz!Box LAN side runs at MTU 1492 (mirrors its PPPoE WAN MTU).
+        # Keep the client at 1492 so full-size IPv6 packets aren't dropped
+        # before ICMPv6 PMTUD can adapt (measured: payload 1452 = 1500 total fails
+        # even to the router; 1444 = 1492 works).
+        linkConfig = {
+          MTUBytes = "1492";
+          RequiredForOnline = "routable";
+        };
         networkConfig.DHCP = "no";
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
