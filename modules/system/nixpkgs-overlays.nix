@@ -12,6 +12,51 @@ _: {
         }
       );
 
+      # system-level python3Packages resolves to python314 on this nixpkgs
+      python314Packages = prev.python314Packages.overrideScope (
+        _: pyprev: {
+          python-lsp-server = pyprev.python-lsp-server.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+
+          # AI/MCP servers pull a check-dependency cascade
+          # fastmcp→py-key-value-aio→py-key-value-shared→inline-snapshot→isort→
+          # pylama→vulture→pint→uncertainties→scipy. scipy's hypothesis-based
+          # tests are flaky against numpy 2.5 array_api and fail in the sandbox.
+          # Disable checks along the whole chain so scipy is never even built.
+          fastmcp = pyprev.fastmcp.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          py-key-value-aio = pyprev.py-key-value-aio.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          py-key-value-shared = pyprev.py-key-value-shared.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          inline-snapshot = pyprev.inline-snapshot.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          isort = pyprev.isort.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          pylama = pyprev.pylama.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          vulture = pyprev.vulture.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          pint = pyprev.pint.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          uncertainties = pyprev.uncertainties.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+          scipy = pyprev.scipy.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+        }
+      );
+
       # poetry 2.4.1 has flaky test_executor tests that fail in the nix sandbox
       poetry = prev.poetry.overridePythonAttrs (_: {
         doCheck = false;
