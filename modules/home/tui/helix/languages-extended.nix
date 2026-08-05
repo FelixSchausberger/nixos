@@ -31,7 +31,7 @@
   programs.helix.languages = lib.mkIf (config.features.development.enable or config.hostConfig.isGui or false) {
     language-server = {
       rust-analyzer = {
-        command = "rust-analyzer";
+        command = "${pkgs.rust-analyzer}/bin/rust-analyzer";
         config = {
           checkOnSave = {
             command = "clippy";

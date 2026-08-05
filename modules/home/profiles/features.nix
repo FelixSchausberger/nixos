@@ -51,6 +51,7 @@
           # Language-specific tools
           ++ lib.optionals (lib.elem "rust" config.features.development.languages) [
             rustup
+            cargo-watch # Auto-rebuild on source changes (used by zellij rust layout)
             bugstalker # Modern Rust debugger with async support
           ]
           ++ lib.optionals (lib.elem "python" config.features.development.languages) [
