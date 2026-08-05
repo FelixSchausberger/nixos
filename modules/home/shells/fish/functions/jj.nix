@@ -14,8 +14,8 @@
 
       # Warn if local main bookmark has diverged from origin — this indicates a commit
       # was made directly to the local main bookmark instead of going through a PR.
-      local_main=$(jj log -r 'main' -T 'commit_id' 2>/dev/null | tr -d '[:space:]') || true
-      remote_main=$(jj log -r 'main@origin' -T 'commit_id' 2>/dev/null | tr -d '[:space:]') || true
+      local_main=$(jj log --no-graph -r 'main' -T 'commit_id' 2>/dev/null | tr -d '[:space:]') || true
+      remote_main=$(jj log --no-graph -r 'main@origin' -T 'commit_id' 2>/dev/null | tr -d '[:space:]') || true
       if [ -n "$local_main" ] && [ -n "$remote_main" ] && [ "$local_main" != "$remote_main" ]; then
         echo ""
         echo "WARNING: local 'main' has diverged from 'main@origin'." >&2
@@ -46,12 +46,12 @@
 
       # Verify that the working copy is now a descendant of main@origin.
       # If not, the rebase may have moved @ to a stale branch instead of on top of main.
-      main_in_ancestors=$(jj log -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | tr -d '[:space:]')
+      main_in_ancestors=$(jj log --no-graph -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | tr -d '[:space:]')
       if [ -z "$main_in_ancestors" ]; then
         echo ""
         echo "WARNING: working copy parent is not main@origin after rebase." >&2
         echo "Current ancestry:" >&2
-        jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+        jj log --no-graph -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
         echo "" >&2
         echo "To fix: jj rebase -d 'main@origin'" >&2
         exit 1
@@ -90,12 +90,12 @@
       # main@origin. Checking main@origin (not the local bookmark) prevents
       # silently pushing work that diverged from the actual remote main due
       # to local bookmark drift.
-      if [ -z "$(jj log -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | tr -d '[:space:]')" ]; then
+      if [ -z "$(jj log --no-graph -r 'ancestors(@) & main@origin' -T 'change_id' 2>/dev/null | tr -d '[:space:]')" ]; then
         echo "Error: current change is not based on main@origin." >&2
         echo "Run 'jjwork' first to rebase onto main@origin." >&2
         echo "" >&2
         echo "Current ancestry:" >&2
-        jj log -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
+        jj log --no-graph -r '@ | @-' -T 'commit_id.short() ++ " " ++ remote_bookmarks ++ " " ++ description.first_line()' 2>/dev/null >&2
         exit 1
       fi
 
@@ -108,8 +108,8 @@
         # No feature bookmark — auto-create one from the commit description's
         # first line. Resolve @ via change_id so the description is read from
         # the actual change even when @ is an empty working copy.
-        change_id="$(jj log -r '@' -T 'change_id' 2>/dev/null | tr -d '[:space:]')"
-        first_line="$(jj log -r "$change_id" -T 'description.first_line()' 2>/dev/null | tr -d '[:space:]')"
+        change_id="$(jj log --no-graph -r '@' -T 'change_id' 2>/dev/null | tr -d '[:space:]')"
+        first_line="$(jj log --no-graph -r "$change_id" -T 'description.first_line()' 2>/dev/null)"
         if [ -z "$first_line" ] || [ "$first_line" = "working copy" ]; then
           echo "No commit message set. Use 'jj describe' or 'jjdescribe' first." >&2
           exit 1
@@ -126,7 +126,7 @@
         echo "Auto-created bookmark: $bookmark"
       else
         # Auto-squash empty working copy into the bookmarked parent.
-        if [ "$(jj log -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')" = "true" ]; then
+        if [ "$(jj log --no-graph -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')" = "true" ]; then
           jj squash 2>/dev/null || true
         fi
       fi
