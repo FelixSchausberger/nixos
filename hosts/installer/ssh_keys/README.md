@@ -1,10 +1,12 @@
 # SSH Keys for Installer ISO
 
-**SECURITY WARNING**: This directory contains SSH private keys that will be baked into the installer ISO.
+**SECURITY WARNING**: This directory contains SSH private keys that will be
+baked into the installer ISO.
 
 ## Purpose
 
 These SSH keys are included in the installer ISO to enable:
+
 1. GitHub authentication during installation
 2. sops secret decryption using ssh-to-age
 3. Seamless install-vm workflow
@@ -12,6 +14,7 @@ These SSH keys are included in the installer ISO to enable:
 ## Usage
 
 1. **Copy your SSH keys here** (before building the ISO):
+
    ```bash
    cp ~/.ssh/id_ed25519 hosts/installer/ssh_keys/
    cp ~/.ssh/id_ed25519.pub hosts/installer/ssh_keys/
@@ -20,6 +23,7 @@ These SSH keys are included in the installer ISO to enable:
    ```
 
 2. **Build the installer ISO**:
+
    ```bash
    nix build .#installer-iso-minimal
    ```
@@ -39,6 +43,7 @@ These SSH keys are included in the installer ISO to enable:
 ## Alternative: install-vm Script
 
 If you prefer not to bake keys into the ISO, use the install-vm script:
+
 ```bash
 nix run .#install-vm hp-probook-vmware 192.168.1.100
 ```

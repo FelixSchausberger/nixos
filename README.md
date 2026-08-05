@@ -4,13 +4,15 @@
 
 ## About
 
-NixOS and Home Manager configuration using flakes and flake-parts architecture. Supports multiple hosts with modular system and home configurations, ZFS with opt-in state, and sops-nix secret management.
+NixOS and Home Manager configuration using flakes and flake-parts architecture.
+Supports multiple hosts with modular system and home configurations, ZFS with
+opt-in state, and sops-nix secret management.
 
 ## Architecture
 
 ### Directory Structure
 
-```
+```text
 .
 ├── flake.nix              # Main flake configuration with inputs and outputs
 ├── hosts/                 # System-level configurations per machine
@@ -47,7 +49,8 @@ Home modules in `modules/home/`:
 
 - gui: Desktop applications (browsers, terminals, COSMIC)
 - tui: Terminal applications (editors, file managers, git, nh)
-- shells: Shell configurations (bash, fish) and shell integrations (starship, direnv, fzf, zoxide, eza, bat)
+- shells: Shell configurations (bash, fish) and shell integrations
+  (starship, direnv, fzf, zoxide, eza, bat)
 - themes: Theme system with TUI/GUI separation
 - wallpapers: Wallpaper configurations
 - wm: Window manager configurations (COSMIC, GNOME, Hyprland)
@@ -132,7 +135,7 @@ Follow Conventional Commits specification:
 
 Examples:
 
-```
+```text
 feat: add ZFS encryption support
 fix: resolve fish shell startup loop
 chore: update flake inputs
@@ -149,7 +152,7 @@ docs: improve emergency recovery guide
 
 Examples:
 
-```
+```text
 feature/add-hyprland-config
 fix/zellij-startup-error
 chore/update-dependencies
@@ -200,6 +203,7 @@ For VMware/VirtualBox VMs, use nixos-anywhere instead of building a custom ISO.
    - **No password setup needed** - SSH keys already configured!
 
 3. **Install from your dev machine** (fully automated)
+
    ```bash
    nix run .#install-vm hp-probook-vmware <vm-ip-address>
    ```
@@ -227,9 +231,11 @@ This automatically:
 
 **Troubleshooting:**
 
-- If SSH fails: Verify custom ISO was built with latest config containing your SSH key
+- If SSH fails: Verify custom ISO was built with latest config
+  containing your SSH key
 - If SSH key missing: Ensure `~/.ssh/id_ed25519` exists on your dev machine
-- If repo clone fails: Manually clone with `ssh root@<vm-ip> "git clone https://github.com/FelixSchausberger/nixos.git /per/etc/nixos"`
+- If repo clone fails: Manually clone with
+  `ssh root@<vm-ip> "git clone https://github.com/FelixSchausberger/nixos.git /per/etc/nixos"`
 
 #### Alternative: Standard ISO with Manual Setup
 
@@ -253,6 +259,7 @@ If you prefer using a standard NixOS ISO:
    ```
 
 3. **Install from your dev machine**
+
    ```bash
    nix run .#install-vm hp-probook-vmware <vm-ip-address>
    ```
@@ -273,17 +280,19 @@ For manual control or custom configurations:
      root@<vm-ip-address>
    ```
 
-   **Note**: The disk device (`/dev/sda`) is configured in the disko configuration file. If your VM uses a different disk device (like `/dev/nvme0n1`), update it in `hosts/hp-probook-vmware/disko/disko.nix`.
+   **Note**: The disk device (`/dev/sda`) is configured in the disko
+   configuration file. If your VM uses a different disk device (like
+   `/dev/nvme0n1`), update it in `hosts/hp-probook-vmware/disko/disko.nix`.
 
 4. **Post-installation setup** (manual only)
 
    ```bash
-# Copy SSH keys (used by sops for secret decryption)
-    scp ~/.ssh/id_ed25519 root@<vm-ip>:/per/home/schausberger/.ssh/id_ed25519
-    scp ~/.ssh/id_ed25519.pub root@<vm-ip>:/per/home/schausberger/.ssh/id_ed25519.pub
+   # Copy SSH keys (used by sops for secret decryption)
+   scp ~/.ssh/id_ed25519 root@<vm-ip>:/per/home/schausberger/.ssh/id_ed25519
+   scp ~/.ssh/id_ed25519.pub root@<vm-ip>:/per/home/schausberger/.ssh/id_ed25519.pub
 
-    # Clone repository
-   ssh root@<vm-ip> "git clone https://github.com/FelixSchausberger/nixos.git /per/etc/nixos"
+   # Clone repository
+   ssh root@<vm-ip> "git clone <https://github.com/FelixSchausberger/nixos.git> /per/etc/nixos"
    ```
 
 **Requirements:**
@@ -296,13 +305,16 @@ See [nixos-anywhere documentation](https://nix-community.github.io/nixos-anywher
 
 ### Custom Installer ISO (ZFS-ready)
 
-**Note**: For simple VM installations, consider using [nixos-anywhere](#quick-vm-installation-with-nixos-anywhere-recommended) instead. Custom ISOs are best for:
+**Note**: For simple VM installations, consider using
+[nixos-anywhere](#quick-vm-installation-with-nixos-anywhere-recommended)
+instead. Custom ISOs are best for:
 
 - Physical hardware without network access
 - Recovery scenarios
 - Air-gapped installations
 
-This repo can build a self-contained installer ISO that includes the repo checkout, ZFS tooling, and the interactive `install-nixos` helper.
+This repo can build a self-contained installer ISO that includes the repo
+checkout, ZFS tooling, and the interactive `install-nixos` helper.
 
 Two ISO variants are available:
 
@@ -347,7 +359,8 @@ See `hosts/installer/README.md` for complete installation documentation.
 If you see errors like `path 'https://api.flakehub.com/...' does not exist`:
 
 - This occurs when building from inside the installer ISO
-- Solution: Use [nixos-anywhere](#quick-vm-installation-with-nixos-anywhere-recommended) from your dev machine instead
+- Solution: Use [nixos-anywhere](#quick-vm-installation-with-nixos-anywhere-recommended)
+  from your dev machine instead
 - Alternative: Follow the manual symlink workaround in the installer welcome message
 
 **Why does deploy work locally but fail in VMs?**
@@ -428,13 +441,15 @@ Configuration: `.github/workflows/ci.yml`, `.github/workflows/auto-merge.yml`
 - **Personal**: felixschausberger.cachix.org (custom builds)
 - **Community**: nix-community.cachix.org and project-specific caches
 
-All caches configured in `modules/system/nix.nix` with priority-based fallback.
+All caches configured in `modules/system/nix.nix` with priority-based
+fallback.
 
 ## Additional Documentation
 
 Detailed guides available in the [Wiki](../../wiki):
 
-- **[Installation Guide](../../wiki/Installation)** - Disko automated installation, ZFS setup, post-installation configuration
+- **[Installation Guide](../../wiki/Installation)** - Disko automated
+  installation, ZFS setup, post-installation configuration
 - **[Secret Management](../../wiki/Secret-Management)** - Detailed sops-nix usage and key management
 - **[Emergency Recovery](../../wiki/Emergency-Recovery)** - Complete recovery procedures and troubleshooting
 
