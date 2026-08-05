@@ -217,16 +217,6 @@ jjdescribe     # Describe the change with AI-assisted message
 jjpush         # Auto-creates bookmark, pushes, creates PR with auto-merge
 ```
 
-**Feature branch workflow (experimental/larger changes):**
-
-```bash
-jjwork         # Fetch, rebase onto main
-jjbranch       # Create named feature branch (e.g. feat/add-widget)
-# ... make changes ...
-jjdescribe     # Describe the change
-jjpush         # Push branch and create PR
-```
-
 **AI agent requirement:** Use `jj` commands for all VCS operations. Avoid using
 `git commit`/`git push` in normal operation. `jjpush` auto-creates a bookmark
 from the commit description when none exists, converting `"feat: add widget"`
@@ -247,21 +237,20 @@ This prevents the root cause of lost work: accidentally pushing to a stale branc
 that diverged from `main`. If `jjpush` refuses, run `jjwork` first.
 
 **Single-branch policy:** Only one long-lived branch exists: `main`. Every other
-branch is ephemeral — created by `jjpush` or `jjbranch`, immediately goes through
+branch is ephemeral — auto-created by `jjpush` from the commit description, immediately goes through
 CI, and is auto-merged. Never manually push to `weekly-updates` or any other
 named branch. The weekly-updates workflow manages that branch automatically.
 
 **Key Principles:**
 
 - All changes land on `main` via PRs with auto-merge label
-- Feature branches (via `jjbranch` helper) are optional for experimental work
 - Commit messages follow conventional commits format
 - Validation enforced via prek hook
 - CI validates all changes automatically
 
 For complete workflow details, see [README.md Development Workflow](README.md#development-workflow):
 
-- Jujutsu workflow (jjwork, jjbranch, jjdescribe, jjpush helpers)
+- Jujutsu workflow (jjwork, jjdescribe, jjpush helpers)
 - Traditional Git workflow alternative
 - Commit message conventions and validation
 - Branch naming patterns
@@ -397,7 +386,7 @@ Code's built-in tools already leverage these where appropriate.
 **Development:**
 
 - `hx` (Helix): Primary editor (Colemak-DH keybindings, Steel plugins)
-- `jj` (Jujutsu): Primary VCS (helpers: jjbranch, jjdescribe, jjpush)
+- `jj` (Jujutsu): Primary VCS (helpers: jjwork, jjdescribe, jjpush)
 
 ### Tool Selection
 
