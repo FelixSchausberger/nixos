@@ -477,5 +477,9 @@ in {
       udpGROInterface = "eno1";
     };
     ssh.enable = true;
+    zellijWeb = {
+      enable = true;
+      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+    };
   };
 }

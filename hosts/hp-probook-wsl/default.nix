@@ -423,6 +423,17 @@ in {
           ssh("Private: m920q",   "m920q"),
           ssh("Private: desktop", "desktop"),
 
+          -- ── Homelab Zellij (web session) ─────────────────────────────────
+          {
+            label  = "Homelab: m920q Zellij",
+            domain = { DomainName = "local" },
+            args   = {
+              "wsl.exe", "-d", "NixOS", "--",
+              "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
+              "zr",
+            },
+          },
+
           -- ── Jump hosts ───────────────────────────────────────────────────
           ssh("Jumphost: fvcs-jh",  "fvcs-jh"),
           ssh("Jumphost: jumphost", "jumphost"),
