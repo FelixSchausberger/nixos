@@ -233,3 +233,32 @@ flake-check:
 # Show flake info
 flake-info:
     nix flake show
+
+# === DEPLOYMENT GUARD ===
+
+# Run the downgrade guard against a built toplevel (default: ./result)
+guard RESULT="./result":
+    tools/scripts/guard-downgrades.sh {{RESULT}}
+
+# Build the current host and check for downgrades without switching
+guard-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HOSTNAME=$(hostname)
+    nh os build -H "$HOSTNAME" -o /tmp/nh-guard-result
+    tools/scripts/guard-downgrades.sh /tmp/nh-guard-result
+
+# Build all host closures and push them to the personal cachix
+build-push-cache:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HOSTS="desktop surface portable hp-probook-wsl hp-probook-vmware m920q"
+    PATHS=()
+    for host in $HOSTS; do
+      echo "Building $host toplevel..."
+      PATHS+=("$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --print-out-paths)")
+      echo "Building $host home activation..."
+      PATHS+=("$(nix build ".#nixosConfigurations.$host.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths)")
+    done
+    echo "Pushing to felixschausberger.cachix.org..."
+    cachix push felixschausberger "${PATHS[@]}"
