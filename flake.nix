@@ -103,6 +103,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
     };
+    # Declarative Helix config with Steel plugin support
+    nhx = {
+      url = "github:Ra77a3l3-jar/nhx";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # File manager (used by both TUI and GUI)
     yazi = {

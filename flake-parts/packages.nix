@@ -16,10 +16,8 @@
     packages = {
       jj-lsp = pkgs.callPackage ../pkgs/jj-lsp {};
 
-      lumen = pkgs.callPackage ../pkgs/lumen {};
-
-      # Editor with Steel plugin support
-      scooter-hx = pkgs.callPackage ../pkgs/scooter-hx {};
+      # Instant AI Git Commit message generator (from nixpkgs)
+      inherit (pkgs) lumen;
 
       # SSH connection manager
       dssh = pkgs.callPackage ../pkgs/dssh {};
