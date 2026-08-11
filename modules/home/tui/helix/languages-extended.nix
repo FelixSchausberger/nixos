@@ -28,7 +28,7 @@
     gofumpt # Go formatter (stricter than gofmt)
   ]);
 
-  programs.helix.languages = lib.mkIf (config.features.development.enable or config.hostConfig.isGui or false) {
+  programs.nhx.languages = lib.mkIf (config.features.development.enable or config.hostConfig.isGui or false) {
     language-server = {
       rust-analyzer = {
         command = "${pkgs.rust-analyzer}/bin/rust-analyzer";

@@ -3,7 +3,7 @@
   alerts_enabled = true;
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
-  auto_update_enabled = true;
+  auto_update_enabled = false;
   has_display_manager_gui_assertion = true;
   has_gaming_gui_assertion = true;
   has_hyprland = false;
