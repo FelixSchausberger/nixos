@@ -110,8 +110,8 @@
 
         ZELLIJ RECOVERY
 
-        Disable Zellij auto-start temporarily:
-          set -e ZELLIJ_AUTO_START
+        SSH auto-attach to Zellij is disabled while emergency mode is active
+        (see "SYSTEM EMERGENCY MODE" below).
 
         Fix Zellij configuration:
           mv ~/.config/zellij/config.kdl ~/.config/zellij/config.kdl.backup

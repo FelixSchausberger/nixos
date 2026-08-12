@@ -60,8 +60,6 @@ in {
           "${terminalPkg}/bin/${cfg.terminal}"
           "-e"
           "${pkgs.fish}/bin/fish"
-          "-c"
-          "set -gx ZELLIJ_AUTO_START 0; exec fish"
         ];
 
         # Open terminal with herdr for AI agent sessions
