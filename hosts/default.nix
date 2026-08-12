@@ -40,19 +40,20 @@
             networking.hostName = hostName;
             _module.args.hostName = hostName;
           }
-          (_: {
+          ({config, ...}: {
             home-manager = {
               users.${inputs.self.lib.user}.imports = homeImports."${inputs.self.lib.user}@${hostName}";
               extraSpecialArgs =
                 specialArgs
                 // {
                   inherit hostName;
+                  # Pass the resolved per-host option (config.hostConfig) so home
+                  # modules see the same values the system modules do (e.g.
+                  # zellijAutoAttach.sessionName). Merging with the static lib
+                  # data keeps non-option fields (ip, description) available.
                   hostConfig =
                     (inputs.self.lib.hosts.${hostName} or {})
-                    // {
-                      inherit (inputs.self.lib) user;
-                      inherit hostName;
-                    };
+                    // config.hostConfig;
                 };
             };
           })
