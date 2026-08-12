@@ -43,7 +43,16 @@ in {
         "Windows.Terminal.Azure"
         "Windows.Terminal.VisualStudio"
       ];
-      keybindings = [];
+      keybindings = [
+        # Open the native dssh tab directly (Ctrl+Alt+D)
+        {
+          command = {
+            action = "newTab";
+            profile = dsshGuid;
+          };
+          keys = "ctrl+alt+d";
+        }
+      ];
       newTabMenu = [
         {type = "remainingProfiles";}
       ];
@@ -92,9 +101,13 @@ in {
           }
           # Native dssh TUI connection manager. Uses the Windows OpenSSH on
           # PATH, so interior ProxyCommand hosts work exactly as in WezTerm.
-          # Bare commandline: the tab closes when the ssh session ends.
+          # Absolute path: avoids the bare-name resolving via a stale Windows
+          # Terminal process PATH (dssh is installed via winget into
+          # %LOCALAPPDATA%\Microsoft\WinGet\Links, which only newer WT
+          # processes have). Bare commandline: the tab closes when the ssh
+          # session ends.
           {
-            commandline = "dssh.exe";
+            commandline = "C:\\Users\\SchausbergerF\\AppData\\Local\\Microsoft\\WinGet\\Links\\dssh.exe";
             guid = dsshGuid;
             hidden = false;
             icon = "C:\\NixOS\\shortcut.ico";
