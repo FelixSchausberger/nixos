@@ -54,11 +54,27 @@ in {
         };
 
         zellijAutoAttach = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Auto-attach to the host's Zellij session on interactive SSH logins";
-        };
+          type = lib.types.submodule {
+            options = {
+              enable = lib.mkOption {
+                type = lib.types.bool;
+                default = true;
+                description = "Auto-attach to Zellij on interactive SSH logins";
+              };
 
+              sessionName = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Zellij session name to attach on SSH login (null = disabled)";
+              };
+            };
+          };
+          default = {
+            enable = true;
+            sessionName = null;
+          };
+          description = "Zellij SSH auto-attach configuration";
+        };
         system = lib.mkOption {
           type = lib.types.str;
           default = defaults.system.architecture;

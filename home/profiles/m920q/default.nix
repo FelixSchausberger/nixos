@@ -43,7 +43,6 @@
     sessionVariables = {
       VITALS_URL = "http://127.0.0.1:8080";
       EDITOR = "hx";
-      ZELLIJ_SESSION_NAME = "homelab";
     };
 
     packages = with pkgs; [

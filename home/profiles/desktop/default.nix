@@ -32,10 +32,6 @@
   };
 
   home = {
-    sessionVariables = {
-      ZELLIJ_SESSION_NAME = "desktop";
-    };
-
     packages = with pkgs; [
       # Desktop-specific hardware support
       linuxKernel.packages.linux_zen.xpadneo # Advanced Linux driver for Xbox One wireless controllers
