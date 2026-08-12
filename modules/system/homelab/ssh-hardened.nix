@@ -11,6 +11,10 @@
     services.openssh = {
       enable = true;
 
+      # Socket activation: no sshd daemon between connections. Avoids restarting an
+      # active sshd during a switch (no dropped sessions) and tightens attack surface.
+      startWhenNeeded = true;
+
       # Persist host keys across impermanence reboots
       hostKeys = lib.mkForce [
         {

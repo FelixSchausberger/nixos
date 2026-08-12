@@ -21,12 +21,18 @@
     fi
 
     if grep -qsx "connected" "''${hdmi_status_files[@]}"; then
-      echo "niri" > /run/m920q-hdmi-state
+      new_state="niri"
     else
-      echo "headless" > /run/m920q-hdmi-state
+      new_state="headless"
     fi
 
-    exec /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
+    # Only restart the debounced mode-switch timer when the hardware state
+    # actually changed; a plain detect run must not re-trigger a switch.
+    old_state=$(cat /run/m920q-hdmi-state 2>/dev/null || echo "unknown")
+    if [[ "$old_state" != "$new_state" ]]; then
+      echo "$new_state" > /run/m920q-hdmi-state
+      exec /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
+    fi
   '';
 
   modeSwitchScript = pkgs.writeShellScript "m920q-mode-switch" ''
@@ -79,20 +85,67 @@
     fi
 
     if [[ "$current_mode" == "niri" ]]; then
-      sudo -u ${user} DISPLAY= WAYLAND_DISPLAY= XDG_RUNTIME_DIR=/run/user/1000 /run/current-system/sw/bin/niri msg quit 2>/dev/null || true
-      timeout 5 ${pkgs.bash}/bin/bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
+      # Tear down the graphical session deterministically through the user
+      # systemd manager. Stopping niri-session.target / graphical-session.target
+      # also stops niri.service (BindsTo graphical-session.target), ending the
+      # session and all bound services without relying on socket discovery.
+      sudo -u ${user} /run/current-system/sw/bin/systemctl --user -M ${user}@ stop niri-session.target 2>/dev/null || true
+      sudo -u ${user} /run/current-system/sw/bin/systemctl --user -M ${user}@ stop graphical-session.target 2>/dev/null || true
+      timeout 15 ${pkgs.bash}/bin/bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
+      # Kill any stray compositor/UWSM processes that escaped the teardown.
+      /run/current-system/sw/bin/pkill -u ${user} -f 'niri|uwsm' 2>/dev/null || true
+      /run/current-system/sw/bin/systemctl stop greetd.service 2>/dev/null || true
     fi
 
+    # The inner switch-to-configuration runs are best-effort: a partial failure
+    # (e.g. busy user mounts) must not abort the whole script with set -e, which
+    # previously left /run/m920q-current-mode stale.
+    switch_ok=1
     if [[ "$desired_mode" == "niri" ]]; then
-      "$gui_switch" test
+      if ! "$gui_switch" test; then
+        echo "WARNING: GUI switch failed; keeping current mode and retrying later" >&2
+        switch_ok=0
+      else
+        # The switch may have started greetd and autologged-in before home-manager
+        # re-activated user units; reset it so the session starts only after HM.
+        /run/current-system/sw/bin/systemctl stop greetd.service 2>/dev/null || true
+        # home-manager must finish before the session starts: niri reads
+        # ~/.config/niri and the user units (niri.service, graphical-session.target)
+        # come from its activation. --wait makes the ordering deterministic.
+        /run/current-system/sw/bin/systemctl restart --wait "$hm_service"
+        /run/current-system/sw/bin/systemctl start greetd.service
+      fi
     else
-      "$headless_switch" test
+      if ! "$headless_switch" test; then
+        echo "WARNING: headless switch failed; keeping current mode and retrying later" >&2
+        switch_ok=0
+      else
+        /run/current-system/sw/bin/systemctl stop graphical.target greetd.service 2>/dev/null || true
+        /run/current-system/sw/bin/systemctl restart "$hm_service"
+      fi
     fi
 
-    echo "$desired_mode" > "$mode_file"
+    # Always keep the marker consistent with what the system is actually running.
+    # On success that is desired_mode; on failure the system is still in the
+    # previous mode, so the marker is left untouched and a retry is scheduled.
+    if [[ $switch_ok -eq 1 ]]; then
+      echo "$desired_mode" > "$mode_file"
+      rm -f /run/m920q-retry-count
+    else
+      echo "WARNING: mode switch to $desired_mode failed; current-mode stays $current_mode ($mode_file)" >&2
 
-    systemctl restart "$hm_service"
-    systemctl restart getty@tty1.service
+      # Bounded retry: restart the debounced timer so the switch is attempted
+      # again shortly, but give up after several failures to avoid a hot loop.
+      retries=0
+      [[ -f /run/m920q-retry-count ]] && retries=$(cat /run/m920q-retry-count)
+      if [[ $retries -lt 5 ]]; then
+        echo $((retries + 1)) > /run/m920q-retry-count
+        /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer || true
+      else
+        echo "WARNING: giving up after 5 failed mode-switch attempts; next HDMI change will retry" >&2
+        rm -f /run/m920q-retry-count
+      fi
+    fi
 
     # Re-evaluate after the (slow) switch: if hardware state changed while the
     # lock was held, schedule a corrective switch once the lock is released.
@@ -104,8 +157,20 @@
 
     if [[ "$actual_mode" != "$desired_mode" ]]; then
       echo "$actual_mode" > "$state_file"
-      /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer
+      /run/current-system/sw/bin/systemctl restart m920q-mode-switch.timer || true
     fi
+  '';
+
+  hdmiResyncScript = pkgs.writeShellScript "m920q-hdmi-resync" ''
+    set -euo pipefail
+
+    mode="headless"
+    hdmi_status_files=(/sys/class/drm/*-HDMI-A-*/status)
+    if (( ''${#hdmi_status_files[@]} > 0 )) && grep -qsx "connected" "''${hdmi_status_files[@]}"; then
+      mode="niri"
+    fi
+    echo "$mode" > /run/m920q-current-mode
+    echo "m920q: current-mode resynced to $mode after deploy" >&2
   '';
 
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
@@ -166,19 +231,31 @@ in {
             enable = lib.mkForce true;
             package = pkgs.niri;
           };
-          programs.uwsm = {
-            enable = lib.mkForce true;
-            waylandCompositors.niri = {
-              prettyName = "Niri";
-              comment = "Scrollable tiling Wayland compositor";
-              binPath = "${pkgs.niri}/bin/niri --session";
+          # Single-compositor guarantee: greetd owns tty1 and autologins into
+          # niri-session, which starts niri.service and graphical-session.target.
+          # UWSM would launch a second niri instance racing the home-module units.
+          programs.uwsm.enable = lib.mkForce false;
+
+          services.greetd = {
+            enable = true;
+            settings = {
+              # Fallback text login prompt on tty1 after the niri session exits.
+              # Never reached during normal operation (initial_session wins).
+              default_session = {
+                command = "${pkgs.greetd}/bin/agreety";
+                user = "greeter";
+              };
+              initial_session = {
+                command = "${pkgs.niri}/bin/niri-session";
+                user = inputs.self.lib.user;
+              };
             };
           };
 
           services.dbus.implementation = lib.mkForce "dbus";
 
+          # wm/niri home module auto-imports via home/profiles/shared.nix from hostConfig.wms
           home-manager.users.${inputs.self.lib.user}.imports = [
-            ../../modules/home/wm/niri
             ../../home/profiles/m920q/niri.nix.specialisation
           ];
         };
@@ -275,6 +352,29 @@ in {
     };
   };
 
+  # Network daemons must not be restarted mid-deploy: networkd owns the LAN link
+  # (static IP, MTU), resolved handles DNS, tailscaled the tailnet, and AdGuard
+  # is the LAN DNS server. switch-to-configuration otherwise restarts any unit
+  # whose file changed, which can drop the SSH/deploy connection. The restarts
+  # are deferred to the nightly maintenance window (maintenance.deferredRestarts).
+  systemd.services.systemd-networkd.restartIfChanged = lib.mkForce false;
+  systemd.services.systemd-resolved.restartIfChanged = lib.mkForce false;
+  systemd.services.tailscaled.restartIfChanged = lib.mkForce false;
+  systemd.services.adguardhome.restartIfChanged = lib.mkForce false;
+
+  # The network-maintenance sanity gate pre-checks that these still exist in the
+  # rendered network config; fail loudly if someone removes them.
+  assertions = [
+    {
+      assertion = builtins.elem "192.168.178.2/24" (config.systemd.network.networks."10-eno1".address or []);
+      message = "m920q: 10-eno1 must keep static address 192.168.178.2/24 (network-maintenance sanity gate depends on it)";
+    }
+    {
+      assertion = builtins.elem "192.168.178.1" (config.systemd.network.networks."10-eno1".gateway or []);
+      message = "m920q: 10-eno1 must keep gateway 192.168.178.1 (network-maintenance sanity gate depends on it)";
+    }
+  ];
+
   networking.wireless.iwd.enable = true;
 
   boot.kernelModules = ["vkms"];
@@ -312,11 +412,31 @@ in {
     };
   };
 
+  # After a deploy the base config re-activates but the mode-switch never re-runs,
+  # leaving /run/m920q-current-mode stale (observed: current-mode=niri while the box
+  # boots headless). Hook the resync onto nixos-deploy and reconcile the marker with
+  # the hardware reality so a later HDMI change triggers the correct switch.
+  systemd.services.nixos-deploy.serviceConfig.ExecStartPost = lib.mkIf config.modules.system.maintenance.enable [
+    "${pkgs.systemd}/bin/systemctl start m920q-deploy-resync.service"
+  ];
+
+  systemd.services.m920q-deploy-resync = {
+    description = "Resync M920q mode state after deployment";
+    after = ["nixos-deploy.service"];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = hdmiResyncScript;
+    };
+  };
+
   services.udev.extraRules = ''
     ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="${pkgs.systemd}/bin/systemctl start m920q-hdmi-detect.service"
   '';
 
-  systemd.services.nix-daemon.serviceConfig.KillMode = lib.mkForce "control-group";
+  # KillMode "mixed": SIGTERM to the main process, SIGKILL to the remaining
+  # cgroup. Avoids the ~90s stop timeout during specialisation mode switches
+  # while still ensuring the whole cgroup (workers) is torn down.
+  systemd.services.nix-daemon.serviceConfig.KillMode = lib.mkForce "mixed";
 
   systemd.sockets.nix-daemon.enable = false;
   systemd.sockets.determinate-nixd.enable = false;
@@ -333,8 +453,6 @@ in {
   fileSystems."/home".neededForBoot = true;
 
   services = {
-    getty.autologinUser = lib.mkIf config.hostConfig.isGui inputs.self.lib.user;
-
     geoclue2.enable = lib.mkForce false;
 
     dbus.implementation = lib.mkForce "dbus";
@@ -398,6 +516,23 @@ in {
       monitoring = {
         enable = true;
         alerts = true;
+      };
+      # Network daemon restarts are deferred to a nightly window (04:00) so
+      # daytime deploys never drop the link; see restartIfChanged = false above.
+      deferredRestarts = {
+        enable = true;
+        services = [
+          "systemd-networkd"
+          "systemd-resolved"
+          "tailscaled"
+          "adguardhome"
+        ];
+        networkSanity = {
+          interface = "eno1";
+          address = "192.168.178.2/24";
+          gateway = "192.168.178.1";
+        };
+        autoRebootForKernel = true;
       };
     };
   };
