@@ -89,6 +89,10 @@ in {
           + "--ip 127.0.0.1 --port ${toString cfg.port}";
         Environment = [
           "HOME=${homeDir}"
+          # Login-equivalent PATH so sessions spawned by the web server can
+          # resolve the user shell (fish lives under /etc/profiles/per-user)
+          # and standard system tools.
+          "PATH=${homeDir}/.local/bin:/run/wrappers/bin:${homeDir}/.nix-profile/bin:/etc/profiles/per-user/${user}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
           "XDG_DATA_HOME=${homeDir}/.local/share"
           "XDG_CACHE_HOME=${homeDir}/.cache"
           "XDG_RUNTIME_DIR=${runtimeDir}"

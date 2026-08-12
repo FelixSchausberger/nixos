@@ -38,6 +38,9 @@
                                   sed -i 's|wslpath (wslvar windir)/System32|wslpath -u "C:/Windows/System32"|' $out/conf.d/done.fish
                                   # Add fallback to absolute path if wslpath fails
                                   perl -0pi -e 's|    if string length --quiet "\$powershell_exe"|    if not string length --quiet "\$powershell_exe"\n        and test -x /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\n        set -l powershell_exe /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\n    end\n\n    if string length --quiet "\$powershell_exe"|g' $out/conf.d/done.fish
+                                  # Skip powershell on WSL when the WSLInterop binfmt is unregistered so
+                                  # notifications degrade silently instead of erroring on every prompt
+                                  perl -0pi -e 's|function __done_run_powershell_script\n    set -f powershell_exe|function __done_run_powershell_script\n    if uname -a \| string match --quiet --ignore-case --regex microsoft\n        and not test -f /proc/sys/fs/binfmt_misc/WSLInterop\n        return 1\n    end\n\n    set -f powershell_exe|g' $out/conf.d/done.fish
                                 # Guard niri command in SSH/headless sessions where NIRI_SOCKET is unset
                                 perl -pi -e 's{niri msg --json focused-window \| jq ".id"}{test -n "\$NIRI_SOCKET"; and type -q niri; and niri msg --json focused-window | jq ".id"}' $out/conf.d/done.fish
 
