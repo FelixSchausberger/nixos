@@ -45,6 +45,9 @@ target/
 # Claude Code MCP configuration (auto-generated, contains nix store paths)
 .mcp.json
 
+# AI assistant LSP config (auto-generated, contains nix store paths)
+.lsp.json
+
 # OpenCode project config (auto-generated, contains GitHub PAT at runtime)
 opencode.json
 
