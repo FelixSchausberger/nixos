@@ -28,6 +28,11 @@
       enable = true;
       nix-direnv.enable = true;
     };
+
+    # Opt new sessions into being shareable through the zellij web server
+    # (served via Tailscale Serve on this host). The web server itself is the
+    # systemd service modules.system.homelab.zellijWeb.
+    zellij.settings.web_sharing = "on";
   };
 
   home = {

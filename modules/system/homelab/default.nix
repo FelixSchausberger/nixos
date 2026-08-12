@@ -14,5 +14,6 @@
     ./samba.nix
     ./ssh-hardened.nix
     ./tailscale.nix
+    ./zellij-web.nix
   ];
 }

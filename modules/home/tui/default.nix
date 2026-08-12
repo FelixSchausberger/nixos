@@ -27,6 +27,7 @@ in {
     ./typix.nix # Typst: A markup-based typesetting system
     ./windows-terminal.nix # Windows Terminal settings deployment to Windows
     ./zellij.nix # Terminal multiplexer with modern features
+    ./zellij-remote.nix # Remote attach helper for the homelab Zellij web server
     ./cachix.nix # Binary cache daemon for automatic cache population
     ./vitals.nix # Vitals health monitoring daemon + CLI
   ];
