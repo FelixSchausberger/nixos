@@ -27,6 +27,8 @@ in {
     inherit (hostInfo) wms;
     # user and system use defaults from lib/defaults.nix
 
+    zellijAutoAttach.sessionName = "portable";
+
     # Portable-specific specialisations for recovery scenarios
     specialisations = {
       # Enhanced recovery mode with additional tools

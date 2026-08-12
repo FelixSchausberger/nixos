@@ -26,6 +26,8 @@ in {
     inherit (hostInfo) wms;
     # user and system use defaults from lib/defaults.nix
 
+    zellijAutoAttach.sessionName = "vmware";
+
     # Enable auto-login for VM convenience
     autoLogin = {
       enable = true;
