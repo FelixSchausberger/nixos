@@ -16,14 +16,15 @@
   # Attaching to a "(current)" session also panics — the (current) check skips that.
   # No exec — if zellij exits or crashes, the WezTerm tab stays open with fish.
   # Uses only single-quoted strings so the value embeds safely in a Lua double-quoted string.
+  attachSession = config.hostConfig.zellijAutoAttach.sessionName;
   zellijCmd = ''
-    set -l zs (zellij list-sessions --no-formatting 2>/dev/null | string match -r '^homelab-wsl\b.*'); \
+    set -l zs (zellij list-sessions --no-formatting 2>/dev/null | string match -r '^${attachSession}\b.*'); \
     if test (count $zs) -gt 0; \
       if not string match -rq '\(current\)' -- $zs; \
-        zellij attach homelab-wsl; \
+        zellij attach ${attachSession}; \
       end; \
     else; \
-      zellij --session homelab-wsl; \
+      zellij --session ${attachSession}; \
     end'';
 
   # Catppuccin Mocha color scheme for WezTerm, generated from the repo's color
@@ -150,6 +151,8 @@ in {
       inherit (hostInfo) isGui;
       inherit (hostInfo) wms;
       # user and system use defaults from lib/defaults.nix
+
+      zellijAutoAttach.sessionName = "homelab-wsl";
     };
 
     modules.system.stylix-catppuccin.enable = true;

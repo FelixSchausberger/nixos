@@ -56,7 +56,6 @@
     ];
 
     sessionVariables = {
-      ZELLIJ_SESSION_NAME = "homelab-wsl";
       EDITOR = "hx";
     };
   };

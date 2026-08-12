@@ -2,10 +2,6 @@
   imports = [];
 
   home = {
-    sessionVariables = {
-      ZELLIJ_SESSION_NAME = "surface";
-    };
-
     packages = with pkgs; [
       libwacom # Libraries, configuration, and diagnostic tools for Wacom tablets running under Linux
       tlp # Advanced Power Management for Linux
