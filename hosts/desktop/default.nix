@@ -53,6 +53,8 @@ in {
     inherit (hostInfo) isGui;
     inherit (hostInfo) wms;
 
+    zellijAutoAttach.sessionName = "desktop";
+
     autoLogin = {
       enable = true;
       inherit (inputs.self.lib) user;

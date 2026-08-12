@@ -138,6 +138,8 @@ in {
     inherit (hostInfo) isGui wms;
     performanceProfile = "server-efficiency";
 
+    zellijAutoAttach.sessionName = "homelab";
+
     specialisations = {
       niri = {
         wms = ["niri"];

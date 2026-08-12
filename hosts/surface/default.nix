@@ -30,6 +30,8 @@ in {
     inherit (hostInfo) wms;
     # user and system use defaults from lib/defaults.nix
 
+    zellijAutoAttach.sessionName = "surface";
+
     # Surface-specific specialisations focused on performance profiles
     specialisations = {
       # Power-saving mode for battery life

@@ -3,7 +3,49 @@
   lib,
   hostConfig ? {},
   ...
-}: {
+}: let
+  attachCfg = hostConfig.zellijAutoAttach or {};
+  attachEnabled = attachCfg.enable or true;
+  attachSession = attachCfg.sessionName or null;
+
+  # SSH auto-attach fish snippet. Emitted only when a session name is
+  # configured (hostConfig.zellijAutoAttach.sessionName). The session name is
+  # interpolated at build time and passed via a local variable so the invoking
+  # shell never needs ZELLIJ_SESSION_NAME exported (which would make zellij's
+  # CLI believe we are already inside that session and refuse to attach).
+  sshAttachBlock =
+    if attachSession != null
+    then ''
+      # === SSH AUTO-ATTACH TO ZELLIJ ===
+      # Interactive SSH logins automatically attach to the host's named Zellij
+      # session. Local terminals are unaffected (no SSH_CONNECTION). Opt out per
+      # host with hostConfig.zellijAutoAttach.
+      #
+      # ZELLIJ and ZELLIJ_PANE_ID are exported by Zellij inside its panes, so an
+      # unset value here means "not inside zellij" — this prevents nested sessions.
+      # "attach --create" is avoided (it can race when the server considers the
+      # session current); instead list-sessions is checked and the session is
+      # attached or created. zellij is not exec'd — on detach, fish resumes as a
+      # plain shell.
+      if status is-interactive
+          and ${lib.boolToString attachEnabled}
+          and not __emergency_check
+          and set -q SSH_CONNECTION
+          and not set -q ZELLIJ
+          and not set -q ZELLIJ_PANE_ID
+          and command -q zellij
+        set -l session_name "${attachSession}"
+        if test -n "$session_name"
+          if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
+            zellij attach "$session_name"
+          else
+            zellij --session "$session_name"
+          end
+        end
+      end
+    ''
+    else "";
+in {
   imports = [
     ./functions
     ./plugins.nix
@@ -183,31 +225,7 @@
       end
 
 
-      # === SSH AUTO-ATTACH TO ZELLIJ ===
-      # Interactive SSH logins automatically attach to the host's named Zellij
-      # session (ZELLIJ_SESSION_NAME). Local terminals are unaffected (no
-      # SSH_CONNECTION). Opt out per host with hostConfig.zellijAutoAttach.
-      #
-      # ZELLIJ and ZELLIJ_PANE_ID are exported by Zellij inside its panes, so an
-      # unset value here means "not inside zellij" — this prevents nested sessions.
-      # "attach --create" is avoided (it can race when the server considers the
-      # session current); instead list-sessions is checked and the session is
-      # attached or created. zellij is not exec'd — on detach, fish resumes as a
-      # plain shell.
-      if status is-interactive
-          and ${lib.boolToString (hostConfig.zellijAutoAttach or true)}
-          and not __emergency_check
-          and set -q SSH_CONNECTION
-          and not set -q ZELLIJ
-          and not set -q ZELLIJ_PANE_ID
-          and test -n "$ZELLIJ_SESSION_NAME"
-          and command -q zellij
-        if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$ZELLIJ_SESSION_NAME\b.*"
-          zellij attach "$ZELLIJ_SESSION_NAME"
-        else
-          zellij --session "$ZELLIJ_SESSION_NAME"
-        end
-      end
+      ${sshAttachBlock}
 
     '';
   };
