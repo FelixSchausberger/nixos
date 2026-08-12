@@ -19,10 +19,19 @@ env:
     narinfo-cache-positive-ttl = 3600
     connect-timeout = 5
     stalled-download-timeout = 30
+    # Limit build parallelism so heavy closures cannot starve the hosted
+    # runner (default auto detects vCPUs and can exhaust memory/disk).
+    max-jobs = 2
+    cores = 2
 jobs:
   build-and-push:
-    name: Build all hosts and push to cachix
+    name: Build and push ${{ matrix.host }}
     runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [desktop, surface, portable, hp-probook-wsl, hp-probook-vmware, m920q]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -42,12 +51,7 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           # cachix-action automatically pushes every store path added
           # during the job to felixschausberger.cachix.org.
-      - name: Build all host configurations
-        run: |
-          HOSTS="desktop surface portable hp-probook-wsl hp-probook-vmware m920q"
-          for host in $HOSTS; do
-            echo "Building $host toplevel..."
-            nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --print-out-paths
-            echo "Building $host home activation..."
-            nix build ".#nixosConfigurations.$host.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths
-          done
+      - name: Build ${{ matrix.host }} toplevel
+        run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --print-out-paths
+      - name: Build ${{ matrix.host }} home activation
+        run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths
