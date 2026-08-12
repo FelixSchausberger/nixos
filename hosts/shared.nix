@@ -53,6 +53,12 @@ in {
           description = "Whether this host runs inside Windows Subsystem for Linux (disables greetd and other bare-metal features)";
         };
 
+        zellijAutoAttach = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Auto-attach to the host's Zellij session on interactive SSH logins";
+        };
+
         system = lib.mkOption {
           type = lib.types.str;
           default = defaults.system.architecture;
