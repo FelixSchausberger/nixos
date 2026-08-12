@@ -39,6 +39,13 @@ if [[ -n "${ALLOW_DOWNGRADES:-}" ]]; then
 	IFS=' ' read -r -a allowed <<<"$ALLOW_DOWNGRADES"
 fi
 
+# Packages that expose their flake git-rev short-hash as the version (e.g.
+# iris: 994ff83) always look like a downgrade to the naive version-sort, even
+# when the rev moves forward. They are pinned by the nixpkgs/inputs lock, not
+# the semver channel, so exempt them permanently.
+declare -a non_versioned_pkgs=(iris)
+allowed+=("${non_versioned_pkgs[@]}")
+
 in_allowed() {
 	local pkg="$1"
 	for a in "${allowed[@]}"; do
@@ -78,4 +85,4 @@ if [[ ${#downgrades[@]} -gt 0 ]]; then
 	exit 1
 fi
 
-echo "ok: no package downgrades detected"
+exit 0

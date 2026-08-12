@@ -1,0 +1,70 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index af4c5f9..bf0492d 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -7,4 +7,4 @@ authors = ["Ignacio Aleman <onsen@duck.com>"]
+ [dependencies]
+ serde = "1.0.175"
+ serde_json = "1.0.103"
+-zellij-tile = "0.42.2"
++zellij-tile = "0.44.3"
+diff --git a/src/main.rs b/src/main.rs
+index 40aa0be..03460ac 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -136,7 +136,8 @@ impl State {
+     }
+
+     fn sort_panes(&mut self) {
+-        self.panes.sort_by(|x, y| x.tab_info.position.cmp(&y.tab_info.position));
++        self.panes
++            .sort_by(|x, y| x.tab_info.position.cmp(&y.tab_info.position));
+     }
+
+     /// Reconciles the stored pane list against the latest manifest and updates
+@@ -167,7 +168,11 @@ impl State {
+
+         // Move cursor to the focused pane if it's in the list
+         if let Some(focused) = &self.focused_pane {
+-            if let Some(idx) = self.panes.iter().position(|p| p.pane_info.id == focused.pane_info.id) {
++            if let Some(idx) = self
++                .panes
++                .iter()
++                .position(|p| p.pane_info.id == focused.pane_info.id)
++            {
+                 self.selected = idx;
+             }
+         }
+@@ -249,7 +254,9 @@ impl ZellijPlugin for State {
+                     if let Some(pane_manifest) = &self.pane_manifest {
+                         if let Some(tab_info) = &self.tab_info {
+                             for (tab_position, panes) in &pane_manifest.panes {
+-                                if let Some(tab) = tab_info.iter().find(|t| t.position == *tab_position) {
++                                if let Some(tab) =
++                                    tab_info.iter().find(|t| t.position == *tab_position)
++                                {
+                                     for pane in panes {
+                                         if !pane.is_plugin && !current_ids.contains(&pane.id) {
+                                             self.panes.push(Pane {
+@@ -273,7 +280,11 @@ impl ZellijPlugin for State {
+                     // Since pane IDs are session-unique for terminal panes, we only
+                     // need to check the ID (not tab position).
+                     if let Some(pane) = &self.focused_pane {
+-                        if !self.panes.iter().any(|p| p.pane_info.id == pane.pane_info.id) {
++                        if !self
++                            .panes
++                            .iter()
++                            .any(|p| p.pane_info.id == pane.pane_info.id)
++                        {
+                             self.panes.push(pane.clone());
+                             self.sort_panes();
+                             self.persistence
+@@ -311,7 +322,7 @@ impl ZellijPlugin for State {
+                     if let Some(pane) = self.panes.get(self.selected) {
+                         hide_self();
+                         // TODO: This has a bug on macOS with hidden panes
+-                        focus_terminal_pane(pane.pane_info.id, true);
++                        focus_terminal_pane(pane.pane_info.id, true, true);
+                     }
+                 }
+                 _ => (),

@@ -51,7 +51,8 @@ in {
       wantedBy = ["graphical-session.target"];
       serviceConfig = {
         ExecStart = "${pkgs.uxplay}/bin/uxplay -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
-        EnvironmentFile = "-%t/uwsm/env_session.conf";
+        # WAYLAND_DISPLAY is inherited from the systemd user activation
+        # environment that niri --session exports on READY.
         Restart = "on-failure";
         RestartSec = 5;
       };

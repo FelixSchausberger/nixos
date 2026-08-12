@@ -7,14 +7,8 @@
   # m920q niri specialisation: minimal GUI config for occasional desktop use.
   # Monitor auto-detection used since output names vary (HDMI-A-1, DP-1, etc.).
 
-  # agetty autologin (set in hosts/m920q/default.nix specialisation) logs in schausberger
-  # on tty1. Fish detects tty1 on login and starts the niri session via UWSM.
-  # exec replaces the fish process so UWSM becomes the session leader.
-  programs.fish.loginShellInit = ''
-    if test (tty) = /dev/tty1
-      exec uwsm start niri-uwsm.desktop
-    end
-  '';
+  # Session start is handled system-side: greetd autologin runs niri-session
+  # (see hosts/m920q/default.nix). No shell-level session bootstrap needed.
 
   wm.niri = {
     enable = true;
@@ -25,6 +19,13 @@
       {
         name = "VIRTUAL-1";
         enable = false;
+      }
+    ];
+    windowRules = [
+      # Moonlight streams on the projector only; always fullscreen there.
+      {
+        matches = [{app-id = "^moonlight$";}];
+        open-fullscreen = true;
       }
     ];
   };

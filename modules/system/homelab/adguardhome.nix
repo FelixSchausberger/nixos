@@ -64,7 +64,9 @@
             "9.9.9.9"
             "1.1.1.1"
           ];
-          bind_hosts = ["127.0.0.1" "192.168.178.2"];
+          # Tailnet IP exposes AdGuard to roaming Tailscale clients, which use it
+          # as the tailnet DNS server with public resolvers as fallback.
+          bind_hosts = ["127.0.0.1" "192.168.178.2" "100.105.37.12"];
           port = 53;
         };
         querylog.enabled = true;
