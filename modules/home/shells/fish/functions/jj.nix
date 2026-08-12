@@ -57,20 +57,39 @@
         exit 1
       fi
 
-      # Garbage-collect leftover local bookmarks whose remote branch no longer
-      # exists on origin. With delete-branch-on-merge, a missing @origin ref
-      # means the PR was merged or the branch was removed; the commits stay
-      # reachable in history, so dropping the pointer is safe. The current
-      # bookmark and main are always kept.
-      current_bookmark=$(jj bookmark list -r '@' 2>/dev/null | grep -E '^[^ :]+:' | sed 's/:.*//' | head -1) || true
+      # Garbage-collect leftover bookmarks whose remote branch no longer exists
+      # on origin. With GitHub "automatically delete head branches" + auto-merge,
+      # a gone @origin ref means the PR was merged and the branch deleted; the
+      # commits stay reachable in history, so dropping the pointer is safe.
+      # Deleting a conflicted bookmark also resolves its conflicting targets,
+      # and in this colocated repo removes the exported git branch.
+      #
+      # A bookmark is only deleted when its content is provably merged into
+      # main@origin (target is an ancestor of main@origin, or it introduces no
+      # diff on top of it) - so the working copy's own bookmark is cleaned up
+      # once its PR merges. Unmerged work and main are always kept.
+      #
+      # Invariant: origin auto-deletes head branches on merge; jjwork drops the
+      # local bookmark (and exported git branch) once @origin is gone. Requires
+      # remote.origin.prune=true in the colocated repo's git config.
       echo "Cleaning up leftover bookmarks..."
-      for bm in $(jj bookmark list 2>/dev/null | grep -E '^[^ :]+:' | sed 's/:.*//'); do
+      for bm in $(jj bookmark list -T 'name ++ "\n"' 2>/dev/null | sort -u); do
         [ "$bm" = "main" ] && continue
-        [ "$bm" = "$current_bookmark" ] && continue
-        if ! jj bookmark list --all "$bm" 2>/dev/null | grep -q '^  @origin'; then
+
+        # Remote branch still exists on origin -> active work, keep it.
+        # With fetch.prune enabled, a remote-only deletion also lands here as a
+        # failed @origin lookup.
+        if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
+          continue
+        fi
+
+        if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & bookmarks(\"$bm\")" -T 'commit_id' 2>/dev/null)" ] \
+          || [ -z "$(jj diff --from 'main@origin' --to "bookmarks(\"$bm\")" --name-only 2>/dev/null)" ]; then
           if jj bookmark delete "$bm" 2>/dev/null; then
             echo "  deleted leftover bookmark: $bm"
           fi
+        else
+          echo "  keeping unmerged work: $bm (differs from main@origin)" >&2
         fi
       done
 
