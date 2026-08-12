@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  hostConfig ? {},
   ...
 }: {
   imports = [
@@ -82,9 +83,6 @@
         # Do NOT exit - continue with minimal shell to avoid WSL lockout
         return 0
       end
-
-      # Enable zellij auto-start by default (can be disabled with ZELLIJ_AUTO_START=0)
-      set -gx ZELLIJ_AUTO_START 1
 
       # Emergency shell functions - NixOS integrated
       ${(import ../emergency-functions.nix {inherit lib;}).emergencyShellFunctions.fish}
@@ -185,92 +183,29 @@
       end
 
 
-      # === PRE-FLIGHT SAFETY CHECKS ===
-      # Comprehensive validation before enabling any auto-start features
-      function __zellij_preflight_check
-        # Check 1: PATH is set and functional
-        if not test -n "$PATH"
-          echo "  Check failed: PATH is not set" >&2
-          return 1
-        end
-
-        # Check 2: Core commands available (critical for WSL)
-        if not command -v fish >/dev/null 2>&1
-          echo "  Check failed: fish not found in PATH" >&2
-          return 1
-        end
-        if not command -v ls >/dev/null 2>&1
-          echo "  Check failed: ls not found in PATH" >&2
-          return 1
-        end
-
-        # Check 3: WSL root shell detection - skip auto-start for root
-        if test (id -u) -eq 0
-          echo "  Check failed: running as root" >&2
-          return 1
-        end
-
-        # Check 4: Zellij binary exists and is executable
-        if not command -v zellij >/dev/null 2>&1
-          echo "  Check failed: zellij not found in PATH" >&2
-          return 1
-        end
-
-        # Check 5: Zellij configuration is valid
-        if not zellij setup --check >/dev/null 2>&1
-          echo "  Check failed: zellij setup --check (run 'zellij setup --check' for details)" >&2
-          return 1
-        end
-
-        return 0
-      end
-
-      # === SAFE ZELLIJ AUTO-START ===
-      # Single named session "homelab-wsl" on all startup paths.
-      # SSH connections skip zellij — local zellij acts as the outer multiplexer,
-      # avoiding nested sessions and mouse-capture conflicts.
+      # === SSH AUTO-ATTACH TO ZELLIJ ===
+      # Interactive SSH logins automatically attach to the host's named Zellij
+      # session (ZELLIJ_SESSION_NAME). Local terminals are unaffected (no
+      # SSH_CONNECTION). Opt out per host with hostConfig.zellijAutoAttach.
       #
-      # "attach --create" is avoided: it panics when the server considers the
-      # session "current" (race condition on shutdown/reconnect). Instead,
-      # list-sessions is checked explicitly and the session is either attached
-      # or created as a new session. The two subcommands never race.
-      #
-      # zellij is not exec'd — if it exits or crashes, fish resumes as a plain
-      # shell rather than closing the tab/window.
-      #
-      # Cleanup: kill stale EXITED sessions on startup to prevent clutter.
-      if status is-interactive; and test "$ZELLIJ_AUTO_START" = 1; and not __emergency_check
-        if __zellij_preflight_check
-          # ZELLIJ_SESSION_NAME is set by Zellij inside any active session.
-          # ZELLIJ is NOT set by Zellij (guard on that variable is ineffective).
-          if not set -q ZELLIJ_SESSION_NAME
-            if set -q SSH_CONNECTION
-              # SSH: skip zellij to avoid nested sessions
-            else
-              # Kill stale exited sessions to prevent clutter
-              for line in (zellij list-sessions --no-formatting 2>/dev/null)
-                if string match -rq '\[EXITED\]' -- "$line"
-                  zellij kill-session (string split ' ' -- "$line")[1] 2>/dev/null
-                end
-              end
-
-              # Check whether homelab-wsl exists AND is not the current session.
-              # Attaching to the current session panics; skip zellij entirely in that case.
-              set -l session_line (zellij list-sessions --no-formatting 2>/dev/null | string match -r '^homelab-wsl\b.*')
-              if test -n "$session_line"
-                if not string match -rq '\(current\)' -- "$session_line"
-                  zellij attach homelab-wsl
-                end
-                # session is current — already inside zellij, do nothing
-              else
-                zellij --session homelab-wsl
-              end
-              # zellij exited (normally or via crash) — fish continues as plain shell
-            end
-          end
+      # ZELLIJ and ZELLIJ_PANE_ID are exported by Zellij inside its panes, so an
+      # unset value here means "not inside zellij" — this prevents nested sessions.
+      # "attach --create" is avoided (it can race when the server considers the
+      # session current); instead list-sessions is checked and the session is
+      # attached or created. zellij is not exec'd — on detach, fish resumes as a
+      # plain shell.
+      if status is-interactive
+          and ${lib.boolToString (hostConfig.zellijAutoAttach or true)}
+          and not __emergency_check
+          and set -q SSH_CONNECTION
+          and not set -q ZELLIJ
+          and not set -q ZELLIJ_PANE_ID
+          and test -n "$ZELLIJ_SESSION_NAME"
+          and command -q zellij
+        if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$ZELLIJ_SESSION_NAME\b.*"
+          zellij attach "$ZELLIJ_SESSION_NAME"
         else
-          echo "Zellij pre-flight checks failed - starting normal fish shell" >&2
-          echo "   To enable auto-start, ensure zellij is properly configured"
+          zellij --session "$ZELLIJ_SESSION_NAME"
         end
       end
 

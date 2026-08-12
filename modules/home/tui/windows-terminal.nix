@@ -110,7 +110,9 @@ in {
             commandline = "C:\\Users\\SchausbergerF\\AppData\\Local\\Microsoft\\WinGet\\Links\\dssh.exe";
             guid = dsshGuid;
             hidden = false;
-            icon = "C:\\NixOS\\shortcut.ico";
+            # No icon: lets WT show its generic terminal icon so the tab is not
+            # mistaken for the NixOS/WSL tab (tab title is set per-host by the
+            # ssh LocalCommand in the Windows .ssh/config).
             name = "dssh";
           }
         ];
