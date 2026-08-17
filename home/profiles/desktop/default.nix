@@ -29,6 +29,24 @@
         "minecraft"
       ];
     };
+
+    media = {
+      enable = true;
+      services = ["music"];
+    };
+
+    productivity = {
+      enable = true;
+      tools = [
+        "notes"
+        "tasks"
+      ];
+    };
+
+    communication = {
+      enable = true;
+      protocols = ["matrix"];
+    };
   };
 
   home = {

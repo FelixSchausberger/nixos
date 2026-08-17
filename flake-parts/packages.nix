@@ -1,5 +1,6 @@
 {inputs, ...}: {
   perSystem = {pkgs, ...}: let
+    zellijPlugins = pkgs.callPackage ../pkgs/zellij-plugins {};
     makeISO = modules:
       (inputs.nixpkgs.lib.nixosSystem {
         inherit (pkgs.stdenv.hostPlatform) system;
@@ -21,6 +22,14 @@
 
       # SSH connection manager
       dssh = pkgs.callPackage ../pkgs/dssh {};
+
+      inherit
+        (zellijPlugins)
+        harpoon
+        zellij-attention
+        zellij-forgot
+        zjstatus-hints
+        ;
 
       # Prometheus exporter for AdGuard Home
       adguard-exporter = pkgs.callPackage ../pkgs/adguard-exporter {};

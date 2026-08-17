@@ -157,20 +157,6 @@
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.flake-utils.follows = "flake-utils";
     };
-    zjstatus = {
-      url = "github:dj95/zjstatus";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-    zjstatus-hints = {
-      url = "github:b0o/zjstatus-hints";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-      inputs.crane.follows = "crane";
-      inputs.rust-overlay.follows = "rust-overlay";
-    };
-
     # Installation tools (useful for portable/recovery)
     nixos-wizard = {
       url = "github:km-clay/nixos-wizard";

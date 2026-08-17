@@ -23,6 +23,12 @@ in {
         return 1
       end
 
+      # Prevent nested attach: if already inside the target session, refuse.
+      if set -q ZELLIJ_SESSION_NAME; and string match -q "${session}" "$ZELLIJ_SESSION_NAME"
+        echo "zr: already inside session '${session}' -- nested attach skipped" >&2
+        return 1
+      end
+
       while true
         zellij attach "https://${host}:${httpsPort}/${session}" -t "$token" -r
         set -l code $status

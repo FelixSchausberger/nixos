@@ -1,15 +1,18 @@
 {
+  config,
   inputs,
+  lib,
   pkgs,
   ...
 }: let
   spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  enabled = config.features.media.enable;
 in {
   imports = [
     inputs.spicetify-nix.homeManagerModules.default
   ];
 
-  systemd.user.services.spotify = {
+  systemd.user.services.spotify = lib.mkIf enabled {
     serviceConfig.Environment = let
       libs = with pkgs; [
         libx11
@@ -22,12 +25,12 @@ in {
     in ["LD_PRELOAD=${pkgs.lib.makeLibraryPath libs}"];
   };
 
-  home.packages = with pkgs; [
+  home.packages = lib.mkIf enabled (with pkgs; [
     libayatana-indicator
     libdbusmenu
-  ];
+  ]);
 
-  programs.spicetify = {
+  programs.spicetify = lib.mkIf enabled {
     enable = true;
 
     # https://github.com/the-argus/spicetify-nix/blob/master/EXTENSIONS.md

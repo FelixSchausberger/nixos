@@ -26,6 +26,7 @@ in {
       libvdpau-va-gl # OpenGL+VAAPI bridge
     ];
 
+    # Moonlight streaming client (watch streams from the desktop's moonshine server).
     environment.systemPackages = with pkgs; [
       moonlight-qt
     ];

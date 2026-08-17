@@ -6,13 +6,12 @@
 }: let
   inherit (inputs.self.lib) defaults;
   catppuccin = inputs.self.lib.catppuccinColors.mocha;
-in {
-  xdg.configFile."zellij/layouts/default.kdl".text = ''
+  defaultLayout = ''
     layout {
       default_tab_template {
         children
         pane size=1 borderless=true {
-          plugin location="file://${pkgs.zjstatus}/bin/zjstatus.wasm" {
+          plugin location="zjstatus" {
             format_left   "{mode}"
             format_center "{tabs}"
             format_right  "{pipe_zjstatus_hints} {datetime}"
@@ -47,7 +46,7 @@ in {
     }
   '';
 
-  xdg.configFile."zellij/layouts/rust.kdl".text = ''
+  rustLayout = ''
     layout {
       pane split_direction="vertical" {
         // Editor on top, cargo watch terminal on the bottom.
@@ -59,31 +58,31 @@ in {
       }
     }
   '';
-
+in {
   home.activation.writeZellijPermissions = lib.hm.dag.entryAfter ["writeBoundary"] ''
     permissions_file="$HOME/.cache/zellij/permissions.kdl"
     mkdir -p "$(dirname "$permissions_file")"
     $DRY_RUN_CMD cat > "$permissions_file" << 'PERMISSIONS_EOF'
-    "${pkgs.zjstatus}/bin/zjstatus.wasm" {
+    "${defaults.paths.homeDir}/.config/zellij/plugins/zjstatus.wasm" {
         RunCommands
         ChangeApplicationState
         ReadApplicationState
     }
-    "${pkgs."zjstatus-hints"}/bin/zjstatus-hints.wasm" {
+    "${defaults.paths.homeDir}/.config/zellij/plugins/zjstatus-hints.wasm" {
         MessageAndLaunchOtherPlugins
         ChangeApplicationState
         ReadCliPipes
         ReadApplicationState
     }
-    "https://github.com/Nacho114/harpoon/releases/latest/download/harpoon.wasm" {
+    "${defaults.paths.homeDir}/.config/zellij/plugins/harpoon.wasm" {
         ReadApplicationState
         ChangeApplicationState
     }
-    "https://github.com/karimould/zellij-forgot/releases/latest/download/zellij_forgot.wasm" {
+    "${defaults.paths.homeDir}/.config/zellij/plugins/forgot.wasm" {
         ReadApplicationState
         ChangeApplicationState
     }
-    "https://github.com/KiryuuLight/zellij-attention/releases/latest/download/zellij-attention.wasm" {
+    "${defaults.paths.homeDir}/.config/zellij/plugins/attention.wasm" {
         MessageAndLaunchOtherPlugins
         ChangeApplicationState
         ReadCliPipes
@@ -100,39 +99,51 @@ in {
   programs.zellij = {
     enable = true;
 
-    settings =
-      {
-        theme = "catppuccin-mocha";
-        default_shell = "fish";
-        default_cwd = defaults.paths.homeDir;
-        default_mode = "Locked";
+    layouts = {
+      default = defaultLayout;
+      rust = rustLayout;
+    };
 
-        # UI settings
-        pane_frames = false;
-        simplified_ui = true;
-        default_layout = "default";
-        show_startup_tips = false;
+    plugins = [
+      pkgs.zjstatus
+      pkgs."zjstatus-hints"
+      pkgs.zellij-attention
+      pkgs.harpoon-plugin
+      pkgs.zellij-forgot
+    ];
 
-        # Mouse support
-        mouse_mode = true;
-        copy_on_select = true; # Automatically copy selected text via OSC 52
+    settings = {
+      theme = "catppuccin-mocha";
+      default_shell = "fish";
+      default_cwd = defaults.paths.homeDir;
+      default_mode = "Locked";
 
-        # Session settings
-        session_serialization = true;
-        disable_session_metadata = true;
+      # UI settings
+      pane_frames = false;
+      simplified_ui = true;
+      default_layout = "default";
+      show_startup_tips = false;
 
-        scrollback_editor = "${pkgs.helix}/bin/hx";
-        auto_layout = true;
-      }
-      // {
-        # Clipboard integration
-        # On WSL: Zellij automatically uses OSC 52 escape sequences when no copy_command is set
-        # Windows Terminal (1.12+) supports OSC 52 and handles UTF-8 properly
-        # This avoids clip.exe which has UTF-8 encoding issues
-        # No copy_command needed - Zellij's built-in OSC 52 support works automatically
-        # Load plugins at startup
-        # Note: zjstatus is loaded automatically when referenced in layouts
+      # Mouse support
+      mouse_mode = true;
+      copy_on_select = true; # Automatically copy selected text via OSC 52
+
+      # Session settings
+      session_serialization = true;
+      disable_session_metadata = false;
+
+      scrollback_editor = "${pkgs.helix}/bin/hx";
+      auto_layout = true;
+
+      # Home Manager aliases every plugin, but only headless pipe consumers
+      # should start eagerly. UI plugins remain layout/on-demand driven.
+      load_plugins = lib.mkForce {
+        _children = [
+          {"zjstatus-hints" = [];}
+          {attention = [];}
+        ];
       };
+    };
 
     # Unlock-first keybinding preset with Colemak-DH navigation
     # Prevents conflicts with Claude Code shortcuts (Ctrl+T, Ctrl+O, etc.)
@@ -150,22 +161,6 @@ in {
         pane_frames {
           rounded_corners true
         }
-      }
-
-      plugins {
-        zjstatus location="file://${pkgs.zjstatus}/bin/zjstatus.wasm"
-        harpoon location="https://github.com/Nacho114/harpoon/releases/latest/download/harpoon.wasm"
-        forgot location="https://github.com/karimould/zellij-forgot/releases/latest/download/zellij_forgot.wasm"
-        zellij-attention location="https://github.com/KiryuuLight/zellij-attention/releases/latest/download/zellij-attention.wasm"
-        zjstatus-hints location="file://${pkgs."zjstatus-hints"}/bin/zjstatus-hints.wasm" {
-          pipe_name "zjstatus_hints"
-          hide_in_base_mode false
-        }
-      }
-
-      load_plugins {
-        zjstatus-hints
-        zellij-attention
       }
 
       keybinds clear-defaults=true {

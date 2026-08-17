@@ -28,10 +28,6 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Create fresh weekly-updates branch
-        run: |
-          git branch -D weekly-updates 2>/dev/null || true
-          git switch -c weekly-updates
       - name: Setup SSL certificates
         uses: ./.github/actions/setup-ssl
       - name: Install Nix

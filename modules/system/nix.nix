@@ -23,9 +23,15 @@
     overlays = [
       inputs.nur.overlays.default
       # Custom overlay for TUI-specific packages
-      (final: prev: {
-        zjstatus = inputs.zjstatus.packages.${prev.stdenv.hostPlatform.system}.default;
-        "zjstatus-hints" = inputs.zjstatus-hints.packages.${prev.stdenv.hostPlatform.system}.default;
+      (final: prev: let
+        zellijPlugins = prev.callPackage ../../pkgs/zellij-plugins {};
+        zjstatus = prev.zellijPlugins.zjstatus;
+      in {
+        inherit zjstatus;
+        "zjstatus-hints" = zellijPlugins.zjstatus-hints;
+        inherit (zellijPlugins) zellij-attention;
+        harpoon-plugin = zellijPlugins.harpoon;
+        inherit (zellijPlugins) zellij-forgot;
         dssh = final.callPackage ../../pkgs/dssh {};
 
         # Align the tree-sitter-rust grammar with the queries shipped by the

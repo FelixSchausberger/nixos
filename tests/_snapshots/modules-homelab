@@ -16,6 +16,6 @@
   zellij_web_https_port = 8443;
   zellij_web_linger = true;
   zellij_web_port = 8083;
-  zellij_web_service_exec_start = "/nix/store/0q7n8a91d6zv5k5bcmaz3wi8dx31y5zf-zellij-0.44.3/bin/zellij web --start --ip 127.0.0.1 --port 8083";
+  zellij_web_service_exec_start = "/nix/store/lyw5xzp33j92ssj63wj1krpjgglp0w2q-zellij-0.44.3/bin/zellij web --start --ip 127.0.0.1 --port 8083";
   zellij_web_tailnet_domain = "m920q.tailf2f0ca.ts.net";
 }

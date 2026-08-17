@@ -35,6 +35,36 @@
         description = "Gaming platforms to support";
       };
     };
+
+    # Media features
+    media = {
+      enable = lib.mkEnableOption "media applications and services";
+      services = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum ["music"]);
+        default = [];
+        description = "Media services to include";
+      };
+    };
+
+    # Productivity features
+    productivity = {
+      enable = lib.mkEnableOption "productivity applications";
+      tools = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum ["notes" "tasks"]);
+        default = [];
+        description = "Productivity tools to include";
+      };
+    };
+
+    # Communication features
+    communication = {
+      enable = lib.mkEnableOption "communication applications";
+      protocols = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum ["matrix"]);
+        default = [];
+        description = "Communication protocols to support";
+      };
+    };
   };
 
   config = {
@@ -71,26 +101,31 @@
           ]
       ))
 
-      # Creative packages (only packages not already in gui/default.nix)
+      # Creative packages
       (lib.mkIf config.features.creative.enable (
         with pkgs;
           lib.optionals (lib.elem "image" config.features.creative.tools) [
             krita
             inkscape
+            gimp # The GNU Image Manipulation Program
           ]
           ++ lib.optionals (lib.elem "video" config.features.creative.tools) [
             ffmpeg
           ]
           ++ lib.optionals (lib.elem "3d" config.features.creative.tools) [
             blender
+            freecad # 3D CAD software
+            prusa-slicer # G-code generator for 3D printer
           ]
       ))
 
-      # Gaming packages (avoid conflicts with existing steam configs)
+      # Gaming packages
       (lib.mkIf config.features.gaming.enable (
         with pkgs;
-        # Don't include steam here - it's handled by hyprland.nix and gui/default.nix
-          lib.optionals (lib.elem "lutris" config.features.gaming.platforms) [
+          lib.optionals (lib.elem "steam" config.features.gaming.platforms) [
+            steam # Gaming platform
+          ]
+          ++ lib.optionals (lib.elem "lutris" config.features.gaming.platforms) [
             lutris
           ]
           ++ lib.optionals (lib.elem "emulation" config.features.gaming.platforms) [
@@ -101,7 +136,38 @@
             inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.quantumlauncher
           ]
       ))
+
+      # Media packages
+      (lib.mkIf config.features.media.enable (
+        with pkgs;
+          lib.optionals (lib.elem "music" config.features.media.services) [
+            # Spicetify is handled by gui/spicetify.nix (self-gated)
+          ]
+      ))
+
+      # Productivity packages
+      (lib.mkIf config.features.productivity.enable (
+        with pkgs;
+          lib.optionals (lib.elem "notes" config.features.productivity.tools) [
+            # Obsidian is handled by gui/obsidian.nix (self-gated)
+          ]
+          ++ lib.optionals (lib.elem "tasks" config.features.productivity.tools) [
+            planify # Task manager with Todoist support
+            noto-fonts-emoji-blob-bin # Font needed for planify
+          ]
+      ))
+
+      # Communication packages
+      (lib.mkIf config.features.communication.enable (
+        with pkgs;
+          lib.optionals (lib.elem "matrix" config.features.communication.protocols) [
+            fractal # Matrix group messaging app
+          ]
+      ))
     ];
+
+    # Font configuration for planify
+    fonts.fontconfig.enable = lib.mkIf config.features.productivity.enable true;
 
     # Development shell configurations
     programs = lib.mkIf config.features.development.enable {
