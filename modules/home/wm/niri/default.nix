@@ -537,6 +537,11 @@ in {
       Install.WantedBy = ["graphical-session.target"];
     };
 
+    # niri-flake ships a KDE polkit agent whose portal registration spams
+    # journald ("Failed to register with host portal"). Swap in polkit-gnome,
+    # the platform-agnostic Wayland-compatible agent.
+    systemd.user.services."niri-flake-polkit".serviceConfig.ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+
     # Enable xwayland-satellite for X11 app compatibility
     systemd.user.services.xwayland-satellite = {
       Unit = {

@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+# A newer push to main supersedes any stale run; racing runs would push the
+# same paths and waste runner minutes.
+concurrency:
+  group: cachix-push-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 env:
@@ -45,7 +50,7 @@ jobs:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
       - name: Install Cachix
-        uses: cachix/cachix-action@v15
+        uses: cachix/cachix-action@v17
         with:
           name: felixschausberger
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}

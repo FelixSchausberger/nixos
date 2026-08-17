@@ -351,6 +351,10 @@
               # Apply a pending kernel update only if the network came back cleanly.
               if [[ "$networkd_ok" -eq 1 ]] \
                 && [[ "$(readlink -f /run/current-system/kernel 2>/dev/null)" != "$(readlink -f /run/booted-system/kernel 2>/dev/null)" ]]; then
+                # Flush the zellij session serialization tail (runs every 1 s) to
+                # disk so the next attach can resurrect from a fresh snapshot.
+                echo "flushing zellij session data before reboot"
+                ${pkgs.coreutils}/bin/sync
                 echo "kernel update pending; rebooting to apply"
                 ${pkgs.systemd}/bin/systemctl reboot
               fi

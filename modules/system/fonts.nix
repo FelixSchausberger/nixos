@@ -19,7 +19,6 @@
       # Programming and monospace fonts
       fira-code
       fira-code-symbols
-      jetbrains-mono
 
       # Nerd Fonts variants (patched with icons)
       nerd-fonts.jetbrains-mono
