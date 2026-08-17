@@ -30,9 +30,6 @@
       (rule "Lutris" "lutris" {open-on-workspace = "1";})
       (rule "Heroic Games Launcher" "heroic" {open-on-workspace = "1";})
 
-      # Moonlight streaming - fullscreen on workspace 1
-      (rule "Moonlight" "moonlight" {open-on-workspace = "1";})
-
       # Chat and communication - open on workspace 2
       (rule "Discord" "discord" {open-on-workspace = "2";})
 
@@ -53,12 +50,8 @@
     ];
   };
 
-  # Gaming: tools and configurations for Moonlight streaming
+  # Gaming: MangoHud for FPS monitoring and performance overlay
   home.packages = with pkgs; [
-    # Moonlight game streaming client
-    moonlight-qt
-
-    # MangoHud for FPS monitoring and performance overlay
     mangohud
   ];
 

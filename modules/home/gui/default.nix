@@ -12,27 +12,10 @@
     ./spicetify.nix # Play music from the Spotify music service
   ];
 
-  # Simple single-package applications (consolidated from individual files)
+  # Simple single-package applications
   home.packages = with pkgs; [
-    # Previously individual modules, now consolidated:
-    freecad # 3D CAD software (was freecad.nix)
-    oculante # Minimalistic image viewer (was oculante.nix)
-    planify # Task manager with Todoist support (was planify.nix)
-    steam # Gaming platform (was steam.nix)
-
-    # Font needed for planify (from planify.nix)
-    noto-fonts-emoji-blob-bin
-
-    # Other applications:
-    # celeste # GUI file synchronization client that can sync with any cloud provider
-    fractal # Matrix group messaging app
-    gimp # The GNU Image Manipulation Program
-    # rnote # Simple drawing application to create handwritten notes
-    # qbittorrent-enhanced # Unofficial enhanced version of qBittorrent, a BitTorrent client
+    oculante # Minimalistic image viewer
   ];
-
-  # Font configuration needed for planify (from planify.nix)
-  fonts.fontconfig.enable = true;
 
   # MIME type associations for oculante (from oculante.nix)
   xdg = {

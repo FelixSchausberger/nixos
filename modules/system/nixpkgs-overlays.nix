@@ -3,6 +3,13 @@
 _: {
   nixpkgs.overlays = [
     (_final: prev: {
+      # moonlight-qt 6.1.0 does not compile against ffmpeg-9 (AVCodec.pix_fmts
+      # was removed upstream). Pin it to ffmpeg_8 until nixpkgs/upstream add
+      # ffmpeg-9 support. Needed by the m920q media client.
+      moonlight-qt = prev.moonlight-qt.override {
+        ffmpeg = prev.ffmpeg_8;
+      };
+
       # python-lsp-server has flaky tests that fail in CI, disable them
       python312Packages = prev.python312Packages.overrideScope (
         _: pyprev: {
