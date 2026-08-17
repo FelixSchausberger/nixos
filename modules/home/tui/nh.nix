@@ -15,25 +15,34 @@ _: {
   };
 
   # NH (Nix Helper) aliases for Fish shell
-  # Deploy chain: build -> downgrade-guard -> detached switch -> validate.
+  # Deploy chain: build -> downgrade-guard -> switch -> validate.
   # nh os switch <path> skips flake evaluation entirely (deploys exactly the guarded
-  # closure, so a flake edit between steps cannot cause divergence). The switch itself
-  # runs as a systemd oneshot (nixos-deploy.service), so a network timeout or SSH
-  # disconnect cannot kill it mid-flight and leave the box half-deployed; instead of
-  # dropping the connection, the daemons that own the link (networkd, resolved,
-  # tailscaled, adguardhome) are deferred to the nightly maintenance window.
+  # closure, so a flake edit between steps cannot cause divergence). The switch runs
+  # in the foreground: NixOS switches are atomic and re-runnable, so an SSH drop
+  # mid-switch leaves a partially-activated system that a re-run converges — old
+  # generation stays bootable. nh escalates to root internally for activation; the
+  # store path is resolved first because root cannot follow the /tmp/nh-result
+  # symlink across ZFS datasets with posix ACLs (Permission denied on stat).
   # A failed activation keeps the old generation, so switch needs no test pre-step.
   # guard-downgrades.sh blocks deploys/updates that would regress package versions.
+  #
+  # update-system.sh runs a smart update: it first deploys the committed config
+  # when it is at least as new as the deployed system (no input refresh), and
+  # only refreshes all flake inputs when the committed config is older. The
+  # downgrade guard is mandatory in every path and ALLOW_DOWNGRADE=1 (bulk
+  # bypass) is refused; intentional per-package downgrades go through
+  # ALLOW_DOWNGRADES or an input pin in flake.nix.
   programs.fish.shellAliases = {
-    # Build, block regressions, then switch atomically under systemd
+    # Build, block regressions, then switch the guarded store path
     # jj status runs first as a non-blocking sanity check (shows untracked files, pending changes)
     # --repository targets the flake dir regardless of cwd
-    deploy = "jj --repository $NH_FLAKE status; and nh os build -S -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and sudo systemctl start --wait nixos-deploy; and validate-system";
-    deploy-offline = "jj --repository $NH_FLAKE status; and nh os build -S -o /tmp/nh-result -- --option substitute false; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and sudo systemctl start --wait nixos-deploy; and validate-system";
-    deploy-verbose = "jj --repository $NH_FLAKE status; and NH_LOG=nh=debug nh os build -S -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and sudo systemctl start --wait nixos-deploy; and validate-system; and journalctl -u nixos-deploy -n 50 --no-pager";
+    deploy = "jj --repository $NH_FLAKE status; and nh os build -S -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system";
+    deploy-offline = "jj --repository $NH_FLAKE status; and nh os build -S -o /tmp/nh-result -- --option substitute false; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system";
+    deploy-verbose = "jj --repository $NH_FLAKE status; and NH_LOG=nh=debug nh os build -S -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system";
 
-    # Update flake inputs, build, guard against downgrades, then switch the guarded store path
-    update = "nh os build --update -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and sudo systemctl start --wait nixos-deploy; and validate-system";
+    # Smart update: deploy committed config if current, else refresh all inputs.
+    # Never bulk-downgrades; the guard is mandatory and the bulk bypass is refused.
+    update = "$NH_FLAKE/tools/scripts/update-system.sh";
 
     # Utility aliases
     clean = "nh clean all";

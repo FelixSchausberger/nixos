@@ -87,6 +87,13 @@ in {
       defaultText = lib.literalExpression "config.modules.system.homelab.remoteControl.enable";
       description = "Expose remote-control web UI via Tailscale at <tailnetDomain>/remote-control";
     };
+
+    homepage = lib.mkOption {
+      type = lib.types.bool;
+      default = hl.homepage.enable;
+      defaultText = lib.literalExpression "config.modules.system.homelab.homepage.enable";
+      description = "Expose Homepage dashboard via Tailscale at <tailnetDomain>/homepage";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -119,6 +126,10 @@ in {
         assertion = !cfg.remoteControl || hl.remoteControl.enable;
         message = "caddyProxy.remoteControl requires modules.system.homelab.remoteControl.enable = true";
       }
+      {
+        assertion = !cfg.homepage || hl.homepage.enable;
+        message = "caddyProxy.homepage requires modules.system.homelab.homepage.enable = true";
+      }
     ];
 
     # Allow Caddy to fetch TLS certificates from the local Tailscale daemon.
@@ -143,6 +154,7 @@ in {
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
           + lib.optionalString cfg.remoteControl (mkRoute "remote-control" hl.remoteControl.port)
+          + lib.optionalString cfg.homepage (mkRoute "homepage" hl.homepage.port)
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.
           + lib.optionalString cfg.nextcloud (mkWellKnownRedirects "/nextcloud")

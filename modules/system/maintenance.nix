@@ -237,37 +237,6 @@
           };
         };
 
-        # Deployment switch owned by systemd, not the SSH session. The deploy aliases
-        # stage the build with `nh os build -o /tmp/nh-result` and then run
-        # `systemctl start --wait nixos-deploy`. Because the job is a systemd unit, a
-        # network timeout or SSH disconnect cannot kill the switch mid-flight and leave
-        # the box half-deployed; systemd also activates home-manager/logind afterwards.
-        nixos-deploy = {
-          description = "NixOS deployment switch (detached from the invoking SSH session)";
-          after = ["nix-daemon.service" "network-online.target"];
-          wants = ["network-online.target"];
-          path = [config.system.path pkgs.nh];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            User = "root";
-            Group = "root";
-          };
-          script = ''
-            set -euo pipefail
-
-            result=/tmp/nh-result
-            if [[ ! -e "$result" ]]; then
-              echo "nixos-deploy: no staged result at $result" >&2
-              exit 1
-            fi
-
-            # Same invocation as the old aliases (--diff never) minus the flake eval:
-            # nh deploys exactly the guarded closure staged in /tmp/nh-result.
-            nh os switch -d never "$result"
-          '';
-        };
-
         # Nightly maintenance: apply deferred network daemon restarts and, when a
         # kernel update is pending, reboot. Runs at 04:00 so network restarts never
         # interrupt daytime use. The networkd restart is gated by a pre-check (the
