@@ -384,6 +384,17 @@ in {
           status_line err "/nix/store" "not accessible"
         fi
 
+        section "Reboot"
+        current_kernel=$(readlink -f /run/current-system/kernel 2>/dev/null || echo "unknown")
+        booted_kernel=$(readlink -f /run/booted-system/kernel 2>/dev/null || echo "unknown")
+        if [[ "$current_kernel" == "$booted_kernel" ]]; then
+          status_line ok "Kernel" "up to date ($booted_kernel)"
+        elif [[ "$current_kernel" == "unknown" || "$booted_kernel" == "unknown" ]]; then
+          status_line info "Kernel" "unavailable ($current_kernel vs $booted_kernel)"
+        else
+          status_line warn "Kernel" "reboot pending: running $booted_kernel -> deployed $current_kernel"
+        fi
+
         section "Current Generation"
         current_path=$(readlink -f /run/current-system 2>/dev/null || echo "unknown")
         status_line info "Path" "$current_path"
