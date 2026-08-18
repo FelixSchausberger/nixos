@@ -414,20 +414,15 @@ in {
 
   # After a deploy the base config re-activates but the mode-switch never re-runs,
   # leaving /run/m920q-current-mode stale (observed: current-mode=niri while the box
-  # boots headless). Hook the resync onto nixos-deploy and reconcile the marker with
-  # the hardware reality so a later HDMI change triggers the correct switch.
-  systemd.services.nixos-deploy.serviceConfig.ExecStartPost = lib.mkIf config.modules.system.maintenance.enable [
-    "${pkgs.systemd}/bin/systemctl start m920q-deploy-resync.service"
-  ];
-
-  systemd.services.m920q-deploy-resync = {
-    description = "Resync M920q mode state after deployment";
-    after = ["nixos-deploy.service"];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = hdmiResyncScript;
-    };
-  };
+  # boots headless). Reconcile the marker with the hardware reality so a later HDMI
+  # change triggers the correct switch. Only runs when the marker already exists: a
+  # fresh boot (/run tmpfs) has no stale state, and pre-seeding "niri" would suppress
+  # the debounced boot-time HDMI switch (desired == current → no-op).
+  system.activationScripts.m920q-resync-mode = lib.mkIf (!config.hostConfig.isGui) (lib.stringAfter ["m920q-base-toplevel"] ''
+    if [[ -f /run/m920q-current-mode ]]; then
+      ${hdmiResyncScript}
+    fi
+  '');
 
   services.udev.extraRules = ''
     ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="${pkgs.systemd}/bin/systemctl start m920q-hdmi-detect.service"
@@ -600,6 +595,7 @@ in {
       enable = true;
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
+    homepage.enable = true;
     ntfy.enable = true;
     remoteControl = {
       enable = true;

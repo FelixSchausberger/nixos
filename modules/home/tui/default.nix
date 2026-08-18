@@ -106,7 +106,7 @@ in {
     export HM_ACTIVATION=1
 
     # Run health check with proper PATH - make it non-fatal (warnings only)
-    if run ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
+    if run env PATH="${pkgs.kdlfmt}/bin:$PATH" ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
       run echo "Shell health check passed"
     else
       run echo "Shell health check found issues (non-fatal during activation)"

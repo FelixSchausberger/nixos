@@ -134,12 +134,25 @@
     # already in place at that path ("Device or resource busy"), and the transient uid
     # it creates cannot write to directories it doesn't own.
     # A static user sidesteps both problems, matching the pattern used by rustdesk.nix.
-    systemd.services.adguardhome.serviceConfig = {
-      DynamicUser = lib.mkForce false;
-      User = lib.mkForce "adguardhome";
-      Group = lib.mkForce "adguardhome";
-      Restart = lib.mkForce "on-failure";
-      RestartSec = lib.mkForce "5s";
+    systemd.services.adguardhome = {
+      # When tailscaled or network interfaces restart, AdGuard's static bind_hosts
+      # (e.g. 100.105.37.12) may not immediately be assigned to an interface.
+      # IP_FREEBIND allows binding before the interface address is fully configured.
+      after = [
+        "network.target"
+        "tailscaled.service"
+      ];
+      wants = [
+        "tailscaled.service"
+      ];
+      serviceConfig = {
+        DynamicUser = lib.mkForce false;
+        User = lib.mkForce "adguardhome";
+        Group = lib.mkForce "adguardhome";
+        Restart = lib.mkForce "on-failure";
+        RestartSec = lib.mkForce "5s";
+        IPFreebind = true;
+      };
     };
 
     # Port 53 is served directly by AdGuard Home for LAN clients.

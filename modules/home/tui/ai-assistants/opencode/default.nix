@@ -116,7 +116,11 @@ in {
         return {};
       }
 
-      const notifyAttention = async (state) => {
+      let lastState = null;
+
+      const notifyState = async (state) => {
+        if (state === lastState) return;
+        lastState = state;
         try {
           await $`zellij pipe --name "zellij-attention::''${state}::''${paneId}"`;
         } catch {
@@ -127,15 +131,22 @@ in {
       return {
         event: async ({ event }) => {
           if (event.type === "permission.asked") {
-            await notifyAttention("waiting");
+            await notifyState("attention");
           }
 
           if (
             event.type === "permission.replied" ||
+            event.type === "tool.execute.before" ||
+            event.type === "message.part.updated"
+          ) {
+            await notifyState("working");
+          }
+
+          if (
             event.type === "session.idle" ||
             event.type === "session.error"
           ) {
-            await notifyAttention("completed");
+            await notifyState("done");
           }
         },
       };

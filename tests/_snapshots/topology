@@ -1,0 +1,22 @@
+#pretty
+{
+  d2_has_desktop = true;
+  d2_has_fritzbox = true;
+  d2_has_internet = true;
+  d2_has_m920q = true;
+  d2_has_tailscale = true;
+  d2_text_nonempty = true;
+  enabled_service_count = 8;
+  enabled_services = [
+    "adguardhome"
+    "immich"
+    "monitoring"
+    "navidrome"
+    "nextcloud"
+    "ntfy"
+    "remoteControl"
+    "zellijWeb"
+  ];
+  has_immich = true;
+  has_monitoring = true;
+}

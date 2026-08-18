@@ -164,13 +164,12 @@ sudo nixos-rebuild test --flake .                # Temporary, no bootloader chan
 
 # Using nh (recommended)
 nh os switch                                     # Build and activate (includes Home Manager)
-nh os switch --update                            # Update inputs first
 nh os test                                       # Temporary testing
 nh os build                                      # Build without activating
 
 # Aliases available in shell
-deploy                                           # First nh os build, guard, test, then switch
-update                                           # Update inputs, guard, test, then switch
+deploy                                           # Build committed config, guard, then switch
+update                                           # Smart update (see Downgrade Guard below)
 clean                                            # Clean old generations
 history                                          # View generation history
 ```
@@ -183,13 +182,23 @@ and blocks the deployment if any package would be downgraded. This prevents
 the rolling nixpkgs semver channel or divergent per-host lock files from
 silently regressing versions.
 
+`update` runs `tools/scripts/update-system.sh`, which deploys the committed
+config when it is at least as new as the deployed system (no input refresh),
+and only refreshes all flake inputs when the committed config is older. The
+guard is mandatory in every path, and bulk downgrades are never allowed:
+`update` refuses `ALLOW_DOWNGRADE=1`. Intentional per-package downgrades go
+through `ALLOW_DOWNGRADES` or an input pin in `flake.nix`.
+
 Override to allow downgrades deliberately (for pinned versions):
 
 ```bash
-ALLOW_DOWNGRADE=1 deploy                                   # Allow all downgrades
 ALLOW_DOWNGRADES="pkg1 pkg2" deploy                        # Allow specific packages
+ALLOW_DOWNGRADES="pkg1 pkg2" update                        # Allow specific packages during update
 just guard-build                                           # Check current host without switching
 ```
+
+Note: `ALLOW_DOWNGRADE=1` (allow all downgrades) is only honored by `deploy`,
+never by `update`.
 
 ### Quick VM Installation with nixos-anywhere (Recommended)
 

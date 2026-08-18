@@ -133,6 +133,30 @@ function validate_zellij_config
         return 1
     end
 
+    # Validate layout files parse as valid KDL. `zellij setup --check` only
+    # validates config.kdl, so a broken layout would otherwise ship silently.
+    if command -v kdlfmt >/dev/null 2>&1
+        set -l layout_dir "$HOME/.config/zellij/layouts"
+        if test -d "$layout_dir"
+            set -l layout_failed 0
+            for layout in "$layout_dir"/*.kdl
+                if test -f "$layout"
+                    if not kdlfmt format - < "$layout" >/dev/null 2>&1
+                        log_warning "Zellij layout '$layout' failed to parse"
+                        set layout_failed 1
+                    end
+                end
+            end
+            if test $layout_failed -eq 0
+                log_success "Zellij layouts parse correctly"
+            else
+                return 1
+            end
+        end
+    else
+        log_warning "kdlfmt not available; skipping Zellij layout KDL validation"
+    end
+
     return 0
 end
 

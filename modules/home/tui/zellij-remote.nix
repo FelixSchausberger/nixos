@@ -23,10 +23,18 @@ in {
         return 1
       end
 
-      # Prevent nested attach: if already inside the target session, refuse.
-      if set -q ZELLIJ_SESSION_NAME; and string match -q "${session}" "$ZELLIJ_SESSION_NAME"
-        echo "zr: already inside session '${session}' -- nested attach skipped" >&2
-        return 1
+      # Never run two nested zellij sessions (user invariant). If already inside
+      # any zellij session, attaching again would nest, so:
+      # - inside the homelab session: already at the desired outer session -> no-op success.
+      # - inside a different session: refuse and tell the user to detach first.
+      if set -q ZELLIJ_SESSION_NAME
+        if string match -q "${session}" "$ZELLIJ_SESSION_NAME"
+          echo "zr: already attached to session '${session}' -- nothing to do" >&2
+          return 0
+        else
+          echo "zr: inside zellij session '$ZELLIJ_SESSION_NAME'; detach first (Ctrl-g d), then run zr to attach to '${session}'" >&2
+          return 1
+        end
       end
 
       while true
