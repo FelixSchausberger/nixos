@@ -45,14 +45,16 @@ in {
 
     systemd.user.services.uxplay = {
       description = "UxPlay AirPlay receiver";
-      after = ["graphical-session.target"];
-      partOf = ["graphical-session.target"];
-      bindsTo = ["graphical-session.target"];
-      wantedBy = ["graphical-session.target"];
+      # niri-session.target activates after niri.service is ready and exports
+      # WAYLAND_DISPLAY; graphical-session.target alone fires too early.
+      after = ["niri-session.target"];
+      partOf = ["niri-session.target"];
+      bindsTo = ["niri-session.target"];
+      wantedBy = ["niri-session.target"];
       serviceConfig = {
         ExecStart = "${pkgs.uxplay}/bin/uxplay -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
-        # WAYLAND_DISPLAY is inherited from the systemd user activation
-        # environment that niri --session exports on READY.
+        StandardOutput = "journal";
+        StandardError = "journal";
         Restart = "on-failure";
         RestartSec = 5;
       };
