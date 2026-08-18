@@ -103,7 +103,8 @@ in {
             # Check critical services are defined
             echo "Checking critical services..."
             ${lib.concatMapStringsSep "\n" (service: ''
-                if ! ${pkgs.systemd}/bin/systemctl cat ${service}.service &>/dev/null; then
+                if ! ${pkgs.systemd}/bin/systemctl cat ${service}.service &>/dev/null && \
+                   ! ${pkgs.systemd}/bin/systemctl cat ${service}.socket &>/dev/null; then
                   echo "WARNING: Critical service not found: ${service}"
                   # Don't fail activation for missing services, just warn
                 fi
@@ -165,6 +166,10 @@ in {
               if ${pkgs.systemd}/bin/systemctl is-enabled ${service}.service &>/dev/null; then
                 if ! ${pkgs.systemd}/bin/systemctl is-active ${service}.service &>/dev/null; then
                   echo "WARNING: Critical service not active: ${service}"
+                fi
+              elif ${pkgs.systemd}/bin/systemctl is-enabled ${service}.socket &>/dev/null; then
+                if ! ${pkgs.systemd}/bin/systemctl is-active ${service}.socket &>/dev/null; then
+                  echo "WARNING: Critical service socket not active: ${service}"
                 fi
               fi
             '')
@@ -350,6 +355,8 @@ in {
               status_line ok "${service}" "active"
             elif ${pkgs.systemd}/bin/systemctl is-enabled ${service}.service &>/dev/null; then
               status_line warn "${service}" "enabled but inactive"
+            elif ${pkgs.systemd}/bin/systemctl is-enabled ${service}.socket &>/dev/null || ${pkgs.systemd}/bin/systemctl is-active ${service}.socket &>/dev/null; then
+              status_line ok "${service}" "socket-activated"
             else
               status_line err "${service}" "not found or disabled"
             fi

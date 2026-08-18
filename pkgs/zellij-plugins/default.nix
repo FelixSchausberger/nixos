@@ -20,15 +20,15 @@ in {
   };
   zellij-attention = builder.buildZellijPlugin {
     pname = "zellij-attention";
-    version = "0.3.1";
-    owner = "KiryuuLight";
+    version = "0.4.0";
+    owner = "jimmyff";
     repo = "zellij-attention";
-    rev = "46a31e217d86d4bdb3676fb84c2b27aeb8d195cc";
-    hash = "sha256-T36mzLbXCUqBeLa5hUX4/gMZ/c41szKAcLrsyXB6TIQ=";
+    rev = "15c731fe28f03418cfacda0c48bf1efceca1094f";
+    hash = "sha256-7JN+xmveGp20qSLozZhdW3yI6PPkuQODOuJAHqGAQ3I=";
     cargoLock = ./zellij-attention.Cargo.lock;
-    cargoPatches = [./zellij-attention.patch];
-    description = "Visual attention notifications on pane focus change";
-    homepage = "https://github.com/KiryuuLight/zellij-attention";
+    cargoPatches = [./zellij-attention-fork.patch];
+    description = "3-state attention indicator (attention/working/done) for Zellij tabs";
+    homepage = "https://github.com/jimmyff/zellij-attention";
     license = lib.licenses.mit;
   };
   # On-demand plugins (launched via LaunchOrFocusPlugin keybind)

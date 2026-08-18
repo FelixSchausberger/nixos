@@ -5,6 +5,7 @@
     ./adguardhome.nix
     ./backup.nix
     ./caddy-proxy.nix
+    ./homepage.nix
     ./immich.nix
     ./monitoring.nix
     ./navidrome.nix

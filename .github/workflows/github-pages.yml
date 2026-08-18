@@ -1,4 +1,4 @@
-name: Deploy Quality Dashboard
+name: Deploy Quality Dashboard + Homelab Topology
 on:
   push:
     branches: [main]
@@ -14,22 +14,35 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    name: Build Dashboard
+    name: Build Dashboard + Topology
     runs-on: ubuntu-latest
+    env:
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Setup Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            ${{ env.NIX_CONFIG }}
+      - name: Cache Nix store
+        uses: DeterminateSystems/flakehub-cache-action@v3
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Copy dashboard files
         run: |
           mkdir -p _site
           cp docs/site/index.html _site/
+      - name: Build homelab topology
+        run: |
+          nix build .#homelab-topology --accept-flake-config
+          mkdir -p _site/topology
+          cp result/* _site/topology/
       - name: Generate metrics JSON
         run: |
-          # Create a basic metrics.json from the quality dashboard if it exists
           if [ -f ".quality-metrics/aggregate-coverage.json" ]; then
-            # Merge all metrics into a single file for the dashboard
             jq -s '
               {
                 timestamp: (.[0].timestamp // now | todate),
@@ -45,7 +58,6 @@ jobs:
             ' .quality-metrics/aggregate-coverage.json > _site/metrics.json 2>/dev/null || \
             echo '{"timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
           else
-            # Create placeholder metrics if none exist yet
             echo '{"timestamp":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","aggregate_coverage":0,"critical_path_coverage":0,"test_suites":0,"snapshot_assertions":0,"dead_code":0,"unused_modules":0,"statix_issues":0,"eval_time":0}' > _site/metrics.json
           fi
       - name: Upload artifact
