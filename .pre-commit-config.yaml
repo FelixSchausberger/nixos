@@ -109,6 +109,12 @@ repos:
         entry: tools/scripts/check-dangerous-patterns.sh
         language: system
         files: \.nix$|\.fish$
+      - id: zellij-layout-validate
+        name: Validate Zellij layout KDL
+        entry: tools/scripts/validate-zellij-layouts.sh
+        language: system
+        files: ^modules/home/tui/zellij\.nix$
+        pass_filenames: false
       - id: pre-commit-hook-ensure-sops
         name: Ensure SOPS secrets are encrypted
         entry: pre-commit-hook-ensure-sops

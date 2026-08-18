@@ -27,6 +27,11 @@
       # session current); instead list-sessions is checked and the session is
       # attached or created. zellij is not exec'd — on detach, fish resumes as a
       # plain shell.
+      #
+      # Stale-session guard: a session whose server has no live pane shells
+      # (e.g. created by an interrupted web attach) renders as an empty pane and
+      # strands every SSH login on it. Verify liveness before attaching; if the
+      # session is a zombie, kill it and start a fresh one.
       if status is-interactive
           and ${lib.boolToString attachEnabled}
           and not __emergency_check
@@ -37,7 +42,18 @@
         set -l session_name "${attachSession}"
         if test -n "$session_name"
           if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
-            zellij attach "$session_name"
+            if command -q pgrep
+              set -l server_pid (pgrep -f "zellij.*--server.*/$session_name" 2>/dev/null | head -1)
+              if test -n "$server_pid"; and pgrep -P "$server_pid" >/dev/null 2>&1
+                zellij attach "$session_name"
+              else
+                echo "ssh-attach: session '$session_name' has no live panes; recreating" >&2
+                zellij kill-session "$session_name" 2>/dev/null
+                zellij --session "$session_name"
+              end
+            else
+              zellij attach "$session_name"
+            end
           else
             zellij --session "$session_name"
           end

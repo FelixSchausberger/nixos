@@ -34,6 +34,11 @@
       # Prometheus exporter for AdGuard Home
       adguard-exporter = pkgs.callPackage ../pkgs/adguard-exporter {};
 
+      # Homelab topology diagram generator (D2 → SVG + HTML)
+      homelab-topology = pkgs.callPackage ../pkgs/topology {
+        m920qConfig = inputs.self.nixosConfigurations.m920q.config;
+      };
+
       # Applications
       quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
 
