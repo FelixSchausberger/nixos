@@ -280,6 +280,7 @@
               inherit (inputs.nixpkgs) lib;
             };
             hosts = import ./lib/hosts.nix;
+            homelabPorts = import ./lib/homelab-ports.nix;
 
             inherit (defaults.system) user;
             inherit (defaults) personalInfo;

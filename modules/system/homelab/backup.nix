@@ -103,9 +103,13 @@ in {
               # Abort any broken partial receive before starting sync
               ${pkgs.zfs}/bin/zfs receive -A ${cmd.target} 2>/dev/null || true
               # Check target pool has enough free space (abort early instead of crashing)
-              avail=$(${pkgs.zfs}/bin/zfs get -Hpo value available ${cmd.target} 2>/dev/null || echo "0")
+              target_parent="${cmd.target}"
+              while [ -n "$target_parent" ] && ! ${pkgs.zfs}/bin/zfs list "$target_parent" >/dev/null 2>&1; do
+                target_parent="''${target_parent%/*}"
+              done
+              avail=$(${pkgs.zfs}/bin/zfs get -Hpo value available "$target_parent" 2>/dev/null || echo "0")
               if [ "$avail" -lt 1073741824 ]; then
-                echo "ERROR: ${cmd.target} has only $avail bytes available (< 1GB). Aborting backup."
+                echo "ERROR: $target_parent has only $avail bytes available (< 1GB). Aborting backup."
                 exit 1
               fi
             '';
