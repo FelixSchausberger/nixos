@@ -17,21 +17,12 @@
 
   # CalDAV/CardDAV clients and Nextcloud's service discovery probe the
   # .well-known endpoints at the site root; with Nextcloud served under a
-  # sub-path these must redirect into it. nginx handles this natively for
-  # nextcloud.local, Caddy does not.
+  # sub-path these must redirect into it.
   mkWellKnownRedirects = path: ''
-    handle /.well-known/carddav {
-      redir ${path}/remote.php/dav permanent
-    }
-    handle /.well-known/caldav {
-      redir ${path}/remote.php/dav permanent
-    }
-    handle /.well-known/host-meta {
-      redir ${path}/public.php?service=host-meta permanent
-    }
-    handle /.well-known/host-meta.json {
-      redir ${path}/public.php?service=host-meta-json permanent
-    }
+    redir /.well-known/carddav ${path}/remote.php/dav permanent
+    redir /.well-known/caldav ${path}/remote.php/dav permanent
+    redir /.well-known/host-meta ${path}/public.php?service=host-meta permanent
+    redir /.well-known/host-meta.json ${path}/public.php?service=host-meta-json permanent
   '';
 in {
   options.modules.system.homelab.caddyProxy = {

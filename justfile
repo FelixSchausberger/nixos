@@ -87,6 +87,19 @@ test:
 review:
     namaka review
 
+# Run specific VM integration test (e.g., just test-vm m920q-mode-switch)
+test-vm NAME:
+    nix build .#packages.x86_64-linux.test-{{NAME}} -L
+
+# Run all VM integration tests
+test-vm-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for test in m920q-mode-switch caddy-proxy zfs-backup streaming-services deferred-maintenance; do
+        echo "=== Running VM Test: $test ==="
+        nix build ".#packages.x86_64-linux.test-$test" -L
+    done
+
 # Full validation: format, hooks, and tests
 validate: fmt check test
 
