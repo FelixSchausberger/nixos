@@ -13,7 +13,6 @@ in {
     ../modules/system
     ../modules/system/sops-common.nix
     ../modules/system/wifi.nix
-    ../modules/system/homelab
     inputs.sops-nix.nixosModules.sops
   ];
 

@@ -6,8 +6,7 @@
   imports = [
     inputs.nhx.homeManagerModules.nhx # Declarative Helix config with Steel plugin support
     ./dprint.nix # Code formatting platform written in Rust
-    ./languages-core.nix
-    ./languages-extended.nix
+    ./languages.nix # Combined core + extended language configs (single program.nhx.languages definition)
   ];
 
   home.shellAliases = {
