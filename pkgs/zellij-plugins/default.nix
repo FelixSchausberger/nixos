@@ -18,19 +18,6 @@ in {
     homepage = "https://github.com/b0o/zjstatus-hints";
     license = lib.licenses.mit;
   };
-  zellij-attention = builder.buildZellijPlugin {
-    pname = "zellij-attention";
-    version = "0.4.0";
-    owner = "jimmyff";
-    repo = "zellij-attention";
-    rev = "15c731fe28f03418cfacda0c48bf1efceca1094f";
-    hash = "sha256-7JN+xmveGp20qSLozZhdW3yI6PPkuQODOuJAHqGAQ3I=";
-    cargoLock = ./zellij-attention.Cargo.lock;
-    cargoPatches = [./zellij-attention-fork.patch];
-    description = "3-state attention indicator (attention/working/done) for Zellij tabs";
-    homepage = "https://github.com/jimmyff/zellij-attention";
-    license = lib.licenses.mit;
-  };
   # On-demand plugins (launched via LaunchOrFocusPlugin keybind)
   harpoon = builder.buildZellijPlugin {
     pname = "harpoon";

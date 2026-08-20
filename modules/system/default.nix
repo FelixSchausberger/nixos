@@ -3,6 +3,7 @@
 # so headless hosts (wms = []) get no display manager or graphics stack
 {
   imports = [
+    ./backup.nix
     ./containers.nix
     ./deployment-validation.nix
     ./development.nix
@@ -16,5 +17,6 @@
     ./nix.nix
     ./security-hardening.nix
     ./ssl-config.nix
+    ./tailscale.nix
   ];
 }

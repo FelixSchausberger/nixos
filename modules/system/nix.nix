@@ -29,7 +29,6 @@
       in {
         inherit zjstatus;
         "zjstatus-hints" = zellijPlugins.zjstatus-hints;
-        inherit (zellijPlugins) zellij-attention;
         harpoon-plugin = zellijPlugins.harpoon;
         inherit (zellijPlugins) zellij-forgot;
         dssh = final.callPackage ../../pkgs/dssh {};

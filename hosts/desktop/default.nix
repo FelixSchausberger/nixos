@@ -39,7 +39,8 @@ in {
       ./disko.nix
       ./base-config.nix
       ../../modules/system/gaming.nix
-      ../../modules/system/homelab
+      ../../modules/system/tailscale.nix
+      ../../modules/system/backup.nix
       ../../modules/system/hardware/power-management.nix
       inputs.moonshine.nixosModules.default
       ../../modules/system/moonshine.nix

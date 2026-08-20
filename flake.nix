@@ -46,7 +46,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
-    crane.url = "github:ipetkov/crane";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     home-manager = {
@@ -74,10 +73,6 @@
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-inspect = {
-      url = "github:bluskript/nix-inspect";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     nur.url = "github:nix-community/NUR";
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL";
@@ -85,10 +80,6 @@
     };
     sops-nix = {
       url = "github:Mic92/sops-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    gitignore-nix = {
-      url = "github:hercules-ci/gitignore.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     namaka = {
@@ -100,11 +91,6 @@
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    helix = {
-      url = "github:helix-editor/helix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
     };
     # Declarative Helix config with Steel plugin support
     nhx = {
@@ -153,13 +139,6 @@
       flake = false;
     };
 
-    # TUI applications (used by both profiles)
-    bluetui = {
-      url = "github:pythops/bluetui";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.flake-utils.follows = "flake-utils";
-    };
     # Installation tools (useful for portable/recovery)
     nixos-wizard = {
       url = "github:km-clay/nixos-wizard";

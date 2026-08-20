@@ -1,8 +1,0 @@
-diff --git a/Cargo.toml b/Cargo.toml
---- a/Cargo.toml
-+++ b/Cargo.toml
-@@ -16,4 +16,4 @@
- 
- [dependencies]
--zellij-tile = "0.43.1"
-+zellij-tile = "0.44.3"

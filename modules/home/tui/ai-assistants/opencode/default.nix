@@ -56,7 +56,7 @@ in {
         summary.model = "github-copilot/gpt-5-mini";
         compaction.model = "github-copilot/gpt-5-mini";
       };
-      plugin = ["@slkiser/opencode-quota"];
+      plugin = ["@slkiser/opencode-quota" "@mohak34/opencode-notifier"];
       permission = {
         bash = {
           "git reset*" = "deny";
@@ -93,7 +93,7 @@ in {
     };
 
     tui = {
-      plugin = ["@slkiser/opencode-quota"];
+      plugin = ["@slkiser/opencode-quota" "@mohak34/opencode-notifier"];
     };
   };
 
@@ -106,51 +106,6 @@ in {
     if test -f ${config.sops.secrets."ollama/api-key".path}
       set -gx OLLAMA_API_KEY (cat ${config.sops.secrets."ollama/api-key".path})
     end
-  '';
-
-  xdg.configFile."opencode/plugins/zellij-attention.js".text = ''
-    export const ZellijAttentionPlugin = async ({ $ }) => {
-      const paneId = process.env.ZELLIJ_PANE_ID;
-
-      if (!paneId) {
-        return {};
-      }
-
-      let lastState = null;
-
-      const notifyState = async (state) => {
-        if (state === lastState) return;
-        lastState = state;
-        try {
-          await $`zellij pipe --name "zellij-attention::''${state}::''${paneId}"`;
-        } catch {
-          // Ignore if zellij isn't available in this process context.
-        }
-      };
-
-      return {
-        event: async ({ event }) => {
-          if (event.type === "permission.asked") {
-            await notifyState("attention");
-          }
-
-          if (
-            event.type === "permission.replied" ||
-            event.type === "tool.execute.before" ||
-            event.type === "message.part.updated"
-          ) {
-            await notifyState("working");
-          }
-
-          if (
-            event.type === "session.idle" ||
-            event.type === "session.error"
-          ) {
-            await notifyState("done");
-          }
-        },
-      };
-    };
   '';
 
   xdg.configFile."opencode/agents/code-simplifier.md".text = ''
@@ -185,6 +140,46 @@ in {
     4. Validate that semantics are unchanged.
     5. Report meaningful simplifications only.
   '';
+
+  xdg.configFile."opencode/opencode-notifier.json".text = builtins.toJSON {
+    sound = true;
+    notification = true;
+    suppressWhenFocused = false;
+    bell = false;
+    timeout = 5;
+    showProjectName = true;
+    showSessionTitle = false;
+    showIcon = true;
+    linux = {
+      grouping = true;
+    };
+    events = {
+      permission = {
+        sound = true;
+        notification = true;
+      };
+      complete = {
+        sound = true;
+        notification = true;
+      };
+      error = {
+        sound = true;
+        notification = true;
+      };
+      question = {
+        sound = true;
+        notification = true;
+      };
+      subagent_complete = {
+        sound = false;
+        notification = false;
+      };
+      user_cancelled = {
+        sound = false;
+        notification = false;
+      };
+    };
+  };
 
   # Ensure opencode's AGENTS.md always includes the jjwork rule
   # This is appended to the auto-generated file on activation
