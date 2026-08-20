@@ -2,6 +2,9 @@
 
 [![CI Pipeline](https://github.com/FelixSchausberger/nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions)
 [![Cachix Cache](https://github.com/FelixSchausberger/nixos/actions/workflows/cachix-push.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions/workflows/cachix-push.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/coverage.json)](https://github.com/FelixSchausberger/nixos/actions/workflows/quality-gates.yml)
+[![Eval Time](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/eval-time.json)](https://github.com/FelixSchausberger/nixos/actions/workflows/quality-gates.yml)
+[![Quality](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/quality-gates.json)](https://github.com/FelixSchausberger/nixos/actions/workflows/quality-gates.yml)
 
 ## About
 

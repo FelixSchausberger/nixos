@@ -29,6 +29,8 @@ in {
       ../../modules/system/m920q.nix
       ../../modules/system/specialisations.nix
       ../../modules/system/homelab
+      ../../modules/system/tailscale.nix
+      ../../modules/system/backup.nix
       ../../modules/system/hardware/power-management.nix
       ../../modules/system/media-client.nix
       ../../modules/system/airplay-receiver.nix

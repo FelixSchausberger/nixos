@@ -69,7 +69,7 @@ in {
     inputs.stylix.nixosModules.stylix
     ../../modules/system/stylix-catppuccin.nix
     ../../modules/system/wsl-integration.nix
-    ../../modules/system/homelab/tailscale.nix
+    ../../modules/system/tailscale.nix
     ../../modules/system/nixpkgs-overlays.nix # Disable flaky python-lsp-server/scipy checks
     ../../modules/vitals.nix
   ];

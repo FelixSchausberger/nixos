@@ -17,6 +17,7 @@ in {
       ../../modules/system/stylix-catppuccin.nix
       ../../modules/system/specialisations.nix
       ../../modules/system/performance-profiles.nix
+      ../../modules/system/tailscale.nix
 
       # Surface-specific hardware module
       inputs.nixos-hardware.nixosModules.microsoft-surface-pro-intel

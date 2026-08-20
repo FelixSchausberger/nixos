@@ -26,7 +26,6 @@
       inherit
         (zellijPlugins)
         harpoon
-        zellij-attention
         zellij-forgot
         zjstatus-hints
         ;

@@ -18,6 +18,7 @@ in {
     ../../modules/system/nixpkgs-overlays.nix
     ../../modules/system/specialisations.nix
     ../../modules/system/performance-profiles.nix
+    ../../modules/system/tailscale.nix
   ];
 
   # Host-specific configuration using centralized host mapping

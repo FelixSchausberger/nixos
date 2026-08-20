@@ -82,12 +82,6 @@ in {
         ReadApplicationState
         ChangeApplicationState
     }
-    "${defaults.paths.homeDir}/.config/zellij/plugins/attention.wasm" {
-        MessageAndLaunchOtherPlugins
-        ChangeApplicationState
-        ReadCliPipes
-        ReadApplicationState
-    }
     PERMISSIONS_EOF
 
     # Clean up stale session metadata older than 7 days to prevent "About Zellij" pane popup
@@ -107,7 +101,6 @@ in {
     plugins = [
       pkgs.zjstatus
       pkgs."zjstatus-hints"
-      pkgs.zellij-attention
       pkgs.harpoon-plugin
       pkgs.zellij-forgot
     ];
@@ -140,7 +133,6 @@ in {
       load_plugins = lib.mkForce {
         _children = [
           {"zjstatus-hints" = [];}
-          {attention = [];}
         ];
       };
     };
