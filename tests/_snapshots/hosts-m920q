@@ -1,0 +1,35 @@
+#pretty
+{
+  adguardhome_enabled = true;
+  backup_enabled = true;
+  caddy_proxy_enabled = true;
+  containers_enabled = true;
+  deferred_restarts_enabled = true;
+  has_192_168_178_route = true;
+  has_deferred_services = true;
+  has_gateway = true;
+  has_static_address = true;
+  homepage_enabled = true;
+  hostname = "m920q";
+  immich_enabled = true;
+  is_gui = false;
+  m920q_module_enabled = true;
+  maintenance_enabled = true;
+  navidrome_enabled = true;
+  networkd_enabled = true;
+  networkmanager_disabled = true;
+  nextcloud_enabled = true;
+  ntfy_enabled = true;
+  performance_profile = "server-efficiency";
+  power_lan_interface = "eno1";
+  power_management_enabled = true;
+  samba_enabled = true;
+  smartd_enabled = true;
+  ssh_enabled = true;
+  tailscale_enabled = true;
+  tailscale_routes = [
+    "192.168.178.0/24"
+  ];
+  wm_count = 0;
+  zellij_web_enabled = true;
+}

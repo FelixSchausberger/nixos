@@ -1,0 +1,57 @@
+#pretty
+{
+  desktop = {
+    curl_ca_bundle_is_bundle = true;
+    has_cacert_package = true;
+    hostName = "desktop";
+    nix_ssl_cert_file_set = true;
+    ssl_cert_dir_is_standard = true;
+    ssl_cert_file_is_bundle = true;
+    ssl_enabled = true;
+  };
+  hp-probook-vmware = {
+    curl_ca_bundle_is_bundle = true;
+    has_cacert_package = true;
+    hostName = "hp-probook-vmware";
+    nix_ssl_cert_file_set = true;
+    ssl_cert_dir_is_standard = true;
+    ssl_cert_file_is_bundle = true;
+    ssl_enabled = true;
+  };
+  hp-probook-wsl = {
+    curl_ca_bundle_is_bundle = true;
+    has_cacert_package = true;
+    hostName = "hp-probook-wsl";
+    nix_ssl_cert_file_set = true;
+    ssl_cert_dir_is_standard = true;
+    ssl_cert_file_is_bundle = true;
+    ssl_enabled = true;
+  };
+  m920q = {
+    curl_ca_bundle_is_bundle = true;
+    has_cacert_package = true;
+    hostName = "m920q";
+    nix_ssl_cert_file_set = true;
+    ssl_cert_dir_is_standard = true;
+    ssl_cert_file_is_bundle = true;
+    ssl_enabled = true;
+  };
+  portable = {
+    curl_ca_bundle_is_bundle = true;
+    has_cacert_package = true;
+    hostName = "portable";
+    nix_ssl_cert_file_set = true;
+    ssl_cert_dir_is_standard = true;
+    ssl_cert_file_is_bundle = true;
+    ssl_enabled = true;
+  };
+  surface = {
+    curl_ca_bundle_is_bundle = true;
+    has_cacert_package = true;
+    hostName = "surface";
+    nix_ssl_cert_file_set = true;
+    ssl_cert_dir_is_standard = true;
+    ssl_cert_file_is_bundle = true;
+    ssl_enabled = true;
+  };
+}

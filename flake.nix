@@ -68,6 +68,12 @@
       url = "github:nix-community/impermanence";
       inputs.home-manager.follows = "home-manager";
     };
+    # Pull-based GitOps deployment: hosts poll the public GitHub main branch
+    # and deploy nixosConfigurations.<hostname> automatically
+    comin = {
+      url = "github:nlewo/comin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
@@ -110,7 +116,6 @@
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
     };
 
     # Yazi plugins

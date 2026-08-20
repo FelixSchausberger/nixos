@@ -1,0 +1,63 @@
+#pretty
+{
+  desktop = {
+    has_bash_ls = true;
+    has_gcc = true;
+    has_gnumake = true;
+    has_jq = true;
+    has_nixd = true;
+    has_nodejs = true;
+    has_python3 = true;
+    hostName = "desktop";
+  };
+  hp-probook-vmware = {
+    has_bash_ls = true;
+    has_gcc = true;
+    has_gnumake = true;
+    has_jq = true;
+    has_nixd = true;
+    has_nodejs = true;
+    has_python3 = true;
+    hostName = "hp-probook-vmware";
+  };
+  hp-probook-wsl = {
+    has_bash_ls = true;
+    has_gcc = true;
+    has_gnumake = true;
+    has_jq = true;
+    has_nixd = true;
+    has_nodejs = true;
+    has_python3 = true;
+    hostName = "hp-probook-wsl";
+  };
+  m920q = {
+    has_bash_ls = true;
+    has_gcc = true;
+    has_gnumake = true;
+    has_jq = true;
+    has_nixd = true;
+    has_nodejs = true;
+    has_python3 = true;
+    hostName = "m920q";
+  };
+  portable = {
+    has_bash_ls = true;
+    has_gcc = true;
+    has_gnumake = true;
+    has_jq = true;
+    has_nixd = true;
+    has_nodejs = true;
+    has_python3 = true;
+    hostName = "portable";
+  };
+  surface = {
+    has_bash_ls = true;
+    has_gcc = true;
+    has_gnumake = true;
+    has_jq = true;
+    has_nixd = true;
+    has_nodejs = true;
+    has_python3 = true;
+    hostName = "surface";
+  };
+}

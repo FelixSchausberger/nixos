@@ -75,6 +75,10 @@ in {
   hardware.profiles.powerManagement = {
     enable = true;
     lanInterface = "eno1";
+    # thermald >= 2.5.12 refuses to start on non-mobile ACPI platform profiles
+    # (upstream intel/thermal_daemon#562); kernel TCC throttling and RAPL limits
+    # provide thermal protection on this desktop.
+    intelCpuThermals = false;
   };
 
   # Static LAN IP for predictable access from m920q
@@ -188,6 +192,12 @@ in {
       alerts = true;
       ntfyUrl = "http://m920q:2586/homelab-alerts";
     };
+  };
+
+  # Pull-based GitOps: converge to main automatically, alert on downgrades
+  modules.system.comin = {
+    enable = true;
+    alertNtfyUrl = "http://m920q:2586/homelab-alerts";
   };
 
   modules.system.homelab.backup = {

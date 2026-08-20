@@ -27,6 +27,8 @@ in {
     intelCpuThermals = lib.mkOption {
       type = lib.types.bool;
       default = true;
+      # thermald >= 2.5.12 exits on non-mobile ACPI platform profiles
+      # (upstream intel/thermal_daemon#562), so desktop hosts must opt out.
       description = "Enable thermald on Intel systems for sustained thermal control";
     };
   };
