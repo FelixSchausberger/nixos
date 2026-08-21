@@ -26,12 +26,14 @@ _: {
   # A failed activation keeps the old generation, so switch needs no test pre-step.
   # guard-downgrades.sh blocks deploys/updates that would regress package versions.
   #
-  # update-system.sh runs a smart update: it first deploys the committed config
-  # when it is at least as new as the deployed system (no input refresh), and
-  # only refreshes all flake inputs when the committed config is older. The
-  # downgrade guard is mandatory in every path and ALLOW_DOWNGRADE=1 (bulk
-  # bypass) is refused; intentional per-package downgrades go through
-  # ALLOW_DOWNGRADES or an input pin in flake.nix.
+  # Lock updates have a single writer: the weekly-updates GitHub Actions
+  # workflow (daily cron, on-demand via `update`). Hosts converge to main
+  # automatically through comin; `update` triggers CI and restarts comin for
+  # immediate convergence. The downgrade guard is mandatory in the deploy
+  # path and ALLOW_DOWNGRADE=1 (bulk bypass) is refused; intentional
+  # per-package downgrades go through ALLOW_DOWNGRADES or an input pin in
+  # flake.nix. Automated comin deployments cannot block, so they report
+  # regressions to ntfy instead (modules/system/comin.nix).
   programs.fish.shellAliases = {
     # Build, block regressions, then switch the guarded store path
     # jj status runs first as a non-blocking sanity check (shows untracked files, pending changes)
@@ -40,8 +42,8 @@ _: {
     deploy-offline = "jj --repository $NH_FLAKE status; and nh os build -S -o /tmp/nh-result -- --option substitute false; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system";
     deploy-verbose = "jj --repository $NH_FLAKE status; and NH_LOG=nh=debug nh os build -S -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system";
 
-    # Smart update: deploy committed config if current, else refresh all inputs.
-    # Never bulk-downgrades; the guard is mandatory and the bulk bypass is refused.
+    # Immediate update: dispatch the lock-refresh workflow, wait for the PR
+    # to auto-merge, sync onto main, restart comin for instant convergence.
     update = "$NH_FLAKE/tools/scripts/update-system.sh";
 
     # Utility aliases

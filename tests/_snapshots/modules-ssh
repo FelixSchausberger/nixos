@@ -1,0 +1,14 @@
+#pretty
+{
+  has_ed25519_key = true;
+  has_rsa_key = true;
+  has_ssh_tmpfiles = true;
+  kbd_interactive_disabled = true;
+  login_grace_time = 30;
+  max_auth_tries = 3;
+  openssh_enabled = true;
+  password_auth_disabled = true;
+  permit_root_login_no = true;
+  ssh_module_enabled = true;
+  x11_forwarding_disabled = true;
+}

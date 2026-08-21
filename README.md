@@ -2,9 +2,6 @@
 
 [![CI Pipeline](https://github.com/FelixSchausberger/nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions)
 [![Cachix Cache](https://github.com/FelixSchausberger/nixos/actions/workflows/cachix-push.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions/workflows/cachix-push.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/coverage.json)](https://github.com/FelixSchausberger/nixos/actions/workflows/quality-gates.yml)
-[![Eval Time](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/eval-time.json)](https://github.com/FelixSchausberger/nixos/actions/workflows/quality-gates.yml)
-[![Quality](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/FelixSchausberger/c9ae337c71e6379e6725776bed1a5f96/raw/quality-gates.json)](https://github.com/FelixSchausberger/nixos/actions/workflows/quality-gates.yml)
 
 ## About
 
@@ -172,31 +169,39 @@ nh os build                                      # Build without activating
 
 # Aliases available in shell
 deploy                                           # Build committed config, guard, then switch
-update                                           # Smart update (see Downgrade Guard below)
+update                                           # Trigger CI lock refresh, wait for merge, converge comin
 clean                                            # Clean old generations
 history                                          # View generation history
 ```
 
-### Downgrade Guard
+### Update Flow and Downgrade Guard
 
-Deploys and updates are protected by `tools/scripts/guard-downgrades.sh`,
-which compares the currently active system against the freshly built toplevel
-and blocks the deployment if any package would be downgraded. This prevents
-the rolling nixpkgs semver channel or divergent per-host lock files from
-silently regressing versions.
+`flake.lock` has a single writer: the `weekly-updates.yml` GitHub Actions
+workflow (daily cron at 03:00 UTC, also dispatchable on demand). After a lock
+PR merges, `cachix-push.yml` builds every host toplevel and warms the cachix
+cache; hosts then converge automatically through
+[comin](https://github.com/nlewo/comin), which polls main every 60 seconds
+and deploys `nixosConfigurations.<hostname>`.
 
-`update` runs `tools/scripts/update-system.sh`, which deploys the committed
-config when it is at least as new as the deployed system (no input refresh),
-and only refreshes all flake inputs when the committed config is older. The
-guard is mandatory in every path, and bulk downgrades are never allowed:
-`update` refuses `ALLOW_DOWNGRADE=1`. Intentional per-package downgrades go
-through `ALLOW_DOWNGRADES` or an input pin in `flake.nix`.
+- `update` runs `tools/scripts/update-system.sh`: it dispatches the workflow,
+  blocks until the PR auto-merges (handles "nothing new" gracefully), syncs
+  the working copy onto main via `jjwork`, and restarts comin for immediate
+  convergence. Timeout is `UPDATE_TIMEOUT_SECS` (default 1200); a timeout is
+  non-fatal because automation converges later.
+- `deploy` builds the committed config locally and switches after the guard.
+
+Deploys are protected by `tools/scripts/guard-downgrades.sh`, which compares
+the currently active system against the freshly built toplevel and blocks the
+deployment if any package would be downgraded. The automated comin path
+cannot block - a blocked host would go stale while unattended - so
+`detect-downgrades.sh` runs after each automated deployment and reports any
+version regressions to ntfy; a bad lock is healed by reverting its commit on
+main, after which every host converges back within one poll period.
 
 Override to allow downgrades deliberately (for pinned versions):
 
 ```bash
 ALLOW_DOWNGRADES="pkg1 pkg2" deploy                        # Allow specific packages
-ALLOW_DOWNGRADES="pkg1 pkg2" update                        # Allow specific packages during update
 just guard-build                                           # Check current host without switching
 ```
 

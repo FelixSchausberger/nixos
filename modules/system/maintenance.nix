@@ -171,6 +171,24 @@
             ''}
             fi
 
+            # CPU package temperature: >=90 C indicates cooling failure (fan or
+            # dust). Hardware still throttles at Tjmax (~100 C), so this is an
+            # early warning below the kernel's "high" mark. Only x86_pkg_temp
+            # exists on Intel hosts; other platforms are silently skipped.
+            pkg_temp=0
+            for zone in /sys/class/thermal/thermal_zone*; do
+              if [[ "$(<"$zone/type")" == x86_pkg_temp ]]; then
+                t=$(<"$zone/temp")
+                if [[ $t -gt $pkg_temp ]]; then pkg_temp=$t; fi
+              fi
+            done
+            if [[ $pkg_temp -ge 90000 ]]; then
+              echo "WARNING: CPU package temperature is $((pkg_temp / 1000)) C"
+              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "High CPU Temperature on $(hostname)" "urgent" "warning" "CPU package at $((pkg_temp / 1000)) C, check cooling"
+            ''}
+            fi
+
             # Kernel update pending (deployed but not booted): reboot required. On
             # hosts with autoRebootForKernel the nightly window handles the reboot.
             if [[ "$(readlink -f /run/current-system/kernel 2>/dev/null)" != "$(readlink -f /run/booted-system/kernel 2>/dev/null)" ]]; then
