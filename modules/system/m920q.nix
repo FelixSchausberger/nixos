@@ -1,5 +1,11 @@
-# M920q HDMI mode switching: headless <-> niri specialisation state machine.
+# M920q HDMI mode switching helpers: headless <-> niri specialisation state machine.
 # Shared between the real host (hosts/m920q) and VM integration tests.
+# Script logic is NOT duplicated in tests — any behavioral change in the module
+# is automatically tested.
+#
+# The automatic hotplug-triggered switch can be disabled with autoSwitch =
+# false; the m920q-mode-switch.service then remains available for manual use:
+#   echo niri > /run/m920q-hdmi-state && systemctl start m920q-mode-switch
 # Guards with lib.mkIf (!config.hostConfig.isGui) for activation scripts
 # so the niri specialisation leaf does not overwrite base-toplevel state.
 {
@@ -53,6 +59,15 @@ in {
       type = lib.types.int;
       default = 120;
       description = "Timeout for the mode-switch service (switch-to-configuration can be slow)";
+    };
+
+    autoSwitch = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Automatically switch headless<->niri on HDMI hotplug. When disabled,
+        only m920q-mode-switch.service remains, for manual invocation.
+      '';
     };
   };
 
@@ -221,7 +236,7 @@ in {
       echo "m920q: current-mode resynced to $mode after deploy" >&2
     '';
   in {
-    systemd.services.m920q-hdmi-detect = {
+    systemd.services.m920q-hdmi-detect = lib.mkIf cfg.autoSwitch {
       description = "Detect HDMI hotplug and update mode state";
       serviceConfig = {
         Type = "oneshot";
@@ -238,7 +253,7 @@ in {
       };
     };
 
-    systemd.timers.m920q-mode-switch = {
+    systemd.timers.m920q-mode-switch = lib.mkIf cfg.autoSwitch {
       description = "Debounced M920q mode switch after HDMI hotplug";
       wantedBy = ["multi-user.target"];
       timerConfig = {
@@ -266,7 +281,7 @@ in {
       fi
     '');
 
-    services.udev.extraRules = ''
+    services.udev.extraRules = lib.mkIf cfg.autoSwitch ''
       ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="${pkgs.systemd}/bin/systemctl start m920q-hdmi-detect.service"
     '';
   });

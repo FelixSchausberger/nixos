@@ -75,7 +75,7 @@ repos:
         pass_filenames: false
       - id: namaka-check
         name: Namaka snapshot tests
-        entry: namaka check -c nix eval .#checks.x86_64-linux
+        entry: namaka check
         language: system
         files: \.nix$
         pass_filenames: false

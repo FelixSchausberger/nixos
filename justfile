@@ -186,16 +186,6 @@ desktop-status:
 
 # === QUALITY MONITORING ===
 
-# Calculate test coverage
-coverage:
-    @echo "Calculating test coverage..."
-    @bash tools/scripts/calculate-coverage.sh
-
-# Detect unused modules
-check-unused:
-    @echo "Checking for unused modules..."
-    @bash tools/scripts/detect-unused-modules.sh
-
 # Profile evaluation time
 profile-eval:
     @echo "Profiling evaluation time..."
@@ -219,15 +209,6 @@ profile-flamegraph HOST="desktop":
 check-closures:
     @echo "Checking closure sizes..."
     @bash tools/scripts/check-closure-size.sh
-
-# Generate quality dashboard
-dashboard:
-    @echo "Generating quality dashboard..."
-    @bash tools/scripts/generate-quality-dashboard.sh
-
-# Run all quality checks
-quality-check: coverage check-unused profile-eval check-closures
-    @echo "All quality checks complete"
 
 # === FLAKE MANAGEMENT ===
 

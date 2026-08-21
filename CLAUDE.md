@@ -206,7 +206,7 @@ The project uses Jujutsu (jj) for version control with a PR-based workflow.
 
 All changes to `main` go through pull requests with auto-merge — even for solo
 development. This ensures CI validates every change before it lands and keeps
-the weekly update workflow consistent.
+the daily lock-update workflow consistent.
 
 **Standard workflow (no feature branch needed):**
 
@@ -239,7 +239,7 @@ that diverged from `main`. If `jjpush` refuses, run `jjwork` first.
 **Single-branch policy:** Only one long-lived branch exists: `main`. Every other
 branch is ephemeral — auto-created by `jjpush` from the commit description, immediately goes through
 CI, and is auto-merged. Never manually push to `weekly-updates` or any other
-named branch. The weekly-updates workflow manages that branch automatically.
+named branch. The lock-update workflow (daily cron) manages that branch automatically.
 
 **Key Principles:**
 

@@ -1,0 +1,47 @@
+#pretty
+{
+  desktop = {
+    has_tailscale_trusted_interface = true;
+    has_udp_gro_service = true;
+    hostName = "desktop";
+    tailscale_enabled = true;
+    tailscale_open_firewall = true;
+    tailscale_service_enabled = true;
+    udp_gro_interface = "eno1";
+  };
+  hp-probook-vmware = {
+    has_tailscale_trusted_interface = true;
+    hostName = "hp-probook-vmware";
+    tailscale_enabled = true;
+    tailscale_open_firewall = true;
+    tailscale_service_enabled = true;
+  };
+  hp-probook-wsl = {
+    has_tailscale_trusted_interface = true;
+    hostName = "hp-probook-wsl";
+    tailscale_enabled = true;
+    tailscale_open_firewall = true;
+    tailscale_service_enabled = true;
+  };
+  m920q = {
+    has_tailscale_trusted_interface = true;
+    hostName = "m920q";
+    tailscale_enabled = true;
+    tailscale_open_firewall = true;
+    tailscale_service_enabled = true;
+  };
+  portable = {
+    has_tailscale_trusted_interface = true;
+    hostName = "portable";
+    tailscale_enabled = true;
+    tailscale_open_firewall = true;
+    tailscale_service_enabled = true;
+  };
+  surface = {
+    has_tailscale_trusted_interface = true;
+    hostName = "surface";
+    tailscale_enabled = true;
+    tailscale_open_firewall = true;
+    tailscale_service_enabled = true;
+  };
+}

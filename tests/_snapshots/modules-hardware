@@ -1,0 +1,26 @@
+#pretty
+{
+  desktop = {
+    amd_gpu_enabled = true;
+    amd_gpu_variant = "desktop";
+    graphics_32bit = true;
+    graphics_enabled = true;
+    has_amdgpu_dc = true;
+    has_amdgpu_initrd = true;
+    has_amdgpu_module = true;
+    has_kvm_amd = true;
+  };
+  desktop_power = {
+    has_autocpufreq = true;
+    has_wol_lan = true;
+    power_lan_interface = "eno1";
+    power_management_enabled = true;
+  };
+  m920q_power = {
+    has_autocpufreq = true;
+    has_wol_lan = true;
+    power_lan_interface = "eno1";
+    power_management_enabled = true;
+    power_suppress_leds = true;
+  };
+}

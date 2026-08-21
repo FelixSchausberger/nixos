@@ -109,6 +109,12 @@ in {
     };
   };
 
+  # Pull-based GitOps: converge to main automatically, alert on downgrades
+  modules.system.comin = {
+    enable = true;
+    alertNtfyUrl = "http://m920q:2586/homelab-alerts";
+  };
+
   # Tailscale for fixed reachability across networks (MagicDNS)
   modules.system.homelab.tailscale.enable = true;
 }
