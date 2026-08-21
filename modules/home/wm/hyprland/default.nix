@@ -39,7 +39,7 @@ in {
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
     ../shared/satty.nix # Screenshot tool
-    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
+    (import ../shared/stasis.nix "hyprland-session.target") # Wayland idle manager with media detection
     # Use shared compositor-agnostic modules with hyprland session target
     ../shared/awww-coordinated.nix # Coordinated wallpaper system with blurred backgrounds
     (import ../shared/wired.nix "hyprland-session.target") # Modern notification daemon configuration

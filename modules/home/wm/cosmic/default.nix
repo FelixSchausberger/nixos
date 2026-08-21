@@ -11,7 +11,7 @@
     # awww-coordinated imported by hyprland only to avoid duplicate systemd service definitions
     (import ../shared/wl-gammarelay.nix "cosmic-session.target") # Screen color temperature manager
     ../shared/satty.nix # Screenshot tool
-    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
+    (import ../shared/stasis.nix "cosmic-session.target") # Wayland idle manager with media detection
   ];
 
   programs.bash = {

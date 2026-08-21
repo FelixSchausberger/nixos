@@ -1,5 +1,5 @@
 # Specialisations are used only for boot-time choices (WM selection).
-# Performance profiles use runtime systemd targets (modules/system/performance-runtime.nix)
+# Performance profiles use runtime systemd targets (modules/system/performance-profiles.nix)
 # to avoid the evaluation overhead that each specialisation adds.
 # Rule of thumb: ≤3 specialisations per host keeps heap usage under 2.5 GB.
 {

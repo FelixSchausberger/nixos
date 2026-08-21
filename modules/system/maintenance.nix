@@ -107,9 +107,10 @@
         };
 
         # Generic host-level health checks. Works on any NixOS host without
-        # Prometheus. homelab-alerter extends this with homelab-specific service
+        # Prometheus. Grafana-provisioned alert rules (modules/system/homelab/
+        # monitoring.nix) extend this with homelab-specific service
         # monitoring (Nextcloud, Immich, AdGuard, Postgres, Node exporter) via
-        # Prometheus queries with cooldown and resolve notifications.
+        # Prometheus queries with grouping and resolve notifications.
         system-health-check = lib.mkIf config.modules.system.maintenance.monitoring.enable {
           description = "System health monitoring";
           script = ''
@@ -270,7 +271,6 @@
             sanity = config.modules.system.maintenance.deferredRestarts.networkSanity;
           in ''
             set -euo pipefail
-            exec > >(tee -a /var/log/network-maintenance.log) 2>&1
             echo "=== maintenance window started at $(date) ==="
 
             rollback_network_config() {

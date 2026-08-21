@@ -1,57 +1,28 @@
-# Activation safety checks that validate critical paths, services, and shell availability.
-# Runs pre/post activation smoke tests to catch broken deployments before full switch-over.
+# Build-time deployment validation: fails evaluation when critical services
+# are missing from the generated unit tree instead of warning at activation
+# time. Runtime health checks live in modules/system/maintenance.nix
+# (system-health-check); interactive inspection stays available through the
+# validate-system CLI.
 {
   config,
   lib,
   pkgs,
   ...
 }: let
-  wslEnabled = config ? wsl && (config.wsl.enable or false);
+  cfg = config.modules.system.deploymentValidation;
+
+  missingServices = let
+    knownUnit = svc:
+      config.systemd.units ? "${svc}.service" || config.systemd.units ? "${svc}.socket";
+  in
+    builtins.filter (svc: !knownUnit svc) cfg.criticalServices;
 in {
   options.modules.system.deploymentValidation = {
     enable =
-      lib.mkEnableOption "deployment validation and integrity checks"
+      lib.mkEnableOption "build-time validation of critical services"
       // {
         default = true;
       };
-
-    preActivation = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Run validation checks before activation";
-      };
-
-      checks = lib.mkOption {
-        type = lib.types.listOf (
-          lib.types.enum [
-            "essential-paths"
-            "systemd-services"
-            "shell-availability"
-          ]
-        );
-        default = [
-          "essential-paths"
-          "systemd-services"
-          "shell-availability"
-        ];
-        description = "Pre-activation checks to run";
-      };
-    };
-
-    postActivation = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Run smoke tests after activation";
-      };
-
-      timeout = lib.mkOption {
-        type = lib.types.int;
-        default = 60;
-        description = "Timeout in seconds for post-activation tests";
-      };
-    };
 
     criticalServices = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -60,166 +31,19 @@ in {
         "systemd-journald"
         "dbus"
       ];
-      description = "Services that must exist and be valid";
+      description = "Services that must exist in the generated unit tree";
     };
-
-    essentialPaths = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [
-        "/run/current-system/sw/bin/bash"
-        "/run/current-system/sw/bin/systemctl"
-        "/etc/nixos"
-        "/nix/store"
-      ];
-      description = "Paths that must exist after activation";
-    };
-
-    alertOnFailure = lib.mkEnableOption "send alerts when validation fails";
   };
 
-  config = lib.mkIf config.modules.system.deploymentValidation.enable {
-    # Pre-activation validation script
-    system.activationScripts.deploymentValidation =
-      lib.mkIf config.modules.system.deploymentValidation.preActivation.enable
+  config = lib.mkIf cfg.enable {
+    assertions = [
       {
-        text = ''
-          echo "Running pre-activation validation checks..."
+        assertion = missingServices == [];
+        message = "deploymentValidation: critical services missing from the unit tree: ${lib.concatStringsSep ", " missingServices}";
+      }
+    ];
 
-          validation_failed=0
-
-          ${lib.optionalString (builtins.elem "essential-paths" config.modules.system.deploymentValidation.preActivation.checks) ''
-            # Check essential paths exist
-            echo "Checking essential paths..."
-            ${lib.concatMapStringsSep "\n" (path: ''
-                if [[ ! -e "${path}" ]]; then
-                  echo "ERROR: Essential path missing: ${path}"
-                  validation_failed=1
-                fi
-              '')
-              config.modules.system.deploymentValidation.essentialPaths}
-          ''}
-
-          ${lib.optionalString (builtins.elem "systemd-services" config.modules.system.deploymentValidation.preActivation.checks) ''
-            # Check critical services are defined
-            echo "Checking critical services..."
-            ${lib.concatMapStringsSep "\n" (service: ''
-                if ! ${pkgs.systemd}/bin/systemctl cat ${service}.service &>/dev/null && \
-                   ! ${pkgs.systemd}/bin/systemctl cat ${service}.socket &>/dev/null; then
-                  echo "WARNING: Critical service not found: ${service}"
-                  # Don't fail activation for missing services, just warn
-                fi
-              '')
-              config.modules.system.deploymentValidation.criticalServices}
-          ''}
-
-          ${lib.optionalString (builtins.elem "shell-availability" config.modules.system.deploymentValidation.preActivation.checks) ''
-            # Verify shells are executable
-            echo "Checking shell availability..."
-            for shell in /run/current-system/sw/bin/bash /run/current-system/sw/bin/sh; do
-              if [[ -x "$shell" ]]; then
-                if ! "$shell" -c 'exit 0' 2>/dev/null; then
-                  echo "ERROR: Shell exists but is not functional: $shell"
-                  validation_failed=1
-                fi
-              fi
-            done
-          ''}
-
-          if [[ $validation_failed -eq 1 ]]; then
-            echo "Pre-activation validation FAILED"
-            echo "Activation will continue, but system may be unstable"
-            # Don't exit 1 here - allow activation to proceed but warn
-          else
-            echo "Pre-activation validation PASSED"
-          fi
-        '';
-        deps = [];
-      };
-
-    # Post-activation smoke test service
-    systemd.services.post-activation-smoke-test =
-      lib.mkIf config.modules.system.deploymentValidation.postActivation.enable
-      {
-        description = "Post-activation smoke tests for system integrity";
-        wantedBy = ["multi-user.target"];
-        after = ["network.target"];
-
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          TimeoutStartSec = config.modules.system.deploymentValidation.postActivation.timeout;
-        };
-
-        script = ''
-          set -euo pipefail
-
-          echo "Running post-activation smoke tests..."
-
-          # Test: systemd is running properly (don't wait indefinitely)
-          system_state=$(${pkgs.systemd}/bin/systemctl is-system-running 2>/dev/null || echo "unknown")
-          if [[ "$system_state" != "running" ]]; then
-            echo "WARNING: systemd reports state: $system_state"
-          fi
-
-          # Test: Critical services are active or can be started
-          ${lib.concatMapStringsSep "\n" (service: ''
-              if ${pkgs.systemd}/bin/systemctl is-enabled ${service}.service &>/dev/null; then
-                if ! ${pkgs.systemd}/bin/systemctl is-active ${service}.service &>/dev/null; then
-                  echo "WARNING: Critical service not active: ${service}"
-                fi
-              elif ${pkgs.systemd}/bin/systemctl is-enabled ${service}.socket &>/dev/null; then
-                if ! ${pkgs.systemd}/bin/systemctl is-active ${service}.socket &>/dev/null; then
-                  echo "WARNING: Critical service socket not active: ${service}"
-                fi
-              fi
-            '')
-            config.modules.system.deploymentValidation.criticalServices}
-
-          # Test: Essential paths still exist
-          ${lib.concatMapStringsSep "\n" (path: ''
-              if [[ ! -e "${path}" ]]; then
-                echo "ERROR: Essential path missing after activation: ${path}"
-                exit 1
-              fi
-            '')
-            config.modules.system.deploymentValidation.essentialPaths}
-
-          # Test: Shells are functional
-          if [[ -x /run/current-system/sw/bin/bash ]]; then
-            /run/current-system/sw/bin/bash -c 'exit 0' || {
-              echo "ERROR: Bash shell is not functional"
-              exit 1
-            }
-          fi
-
-          # Test: Nix store is accessible (quick check only)
-          if [[ ! -d /nix/store ]]; then
-            echo "ERROR: Nix store not accessible"
-            exit 1
-          fi
-
-          # Platform-specific tests
-          ${lib.optionalString wslEnabled ''
-            # WSL-specific checks
-            if [[ ! -d /mnt/c ]]; then
-              echo "WARNING: Windows C: drive not mounted at /mnt/c"
-            fi
-          ''}
-
-          ${lib.optionalString (config.boot.zfs.enabled or false) ''
-            # ZFS-specific checks
-            if command -v zpool &>/dev/null; then
-              if ! zpool status -x | grep -q "all pools are healthy"; then
-                echo "WARNING: ZFS pools are not healthy"
-              fi
-            fi
-          ''}
-
-          echo "Post-activation smoke tests PASSED"
-        '';
-      };
-
-    # Validation utility script
+    # Validation utility script for interactive post-deploy inspection.
     environment.systemPackages = [
       (pkgs.writeShellScriptBin "validate-system" ''
         set -euo pipefail
@@ -338,16 +162,6 @@ in {
             status_line err "$unit" "$detail"
           done <<< "$failed_units"
         fi
-
-        section "Essential Paths"
-        ${lib.concatMapStringsSep "\n" (path: ''
-            if [[ -e "${path}" ]]; then
-              status_line ok "${path}" ""
-            else
-              status_line err "${path}" "missing"
-            fi
-          '')
-          config.modules.system.deploymentValidation.essentialPaths}
 
         section "Critical Services"
         ${lib.concatMapStringsSep "\n" (service: ''

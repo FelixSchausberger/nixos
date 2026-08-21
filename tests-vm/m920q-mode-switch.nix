@@ -1,8 +1,10 @@
-# NixOS VM Integration Test: M920q Headless <-> Niri Mode Switching State Machine
+# NixOS VM Integration Test: M920q Manual Mode Switching
 #
 # Uses the shared modules/system/m920q.nix module (same code as the real host).
 # Script logic is NOT duplicated here — any behavioral change in the module
-# is automatically tested.
+# is automatically tested. The module is manual-only (matching production):
+# the desired mode is written to /run/m920q-desired-mode and the service is
+# started explicitly.
 _: {
   name = "m920q-mode-switch";
 
@@ -111,11 +113,10 @@ _: {
         };
       };
 
-      # Use the shared m920q module with short timeouts for fast test execution
+      # Use the shared m920q module with a short timeout for fast test execution
       modules.system.m920q = {
         enable = true;
         user = "schausberger";
-        timerDelaySec = 1;
         modeSwitchTimeoutSec = 30;
       };
 
@@ -130,30 +131,13 @@ _: {
   testScript = ''
     machine.wait_for_unit("multi-user.target")
 
-    # Mock HDMI sysfs so the mode-switch script's hardware re-verification
-    # sees the expected state. Without this, the script falls back to
-    # headless because /sys/class/drm/*-HDMI-A-*/status doesn't exist in VMs.
-    # Uses bind mount over /sys/class/drm since sysfs dirs can't be created directly.
-    def mock_hdmi(status):
-        """Bind-mount a mock sysfs tree over /sys/class/drm."""
-        if status == "connected":
-            machine.succeed(
-                "mkdir -p /tmp/mock-drm/card0-HDMI-A-1",
-                "echo connected > /tmp/mock-drm/card0-HDMI-A-1/status",
-                "mount --bind /tmp/mock-drm /sys/class/drm",
-            )
-        else:
-            machine.succeed("umount /sys/class/drm 2>/dev/null || true")
-            machine.succeed("rm -rf /tmp/mock-drm")
-
     # 1. Check initial state (headless) and base-toplevel content
     base_toplevel = machine.succeed("cat /run/m920q-base-toplevel").strip()
     assert base_toplevel, "base-toplevel should not be empty"
     machine.fail("systemctl is-active greetd.service")
 
-    # 2. Mock HDMI connected, then trigger Niri mode switch
-    mock_hdmi("connected")
-    machine.succeed("echo niri > /run/m920q-hdmi-state")
+    # 2. Trigger Niri mode switch via the documented manual invocation
+    machine.succeed("echo niri > /run/m920q-desired-mode")
     machine.succeed("systemctl start m920q-mode-switch.service")
 
     # Verify mode is updated to niri and greetd is active
@@ -164,9 +148,8 @@ _: {
     machine.succeed("systemctl start m920q-mode-switch.service")
     machine.succeed("test $(cat /run/m920q-current-mode) = 'niri'")
 
-    # 4. Mock HDMI disconnected, then trigger Headless mode switch
-    mock_hdmi("disconnected")
-    machine.succeed("echo headless > /run/m920q-hdmi-state")
+    # 4. Trigger Headless mode switch
+    machine.succeed("echo headless > /run/m920q-desired-mode")
     machine.succeed("systemctl start m920q-mode-switch.service")
 
     # Verify mode is updated back to headless and greetd is stopped
@@ -179,15 +162,14 @@ _: {
     assert base_toplevel == base_toplevel_after, \
         f"base-toplevel changed across switches: {base_toplevel} -> {base_toplevel_after}"
 
-    # 6. Verify timer exists for debounced mode switching
-    machine.succeed("systemctl list-timers m920q-mode-switch.timer --no-legend | grep -q m920q-mode-switch")
+    # 6. Verify manual-only wiring: no debounce timer exists (production runs
+    #    without automatic hotplug switching)
+    machine.fail("systemctl cat m920q-mode-switch.timer")
 
-    # 7. Resync mode: simulate stale current-mode marker after "deploy"
-    mock_hdmi("disconnected")
+    # 7. Resync mode: simulate stale current-mode marker after "deploy".
+    #    The VM has no HDMI connectors, so the resync reconciles to headless.
     machine.succeed("echo niri > /run/m920q-current-mode")
-    # Run resync activation script — with HDMI disconnected, should resync to headless
     machine.succeed("bash -c 'if [[ -f /run/m920q-current-mode ]]; then /run/current-system/activate 2>&1 || true; fi'")
-    # The resync script should have reconciled to headless
     machine.succeed("test $(cat /run/m920q-current-mode) = 'headless'")
   '';
 }

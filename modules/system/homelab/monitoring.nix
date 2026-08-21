@@ -303,6 +303,106 @@ in {
             }
           ];
         };
+
+        # Prometheus alert rules evaluated by Grafana unified alerting and
+        # routed to ntfy through the contact point and notification policy
+        # above. Fire semantics mirror the previous poller ("query returns any
+        # row"): A runs the instant query, B counts rows, C fires when > 0.
+        alerting.rules.settings = lib.mkIf cfg.alerting.enable {
+          apiVersion = 1;
+          groups = let
+            mkAlert = uid: severity: title: description: expr: {
+              inherit uid title;
+              condition = "C";
+              "for" = "2m";
+              labels.severity = severity;
+              annotations.description = description;
+              data = [
+                {
+                  refId = "A";
+                  relativeTimeRange.from = 600;
+                  relativeTimeRange.to = 0;
+                  datasourceUid = "prometheus";
+                  model = {
+                    inherit expr;
+                    instant = true;
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
+                    refId = "A";
+                  };
+                }
+                {
+                  refId = "B";
+                  datasourceUid = "__expr__";
+                  model = {
+                    datasource.type = "__expr__";
+                    datasource.uid = "__expr__";
+                    type = "reduce";
+                    expression = "A";
+                    reducer = "count";
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
+                    refId = "B";
+                  };
+                }
+                {
+                  refId = "C";
+                  datasourceUid = "__expr__";
+                  model = {
+                    datasource.type = "__expr__";
+                    datasource.uid = "__expr__";
+                    type = "threshold";
+                    expression = "B";
+                    conditions = [
+                      {
+                        evaluator.params = [0];
+                        evaluator.type = "gt";
+                        operator.type = "and";
+                        query.params = ["A"];
+                      }
+                    ];
+                    intervalMs = 1000;
+                    maxDataPoints = 43200;
+                    refId = "C";
+                  };
+                }
+              ];
+            };
+          in [
+            {
+              name = "homelab";
+              folder = "Homelab";
+              interval = "2m";
+              rules =
+                (lib.optionals config.modules.system.homelab.nextcloud.enable [
+                  (mkAlert "nextcloud-down" "urgent" "NextcloudDown"
+                    "Nextcloud is not responding to HTTP health probes"
+                    ''probe_success{job="blackbox",instance=~".*nextcloud.*"} == 0'')
+                ])
+                ++ (lib.optionals config.modules.system.homelab.immich.enable [
+                  (mkAlert "immich-down" "urgent" "ImmichDown"
+                    "Immich is not responding to HTTP health probes"
+                    ''probe_success{job="blackbox",instance=~".*immich.*"} == 0'')
+                ])
+                ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
+                  (mkAlert "adguard-down" "urgent" "AdGuardDown"
+                    "AdGuard Home DNS server is not responding"
+                    ''up{job="adguard"} == 0 or adguard_running == 0'')
+                ])
+                ++ [
+                  (mkAlert "fritzbox-wan-down" "urgent" "FritzboxWanDown"
+                    "Fritz!Box WAN connection is down (uptime = 0)"
+                    "fritz_upnp_uptime_seconds == 0")
+                  (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
+                    "Node exporter is unreachable (system metrics unavailable)"
+                    ''up{job="node"} == 0'')
+                  (mkAlert "postgres-down" "high" "PostgresDown"
+                    "PostgreSQL exporter is unreachable"
+                    ''up{job="postgres"} == 0'')
+                ];
+            }
+          ];
+        };
       };
     };
 
@@ -332,151 +432,6 @@ in {
         ExecStartPre = [
           "+${pkgs.bash}/bin/bash -c 'until ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString cfg.prometheusPort}/-/healthy > /dev/null 2>&1; do sleep 2; done'"
         ];
-      };
-    };
-
-    systemd.services.homelab-alerter = mkIf cfg.alerting.enable (
-      let
-        prometheusUrl = "http://127.0.0.1:${toString cfg.prometheusPort}";
-        ntfyUrl = "http://127.0.0.1:2586/homelab-alerts";
-        stateDir = "/var/lib/homelab-alerter";
-
-        # Conditional alert definitions based on enabled services
-        alertDefinitions =
-          lib.optionals config.modules.system.homelab.nextcloud.enable [
-            {
-              name = "NextcloudDown";
-              query = ''probe_success{job="blackbox",instance=~".*nextcloud.*"} == 0'';
-              priority = "urgent";
-              message = "Nextcloud is not responding to HTTP health probes";
-            }
-          ]
-          ++ lib.optionals config.modules.system.homelab.immich.enable [
-            {
-              name = "ImmichDown";
-              query = ''probe_success{job="blackbox",instance=~".*immich.*"} == 0'';
-              priority = "urgent";
-              message = "Immich is not responding to HTTP health probes";
-            }
-          ]
-          ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
-            {
-              name = "AdGuardDown";
-              # up covers exporter liveness; adguard_running covers AdGuard itself
-              # responding through the exporter's own scraping.
-              query = ''up{job="adguard"} == 0 or adguard_running == 0'';
-              priority = "urgent";
-              message = "AdGuard Home DNS server is not responding";
-            }
-          ]
-          ++ [
-            # Generic host checks (disk, memory, nix store, failed units) are
-            # handled by system-health-check. Only Prometheus-specific service
-            # monitoring belongs here.
-            {
-              name = "FritzboxWanDown";
-              # fritz_upnp_uptime_seconds drops to 0 when WAN connection is lost
-              query = "fritz_upnp_uptime_seconds == 0";
-              priority = "urgent";
-              message = "Fritz!Box WAN connection is down (uptime = 0)";
-            }
-            {
-              name = "NodeExporterDown";
-              query = ''up{job="node"} == 0'';
-              priority = "urgent";
-              message = "Node exporter is unreachable (system metrics unavailable)";
-            }
-            {
-              name = "PostgresDown";
-              query = ''up{job="postgres"} == 0'';
-              priority = "high";
-              message = "PostgreSQL exporter is unreachable";
-            }
-          ];
-        cooldownSeconds = 3600;
-      in {
-        description = "Homelab Prometheus alert bridge to ntfy";
-        after = [
-          "network.target"
-          "prometheus.service"
-          "ntfy-sh.service"
-        ];
-        wants = [
-          "prometheus.service"
-          "ntfy-sh.service"
-        ];
-        wantedBy = ["multi-user.target"];
-
-        path = with pkgs; [curl];
-
-        script = ''
-          NTFY_URL="${ntfyUrl}"
-          PROM_URL="${prometheusUrl}"
-          STATE_DIR="${stateDir}"
-          COOLDOWN=${toString cooldownSeconds}
-
-          mkdir -p "$STATE_DIR"
-          now=$(date +%s)
-          cooldown_after=$((now - COOLDOWN))
-
-          ntfy_send() {
-            local title="$1" priority="$2" tags="$3" message="$4"
-            ${pkgs.curl}/bin/curl -s -o /dev/null \
-              -H "Title: $title" \
-              -H "Priority: $priority" \
-              -H "Tags: $tags" \
-              -d "$message" \
-              "$NTFY_URL" 2>/dev/null || true
-          }
-
-          check_alert() {
-            local name="$1" query="$2" priority="$3" message="$4"
-            local state_file="$STATE_DIR/$name"
-
-            result=$(${pkgs.curl}/bin/curl -G -s "$PROM_URL/api/v1/query" \
-              --data-urlencode "query=$query" 2>/dev/null || echo '{"status":"error"}')
-
-            if echo "$result" | ${pkgs.gnugrep}/bin/grep -q '"result":\[\]' 2>/dev/null; then
-              firing=false
-            else
-              firing=true
-            fi
-
-            if $firing; then
-              local last_fired=0
-              [[ -f "$state_file" ]] && last_fired=$(cat "$state_file" 2>/dev/null || echo 0)
-              if [[ $last_fired -lt $cooldown_after ]]; then
-                ntfy_send "$name" "$priority" "warning" "$message"
-              fi
-              echo "$now" > "$state_file"
-            else
-              if [[ -f "$state_file" ]]; then
-                ntfy_send "$name resolved" "low" "white_check_mark" "$message"
-                rm -f "$state_file"
-              fi
-            fi
-          }
-
-          ${lib.concatMapStringsSep "\n" (alert: ''
-              check_alert "${alert.name}" "${alert.query}" "${alert.priority}" "${alert.message}"
-            '')
-            alertDefinitions}
-        '';
-
-        serviceConfig = {
-          Type = "oneshot";
-          User = "root";
-          StateDirectory = "homelab-alerter";
-        };
-      }
-    );
-
-    systemd.timers.homelab-alerter = mkIf cfg.alerting.enable {
-      description = "Timer for homelab alert checker";
-      wantedBy = ["timers.target"];
-      timerConfig = {
-        OnCalendar = "*:0/2";
-        Persistent = true;
       };
     };
 

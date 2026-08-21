@@ -1,7 +1,10 @@
 # Shared stasis configuration
 # Modern Wayland idle manager with media detection
-# This prevents conflicts when multiple WM modules are imported
-{
+# This prevents conflicts when multiple WM modules are imported.
+# Parameterized by session target so startup ordering matches the active
+# compositor: plain graphical-session.target can activate before
+# WAYLAND_DISPLAY is exported (see awww-coordinated.nix).
+sessionTarget: {
   lib,
   config,
   pkgs,
@@ -12,8 +15,7 @@
   hyprlandEnabled = config.wm.hyprland.enable or false;
   cosmicEnabled = config.programs.cosmic-session or {} != {};
 
-  # Use graphical-session.target which is the standard for all Wayland compositors
-  systemdTarget = "graphical-session.target";
+  systemdTarget = sessionTarget;
 
   # Only enable if at least one WM is enabled
   shouldEnable = niriEnabled || hyprlandEnabled || cosmicEnabled;

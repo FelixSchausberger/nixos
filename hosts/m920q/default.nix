@@ -307,14 +307,10 @@ in {
   hardware.steam-hardware.enable = true;
 
   modules.system = {
-    # Auto-switching disabled: HDMI hotplug must not flip the machine into the
-    # niri specialisation — casting is handled headless by airplay-receiver.
-    # Enter niri via the boot-menu specialisation entry or manually:
-    #   echo niri > /run/m920q-hdmi-state && systemctl start m920q-mode-switch
-    m920q = {
-      enable = true;
-      autoSwitch = false;
-    };
+    # GUI mode is opt-in: casting is handled headless by airplay-receiver, so
+    # enter niri via the boot-menu specialisation entry or manually:
+    #   echo niri > /run/m920q-desired-mode && systemctl start m920q-mode-switch
+    m920q.enable = true;
     stylix-catppuccin.enable = true;
     containers.enable = true;
     # Pull-based GitOps: converge to main automatically. m920q hosts the ntfy

@@ -210,14 +210,6 @@ in {
       # Pull-based GitOps: converge to main automatically. Alerts stay off,
       # matching the WSL monitoring policy; detections land in the journal.
       comin.enable = true;
-      deploymentValidation = {
-        # /run/current-system/sw/bin/systemctl omitted: on WSL each boot is fresh,
-        # so /run/current-system is not available during pre-activation
-        essentialPaths = [
-          "/run/current-system/sw/bin/bash"
-          "/nix/store"
-        ];
-      };
     };
 
     # Network configuration optimized for WSL (high level)
