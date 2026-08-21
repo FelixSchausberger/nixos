@@ -4,7 +4,7 @@ _: {
 
   nodes.machine = {pkgs, ...}: {
     imports = [
-      ../modules/system/homelab/backup.nix
+      ../modules/system/backup.nix
     ];
 
     boot.supportedFilesystems = ["zfs"];
