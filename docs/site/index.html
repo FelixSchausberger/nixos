@@ -50,25 +50,19 @@
     <p class="subtitle">Network topology and service inventory</p>
     <div class="topology" id="topology"></div>
     <script>
-      fetch("topology/homelab.svg")
+      // The homelab-topology package emits topology.svg + index.html into
+      // _site/topology/ (github-pages.yml). Inline the SVG; if absent, hand
+      // over to the fully styled generated page.
+      fetch("topology/topology.svg")
         .then((r) => {
           if (!r.ok) throw new Error("Topology not available");
           return r.text();
         })
         .then((svg) => {
-          const el = document.getElementById("topology");
-          el.innerHTML = svg;
+          document.getElementById("topology").innerHTML = svg;
         })
         .catch(() => {
-          fetch("topology/homelab.html")
-            .then((r) => r.text())
-            .then((html) => {
-              document.getElementById("topology").innerHTML = html;
-            })
-            .catch((err) => {
-              document.getElementById("topology").textContent =
-                "Topology not available: " + err.message;
-            });
+          window.location.href = "topology/";
         });
     </script>
   </body>
