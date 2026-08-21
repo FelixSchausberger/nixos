@@ -1,10 +1,6 @@
 #pretty
 {
   alerts_enabled = true;
-  auto_update_enabled = false;
-  auto_update_service_type = null;
-  has_auto_update_service = false;
-  has_auto_update_timer = false;
   has_health_check_service = true;
   has_health_check_timer = true;
   health_check_service_type = "oneshot";

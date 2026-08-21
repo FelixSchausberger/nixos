@@ -30,7 +30,6 @@ in {
 
   # Test: System maintenance configured
   maintenance_enabled = config.modules.system.maintenance.enable;
-  auto_update_enabled = config.modules.system.maintenance.autoUpdate.enable;
   monitoring_enabled = config.modules.system.maintenance.monitoring.enable;
   alerts_enabled = config.modules.system.maintenance.monitoring.alerts;
 
