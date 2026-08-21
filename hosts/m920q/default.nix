@@ -321,7 +321,6 @@ in {
     };
     maintenance = {
       enable = true;
-      autoUpdate.enable = false;
       monitoring = {
         enable = true;
         alerts = true;

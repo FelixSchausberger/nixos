@@ -65,9 +65,6 @@ in {
     homelab.tailscale.enable = true;
     maintenance = {
       enable = true;
-      # autoUpdate disabled: lock updates flow through the reviewed
-      # weekly-updates CI PR, preventing per-host lock divergence.
-      autoUpdate.enable = false;
       monitoring = {
         enable = true;
         alerts = true;

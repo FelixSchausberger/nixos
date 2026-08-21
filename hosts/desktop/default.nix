@@ -185,12 +185,8 @@ in {
   services.logind.settings.Login.KillUserProcesses = true;
 
   # System maintenance and monitoring
-  # autoUpdate is disabled: lock updates flow through the reviewed
-  # weekly-updates CI PR instead of per-host `nix flake update`, which
-  # otherwise diverged host locks and caused package downgrades.
   modules.system.maintenance = {
     enable = true;
-    autoUpdate.enable = false;
     monitoring = {
       enable = true;
       alerts = true;
