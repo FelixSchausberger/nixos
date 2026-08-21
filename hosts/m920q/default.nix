@@ -148,6 +148,14 @@ in {
       inputs.iris.packages.${pkgs.stdenv.hostPlatform.system}.iris
     ];
 
+  # Mosh for roaming interactive sessions; survives network changes and
+  # suspend. UDP range below covers mosh-server ports (11 concurrent sessions).
+  programs.mosh = {
+    enable = true;
+    # Port range is declared manually above to keep it narrow
+    openFirewall = false;
+  };
+
   networking.firewall.allowedUDPPortRanges = [
     {
       from = 60000;
