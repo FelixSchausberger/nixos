@@ -36,7 +36,7 @@ in {
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
     ../shared/satty.nix
-    ../shared/stasis.nix # Sophisticated Wayland idle manager with media detection
+    (import ../shared/stasis.nix "niri-session.target") # Wayland idle manager with media detection
     ../shared/awww-coordinated.nix # awww wallpaper daemon, enabled via wm.awww options below
     (import ../shared/wired.nix "niri-session.target") # Modern notification daemon configuration
     (import ../shared/cthulock.nix "niri-session.target") # Screen locker
