@@ -1,5 +1,7 @@
-# Scheduled maintenance orchestration for updates, health checks, and alerting.
+# Scheduled maintenance orchestration for health checks, cleanup, and alerting.
 # Centralizes recurring host hygiene tasks under one opt-in module.
+# Lock updates are intentionally not automated per host: they flow through
+# the reviewed weekly-updates CI PR, and comin converges hosts to main.
 {
   config,
   lib,
@@ -8,15 +10,6 @@
 }: {
   options.modules.system.maintenance = {
     enable = lib.mkEnableOption "automated system maintenance";
-
-    autoUpdate = {
-      enable = lib.mkEnableOption "automatic flake updates";
-      schedule = lib.mkOption {
-        type = lib.types.str;
-        default = "weekly";
-        description = "Update schedule (systemd timer format)";
-      };
-    };
 
     monitoring = {
       enable = lib.mkEnableOption "system health monitoring";
@@ -78,34 +71,6 @@
 
     systemd = {
       services = {
-        nixos-auto-update = lib.mkIf config.modules.system.maintenance.autoUpdate.enable {
-          description = "Automatic NixOS flake update";
-          script = ''
-              set -eu
-
-              cd /per/etc/nixos
-
-              # Check if there are uncommitted changes
-              if [[ -n "$(${pkgs.git}/bin/git status --porcelain)" ]]; then
-                echo "Uncommitted changes detected, skipping auto-update"
-                exit 0
-              fi
-
-              # Update flake inputs
-              ${pkgs.nix}/bin/nix flake update --commit-lock-file
-
-            # Test build (don't switch automatically for safety)
-            ${pkgs.nix}/bin/nix build .#nixosConfigurations.$(hostname).config.system.build.toplevel --no-link
-
-            echo "Flake updated successfully. Use 'deploy' to apply changes."
-          '';
-          serviceConfig = {
-            Type = "oneshot";
-            User = "root";
-            Group = "root";
-          };
-        };
-
         # Generic host-level health checks. Works on any NixOS host without
         # Prometheus. Grafana-provisioned alert rules (modules/system/homelab/
         # monitoring.nix) extend this with homelab-specific service
@@ -360,16 +325,6 @@
       };
 
       timers = {
-        nixos-auto-update = lib.mkIf config.modules.system.maintenance.autoUpdate.enable {
-          description = "Timer for automatic NixOS flake updates";
-          wantedBy = ["timers.target"];
-          timerConfig = {
-            OnCalendar = config.modules.system.maintenance.autoUpdate.schedule;
-            Persistent = true;
-            RandomizedDelaySec = "1h";
-          };
-        };
-
         system-health-check = lib.mkIf config.modules.system.maintenance.monitoring.enable {
           description = "Timer for system health monitoring";
           wantedBy = ["timers.target"];

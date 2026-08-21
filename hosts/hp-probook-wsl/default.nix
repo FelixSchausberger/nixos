@@ -201,7 +201,6 @@ in {
       homelab.tailscale.enable = true;
       maintenance = {
         enable = true;
-        autoUpdate.enable = false; # Disable auto-updates in WSL environment
         monitoring = {
           enable = true;
           alerts = false; # Disable alerts in WSL
