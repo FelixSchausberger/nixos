@@ -10,7 +10,7 @@
     development = {
       enable = lib.mkEnableOption "development tools and environments";
       languages = lib.mkOption {
-        type = lib.types.listOf (lib.types.enum ["rust" "python" "go" "nix"]);
+        type = lib.types.listOf (lib.types.enum ["rust" "python" "go" "nix" "javascript"]);
         default = [];
         description = "Programming languages to support";
       };
@@ -98,6 +98,11 @@
             alejandra
             deadnix
             statix
+          ]
+          # Runtime only: the TypeScript/JavaScript LSP ships via the helix
+          # languages module once development is enabled.
+          ++ lib.optionals (lib.elem "javascript" config.features.development.languages) [
+            nodejs
           ]
       ))
 
