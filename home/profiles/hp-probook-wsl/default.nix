@@ -44,6 +44,17 @@
     git.enable = true;
   };
 
+  # Interactive homelab access always uses mosh: roaming-friendly, survives
+  # suspend and network changes. mosh reads ~/.ssh/config for the bootstrap
+  # connection, so keys and host aliases apply unchanged. Plain ssh stays
+  # available for scripts and scp.
+  programs.fish.functions.m920q = {
+    body = ''
+      command mosh m920q $argv
+    '';
+    description = "Interactive mosh session to m920q homelab";
+  };
+
   # WSL-specific home configuration
   home = {
     packages = with pkgs; [
