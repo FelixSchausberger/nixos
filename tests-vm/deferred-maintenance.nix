@@ -52,7 +52,7 @@ _: {
 
     # 1. Normal execution with healthy configuration
     machine.succeed("systemctl start network-maintenance.service")
-    maint_log = machine.succeed("cat /var/log/network-maintenance.log")
+    maint_log = machine.succeed("journalctl -u network-maintenance.service --grep='maintenance window finished' --quiet")
     assert "maintenance window finished" in maint_log, f"Maintenance did not complete cleanly: {maint_log}"
 
     # 2. Verify the maintenance systemd timer exists
@@ -63,7 +63,9 @@ _: {
 
     # 4. Run maintenance again - should detect missing IP/gateway and abort networkd restart safely
     machine.succeed("systemctl restart network-maintenance.service")
-    maint_log2 = machine.succeed("cat /var/log/network-maintenance.log")
+    maint_log2 = machine.succeed(
+        "journalctl -u network-maintenance.service --since='-5min' --quiet"
+    )
     assert "missing static IP/gateway" in maint_log2 or "skipping networkd restart" in maint_log2, \
         f"Sanity gate failed to detect corruption: {maint_log2}"
 

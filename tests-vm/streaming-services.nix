@@ -4,11 +4,10 @@
 # - Moonshine NixOS module (firewall, systemd unit, mock service)
 # - AirPlay receiver pipeline (Avahi, firewall ports, mDNS discovery, TCP connectivity)
 #
-# airplay-receiver.nix is not imported directly: its uxplay user service
-# needs a DRM connector (kmssink) or compositor (waylandsink), neither of
-# which exists in a headless test VM. The non-graphical parts (Avahi,
-# firewall, package) are replicated on the server to validate every layer
-# up to the video sink.
+# airplay-receiver.nix is imported directly in headless mode: its uxplay user
+# service has no WantedBy (started only by HDMI-hotplug udev), so it stays
+# inert in a VM while Avahi, firewall, and package configuration are tested
+# against the real module.
 {inputs, ...}: {
   name = "streaming-services";
 
@@ -21,6 +20,7 @@
       imports = [
         inputs.moonshine.nixosModules.default
         ../modules/system/moonshine.nix
+        ../modules/system/airplay-receiver.nix
       ];
 
       # moonshine.nix reads config.hostConfig.user — define the option
@@ -41,6 +41,15 @@
         };
 
         modules.system.moonshine.enable = true;
+
+        # Real airplay-receiver module in headless mode: uxplay never starts
+        # (no HDMI hotplug in a VM), but Avahi, firewall, and package config
+        # are exercised exactly as shipped.
+        modules.system.airplayReceiver = {
+          enable = true;
+          user = "schausberger";
+          mode = "headless";
+        };
 
         # Mock game streaming listener on Moonshine HTTP port
         systemd.services.mock-moonshine = {
@@ -63,35 +72,6 @@
             Restart = "always";
           };
         };
-
-        # --- AirPlay receiver pipeline (replicates airplay-receiver.nix) ---
-        # uxplay systemd.user.service is omitted because it needs a DRM
-        # connector or compositor; everything else is tested.
-
-        services.avahi = {
-          enable = true;
-          openFirewall = true;
-          nssmdns4 = true;
-          publish = {
-            enable = true;
-            addresses = true;
-            userServices = true;
-          };
-        };
-        services.resolved.settings.Resolve.MulticastDNS = false;
-
-        environment.systemPackages = [pkgs.uxplay];
-
-        networking.firewall.allowedTCPPorts = [
-          7000
-          7001
-          7100
-        ];
-        networking.firewall.allowedUDPPorts = [
-          6000
-          6001
-          7011
-        ];
 
         # Mock AirPlay listener — binds to the primary RAOP port (7000)
         # so the client can verify firewall passthrough and TCP connectivity.
