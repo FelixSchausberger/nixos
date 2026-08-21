@@ -63,6 +63,12 @@ in {
     };
   };
 
+  # Pull-based GitOps: converge to main automatically, alert on downgrades
+  modules.system.comin = {
+    enable = true;
+    alertNtfyUrl = "http://m920q:2586/homelab-alerts";
+  };
+
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel
   boot.kernelPackages = pkgs.lib.mkForce pkgs.linuxPackages;

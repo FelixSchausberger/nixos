@@ -4,10 +4,11 @@
 # - Moonshine NixOS module (firewall, systemd unit, mock service)
 # - AirPlay receiver pipeline (Avahi, firewall ports, mDNS discovery, TCP connectivity)
 #
-# airplay-receiver.nix is not imported directly because it creates a
-# systemd.user service (uxplay) that requires a Wayland compositor. The
-# non-graphical parts (Avahi, firewall, package) are replicated on the
-# server to validate every layer up to the compositor dependency.
+# airplay-receiver.nix is not imported directly: its uxplay user service
+# needs a DRM connector (kmssink) or compositor (waylandsink), neither of
+# which exists in a headless test VM. The non-graphical parts (Avahi,
+# firewall, package) are replicated on the server to validate every layer
+# up to the video sink.
 {inputs, ...}: {
   name = "streaming-services";
 
@@ -64,8 +65,8 @@
         };
 
         # --- AirPlay receiver pipeline (replicates airplay-receiver.nix) ---
-        # uxplay systemd.user.service is omitted because it requires a
-        # Wayland compositor; everything else is tested.
+        # uxplay systemd.user.service is omitted because it needs a DRM
+        # connector or compositor; everything else is tested.
 
         services.avahi = {
           enable = true;

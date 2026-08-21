@@ -11,9 +11,10 @@
     # Boot configuration
     boot = {
       loader = config.boot.loader.systemd-boot.enable or config.boot.loader.grub.enable or false;
-      kernel = config.boot.kernelPackages.kernel.name or "unknown";
-      initrd_available_kernel_modules = config.boot.initrd.availableKernelModules or [];
-      kernel_modules = config.boot.kernelModules or [];
+      kernel_is_linux = builtins.match "linux.*" (config.boot.kernelPackages.kernel.name or "") != null;
+      has_ext4_module = builtins.elem "ext4" (config.boot.initrd.availableKernelModules or []);
+      has_nfs_module = builtins.elem "nfs" (config.boot.initrd.availableKernelModules or []);
+      has_usb_storage = builtins.elem "usb_storage" (config.boot.kernelModules or []);
     };
 
     # Networking configuration
@@ -37,7 +38,8 @@
       sudo_enabled = config.security.sudo.enable;
       polkit_enabled = config.security.polkit.enable;
       rtkit_enabled = config.security.rtkit.enable;
-      pam_services = builtins.attrNames config.security.pam.services;
+      has_pam_sudo = builtins.hasAttr "sudo" config.security.pam.services;
+      has_pam_systemd = builtins.hasAttr "systemd" config.security.pam.services;
     };
 
     # Critical systemd services

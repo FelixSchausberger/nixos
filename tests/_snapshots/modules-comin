@@ -1,0 +1,53 @@
+#pretty
+{
+  desktop = {
+    comin_enabled = true;
+    comin_service_enabled = true;
+    hostName = "desktop";
+    poll_period = 60;
+    post_deploy_set = true;
+    remote_url = "https://github.com/FelixSchausberger/nixos.git";
+    state_persisted = true;
+  };
+  hp-probook-vmware = {
+    comin_enabled = false;
+    comin_service_enabled = false;
+    hostName = "hp-probook-vmware";
+  };
+  hp-probook-wsl = {
+    comin_enabled = true;
+    comin_service_enabled = true;
+    hostName = "hp-probook-wsl";
+    poll_period = 60;
+    post_deploy_set = true;
+    remote_url = "https://github.com/FelixSchausberger/nixos.git";
+    state_persisted = false;
+  };
+  m920q = {
+    comin_enabled = true;
+    comin_service_enabled = true;
+    hostName = "m920q";
+    poll_period = 60;
+    post_deploy_set = true;
+    remote_url = "https://github.com/FelixSchausberger/nixos.git";
+    state_persisted = true;
+  };
+  portable = {
+    comin_enabled = true;
+    comin_service_enabled = true;
+    hostName = "portable";
+    poll_period = 60;
+    post_deploy_set = true;
+    remote_url = "https://github.com/FelixSchausberger/nixos.git";
+    state_persisted = true;
+  };
+  surface = {
+    comin_enabled = true;
+    comin_service_enabled = true;
+    hostName = "surface";
+    poll_period = 60;
+    post_deploy_set = true;
+    remote_url = "https://github.com/FelixSchausberger/nixos.git";
+    state_persisted = false;
+  };
+}

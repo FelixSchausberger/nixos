@@ -4,6 +4,7 @@
 {
   imports = [
     ./backup.nix
+    ./comin.nix
     ./containers.nix
     ./deployment-validation.nix
     ./development.nix

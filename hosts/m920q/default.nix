@@ -1,4 +1,6 @@
-# ThinkCentre M920q dual-role host: headless homelab server with optional HDMI-triggered GUI mode.
+# ThinkCentre M920q dual-role host: headless homelab server with opt-in GUI
+# mode (niri specialisation via boot menu or manual mode-switch). AirPlay
+# casting runs headless (kmssink, udev-triggered) without any session.
 # Prioritizes low idle power while keeping a Niri specialisation available for local media use.
 {
   config,
@@ -60,7 +62,7 @@ in {
             ../../modules/system/wm/niri.nix
           ];
 
-          modules.system.airplayReceiver.enable = true;
+          modules.system.airplayReceiver.mode = "gui";
 
           hostConfig.isGui = lib.mkForce true;
 
@@ -279,6 +281,10 @@ in {
     enable = true;
     lanInterface = "eno1";
     suppressLeds = true;
+    # thermald >= 2.5.12 refuses to start on non-mobile ACPI platform profiles
+    # (upstream intel/thermal_daemon#562); kernel TCC throttling and RAPL limits
+    # provide thermal protection on this desktop.
+    intelCpuThermals = false;
   };
 
   systemd.timers.zfs-snapshot-frequent.enable = lib.mkForce false;
@@ -293,12 +299,30 @@ in {
 
   modules.system.mediaClient.enable = true;
 
+  # AirPlay receiver runs headless (kmssink, udev-triggered) so casting from
+  # the MacBook works without booting into the niri specialisation; the niri
+  # leaf overrides the mode to gui above.
+  modules.system.airplayReceiver.enable = true;
+
   hardware.steam-hardware.enable = true;
 
   modules.system = {
-    m920q.enable = true;
+    # Auto-switching disabled: HDMI hotplug must not flip the machine into the
+    # niri specialisation — casting is handled headless by airplay-receiver.
+    # Enter niri via the boot-menu specialisation entry or manually:
+    #   echo niri > /run/m920q-hdmi-state && systemctl start m920q-mode-switch
+    m920q = {
+      enable = true;
+      autoSwitch = false;
+    };
     stylix-catppuccin.enable = true;
     containers.enable = true;
+    # Pull-based GitOps: converge to main automatically. m920q hosts the ntfy
+    # endpoint itself, so alerts go through the loopback address.
+    comin = {
+      enable = true;
+      alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+    };
     maintenance = {
       enable = true;
       autoUpdate.enable = false;

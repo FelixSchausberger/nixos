@@ -2,7 +2,14 @@ name: Weekly Dependency Updates
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0"
+    # Daily refresh; the filename and branch keep their historical names.
+    # Hosts converge via comin, so a fresh lock reaches them within minutes.
+    - cron: "0 3 * * *"
+# Parallel triggers (cron + on-demand update-system.sh) would race the same
+# PR branch; serialize instead of cancelling an in-flight lock refresh.
+concurrency:
+  group: weekly-updates
+  cancel-in-progress: false
 permissions:
   contents: write
   pull-requests: write
