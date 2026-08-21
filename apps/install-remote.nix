@@ -126,9 +126,11 @@
         # (partition 2: after ESP, before ZFS) with randomEncryption=true which
         # sets up dm-crypt — but we need plain swap during the install phase.
         # mkswap overwrites the dm-crypt header; NixOS will re-create it on first boot.
+        # Abort when the labeled scan finds nothing: guessing a device here and
+        # running mkswap on it would destroy whatever it holds.
         echo "Activating swap partition for install phase..."
         ssh $SSH_OPTS "root@$TARGET_IP" \
-          'SWAP=$(lsblk -rno NAME,PARTLABEL | awk "$2==\"swap\"{print \"/dev/\"\$1}"); [[ -z "$SWAP" ]] && SWAP=/dev/nvme0n1p2; mkswap "$SWAP" && swapon "$SWAP"'
+          'SWAP=$(lsblk -rno NAME,PARTLABEL | awk "$2==\"swap\"{print \"/dev/\"\$1}"); [[ -z "$SWAP" ]] && { echo "ERROR: no partition labeled swap found; refusing to guess" >&2; exit 1; }; mkswap "$SWAP" && swapon "$SWAP"'
 
         # Memory optimization: use existing lock file, limit parallelism, enable eval cache
         echo "Installing NixOS..."
