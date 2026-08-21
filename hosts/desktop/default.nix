@@ -113,9 +113,13 @@ in {
   systemd.services.fwupd-refresh.enable = false;
   systemd.timers.fwupd-refresh.enable = false;
 
+  # zfsutil is required: the datasets use native ZFS mountpoints, and
+  # mount(8) without zfsutil refuses non-legacy datasets (OpenZFS >= 2.4),
+  # which dropped boot into emergency mode.
   fileSystems."/per/games" = {
     device = "dpool/games";
     fsType = "zfs";
+    options = ["defaults" "zfsutil"];
   };
 
   modules.system.ssh.enable = true;
@@ -219,5 +223,6 @@ in {
     device = "bpool/desktop";
     fsType = "zfs";
     neededForBoot = false;
+    options = ["defaults" "zfsutil"];
   };
 }
