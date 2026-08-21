@@ -89,10 +89,7 @@
 
     # Optional daemon service for background operation
     systemd.user.services.spotify-player-daemon = lib.mkIf config.modules.home.tui.spotify-player.enableDaemon {
-      Unit = {
-        Description = "Spotify Player Daemon";
-        After = ["graphical-session.target"];
-      };
+      Unit.Description = "Spotify Player Daemon";
       Service = {
         ExecStart = "${config.modules.home.tui.spotify-player.package}/bin/spotify_player --daemon";
         Restart = "on-failure";
