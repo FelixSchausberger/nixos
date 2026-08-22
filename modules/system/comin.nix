@@ -1,6 +1,6 @@
 # Pull-based GitOps deployment via comin.
 #
-# flake.lock has a single writer: the weekly-updates GitHub Actions workflow
+# flake.lock has a single writer: the daily-updates GitHub Actions workflow
 # (daily cron, on-demand through update-system.sh). Hosts poll the public
 # GitHub main branch and deploy nixosConfigurations.<hostname> automatically;
 # store paths mostly substitute from cachix, warmed by

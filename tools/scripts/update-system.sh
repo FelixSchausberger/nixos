@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Trigger an immediate lock refresh through CI and let comin converge.
 #
-# flake.lock has a single writer: the weekly-updates GitHub Actions workflow
+# flake.lock has a single writer: the daily-updates GitHub Actions workflow
 # (daily cron). This script dispatches the same workflow on demand, waits for
 # the resulting PR to auto-merge, syncs the local working copy onto main, and
 # restarts comin so the host converges immediately instead of waiting for its
@@ -14,8 +14,8 @@
 set -euo pipefail
 
 FLAKE="${NH_FLAKE:-/per/etc/nixos}"
-WORKFLOW="weekly-updates.yml"
-BRANCH="weekly-updates"
+WORKFLOW="daily-updates.yml"
+BRANCH="daily-updates"
 TIMEOUT_SECS="${UPDATE_TIMEOUT_SECS:-1200}"
 POLL_INTERVAL=10
 DEADLINE=$(($(date +%s) + TIMEOUT_SECS))
