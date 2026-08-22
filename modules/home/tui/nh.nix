@@ -26,7 +26,7 @@ _: {
   # A failed activation keeps the old generation, so switch needs no test pre-step.
   # guard-downgrades.sh blocks deploys/updates that would regress package versions.
   #
-  # Lock updates have a single writer: the weekly-updates GitHub Actions
+  # Lock updates have a single writer: the daily-updates GitHub Actions
   # workflow (daily cron, on-demand via `update`). Hosts converge to main
   # automatically through comin; `update` triggers CI and restarts comin for
   # immediate convergence. The downgrade guard is mandatory in the deploy

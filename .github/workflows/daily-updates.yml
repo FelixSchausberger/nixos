@@ -1,14 +1,13 @@
-name: Weekly Dependency Updates
+name: Daily Dependency Updates
 on:
   workflow_dispatch:
   schedule:
-    # Daily refresh; the filename and branch keep their historical names.
     # Hosts converge via comin, so a fresh lock reaches them within minutes.
     - cron: "0 3 * * *"
 # Parallel triggers (cron + on-demand update-system.sh) would race the same
 # PR branch; serialize instead of cancelling an in-flight lock refresh.
 concurrency:
-  group: weekly-updates
+  group: daily-updates
   cancel-in-progress: false
 permissions:
   contents: write
@@ -63,16 +62,20 @@ jobs:
       - name: Create or update PR
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: weekly-updates
+          # A PAT is mandatory here: PRs created with GITHUB_TOKEN do not
+          # trigger pull_request workflows (GitHub anti-recursion rule), so
+          # neither ci.yml's required "Quick Validation" check nor the
+          # auto-merge workflow would ever run and the PR would stall open.
+          token: ${{ secrets.LOCKS_UPDATE_PAT }}
+          branch: daily-updates
           base: main
-          title: "chore: weekly dependency update"
+          title: "chore: daily dependency update"
           labels: auto-merge
-          commit-message: "chore: weekly dependency update"
+          commit-message: "chore: daily dependency update"
           body: |
-            ## Weekly Dependency Update
+            ## Daily Dependency Update
 
-            Automated weekly update of flake inputs and required Namaka snapshots.
+            Automated daily update of flake inputs and required Namaka snapshots.
 
             **Validation:**
             - Namaka snapshot checks run in this workflow
@@ -81,4 +84,4 @@ jobs:
 
             ---
             Triggered by: `${{ github.event_name }}`
-            Workflow: weekly-updates.yml
+            Workflow: daily-updates.yml

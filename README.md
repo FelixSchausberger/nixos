@@ -176,10 +176,13 @@ history                                          # View generation history
 
 ### Update Flow and Downgrade Guard
 
-`flake.lock` has a single writer: the `weekly-updates.yml` GitHub Actions
-workflow (daily cron at 03:00 UTC, also dispatchable on demand). After a lock
-PR merges, `cachix-push.yml` builds every host toplevel and warms the cachix
-cache; hosts then converge automatically through
+`flake.lock` has a single writer: the `daily-updates.yml` GitHub Actions
+workflow (daily cron at 03:00 UTC, also dispatchable on demand). The lock PR
+is created with the fine-grained `LOCKS_UPDATE_PAT` secret (repo-scoped,
+Contents and Pull requests read/write); a PR created with the default
+`GITHUB_TOKEN` would not trigger CI or auto-merge workflows at all. After a
+lock PR merges, `cachix-push.yml` builds every host toplevel and warms the
+cachix cache; hosts then converge automatically through
 [comin](https://github.com/nlewo/comin), which polls main every 60 seconds
 and deploys `nixosConfigurations.<hostname>`.
 

@@ -31,9 +31,9 @@ jobs:
           STALE_REPORT=""
           CUTOFF_DATE=$(date -d "-${STALE_DAYS} days" --iso-8601=seconds)
 
-          # List all remote branches except the persistent ones (main, weekly-updates)
+          # List all remote branches except the persistent ones (main, daily-updates)
           BRANCHES=$(gh api "repos/${REPO}/branches" --paginate \
-            --jq '.[].name' | grep -vxF "main" | grep -vxF "weekly-updates" || true)
+            --jq '.[].name' | grep -vxF "main" | grep -vxF "daily-updates" || true)
 
           if [ -z "$BRANCHES" ]; then
             echo "No ephemeral branches found."
