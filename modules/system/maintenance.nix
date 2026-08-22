@@ -1,7 +1,7 @@
 # Scheduled maintenance orchestration for health checks, cleanup, and alerting.
 # Centralizes recurring host hygiene tasks under one opt-in module.
 # Lock updates are intentionally not automated per host: they flow through
-# the reviewed weekly-updates CI PR, and comin converges hosts to main.
+# the reviewed daily-updates CI PR, and comin converges hosts to main.
 {
   config,
   lib,
