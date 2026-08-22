@@ -11,6 +11,7 @@
   ...
 }: let
   dsshGuid = "{e0b0a5b5-4f2a-4a1d-9d88-3c5d9d1b7b01}";
+  moshHomelabGuid = "{ddea1859-4521-504c-81d0-0196754902b0}";
 in {
   options.tui.windows-terminal = {
     enable =
@@ -114,6 +115,15 @@ in {
             # mistaken for the NixOS/WSL tab (tab title is set per-host by the
             # ssh LocalCommand in the Windows .ssh/config).
             name = "dssh";
+          }
+          # Mosh session to the m920q homelab via WSL. dssh cannot launch mosh
+          # (ssh-only launcher), so this profile wraps the fish function that
+          # picks the tailscale/LAN path. Tab closes when the session ends.
+          {
+            commandline = "wsl.exe -d NixOS -e fish -c m920q";
+            guid = moshHomelabGuid;
+            hidden = false;
+            name = "m920q mosh";
           }
         ];
       };
