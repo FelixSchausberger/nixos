@@ -121,10 +121,15 @@ in {
           # picks the tailscale/LAN path. Routed through the WSL default-shell
           # wrapper (no -e): a direct exec would skip /etc/set-environment and
           # miss PATH/LANG. Tab closes when the session ends.
+          #
+          # Icon: Segoe Fluent Icons "Wifi" glyph (U+E701), same value the WT
+          # settings UI writes when picking the wifi icon - distinguishes mosh
+          # tabs from plain ssh tabs at a glance.
           {
             commandline = "wsl.exe -d NixOS -- fish -c m920q";
             guid = moshHomelabGuid;
             hidden = false;
+            icon = "\ue701";
             name = "m920q mosh";
           }
         ];
