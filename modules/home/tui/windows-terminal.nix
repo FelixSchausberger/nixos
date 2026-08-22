@@ -124,12 +124,14 @@ in {
           #
           # Icon: Segoe Fluent Icons "Wifi" glyph (U+E701), same value the WT
           # settings UI writes when picking the wifi icon - distinguishes mosh
-          # tabs from plain ssh tabs at a glance.
+          # tabs from plain ssh tabs at a glance. Nix has no \uXXXX string
+          # escape (a bare backslash is dropped silently), so the glyph is
+          # parsed out of a JSON string literal via fromJSON.
           {
             commandline = "wsl.exe -d NixOS -- fish -c m920q";
             guid = moshHomelabGuid;
             hidden = false;
-            icon = "\ue701";
+            icon = builtins.fromJSON ''"\ue701"'';
             name = "m920q mosh";
           }
         ];
