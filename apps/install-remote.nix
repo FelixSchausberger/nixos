@@ -1,4 +1,9 @@
-{pkgs}: {
+{
+  pkgs,
+  hosts,
+}: let
+  hostListSpace = builtins.concatStringsSep ", " hosts;
+in {
   type = "app";
   program = "${pkgs.writeShellScript "install-remote" ''
         set -euo pipefail
@@ -6,7 +11,7 @@
         if [[ $# -lt 2 ]]; then
           echo "Usage: nix run .#install-remote HOSTNAME TARGET_IP" >&2
           echo "" >&2
-          echo "Available hosts: desktop, surface, portable, hp-probook-vmware, m920q" >&2
+          echo "Available hosts: ${hostListSpace}" >&2
           echo "" >&2
           echo "Example:" >&2
           echo "  nix run .#install-remote hp-probook-vmware 192.168.1.100" >&2
@@ -47,14 +52,16 @@
           exit 1
         fi
 
-        case "$HOSTNAME" in
-          desktop|surface|portable|hp-probook-vmware|m920q) ;;
-          *)
-            echo "Error: Invalid hostname '$HOSTNAME'" >&2
-            echo "Valid options: desktop, surface, portable, hp-probook-vmware, m920q" >&2
-            exit 1
-            ;;
-        esac
+        # Literal membership check (no case-pattern expansion of user input)
+        host_ok=""
+        for h in ${builtins.concatStringsSep " " hosts}; do
+          [[ "$h" == "$HOSTNAME" ]] && host_ok=1
+        done
+        if [[ -z "$host_ok" ]]; then
+          echo "Error: Invalid hostname '$HOSTNAME'" >&2
+          echo "Valid options: ${hostListSpace}" >&2
+          exit 1
+        fi
 
         echo "Removing old SSH host key for $TARGET_IP..."
         ssh-keygen -R "$TARGET_IP" &>/dev/null || true
