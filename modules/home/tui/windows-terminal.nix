@@ -118,9 +118,11 @@ in {
           }
           # Mosh session to the m920q homelab via WSL. dssh cannot launch mosh
           # (ssh-only launcher), so this profile wraps the fish function that
-          # picks the tailscale/LAN path. Tab closes when the session ends.
+          # picks the tailscale/LAN path. Routed through the WSL default-shell
+          # wrapper (no -e): a direct exec would skip /etc/set-environment and
+          # miss PATH/LANG. Tab closes when the session ends.
           {
-            commandline = "wsl.exe -d NixOS -e fish -c m920q";
+            commandline = "wsl.exe -d NixOS -- fish -c m920q";
             guid = moshHomelabGuid;
             hidden = false;
             name = "m920q mosh";
