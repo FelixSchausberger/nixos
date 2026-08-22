@@ -132,9 +132,12 @@
         ssh $SSH_OPTS "root@$TARGET_IP" \
           'SWAP=$(lsblk -rno NAME,PARTLABEL | awk "$2==\"swap\"{print \"/dev/\"\$1}"); [[ -z "$SWAP" ]] && { echo "ERROR: no partition labeled swap found; refusing to guess" >&2; exit 1; }; mkswap "$SWAP" && swapon "$SWAP"'
 
-        # Memory optimization: use existing lock file, limit parallelism, enable eval cache
+        # Memory optimization: use existing lock file, limit parallelism, enable eval cache.
+        # The token is piped over SSH stdin and read into a remote variable:
+        # passing it in the command string would expose it in the target's
+        # process list (/proc/*/cmdline is world-readable).
         echo "Installing NixOS..."
-        ssh $SSH_OPTS "root@$TARGET_IP" "cd /tmp/nixos-config && NIX_CONFIG='access-tokens = github.com=$GITHUB_TOKEN max-jobs = 1 cores = 1 eval-cache = true' nixos-install --flake .#$HOSTNAME --no-root-password --option extra-experimental-features 'nix-command flakes' --no-write-lock-file"
+        printf '%s\n' "$GITHUB_TOKEN" | ssh $SSH_OPTS "root@$TARGET_IP" "read -r GH_TOKEN && cd /tmp/nixos-config && NIX_CONFIG=\"access-tokens = github.com=\$GH_TOKEN max-jobs = 1 cores = 1 eval-cache = true\" nixos-install --flake .#$HOSTNAME --no-root-password --option extra-experimental-features 'nix-command flakes' --no-write-lock-file"
 
         # Export the ZFS pool cleanly before rebooting.
         # Without this the pool is left in an "active" state from the ISO's perspective,
@@ -190,7 +193,7 @@
 
         # Rebuild from persistent location with GitHub authentication (memory-optimized)
         echo "Rebuilding from /per/etc/nixos to finalize installation..."
-        if ! ssh $SSH_OPTS "root@$TARGET_IP" "cd /per/etc/nixos && NIX_CONFIG='access-tokens = github.com=$GITHUB_TOKEN max-jobs = 1 cores = 1' nixos-rebuild switch --flake .#$HOSTNAME --option extra-experimental-features 'nix-command flakes' --no-write-lock-file"; then
+        if ! printf '%s\n' "$GITHUB_TOKEN" | ssh $SSH_OPTS "root@$TARGET_IP" "read -r GH_TOKEN && cd /per/etc/nixos && NIX_CONFIG=\"access-tokens = github.com=\$GH_TOKEN max-jobs = 1 cores = 1\" nixos-rebuild switch --flake .#$HOSTNAME --option extra-experimental-features 'nix-command flakes' --no-write-lock-file"; then
           echo ""
           echo "WARNING: Final rebuild failed."
           echo "The system is installed and bootable, but may need a manual rebuild."
