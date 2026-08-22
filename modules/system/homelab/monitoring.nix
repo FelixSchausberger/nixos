@@ -322,9 +322,12 @@ in {
                   refId = "A";
                   relativeTimeRange.from = 600;
                   relativeTimeRange.to = 0;
-                  datasourceUid = "prometheus";
+                  datasource.type = "prometheus";
+                  datasource.uid = "prometheus";
                   model = {
                     inherit expr;
+                    datasource.type = "prometheus";
+                    datasource.uid = "prometheus";
                     instant = true;
                     intervalMs = 1000;
                     maxDataPoints = 43200;
@@ -332,6 +335,9 @@ in {
                   };
                 }
                 {
+                  # Legacy datasourceUid here (not a datasource object): the
+                  # expression engine rejects __expr__ nodes that look like
+                  # data queries (it then demands a relative time range).
                   refId = "B";
                   datasourceUid = "__expr__";
                   model = {
