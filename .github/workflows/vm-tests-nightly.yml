@@ -1,0 +1,68 @@
+# Nightly NixOS VM integration tests.
+#
+# Runs the full tests-vm suite on a schedule instead of blocking PRs: the
+# primary regression source is the daily lock update (03:00), so a run a
+# few hours later validates every new nixpkgs revision that hosts will
+# auto-deploy via comin. Failures are advisory — investigate in the
+# morning, they do not gate merges.
+#
+# Note: GitHub runners lack KVM, so QEMU runs under TCG emulation and each
+# test takes 15-30 minutes. The matrix keeps wall time at the slowest test.
+name: VM Tests (Nightly)
+on:
+  schedule:
+    # After the daily-updates lock PR (03:00) has had time to merge.
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  SSL_CERT_DIR: /etc/ssl/certs
+  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  NIX_SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+  NIX_CONFIG: |
+    experimental-features = nix-command flakes pipe-operators
+    allow-import-from-derivation = true
+    accept-flake-config = true
+    ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
+    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org
+    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc=
+    connect-timeout = 5
+    stalled-download-timeout = 30
+    max-jobs = auto
+    cores = 0
+concurrency:
+  group: vm-tests-nightly
+  cancel-in-progress: true
+jobs:
+  vm-test:
+    name: ${{ matrix.test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - m920q-mode-switch
+          - caddy-proxy
+          - zfs-backup
+          - streaming-services
+          - deferred-maintenance
+          - monitoring-alerting
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup SSL certificates
+        uses: ./.github/actions/setup-ssl
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: ${{ env.NIX_CONFIG }}
+      - name: Cache Nix store
+        uses: DeterminateSystems/flakehub-cache-action@v3
+      # A cached success from an identical lock means the test already ran
+      # for this exact input; nothing changed, so skipping is correct.
+      - name: Build and run VM test (${{ matrix.test }})
+        run: nix build ".#packages.x86_64-linux.test-${{ matrix.test }}" -L

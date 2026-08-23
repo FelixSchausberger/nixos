@@ -27,4 +27,5 @@ in {
   zfs-backup = runTest ./zfs-backup.nix;
   streaming-services = runTest ./streaming-services.nix;
   deferred-maintenance = runTest ./deferred-maintenance.nix;
+  monitoring-alerting = runTest ./monitoring-alerting.nix;
 }
