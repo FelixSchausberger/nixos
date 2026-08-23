@@ -81,6 +81,11 @@
           inherit pkgs inputs;
           inherit (inputs) self;
         }).deferred-maintenance;
+      test-monitoring-alerting =
+        (import ../tests-vm {
+          inherit pkgs inputs;
+          inherit (inputs) self;
+        }).monitoring-alerting;
     };
   };
 }

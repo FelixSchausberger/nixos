@@ -18,7 +18,10 @@ if [[ "${COMIN_STATUS:-}" != "done" ]]; then
 	exit 0
 fi
 
-profile=/nix/var/nix/profiles/system
+# COMIN_PROFILE overrides the system profile location; production always
+# uses the default. It exists so the diffing logic can be unit-tested
+# against fixture generation links.
+profile="${COMIN_PROFILE:-/nix/var/nix/profiles/system}"
 
 # The just-activated generation is the highest numbered link; the one before
 # it is what was running until this deployment.
@@ -27,7 +30,7 @@ cur_num=${target//[^0-9]/}
 if [[ -z "$cur_num" || "$cur_num" -le 1 ]]; then
 	exit 0
 fi
-prev="/nix/var/nix/profiles/system-$((cur_num - 1))-link"
+prev="$(dirname "$profile")/system-$((cur_num - 1))-link"
 if [[ ! -e "$prev" ]]; then
 	exit 0
 fi
@@ -38,16 +41,28 @@ new=$(readlink -f "$profile")
 # nix store diff-closures emits lines like:
 #   dolphin: 20.08.1 → 20.08.2, +13.9 KiB
 # Only lines carrying a version arrow are changes, not add/remove.
+# The diff is captured into a variable and fed via here-string: process
+# substitution would require /dev/fd, which is unavailable under some
+# sandboxing profiles (and the detector then silently sees nothing).
+diff_output=$(nix store diff-closures "$old" "$new" 2>/dev/null) || true
+
 downgrades=""
 while IFS= read -r line; do
 	[[ "$line" =~ ^([^:]+):\ ([^ →]+)\ →\ ([^ ,]+) ]] || continue
 	old_v="${BASH_REMATCH[2]}"
 	new_v="${BASH_REMATCH[3]}"
+	# Only version-to-version changes can be downgrades: diff-closures marks
+	# added packages as "∅ → v" and removed ones as "v → ε", and sort -V
+	# ranks those symbols below any number, which would report every package
+	# addition as a downgrade.
+	if [[ ! "$old_v" =~ ^[0-9] || ! "$new_v" =~ ^[0-9] ]]; then
+		continue
+	fi
 	# versionOlder new old -> true means new is older (a downgrade)
 	if [[ "$new_v" != "$old_v" && "$(printf '%s\n%s\n' "$old_v" "$new_v" | sort -V | head -n1)" == "$new_v" ]]; then
 		downgrades+="${line%%,*}"$'\n'
 	fi
-done < <(nix store diff-closures "$old" "$new" 2>/dev/null)
+done <<<"$diff_output"
 
 if [[ -z "$downgrades" ]]; then
 	exit 0

@@ -39,6 +39,17 @@ in {
     alerting = {
       enable = lib.mkEnableOption "Grafana alert rules and notification channel to ntfy";
     };
+    fritzbox = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Monitor a Fritz!Box router via the fritz exporter (scrape job,
+          WAN-down alert rule, and fritzbox/password secret). Disable on
+          hosts without a Fritz!Box on the LAN.
+        '';
+      };
+    };
   };
 
   config = mkIf cfg.enable {
@@ -93,7 +104,7 @@ in {
           "thermal_zone"
         ];
       };
-      exporters.fritz = {
+      exporters.fritz = mkIf cfg.fritzbox.enable {
         enable = true;
         port = 9787;
         listenAddress = "127.0.0.1";
@@ -138,6 +149,8 @@ in {
               }
             ];
           }
+        ]
+        ++ lib.optionals cfg.fritzbox.enable [
           {
             job_name = "fritz";
             scrape_interval = "60s";
@@ -438,10 +451,12 @@ in {
                     "A ZFS snapshot or replication job (sanoid/syncoid) ended in failed state; backups are incomplete until fixed"
                     ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == bool 1'')
                 ])
-                ++ [
+                ++ (lib.optionals cfg.fritzbox.enable [
                   (mkAlert "fritzbox-wan-down" "urgent" "FritzboxWanDown"
                     "Fritz!Box WAN connection is down (uptime = 0)"
                     "fritz_upnp_uptime_seconds == bool 0")
+                ])
+                ++ [
                   (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
                     "Node exporter is unreachable (system metrics unavailable)"
                     ''up{job="node"} == bool 0'')
@@ -455,11 +470,14 @@ in {
       };
     };
 
-    sops.secrets = {
-      "grafana/admin-password".owner = "grafana";
-      "grafana/secret-key".owner = "grafana";
-      "fritzbox/password".owner = "fritz-exporter";
-    };
+    sops.secrets =
+      {
+        "grafana/admin-password".owner = "grafana";
+        "grafana/secret-key".owner = "grafana";
+      }
+      // lib.optionalAttrs cfg.fritzbox.enable {
+        "fritzbox/password".owner = "fritz-exporter";
+      };
     sops.templates."grafana-env" = {
       content = "GF_SECURITY_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}";
       owner = "grafana";

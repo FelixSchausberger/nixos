@@ -111,6 +111,13 @@ in {
       default_cwd = defaults.paths.homeDir;
       default_mode = "Locked";
 
+      # mosh cannot forward kitty keyboard protocol probes reliably (its
+      # server-side terminal emulator eats the sequences), which desyncs
+      # input parsing between ssh and mosh sessions. Legacy encoding makes
+      # both paths behave identically; no functionality is lost since
+      # Windows Terminal does not support the protocol either.
+      support_kitty_keyboard_protocol = false;
+
       # UI settings
       pane_frames = false;
       simplified_ui = true;
@@ -164,6 +171,11 @@ in {
         // This bypasses clip.exe and handles UTF-8 correctly
         locked {
           bind "Ctrl Space" { SwitchToMode "Normal"; }
+
+          # Fallback unlock key: Ctrl g sends BEL (0x07), which survives
+          # transports known to mangle NUL/Ctrl Space (Windows Terminal
+          # ConPTY, mosh)
+          bind "Ctrl g" { SwitchToMode "Normal"; }
 
           // Quick plugin access as floating popups (work in locked mode)
           bind "Alt w" { LaunchOrFocusPlugin "forgot" { floating true; }; }
