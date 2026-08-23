@@ -1,0 +1,94 @@
+#pretty
+{
+  contact_point = {
+    disable_resolve_message = false;
+    name = "ntfy";
+    priority_templated = true;
+    topic_in_payload = true;
+    type = "webhook";
+    url = "http://127.0.0.1:2586/";
+  };
+  expected_rules = [
+    "fritzbox-wan-down"
+    "node-exporter-down"
+    "postgres-down"
+    "nextcloud-down"
+    "immich-down"
+    "adguard-down"
+    "backup-failed"
+  ];
+  folder = "Homelab";
+  interval = "2m";
+  policy = {
+    group_by = [ ];
+    group_interval = "5m";
+    group_wait = "30s";
+    repeat_interval = "4h";
+  };
+  rule_count = 7;
+  rules = [
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox\",instance=~\".*nextcloud.*\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "NextcloudDown";
+      uid = "nextcloud-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox\",instance=~\".*immich.*\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "ImmichDown";
+      uid = "immich-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "up{job=\"adguard\"} == bool 0 or adguard_running == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "AdGuardDown";
+      uid = "adguard-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "node_systemd_unit_state{name=~\".*(sanoid|syncoid).*[.]service\",state=\"failed\"} == bool 1";
+      noDataState = "Alerting";
+      severity = "high";
+      title = "BackupFailed";
+      uid = "backup-failed";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "fritz_upnp_uptime_seconds == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "FritzboxWanDown";
+      uid = "fritzbox-wan-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "up{job=\"node\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "NodeExporterDown";
+      uid = "node-exporter-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "up{job=\"postgres\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "high";
+      title = "PostgresDown";
+      uid = "postgres-down";
+    }
+  ];
+}
