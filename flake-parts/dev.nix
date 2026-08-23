@@ -4,13 +4,26 @@
   ...
 }: {
   perSystem = {pkgs, ...}: {
-    checks = inputs.namaka.lib.load {
-      src = ../tests;
-      inputs = {
-        namaka = inputs.namaka.lib;
-        flake = self;
+    checks =
+      (inputs.namaka.lib.load {
+        src = ../tests;
+        inputs = {
+          namaka = inputs.namaka.lib;
+          flake = self;
+        };
+      })
+      // {
+        # Unit test for the comin post-deploy downgrade detector; also runs as
+        # a prek hook on changes to scripts/detect-downgrades.sh.
+        detect-downgrades = pkgs.runCommand "detect-downgrades-unit-test" {} ''
+          mkdir scripts
+          cp ${../scripts/detect-downgrades.sh} scripts/detect-downgrades.sh
+          cp ${../scripts/test-detect-downgrades.sh} scripts/test-detect-downgrades.sh
+          chmod +x scripts/*.sh
+          ${pkgs.bash}/bin/bash scripts/test-detect-downgrades.sh
+          touch $out
+        '';
       };
-    };
 
     devShells.default = pkgs.mkShell {
       packages = with pkgs; [

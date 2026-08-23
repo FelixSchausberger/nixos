@@ -93,7 +93,11 @@ in {
         timeout 15 ${pkgs.bash}/bin/bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
         # Kill any stray compositor/UWSM processes that escaped the teardown.
         /run/current-system/sw/bin/pkill -u ${user} -f 'niri|uwsm' 2>/dev/null || true
-        /run/current-system/sw/bin/systemctl stop greetd.service 2>/dev/null || true
+        # greetd is deliberately left running here: switch-to-configuration
+        # reloads every active user manager, and one whose owner session was
+        # just killed fails that reload with status 4, turning the service
+        # red even though the switch succeeded. The branches below stop
+        # greetd only after a successful switch test.
       fi
 
       # Failures abort loudly: the service turns red in systemd and the marker
