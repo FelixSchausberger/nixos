@@ -172,9 +172,9 @@ in {
         locked {
           bind "Ctrl Space" { SwitchToMode "Normal"; }
 
-          # Fallback unlock key: Ctrl g sends BEL (0x07), which survives
-          # transports known to mangle NUL/Ctrl Space (Windows Terminal
-          # ConPTY, mosh)
+          // Fallback unlock key: Ctrl g sends BEL (0x07), which survives
+          // transports known to mangle NUL/Ctrl Space (Windows Terminal
+          // ConPTY, mosh)
           bind "Ctrl g" { SwitchToMode "Normal"; }
 
           // Quick plugin access as floating popups (work in locked mode)
