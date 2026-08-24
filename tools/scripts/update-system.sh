@@ -127,6 +127,69 @@ new_head=$(git -C "$FLAKE" rev-parse HEAD)
 if [[ "$new_head" != "$old_head" ]]; then
 	echo "update: changes landed on main:"
 	git -C "$FLAKE" show --stat --oneline "$new_head" | head -n 8
+
+	# Input-level diff: resolve each root input through follows chains to its
+	# locked node in both lock files, print inputs whose rev/date moved.
+	tmpdir=$(mktemp -d /tmp/update-diff.XXXXXX)
+	trap 'rm -rf "$tmpdir"' EXIT
+	git -C "$FLAKE" show "$old_head:flake.lock" >"$tmpdir/old-lock.json"
+	jq -r '
+		def target($l; $path):
+			reduce $path[] as $seg ("root";
+				. as $cur | ($l.nodes[$cur].inputs[$seg] // $cur));
+		def info($l; $name):
+			($l.nodes[$name].locked // null) as $c
+			| if ($c | type) != "object" or ($c.rev // null) == null then "?"
+				else "\(($c.lastModified // 0) | strftime("%Y-%m-%d")) \($c.rev[0:7])"
+				end;
+		. as $new | $old[0] as $o |
+		[($o.nodes.root.inputs | keys[])] as $names |
+		$names[]
+		| . as $name
+		| (target($o; [$name]) | info($o; .)) as $before
+		| (target($new; [$name]) | info($new; .)) as $after
+		| select($before != $after)
+		| "  \($name)\t\($before) → \($after)"
+	' --slurpfile old "$tmpdir/old-lock.json" <"$FLAKE/flake.lock" >"$tmpdir/inputs.txt" || true
+
+	if [[ -s "$tmpdir/inputs.txt" ]]; then
+		echo "update: inputs changed:"
+		column -t -s $'\t' "$tmpdir/inputs.txt" 2>/dev/null || cat "$tmpdir/inputs.txt"
+	else
+		echo "update: no input revisions changed (snapshot-only update)"
+	fi
+
+	# Package-level diff: build both closures and let nix store diff-closures
+	# produce the nh-style list. Failures here degrade to a warning - the
+	# update itself has already succeeded.
+	if [[ "${UPDATE_PKG_DIFF:-1}" == "1" ]]; then
+		host=$(hostname -s)
+		attr="nixosConfigurations.$host.config.system.build.toplevel"
+		worktree="$tmpdir/old-tree"
+		old_c=""
+		new_c=""
+		if git -C "$FLAKE" worktree add --detach -q "$worktree" "$old_head" 2>/dev/null; then
+			old_c=$(timeout "${UPDATE_BUILD_TIMEOUT:-300}" nix build \
+				--no-link --print-out-paths "$worktree#$attr" \
+				2>"$tmpdir/old-build.err" | tail -1) || true
+			new_c=$(timeout "${UPDATE_BUILD_TIMEOUT:-300}" nix build \
+				--no-link --print-out-paths "$FLAKE#$attr" \
+				2>"$tmpdir/new-build.err" | tail -1) || true
+			git -C "$FLAKE" worktree remove --force "$worktree" 2>/dev/null || true
+			git -C "$FLAKE" worktree prune 2>/dev/null || true
+		fi
+		if [[ -n "$old_c" && -n "$new_c" ]]; then
+			if [[ "$old_c" == "$new_c" ]]; then
+				echo "update: package closures identical"
+			else
+				echo "update: package changes:"
+				nix store diff-closures "$old_c" "$new_c" || true
+			fi
+		elif [[ -d "$worktree" ]]; then
+			echo "warn: package diff unavailable (build failed); last errors:" >&2
+			tail -n 5 "$tmpdir/old-build.err" "$tmpdir/new-build.err" 2>/dev/null | sed 's/^/  /' >&2
+		fi
+	fi
 fi
 
 if systemctl is-active --quiet comin; then

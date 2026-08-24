@@ -43,7 +43,9 @@ jobs:
             ${{ env.NIX_CONFIG }}
       - name: Update lock and snapshots
         run: |
-          if ! nix flake update; then
+          set -o pipefail
+          # Captured so the PR body can document exactly which inputs moved.
+          if ! nix flake update | tee update-output.txt; then
             echo "nix flake update failed - input sources may be unreachable" >&2
             exit 1
           fi
@@ -59,6 +61,30 @@ jobs:
               exit 1
             fi
           fi
+
+          {
+            echo "## Daily Dependency Update"
+            echo ""
+            echo "Automated daily update of flake inputs and required Namaka snapshots."
+            echo ""
+            echo "### Updated inputs"
+            echo ""
+            if [ -s update-output.txt ]; then
+              echo '```'
+              cat update-output.txt
+              echo '```'
+            else
+              echo "No input revisions changed."
+            fi
+            echo ""
+            echo "**Validation:**"
+            echo "- Namaka snapshot checks run in this workflow"
+            echo "- CI validates flake evaluation and builds"
+            echo "- PR is auto-merged when required checks pass"
+            echo ""
+            echo "---"
+            echo "Triggered by: \`${{ github.event_name }}\`"
+          } > pr-body.md
       - name: Create or update PR
         uses: peter-evans/create-pull-request@v8
         with:
@@ -72,16 +98,4 @@ jobs:
           title: "chore: daily dependency update"
           labels: auto-merge
           commit-message: "chore: daily dependency update"
-          body: |
-            ## Daily Dependency Update
-
-            Automated daily update of flake inputs and required Namaka snapshots.
-
-            **Validation:**
-            - Namaka snapshot checks run in this workflow
-            - CI validates flake evaluation and builds
-            - PR is auto-merged when required checks pass
-
-            ---
-            Triggered by: `${{ github.event_name }}`
-            Workflow: daily-updates.yml
+          body-path: pr-body.md
