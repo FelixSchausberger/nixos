@@ -133,14 +133,52 @@
             # Calendar-scheduled timers set NextElapseUSecRealtime,
             # monotonic-scheduled ones NextElapseUSecMonotonic; a disarmed
             # timer reports infinity/empty for both.
+            #
+            # systemd 261 defers rearming until the triggered service exits,
+            # so both properties ALSO read empty between a timer elapsing and
+            # its service finishing; those timers are healthy and skipped.
+            # This check runs on the hour, the same second several hourly
+            # timers fire.
             for unit in $(${pkgs.systemd}/bin/systemctl list-unit-files --type=timer --state=enabled --no-legend | ${pkgs.gawk}/bin/awk '{print $1}'); do
               rt_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecRealtime --value)
               mono_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecMonotonic --value)
               if [[ -z "$rt_elapse" && ( -z "$mono_elapse" || "$mono_elapse" == "infinity" ) ]]; then
-                echo "WARNING: timer $unit has no next elapse"
+                # Skip only while the triggered service is busy: oneshot
+                # starts read SubState "start", Type=simple runs read
+                # "running". A finished RemainAfterExit service settles at
+                # "exited" and must NOT be skipped - that is exactly the
+                # network-maintenance disarm case.
+                svc_sub=$(${pkgs.systemd}/bin/systemctl show "''${unit%.timer}.service" --property=SubState --value)
+                if [[ "$svc_sub" != "dead" && "$svc_sub" != "exited" && "$svc_sub" != "failed" ]]; then
+                  continue
+                fi
+                echo "WARNING: timer $unit has no next elapse; attempting rearm"
+                # A plain restart does not clear this corrupted state
+                # (observed on systemd 261: still unarmed minutes later), and
+                # starting a persistent timer with its stamp intact replays
+                # the missed elapse immediately - an unwanted midday reboot
+                # for the nightly window. Purging the stamp rearms cleanly
+                # and waits for the next scheduled slot instead.
+                ${pkgs.systemd}/bin/systemctl stop "$unit" || true
+                rm -f "/var/lib/systemd/timers/stamp-$unit"
+                rearmed=0
+                if ${pkgs.systemd}/bin/systemctl start "$unit"; then
+                  rt_after=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecRealtime --value)
+                  mono_after=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecMonotonic --value)
+                  if [[ -n "$rt_after" || ( -n "$mono_after" && "$mono_after" != "infinity" ) ]]; then
+                    rearmed=1
+                  fi
+                fi
                 ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "Timer Disarmed on $host" "high" "warning" "$unit has no scheduled elapse and will never fire. Run: sudo systemctl restart $unit"
+              if [[ $rearmed -eq 1 ]]; then
+                ntfy_send "Timer Rearmed on $host" "default" "warning" "$unit reported active but had no scheduled elapse; purged stamp and rearmed automatically"
+              else
+                ntfy_send "Timer Disarmed on $host" "high" "warning" "$unit has no scheduled elapse and automatic rearm failed. Run: sudo systemctl restart $unit"
+              fi
             ''}
+                if [[ $rearmed -eq 0 ]]; then
+                  echo "ERROR: timer $unit could not be rearmed automatically"
+                fi
               fi
             done
 

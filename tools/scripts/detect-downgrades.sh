@@ -10,6 +10,9 @@
 # than prevention: a bad lock is healed by reverting its commit on main,
 # after which every host converges back within one poll period.
 #
+# Identical downgrades alert once, not once per deploy: seen pairs are
+# recorded in a persisted state file and only unseen pairs are reported.
+#
 # Exit codes: 0 = nothing to report or alert sent, 1 = unexpected state
 set -euo pipefail
 
@@ -22,6 +25,10 @@ fi
 # uses the default. It exists so the diffing logic can be unit-tested
 # against fixture generation links.
 profile="${COMIN_PROFILE:-/nix/var/nix/profiles/system}"
+
+# COMIN_DOWNGRADES_STATE overrides where seen downgrades are recorded;
+# production always uses comin's persisted state directory.
+seen_file="${COMIN_DOWNGRADES_STATE:-/var/lib/comin/detected-downgrades}"
 
 # The just-activated generation is the highest numbered link; the one before
 # it is what was running until this deployment.
@@ -73,9 +80,32 @@ while IFS= read -r line; do
 	fi
 done <<<"$diff_output"
 
+# Repeat suppression: comin deploys every poll period while a bad lock sits
+# on main, so an unchanged downgrade would alert once per deploy. The file
+# tracks the current set: only unseen pairs alert, healing empties the set,
+# and a later re-appearance of the same pair alerts again.
 if [[ -z "$downgrades" ]]; then
+	if [[ -e "$seen_file" ]]; then
+		rm -f "$seen_file"
+	fi
 	exit 0
 fi
+
+new_downgrades=""
+while IFS= read -r line; do
+	[[ -z "$line" ]] && continue
+	if [[ ! -e "$seen_file" ]] || ! grep -qxF -- "$line" "$seen_file"; then
+		new_downgrades+="$line"$'\n'
+	fi
+done <<<"$downgrades"
+
+# Every pair already reported and still present: stay quiet.
+if [[ -z "$new_downgrades" ]]; then
+	exit 0
+fi
+
+mkdir -p "$(dirname "$seen_file")"
+printf '%s' "$downgrades" >"$seen_file"
 
 host="${COMIN_HOSTNAME:-$(cat /etc/hostname 2>/dev/null || echo unknown)}"
 message="comin deployed downgraded packages on ${host} (${COMIN_GIT_SHA:-unknown sha}):
