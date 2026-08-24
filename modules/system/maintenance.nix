@@ -1,7 +1,8 @@
 # Scheduled maintenance orchestration for health checks, cleanup, and alerting.
 # Centralizes recurring host hygiene tasks under one opt-in module.
 # Lock updates are intentionally not automated per host: they flow through
-# the reviewed daily-updates CI PR, and comin converges hosts to main.
+# the reviewed daily-updates CI PR, and comin converges hosts to main; the
+# optional lock-refresh watchdog observes that CI from a trusted host.
 {
   config,
   lib,
@@ -62,6 +63,24 @@
         });
         default = null;
         description = "Sanity-gate parameters guarding the networkd restart";
+      };
+    };
+
+    # Daily check that the lock-refresh CI (single flake.lock writer) actually
+    # succeeded. GitHub runners cannot reach a LAN ntfy, so workflow-side
+    # failure() steps cannot alert; this local watchdog closes that gap - the
+    # Aug 2026 cron failures stayed unnoticed for two days without it.
+    lockRefreshWatch = {
+      enable = lib.mkEnableOption "daily watchdog for the lock-refresh CI workflow";
+      repository = lib.mkOption {
+        type = lib.types.str;
+        default = "FelixSchausberger/nixos";
+        description = "GitHub repository whose lock-refresh workflow is watched";
+      };
+      workflow = lib.mkOption {
+        type = lib.types.str;
+        default = "daily-updates.yml";
+        description = "Workflow file checked for failures and staleness";
       };
     };
   };
@@ -322,6 +341,69 @@
             TimeoutStartSec = 600;
           };
         };
+
+        # Queries the last completed run of the lock-refresh workflow via the
+        # unauthenticated GitHub API (the repository is public; one call per
+        # day is far below the rate limit) and alerts when it failed or never
+        # ran. Runs once daily at 06:30 local time: the 03:00 UTC cron plus
+        # CI validation and auto-merge are reliably done by then.
+        lock-refresh-watchdog = lib.mkIf config.modules.system.maintenance.lockRefreshWatch.enable {
+          description = "Watchdog for the daily lock-refresh CI workflow";
+          after = ["network-online.target"];
+          wants = ["network-online.target"];
+          script = let
+            cfgWatch = config.modules.system.maintenance.lockRefreshWatch;
+            ntfyUrl = config.modules.system.maintenance.monitoring.ntfyUrl;
+          in ''
+            set -euo pipefail
+
+            api="https://api.github.com/repos/${cfgWatch.repository}/actions/workflows/${cfgWatch.workflow}/runs?per_page=5"
+
+            response=$(${pkgs.curl}/bin/curl -sf \
+              -H "Accept: application/vnd.github+json" "$api") \
+              || { echo "WARN: GitHub API unreachable; watchdog check skipped" >&2; exit 0; }
+
+            run=$(printf '%s' "$response" | ${pkgs.jq}/bin/jq -r \
+              '[.workflow_runs[] | select(.status == "completed")][0] // empty')
+            if [[ -z "$run" ]]; then
+              echo "ERROR: no completed ${cfgWatch.workflow} run found" >&2
+              ${pkgs.curl}/bin/curl -s -o /dev/null \
+                -H "Title: Lock refresh missing on ${cfgWatch.repository}" \
+                -H "Priority: high" -H "Tags: warning,cd" \
+                -d "No completed ${cfgWatch.workflow} run found; cron may be disabled" \
+                "${ntfyUrl}" || true
+              exit 0
+            fi
+
+            conclusion=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .conclusion)
+            run_id=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .id)
+            age_hours=$(( ($(date +%s) - $(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r '.created_at | fromdateiso8601')) / 3600 ))
+
+            if [[ "$conclusion" != "success" ]]; then
+              echo "ERROR: lock-refresh run $run_id concluded '$conclusion'" >&2
+              ${pkgs.curl}/bin/curl -s -o /dev/null \
+                -H "Title: Lock refresh failed on ${cfgWatch.repository}" \
+                -H "Priority: high" -H "Tags: warning,cd" \
+                -d "Run $run_id concluded '$conclusion'; flake.lock is stale until fixed. Check: gh run view $run_id -R ${cfgWatch.repository} --log-failed" \
+                "${ntfyUrl}" || true
+            elif [[ "$age_hours" -gt 26 ]]; then
+              echo "ERROR: last successful lock-refresh run is $age_hours h old" >&2
+              ${pkgs.curl}/bin/curl -s -o /dev/null \
+                -H "Title: Lock refresh stale on ${cfgWatch.repository}" \
+                -H "Priority: high" -H "Tags: warning,cd" \
+                -d "Last completed run ($run_id) is $age_hours hours old; cron did not fire" \
+                "${ntfyUrl}" || true
+            else
+              echo "Lock refresh healthy: run $run_id succeeded $age_hours h ago"
+            fi
+          '';
+          serviceConfig = {
+            Type = "oneshot";
+            User = "root";
+            Group = "root";
+            TimeoutStartSec = 120;
+          };
+        };
       };
 
       timers = {
@@ -354,6 +436,19 @@
             OnCalendar = config.modules.system.maintenance.deferredRestarts.time;
             Persistent = true;
             RandomizedDelaySec = "5min";
+          };
+        };
+
+        lock-refresh-watchdog = lib.mkIf config.modules.system.maintenance.lockRefreshWatch.enable {
+          description = "Timer for the daily lock-refresh CI watchdog";
+          wantedBy = ["timers.target"];
+          after = ["multi-user.target"];
+          timerConfig = {
+            # 06:30 local: the 03:00 UTC cron plus validation and auto-merge
+            # have reliably finished by then.
+            OnCalendar = "*-*-* 06:30:00";
+            Persistent = true;
+            RandomizedDelaySec = "10min";
           };
         };
       };

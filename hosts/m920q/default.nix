@@ -350,6 +350,10 @@ in {
         };
         autoRebootForKernel = true;
       };
+      # m920q hosts the ntfy endpoint and is always on, so it watches the
+      # lock-refresh CI for every host; interactive `update` failures are
+      # visible on the invoking host already.
+      lockRefreshWatch.enable = true;
     };
   };
 
