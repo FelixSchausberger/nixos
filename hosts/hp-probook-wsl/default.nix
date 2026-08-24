@@ -198,12 +198,10 @@ in {
     modules.system = {
       containers.enable = true;
       wsl-integration.enable = true;
-      homelab.tailscale = {
-        enable = true;
-        # Work laptop must not resolve via tailnet DNS (global nameserver =
-        # homelab AdGuard behind DERP relay); use local/company DHCP DNS.
-        acceptDns = false;
-      };
+      # Tailnet DNS is safe here now: the tailnet no longer defines a global
+      # nameserver (removed from admin console), so MagicDNS only answers
+      # *.ts.net and everything else falls back to local DHCP resolvers.
+      homelab.tailscale.enable = true;
       maintenance = {
         enable = true;
         monitoring = {
