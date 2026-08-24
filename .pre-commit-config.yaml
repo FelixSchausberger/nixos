@@ -81,9 +81,9 @@ repos:
         pass_filenames: false
       - id: detect-downgrades-test
         name: detect-downgrades.sh unit test
-        entry: bash scripts/test-detect-downgrades.sh
+        entry: bash tools/scripts/test-detect-downgrades.sh
         language: system
-        files: scripts/(detect-downgrades|test-detect-downgrades)\.sh$
+        files: tools/scripts/(detect-downgrades|test-detect-downgrades)\.sh$
         pass_filenames: false
       - id: detect-unused-modules
         name: Detect unused modules
