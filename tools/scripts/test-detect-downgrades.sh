@@ -93,6 +93,19 @@ expect_silent \
 
 expect_silent "" "empty diff stays silent"
 
+expect_silent \
+	$'iris: 42416fc → 387bb7f, +1.2 MiB\n' \
+	"git short rev bump stays silent"
+
+expect_silent \
+	$'pkg: 1.2.3 → 0abcdef, +10 KiB\n' \
+	"version-to-rev change stays silent"
+
+expect_report \
+	$'openssl: 20250101 → 20240101, -5 KiB\n' \
+	"openssl: 20250101 → 20240101" \
+	"pure-decimal versions still compared as versions"
+
 if [[ $failures -gt 0 ]]; then
 	echo "$failures scenario(s) failed" >&2
 	exit 1

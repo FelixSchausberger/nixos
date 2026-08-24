@@ -100,6 +100,10 @@
           script = ''
             set -eu
 
+            # Service PATH lacks hostname(1) (nettools), so resolve the host
+            # up front; alert titles must always identify the source host.
+            host=$(${pkgs.nettools}/bin/hostname)
+
             ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
               NTFY_URL="${config.modules.system.maintenance.monitoring.ntfyUrl}"
               ntfy_send() {
@@ -119,16 +123,33 @@
               echo "WARNING: $failed_services failed services detected"
               echo "$failed_detail"
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "Failed Services on $(hostname)" "high" "warning" "$failed_detail"
+              ntfy_send "Failed Services on $host" "high" "warning" "$failed_detail"
             ''}
             fi
+
+            # A loaded timer with no next elapse never fires again. Automated
+            # deploys have left timers in this disarmed state while still
+            # reporting active, silently dropping nightly maintenance windows.
+            # Calendar-scheduled timers set NextElapseUSecRealtime,
+            # monotonic-scheduled ones NextElapseUSecMonotonic; a disarmed
+            # timer reports infinity/empty for both.
+            for unit in $(${pkgs.systemd}/bin/systemctl list-unit-files --type=timer --state=enabled --no-legend | ${pkgs.gawk}/bin/awk '{print $1}'); do
+              rt_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecRealtime --value)
+              mono_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecMonotonic --value)
+              if [[ -z "$rt_elapse" && ( -z "$mono_elapse" || "$mono_elapse" == "infinity" ) ]]; then
+                echo "WARNING: timer $unit has no next elapse"
+                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "Timer Disarmed on $host" "high" "warning" "$unit has no scheduled elapse and will never fire. Run: sudo systemctl restart $unit"
+            ''}
+              fi
+            done
 
             # Check disk space
             root_usage=$(df / | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
             if [[ $root_usage -gt 90 ]]; then
               echo "WARNING: Root filesystem is $root_usage% full"
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Disk Usage on $(hostname)" "high" "warning" "Root filesystem is $root_usage% full"
+              ntfy_send "High Disk Usage on $host" "high" "warning" "Root filesystem is $root_usage% full"
             ''}
             fi
 
@@ -137,7 +158,7 @@
               echo "WARNING: Nix store is $nix_usage% full"
               echo "Consider running: clean"
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Nix Store Usage on $(hostname)" "high" "warning" "Nix store is $nix_usage% full"
+              ntfy_send "High Nix Store Usage on $host" "high" "warning" "Nix store is $nix_usage% full"
             ''}
             fi
 
@@ -152,7 +173,7 @@
             if [[ $mem_usage -gt 90 ]]; then
               echo "WARNING: Memory usage is $mem_usage%"
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Memory Usage on $(hostname)" "high" "warning" "Memory usage is $mem_usage%"
+              ntfy_send "High Memory Usage on $host" "high" "warning" "Memory usage is $mem_usage%"
             ''}
             fi
 
@@ -170,7 +191,7 @@
             if [[ $pkg_temp -ge 90000 ]]; then
               echo "WARNING: CPU package temperature is $((pkg_temp / 1000)) C"
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High CPU Temperature on $(hostname)" "urgent" "warning" "CPU package at $((pkg_temp / 1000)) C, check cooling"
+              ntfy_send "High CPU Temperature on $host" "urgent" "warning" "CPU package at $((pkg_temp / 1000)) C, check cooling"
             ''}
             fi
 
@@ -181,7 +202,7 @@
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
               if [[ ! -f /run/reboot-pending-notified ]]; then
                 : > /run/reboot-pending-notified
-                ntfy_send "Reboot Pending on $(hostname)" "default" "warning" "Kernel update deployed but not booted. Run: sudo reboot"
+                ntfy_send "Reboot Pending on $host" "default" "warning" "Kernel update deployed but not booted. Run: sudo reboot"
               fi
             ''}
             fi
@@ -193,7 +214,7 @@
                 echo "WARNING: ZFS pool health issues detected:"
                 echo "$zpool_status"
                 ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "ZFS Pool Issue on $(hostname)" "urgent" "warning" "$zpool_status"
+              ntfy_send "ZFS Pool Issue on $host" "urgent" "warning" "$zpool_status"
             ''}
               fi
             fi
