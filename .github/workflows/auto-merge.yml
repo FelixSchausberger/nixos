@@ -18,5 +18,6 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           echo "🔄 Enabling auto-merge for PR #$PR_NUMBER"
-          gh pr merge --auto --merge "$PR_NUMBER" --repo "$REPO"
+          # Repo settings allow squash merges only; --merge is rejected by the API.
+          gh pr merge --auto --squash "$PR_NUMBER" --repo "$REPO"
           echo "✅ Auto-merge enabled - PR will merge automatically when all checks pass"
