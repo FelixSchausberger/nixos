@@ -14,11 +14,11 @@
       })
       // {
         # Unit test for the comin post-deploy downgrade detector; also runs as
-        # a prek hook on changes to scripts/detect-downgrades.sh.
+        # a prek hook on changes to tools/scripts/detect-downgrades.sh.
         detect-downgrades = pkgs.runCommand "detect-downgrades-unit-test" {} ''
           mkdir scripts
-          cp ${../scripts/detect-downgrades.sh} scripts/detect-downgrades.sh
-          cp ${../scripts/test-detect-downgrades.sh} scripts/test-detect-downgrades.sh
+          cp ${../tools/scripts/detect-downgrades.sh} scripts/detect-downgrades.sh
+          cp ${../tools/scripts/test-detect-downgrades.sh} scripts/test-detect-downgrades.sh
           chmod +x scripts/*.sh
           ${pkgs.bash}/bin/bash scripts/test-detect-downgrades.sh
           touch $out
