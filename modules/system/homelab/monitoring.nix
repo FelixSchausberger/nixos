@@ -122,12 +122,27 @@ in {
       scrapeConfigs = let
         hasAppTargets =
           config.modules.system.homelab.immich.enable || config.modules.system.homelab.nextcloud.enable;
-        blackboxTargets =
+        # One static_config per service so each probe carries an "app" label:
+        # the relabeling below sets instance to the probed URL, which contains
+        # no service name, so alert rules must select by label instead of
+        # matching on the URL.
+        #
+        # Immich >=3.x moved server-info endpoints under /api/server;
+        # /api/server/ping is its unauthenticated liveness check. (Immich 3.x
+        # also serves app metrics on a dedicated port, not /metrics on this
+        # one — the HTTP probe is the only Immich signal scraped here.)
+        blackboxProbes =
           lib.optionals config.modules.system.homelab.immich.enable [
-            "http://127.0.0.1:${toString config.modules.system.homelab.immich.port}/api/server-info/version"
+            {
+              targets = ["http://127.0.0.1:${toString config.modules.system.homelab.immich.port}/api/server/ping"];
+              labels.app = "immich";
+            }
           ]
           ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
-            "http://127.0.0.1:${toString config.modules.system.homelab.nextcloud.port}/status.php"
+            {
+              targets = ["http://127.0.0.1:${toString config.modules.system.homelab.nextcloud.port}/status.php"];
+              labels.app = "nextcloud";
+            }
           ];
       in
         [
@@ -174,18 +189,6 @@ in {
             ];
           }
         ]
-        ++ lib.optionals config.modules.system.homelab.immich.enable [
-          {
-            job_name = "immich";
-            scrape_interval = "60s";
-            static_configs = [
-              {
-                targets = ["127.0.0.1:${toString config.modules.system.homelab.immich.port}"];
-              }
-            ];
-            metrics_path = "/metrics";
-          }
-        ]
         ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
           {
             job_name = "adguard";
@@ -204,7 +207,7 @@ in {
             scrape_interval = "60s";
             metrics_path = "/probe";
             params.module = ["http_2xx"];
-            static_configs = [{targets = blackboxTargets;}];
+            static_configs = blackboxProbes;
             relabel_configs = [
               {
                 source_labels = ["__address__"];
@@ -434,12 +437,12 @@ in {
                 (lib.optionals config.modules.system.homelab.nextcloud.enable [
                   (mkAlert "nextcloud-down" "urgent" "NextcloudDown"
                     "Nextcloud is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",instance=~".*nextcloud.*"} == bool 0'')
+                    ''probe_success{job="blackbox",app="nextcloud"} == bool 0'')
                 ])
                 ++ (lib.optionals config.modules.system.homelab.immich.enable [
                   (mkAlert "immich-down" "urgent" "ImmichDown"
                     "Immich is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",instance=~".*immich.*"} == bool 0'')
+                    ''probe_success{job="blackbox",app="immich"} == bool 0'')
                 ])
                 ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
                   (mkAlert "adguard-down" "urgent" "AdGuardDown"
@@ -453,8 +456,8 @@ in {
                 ])
                 ++ (lib.optionals cfg.fritzbox.enable [
                   (mkAlert "fritzbox-wan-down" "urgent" "FritzboxWanDown"
-                    "Fritz!Box WAN connection is down (uptime = 0)"
-                    "fritz_upnp_uptime_seconds == bool 0")
+                    "Fritz!Box WAN physical link is down"
+                    "fritz_wan_phys_link_status == bool 0")
                 ])
                 ++ [
                   (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
