@@ -74,7 +74,10 @@ in {
       systemd.user.services.uxplay = {
         description = "UxPlay AirPlay receiver";
         serviceConfig = {
-          ExecStart = "${pkgs.uxplay}/bin/uxplay -vs kmssink -as pulsesink -n Projector -nh";
+          # stdbuf forces line buffering: uxplay's stdout is block-buffered
+          # under journald, so startup logs otherwise only appear (all stamped
+          # at exit time) when the process terminates.
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -vs kmssink -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";
@@ -83,22 +86,38 @@ in {
       };
 
       # udev runs as root; reach the lingering user manager via machined.
-      # The connector status check makes one rule serve both directions:
-      # connected -> start, disconnected -> stop (kmssink cannot survive
-      # losing its display).
+      # Start is immediate on connect; stop is debounced below because a
+      # single sysfs read cannot distinguish a real unplug from an HPD flap.
       systemd.services.uxplay-hotplug = {
         description = "Start/stop UxPlay AirPlay receiver on HDMI hotplug";
         serviceConfig = {
           Type = "oneshot";
+          # Debounce must outlive the sleep in the stop path; explicit rather
+          # than relying on defaults that vary between systemd releases.
+          TimeoutStartSec = "120s";
           ExecStart = pkgs.writeShellScript "uxplay-hotplug" ''
             if grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
               exec ${pkgs.systemd}/bin/systemctl --user -M ${cfg.user}@ start uxplay.service
-            else
+            fi
+            # Projector warm-up bounces HPD (~68s after connect on m920q),
+            # which killed healthy sessions when acting on a single read.
+            # Re-read CURRENT state after the window instead of trusting the
+            # triggering event: a reconnect during it leaves the session up,
+            # a genuine loss stops it. The stop criterion is the negation of
+            # start -- unused connectors always read "disconnected", so any
+            # positive "connected" match must keep the session alive.
+            sleep 45
+            if ! grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
               exec ${pkgs.systemd}/bin/systemctl --user -M ${cfg.user}@ stop uxplay.service
             fi
           '';
         };
       };
+
+      # kmssink claims tty1 directly; a getty login prompt on the projector
+      # serves nobody and leaks hostname and username to the room. Emergency
+      # shells are unaffected (sulogin via rescue/emergency targets, sshd).
+      systemd.units."getty@tty1".enable = false;
 
       services.udev.extraRules = ''
         ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="${pkgs.systemd}/bin/systemctl start --no-block uxplay-hotplug.service"
@@ -115,7 +134,7 @@ in {
         bindsTo = ["niri-session.target"];
         wantedBy = ["niri-session.target"];
         serviceConfig = {
-          ExecStart = "${pkgs.uxplay}/bin/uxplay -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";
