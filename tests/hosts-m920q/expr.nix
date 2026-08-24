@@ -35,6 +35,8 @@ in {
   samba_enabled = config.modules.system.homelab.samba.enable;
   ssh_enabled = config.modules.system.homelab.ssh.enable;
   zellij_web_enabled = config.modules.system.homelab.zellijWeb.enable;
+  opencode_web_enabled = config.modules.system.homelab.opencodeWeb.enable;
+  tailscale_openssh_enabled = config.modules.system.homelab.tailscale.openSSH;
 
   # Test: Tailscale configured with route advertising
   tailscale_enabled = config.modules.system.homelab.tailscale.enable;

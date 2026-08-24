@@ -55,6 +55,17 @@ _: {
     maint_log = machine.succeed("journalctl -u network-maintenance.service --grep='maintenance window finished' --quiet")
     assert "maintenance window finished" in maint_log, f"Maintenance did not complete cleanly: {maint_log}"
 
+    # 1b. A second start must execute again: the oneshot has no
+    #     RemainAfterExit, so it returns to inactive and every nightly timer
+    #     fire starts fresh work instead of no-oping against active-exited.
+    machine.succeed("systemctl start network-maintenance.service")
+    runs = int(
+        machine.succeed(
+            "journalctl -u network-maintenance.service --grep='maintenance window finished' --quiet | wc -l"
+        ).strip()
+    )
+    assert runs >= 2, f"Second maintenance start did not execute (found {runs} completions)"
+
     # 2. Verify the maintenance systemd timer exists
     machine.succeed("systemctl list-timers network-maintenance.timer --no-legend | grep -q network-maintenance")
 

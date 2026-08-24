@@ -394,7 +394,9 @@
           '';
           serviceConfig = {
             Type = "oneshot";
-            RemainAfterExit = true;
+            # No RemainAfterExit: an active-exited oneshot turns every later
+            # timer fire into a no-op (observed 2026-08-21..25, nightly runs
+            # silently skipped). Returning to inactive keeps each fire fresh.
             User = "root";
             Group = "root";
             TimeoutStartSec = 600;
