@@ -93,6 +93,63 @@
         fi
       done
 
+      # Stale local work: heads outside main@origin whose effect is provably
+      # already present there. For each candidate, every file it touches is
+      # compared by end-state (git diff --quiet per path) between the change
+      # and main@origin - exact, unlike patch-id matching, and immune to how
+      # the content originally landed. Fully-absorbed changes are abandoned;
+      # anything differing is reported for human review, because a stale
+      # head may hold real fixes that never landed.
+      #
+      # Candidates exclude @ and its ancestors (never disrupt stacked,
+      # not-yet-pushed work) and heads carrying an active remote bookmark
+      # (in-flight PRs). Merge nodes are skipped: absorption semantics for
+      # multi-parent diffs are ambiguous. Disable with JJWORK_CLEANUP=0.
+      if [ "''${JJWORK_CLEANUP:-1}" = "1" ]; then
+        absorbed_count=0
+        review_count=0
+        for c in $(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'change_id ++ "\n"' 2>/dev/null); do
+          cid=$(jj log --no-graph -r "$c" -T 'commit_id')
+          desc=$(jj log --no-graph -r "$c" -T 'description.first_line()')
+          when=$(jj log --no-graph -r "$c" -T 'committer.timestamp().format("%Y-%m-%d")')
+
+          active_remote=0
+          for bm in $(jj bookmark list -r "$c" -T 'name ++ "\n"' 2>/dev/null); do
+            if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
+              active_remote=1
+              break
+            fi
+          done
+          [ "$active_remote" = "1" ] && continue
+
+          if [ "$(jj log --no-graph -r "$c-" -T 'change_id ++ "\n"' 2>/dev/null | wc -l)" -gt 1 ]; then
+            echo "  $c $when [merge node] $desc" >&2
+            continue
+          fi
+
+          differs=""
+          for f in $(jj diff -r "$c" --name-only 2>/dev/null); do
+            if ! git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null; then
+              differs="$differs $f"
+            fi
+          done
+
+          if [ -z "$differs" ]; then
+            echo "  $c $when [absorbed] ''${desc:-<no description>} -> abandoned"
+            jj abandon "$c" >/dev/null
+            absorbed_count=$((absorbed_count + 1))
+          else
+            echo "  $c $when [DIFFERS:$differs] $desc" >&2
+            review_count=$((review_count + 1))
+          fi
+        done
+
+        if [ "$absorbed_count" -gt 0 ] || [ "$review_count" -gt 0 ]; then
+          echo "  stale work: $absorbed_count absorbed, $review_count need review"
+          echo ""
+        fi
+      fi
+
       echo ""
       echo "Working copy is based on main@origin. No conflicts detected."
       echo ""
