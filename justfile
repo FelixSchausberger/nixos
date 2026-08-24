@@ -65,6 +65,113 @@ niri-watch:
 niri-rebuild:
     nix build nixpkgs#niri
 
+# === VCS HYGIENE ===
+
+# Review local work outside main@origin. Two sections:
+#   1. loose heads - offers abandoning provably redundant ones
+#   2. divergent changes (same change-id, multiple visible revisions) -
+#      per-revision facts; offers dropping only revisions that are absorbed
+#      by main, childless, and NOT reachable from main (those pin history;
+#      dropping them would rewrite main and cascade)
+# Anything unique or structurally pinned is display-only and needs a manual
+# decision (land it as a PR or abandon it knowingly).
+jj-hygiene:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # --- section 1: loose heads ---
+    mapfile -t heads < <(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'commit_id ++ "\n"' 2>/dev/null)
+    abandoned=0
+    if [ "''${#heads[@]}" -eq 0 ]; then
+        echo "No loose local heads outside main@origin."
+    else
+        echo "Loose local heads outside main@origin: ''${#heads[@]}"
+        echo ""
+        for cid in "''${heads[@]}"; do
+            desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
+            when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
+
+            differs=""
+            for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
+                git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null || differs="$differs $f"
+            done
+
+            children=$(jj log --no-graph -r "$cid+" -T 'description.first_line()' 2>/dev/null | paste -sd';' -)
+
+            echo "--- $when ${cid:0:8} ${desc:-<no description>}"
+            [ -n "$children" ] && echo "    children: $children"
+            if [ -n "$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null)" ]; then
+                echo "    state: PINNED (has children - abandoning would rewrite them)"
+            elif [ -z "$differs" ]; then
+                echo "    state: ABSORBED by main (content identical)"
+                read -rp "    abandon this head? [y/N] " answer
+                case "$answer" in
+                    y|Y)
+                        jj abandon "$cid" >/dev/null
+                        echo "    abandoned."
+                        abandoned=$((abandoned + 1))
+                        ;;
+                    *)
+                        echo "    kept."
+                        ;;
+                esac
+            else
+                echo "    state: UNIQUE work, differs from main:$differs"
+                echo "    action: land it as a PR or abandon it deliberately:"
+                echo "            jj abandon $cid"
+            fi
+            echo ""
+        done
+    fi
+
+    # --- section 2: divergent changes ---
+    mapfile -t divs < <(jj log --no-graph -r 'divergent()' -T 'change_id ++ "\n"' 2>/dev/null | sort -u)
+    if [ "''${#divs[@]}" -eq 0 ]; then
+        echo "No divergent changes."
+    else
+        echo "Divergent changes (multiple visible revisions share one change-id): ''${#divs[@]}"
+        echo ""
+        for c in "''${divs[@]}"; do
+            echo "=== ${c:0:12}"
+            for i in 0 1 2 3 4 5 6 7; do
+                cid=$(jj log --no-graph -r "$c/$i" -T 'commit_id' 2>/dev/null) || continue
+                [ -z "$cid" ] && continue
+                desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
+                when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
+
+                if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & $cid" -T 'commit_id' 2>/dev/null)" ]; then
+                    echo "    /$i $when ${cid:0:8} IN MAIN HISTORY (keep): $desc"
+                    continue
+                fi
+
+                nchild=$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null | wc -l)
+                differs=""
+                for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
+                    git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null || differs="$differs $f"
+                done
+
+                if [ "$nchild" -gt 0 ]; then
+                    echo "    /$i $when ${cid:0:8} PINNED by $nchild child commit(s): $desc"
+                elif [ -z "$differs" ]; then
+                    echo "    /$i $when ${cid:0:8} redundant copy (absorbed by main)"
+                    read -rp "        drop this revision? [y/N] " answer
+                    case "$answer" in
+                        y|Y)
+                            jj abandon "$cid" >/dev/null
+                            echo "        dropped."
+                            abandoned=$((abandoned + 1))
+                            ;;
+                    esac
+                else
+                    echo "    /$i $when ${cid:0:8} UNIQUE:$differs"
+                    echo "        decide manually: land as PR or jj abandon $cid"
+                fi
+            done
+            echo ""
+        done
+    fi
+    echo "Done. ''${abandoned} revision(s) abandoned."
+
 # === CODE QUALITY ===
 
 # Simplify staged changes via Claude Code CLI

@@ -105,6 +105,12 @@ in {
       pull.rebase = true;
       core.editor = "${pkgs.helix}/bin/hx";
       safe.directory = "*";
+      # Colocated jj repos (e.g. /per/etc/nixos) share this object database.
+      # jj's commit visibility lives outside git refs, so auto-GC can prune
+      # commits jj still considers live and corrupt operation-log history;
+      # the jj docs recommend disabling it for colocated setups. Manual
+      # `git gc` remains available when a repo truly needs repacking.
+      gc.auto = 0;
       # Commit message template
       commit.template = "/per/etc/nixos/.gitmessage";
       # System-wide SSL certificate configuration for all HTTPS Git operations
