@@ -94,27 +94,38 @@
       done
 
       # Stale local work: heads outside main@origin whose effect is provably
-      # already present there. For each candidate, every file it touches is
-      # compared by end-state (git diff --quiet per path) between the change
-      # and main@origin - exact, unlike patch-id matching, and immune to how
-      # the content originally landed. Fully-absorbed changes are abandoned;
-      # anything differing is reported for human review, because a stale
-      # head may hold real fixes that never landed.
+      # already present there. Candidates are handled per revision (commit
+      # id), never per change id: a divergent change-id (several visible
+      # revisions) errors out when used directly, and each revision needs an
+      # independent keep-or-drop decision.
       #
-      # Candidates exclude @ and its ancestors (never disrupt stacked,
-      # not-yet-pushed work) and heads carrying an active remote bookmark
-      # (in-flight PRs). Merge nodes are skipped: absorption semantics for
-      # multi-parent diffs are ambiguous. Disable with JJWORK_CLEANUP=0.
+      # A revision is abandoned only when ALL of these hold:
+      #   - not reachable from main@origin: revisions inside main pin merged
+      #     history (e.g. as second parent of a GitHub merge-commit node),
+      #     and rewriting them cascades into main and every descendant
+      #   - carries no active remote bookmark (in-flight PR)
+      #   - single parent (merge-node absorption semantics are ambiguous)
+      #   - childless (dropping a parent rewrites all of its children)
+      #   - fully absorbed: every file it touches ends at the same state on
+      #     main@origin, compared via git diff --quiet per path - exact,
+      #     unlike patch-id matching, and immune to how the content landed
+      # Anything else is reported for human review (just jj-hygiene).
+      # Disable with JJWORK_CLEANUP=0.
       if [ "''${JJWORK_CLEANUP:-1}" = "1" ]; then
         absorbed_count=0
         review_count=0
-        for c in $(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'change_id ++ "\n"' 2>/dev/null); do
-          cid=$(jj log --no-graph -r "$c" -T 'commit_id')
-          desc=$(jj log --no-graph -r "$c" -T 'description.first_line()')
-          when=$(jj log --no-graph -r "$c" -T 'committer.timestamp().format("%Y-%m-%d")')
+        for cid in $(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'commit_id ++ "\n"' 2>/dev/null); do
+          desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
+          when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
+
+          # Merged-history revision: untouchable even though its off-main
+          # twins may be dropped alongside it.
+          if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & $cid" -T 'commit_id' 2>/dev/null)" ]; then
+            continue
+          fi
 
           active_remote=0
-          for bm in $(jj bookmark list -r "$c" -T 'name ++ "\n"' 2>/dev/null); do
+          for bm in $(jj bookmark list -r "$cid" -T 'name ++ "\n"' 2>/dev/null); do
             if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
               active_remote=1
               break
@@ -122,30 +133,37 @@
           done
           [ "$active_remote" = "1" ] && continue
 
-          if [ "$(jj log --no-graph -r "$c-" -T 'change_id ++ "\n"' 2>/dev/null | wc -l)" -gt 1 ]; then
-            echo "  $c $when [merge node] $desc" >&2
+          if [ "$(jj log --no-graph -r "$cid-" -T 'commit_id ++ "\n"' 2>/dev/null | wc -l)" -gt 1 ]; then
+            echo "  $when [merge node] ''${desc:-<no description>}" >&2
+            review_count=$((review_count + 1))
+            continue
+          fi
+
+          if [ -n "$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null)" ]; then
+            echo "  $when [has descendants] $desc" >&2
+            review_count=$((review_count + 1))
             continue
           fi
 
           differs=""
-          for f in $(jj diff -r "$c" --name-only 2>/dev/null); do
+          for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
             if ! git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null; then
               differs="$differs $f"
             fi
           done
 
           if [ -z "$differs" ]; then
-            echo "  $c $when [absorbed] ''${desc:-<no description>} -> abandoned"
-            jj abandon "$c" >/dev/null
+            echo "  $when [absorbed] ''${desc:-<no description>} -> abandoned"
+            jj abandon "$cid" >/dev/null
             absorbed_count=$((absorbed_count + 1))
           else
-            echo "  $c $when [DIFFERS:$differs] $desc" >&2
+            echo "  $when [DIFFERS:$differs] $desc" >&2
             review_count=$((review_count + 1))
           fi
         done
 
         if [ "$absorbed_count" -gt 0 ] || [ "$review_count" -gt 0 ]; then
-          echo "  stale work: $absorbed_count absorbed, $review_count need review"
+          echo "  stale work: $absorbed_count abandoned, $review_count need review"
           echo ""
         fi
       fi
