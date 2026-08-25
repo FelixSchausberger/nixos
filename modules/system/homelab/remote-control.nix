@@ -13,22 +13,13 @@
     import http.server
     import json
     import socket
-    import subprocess
     import threading
 
     DESKTOP_IP = "${cfg.desktopIp}"
-    DESKTOP_USER = "${cfg.desktopUser}"
     DESKTOP_MAC = bytes.fromhex("${desktopMac}")
     DESKTOP_CHECK_PORT = ${toString cfg.desktopCheckPort}
     SUNSHINE_PORT = ${toString cfg.sunshinePort}
     STEAM_PORT = ${toString cfg.steamRemotePlayPort}
-    DISPLAY_MODE_CONTROL = ${
-      if cfg.enableDisplayModeControl
-      then "True"
-      else "False"
-    }
-    AWAY_MODE_COMMAND = ${builtins.toJSON cfg.desktopAwayModeCommand}
-    HOME_MODE_COMMAND = ${builtins.toJSON cfg.desktopHomeModeCommand}
     BROADCAST_IP = "${cfg.broadcastIp}"
     WOL_PORT = ${toString cfg.wolPort}
     LISTEN_PORT = ${toString cfg.port}
@@ -55,52 +46,16 @@
         sock.close()
 
 
-    def run_ssh_command(command, timeout=15):
-        try:
-            result = subprocess.run(
-                [
-                    "${pkgs.openssh}/bin/ssh",
-                    "-o", "StrictHostKeyChecking=accept-new",
-                    "-o", "ConnectTimeout=5",
-                    f"{DESKTOP_USER}@{DESKTOP_IP}",
-                    command,
-                ],
-                timeout=timeout,
-                capture_output=True,
-                text=True,
-            )
-            return result.returncode == 0, result.stdout.strip()
-        except (subprocess.TimeoutExpired, OSError):
-            return False, ""
-
-
-    def get_display_mode():
-        if not DISPLAY_MODE_CONTROL:
-            return "unsupported"
-        ok, mode = run_ssh_command(
-            "sudo /run/current-system/sw/bin/desktop-display-mode status", timeout=10
-        )
-        if not ok:
-            return "unknown"
-        mode = mode.lower()
-        if mode in ["home", "away"]:
-            return mode
-        return "unknown"
-
-
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path == "/api/status":
                 online = desktop_online()
                 sunshine = check_port(DESKTOP_IP, SUNSHINE_PORT) if online else False
                 steam = check_port(DESKTOP_IP, STEAM_PORT) if online else False
-                display_mode = get_display_mode() if online else "unknown"
                 self._send_json({
                     "desktop": "online" if online else "offline",
                     "sunshine": "running" if sunshine else "stopped",
                     "steam": "running" if steam else "stopped",
-                    "display_mode_control": DISPLAY_MODE_CONTROL,
-                    "display_mode": display_mode,
                 })
             elif self.path == "/":
                 self._send_html(HTML)
@@ -116,11 +71,6 @@
                 if not online:
                     threading.Thread(target=wake_desktop, daemon=True).start()
                     self._send_json({"action": "wake", "ok": True})
-                elif DISPLAY_MODE_CONTROL:
-                    mode = get_display_mode()
-                    cmd = AWAY_MODE_COMMAND if mode == "home" else HOME_MODE_COMMAND
-                    ok, _ = run_ssh_command(cmd)
-                    self._send_json({"action": "switch", "ok": ok})
                 else:
                     self._send_json({"action": "none", "ok": False})
             else:
@@ -163,8 +113,6 @@
       .dot.offline{background:#e94560;box-shadow:0 0 8px #e94560}
       .dot.stopped{background:#e94560;box-shadow:0 0 8px #e94560}
       .dot.running{background:#4ecca3;box-shadow:0 0 8px #4ecca3}
-      .dot.home{background:#4ecca3;box-shadow:0 0 8px #4ecca3}
-      .dot.away{background:#ffd369;box-shadow:0 0 8px #ffd369}
       .dot.unknown{background:#555;box-shadow:0 0 4px #555}
       .dot.waking{background:#ffd369;box-shadow:0 0 8px #ffd369;animation:pulse 0.6s ease-in-out infinite}
       @keyframes pulse{50%{opacity:0.3}}
@@ -174,8 +122,6 @@
       button:hover{filter:brightness(0.9)}
       button:disabled{opacity:0.4;cursor:not-allowed;filter:none}
       .btn-wake{background:#e94560}
-      .btn-away{background:#2d6a4f}
-      .btn-home{background:#1d4ed8}
       .error{color:#e94560;text-align:center;margin-top:0.75rem;display:none;font-size:0.875rem}
     </style>
     </head>
@@ -187,10 +133,6 @@
         <div class="status-row">
           <span class="dot unknown" id="dotDesktop"></span>
           <span class="status-label" id="labelDesktop">Desktop: checking...</span>
-        </div>
-        <div class="status-row">
-          <span class="dot unknown" id="dotDisplayMode"></span>
-          <span class="status-label" id="labelDisplayMode">Display mode: --</span>
         </div>
         <div class="status-row">
           <span class="dot unknown" id="dotMoonshine"></span>
@@ -218,24 +160,10 @@
           document.getElementById("labelMoonshine").innerHTML = "<strong>Moonshine</strong> " + (online ? d.sunshine : "--");
           document.getElementById("dotSteam").className = "dot " + (online ? d.steam : "unknown");
           document.getElementById("labelSteam").innerHTML = "<strong>Steam</strong> " + (online ? d.steam : "--");
-          const mode = online ? (d.display_mode || "unknown") : "unknown";
-          const modeControl = !!d.display_mode_control;
-          document.getElementById("labelDisplayMode").innerHTML = modeControl
-            ? "<strong>Display mode</strong> " + mode
-            : "<strong>Display mode</strong> unsupported";
-          document.getElementById("dotDisplayMode").className = "dot " + (modeControl ? mode : "unknown");
           const btn = document.getElementById("actionBtn");
           if (!online) {
             btn.textContent = "Wake Desktop";
             btn.className = "btn-wake";
-            btn.disabled = false;
-          } else if (modeControl && mode === "home") {
-            btn.textContent = "Switch to Virtual Display";
-            btn.className = "btn-away";
-            btn.disabled = false;
-          } else if (modeControl && mode === "away") {
-            btn.textContent = "Switch to Physical Display";
-            btn.className = "btn-home";
             btn.disabled = false;
           } else {
             btn.textContent = "Desktop Online";
@@ -293,12 +221,6 @@ in {
       description = "IP address of the desktop to control";
     };
 
-    desktopUser = lib.mkOption {
-      type = lib.types.str;
-      default = "schausberger";
-      description = "Username on the desktop for SSH commands";
-    };
-
     desktopMac = lib.mkOption {
       type = lib.types.str;
       default = "10:ff:e0:e1:53:55";
@@ -321,24 +243,6 @@ in {
       type = lib.types.port;
       default = 27036;
       description = "Steam Remote Play port on the desktop for status checks";
-    };
-
-    enableDisplayModeControl = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable remote switching between desktop home/away display modes";
-    };
-
-    desktopAwayModeCommand = lib.mkOption {
-      type = lib.types.str;
-      default = "sudo /run/current-system/sw/bin/desktop-display-mode away";
-      description = "Command executed via SSH on desktop to switch to virtual display mode";
-    };
-
-    desktopHomeModeCommand = lib.mkOption {
-      type = lib.types.str;
-      default = "sudo /run/current-system/sw/bin/desktop-display-mode home";
-      description = "Command executed via SSH on desktop to switch to physical display mode";
     };
 
     broadcastIp = lib.mkOption {
@@ -374,17 +278,16 @@ in {
         "tailscale.service"
       ];
       wantedBy = ["multi-user.target"];
-      path = [pkgs.openssh];
       serviceConfig = {
         ExecStart = "${pkgs.python3}/bin/python3 ${webServer}";
         Restart = "always";
         RestartSec = "5";
-        DynamicUser = lib.mkForce false;
-        User = cfg.desktopUser;
-        Group = "users";
+        # Stateless status prober + WoL sender: runs as an unprivileged
+        # dynamic user (no SSH keys or home access needed).
+        DynamicUser = true;
         PrivateTmp = true;
         ProtectSystem = "strict";
-        ProtectHome = "read-only";
+        ProtectHome = true;
         NoNewPrivileges = true;
         CapabilityBoundingSet = [
           "CAP_NET_BIND_SERVICE"

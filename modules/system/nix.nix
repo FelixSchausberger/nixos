@@ -33,6 +33,14 @@
         inherit (zellijPlugins) zellij-forgot;
         dssh = final.callPackage ../../pkgs/dssh {};
 
+        # TODO(upstream): drop when NixOS/nixpkgs#511228 is fixed. The meson
+        # test suite fails when a feature flag is disabled (e.g. geolocation),
+        # which is how the NixOS portal module builds it on GUI hosts.
+        xdg-desktop-portal = prev.xdg-desktop-portal.overrideAttrs (_: {
+          doCheck = false;
+          doInstallCheck = false;
+        });
+
         # Align the tree-sitter-rust grammar with the queries shipped by the
         # steelix fork (a Helix master snapshot), which still use the
         # `type_parameter` node that newer tree-sitter-rust releases renamed to
