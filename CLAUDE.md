@@ -248,6 +248,12 @@ named branch. The lock-update workflow (daily cron) manages that branch automati
 - Validation enforced via prek hook
 - CI validates all changes automatically
 
+**Auto-push reconciler (m920q):** comin converges the deployed system to `main` every 60s, so
+unpushed local commits get silently reverted in deployment when main moves. The `comin-autopush`
+user timer (every 10min) mitigates this: described commits ahead of `main@origin` are automatically
+rebased (`jjwork`) and pushed as PRs (`jjpush`); CI + auto-merge then decide deployment.
+Undescribed WIP is never pushed — it triggers an ntfy alert and stays local until described.
+
 For complete workflow details, see [README.md Development Workflow](README.md#development-workflow):
 
 - Jujutsu workflow (jjwork, jjdescribe, jjpush helpers)

@@ -8,7 +8,7 @@
 # service has no WantedBy (started only by HDMI-hotplug udev), so it stays
 # inert in a VM while Avahi, firewall, and package configuration are tested
 # against the real module.
-{inputs, ...}: {
+_: {
   name = "streaming-services";
 
   nodes = {
@@ -18,7 +18,6 @@
       ...
     }: {
       imports = [
-        inputs.moonshine.nixosModules.default
         ../modules/system/moonshine.nix
         ../modules/system/airplay-receiver.nix
       ];
@@ -41,6 +40,9 @@
         };
 
         modules.system.moonshine.enable = true;
+
+        # VM NICs are named eth1, not eno1 like the desktop host
+        services.moonshine.firewallInterfaces = ["eth1"];
 
         # Real airplay-receiver module in headless mode: uxplay never starts
         # (no HDMI hotplug in a VM), but Avahi, firewall, and package config

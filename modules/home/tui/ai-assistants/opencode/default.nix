@@ -13,6 +13,11 @@
   );
 
   sharedSkills = ../skills;
+
+  # Fixed port of the long-lived shared server. Local TUIs attach to it via the
+  # `oc` fish function instead of spawning throwaway servers, so TUI and web UI
+  # share one session store.
+  webPort = 4096;
 in {
   programs.opencode = {
     enable = true;
@@ -86,15 +91,27 @@ in {
       enable = true;
       extraArgs = [
         "--port"
-        "4096"
+        (toString webPort)
+        # Loopback only: remote access goes through Tailscale Serve (TLS,
+        # tailnet-only). See modules/system/homelab/opencode-web.nix.
         "--hostname"
-        "0.0.0.0"
+        "127.0.0.1"
       ];
     };
 
     tui = {
       plugin = ["@slkiser/opencode-quota" "@mohak34/opencode-notifier"];
     };
+  };
+
+  # Attach a TUI client to the shared server instead of letting bare `opencode`
+  # start its own throwaway instance. Attaching keeps sessions visible in and
+  # controllable from both the TUI here and the web UI on other devices.
+  programs.fish.functions.oc = {
+    description = "Attach to the shared opencode server (same sessions as the web UI)";
+    body = ''
+      opencode attach "http://127.0.0.1:${toString webPort}" $argv
+    '';
   };
 
   # Set API keys from sops secrets at login time
