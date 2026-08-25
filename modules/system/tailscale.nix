@@ -23,6 +23,15 @@ in {
       default = false;
       description = "Advertise this host as a Tailscale exit node";
     };
+    acceptDns = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether Tailscale may manage DNS on this host (MagicDNS, split DNS,
+        global nameservers). Disable on hosts whose connectivity must not
+        depend on tailnet DNS resolvers (e.g. work machines).
+      '';
+    };
     udpGROInterface = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -49,7 +58,8 @@ in {
         lib.optionals cfg.exitNode ["--advertise-exit-node"]
         ++ lib.optionals (cfg.advertiseRoutes != []) [
           "--advertise-routes=${lib.concatStringsSep "," cfg.advertiseRoutes}"
-        ];
+        ]
+        ++ lib.optionals (!cfg.acceptDns) ["--accept-dns=false"];
     };
 
     # Improves UDP forwarding throughput for Tailscale when interface is specified

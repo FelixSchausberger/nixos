@@ -198,7 +198,12 @@ in {
     modules.system = {
       containers.enable = true;
       wsl-integration.enable = true;
-      homelab.tailscale.enable = true;
+      homelab.tailscale = {
+        enable = true;
+        # Work laptop must not resolve via tailnet DNS (global nameserver =
+        # homelab AdGuard behind DERP relay); use local/company DHCP DNS.
+        acceptDns = false;
+      };
       maintenance = {
         enable = true;
         monitoring = {
