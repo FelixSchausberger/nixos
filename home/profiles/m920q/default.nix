@@ -34,6 +34,11 @@
     # systemd service modules.system.homelab.zellijWeb.
     zellij.settings.web_sharing = "on";
   };
+  # opencode scopes sessions by working directory, and its web UI lists only
+  # the project matching the server's CWD (default $HOME). Pinning the shared
+  # server to the config repo makes TUI (`oc`) and phone-facing web UI show
+  # the same sessions.
+  systemd.user.services.opencode-web.Service.WorkingDirectory = "/per/etc/nixos";
 
   home = {
     shellAliases = {

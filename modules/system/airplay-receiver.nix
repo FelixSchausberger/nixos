@@ -77,7 +77,11 @@ in {
           # stdbuf forces line buffering: uxplay's stdout is block-buffered
           # under journald, so startup logs otherwise only appear (all stamped
           # at exit time) when the process terminates.
-          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -vs kmssink -as pulsesink -n Projector -nh";
+          # -p pins uxplay to the legacy AirPlay ports; without it uxplay binds
+          # random ephemeral ports each run, so clients discover the service
+          # via mDNS but fail to connect through the fixed-port firewall rules
+          # declared above.
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vs kmssink -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";
@@ -114,11 +118,6 @@ in {
         };
       };
 
-      # kmssink claims tty1 directly; a getty login prompt on the projector
-      # serves nobody and leaks hostname and username to the room. Emergency
-      # shells are unaffected (sulogin via rescue/emergency targets, sshd).
-      systemd.units."getty@tty1".enable = false;
-
       services.udev.extraRules = ''
         ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="${pkgs.systemd}/bin/systemctl start --no-block uxplay-hotplug.service"
       '';
@@ -134,7 +133,9 @@ in {
         bindsTo = ["niri-session.target"];
         wantedBy = ["niri-session.target"];
         serviceConfig = {
-          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
+          # -p keeps uxplay on the legacy AirPlay ports declared in the
+          # firewall rules above; see the headless service for details.
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";

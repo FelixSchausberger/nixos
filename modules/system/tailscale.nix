@@ -32,6 +32,15 @@ in {
         depend on tailnet DNS resolvers (e.g. work machines).
       '';
     };
+    openSSH = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable Tailscale SSH: tailscaled intercepts port 22 from tailnet
+        clients and authenticates by device identity (tailnet ACLs), while
+        regular sshd keeps handling non-tailnet connections.
+      '';
+    };
     udpGROInterface = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -51,6 +60,10 @@ in {
       enable = true;
       inherit (cfg) authKeyFile;
       openFirewall = true;
+      # Tailscale SSH has no dedicated upstream option; `tailscale set --ssh`
+      # (via the tailscaled-set oneshot) enables it for already-registered
+      # nodes without needing authKeyFile.
+      extraSetFlags = lib.optionals cfg.openSSH ["--ssh"];
       # Enables IP forwarding sysctls and correct rpfilter rules for subnet routing.
       # rpfilter fix prevents asymmetric routes from dropping subnet-routed packets.
       useRoutingFeatures = lib.mkIf (cfg.advertiseRoutes != [] || cfg.exitNode) "server";
