@@ -200,6 +200,39 @@
         exit 1
       fi
 
+      # Drop empty undescribed commits between main@origin and @ (leftovers
+      # from parallel sessions or abandoned experiments). Pushing a bookmark
+      # whose introduced commit set includes them fails with "Won't push
+      # commit ... has no description", while later invocations report
+      # success because the local git-ref export already mirrors the intended
+      # state - nothing reaches origin and PR creation then fails confusingly.
+      # Abandoning an empty commit is lossless: jj rebases descendants over it.
+      for cid in $(
+        jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id' 2>/dev/null
+      ); do
+        em="$(jj log --no-graph -r "$cid" -T 'if(empty, "y", "n")' 2>/dev/null)"
+        fl="$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)"
+        if [ "$em" = "y" ] && { [ -z "$fl" ] || [ "$fl" = "(no description set)" ]; }; then
+          jj abandon "$cid" >/dev/null 2>&1 || true
+        fi
+      done
+
+      # Anything else undescribed between main@origin and @ blocks the push
+      # loudly instead of leaving origin without the work while every later
+      # push reports success.
+      blockers=""
+      for cid in $(jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id' 2>/dev/null); do
+        fl="$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)"
+        if [ -z "$fl" ] || [ "$fl" = "(no description set)" ]; then
+          blockers="$blockers ${"cid:0:8"}"
+        fi
+      done
+      if [ -n "$blockers" ]; then
+        echo "Error: undescribed commits remain between main@origin and @:$blockers" >&2
+        echo "Describe ('jj describe -r <change> -m \"...\"') or abandon them before pushing." >&2
+        exit 1
+      fi
+
       # Search ancestors for an existing feature bookmark. The main bookmark
       # always sits on the parent commit after a rebase, so it is excluded;
       # otherwise the auto-create branch below would never trigger.
