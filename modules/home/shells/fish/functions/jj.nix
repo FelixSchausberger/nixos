@@ -242,9 +242,15 @@
       echo ""
       echo "Creating pull request with auto-merge..."
       if ! gh pr create --fill --label auto-merge --head "$bookmark"; then
-        echo "Failed to create PR" >&2
-        echo "   You may need to create it manually"
-        exit 1
+        # Re-run after a force-push: the branch may already have an open PR,
+        # which is success (the push above updated it).
+        if gh pr view "$bookmark" --json state --jq 'select(.state == "OPEN")' >/dev/null 2>&1; then
+          echo "PR already open for $bookmark - pushed update"
+        else
+          echo "Failed to create PR" >&2
+          echo "   You may need to create it manually"
+          exit 1
+        fi
       fi
 
       echo ""

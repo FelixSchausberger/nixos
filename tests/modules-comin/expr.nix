@@ -24,6 +24,9 @@
     state_persisted =
       builtins.any (d: (d.directory or "") == "/var/lib/comin")
       ((config.environment.persistence."/per" or {}).directories or []);
+
+    # Auto-push reconciler: only enabled on the development host
+    autopush_enabled = config.modules.system.comin.autoPush.enable;
   };
 in {
   desktop = testComin "desktop" configs.desktop.config;
@@ -38,4 +41,10 @@ in {
     comin_enabled = configs.hp-probook-vmware.config.modules.system.comin.enable or false;
     comin_service_enabled = configs.hp-probook-vmware.config.services.comin.enable or false;
   };
+
+  # m920q-specific reconciler wiring
+  m920q_autopush_service =
+    configs.m920q.config.systemd.user.services.comin-autopush.serviceConfig.ExecStart;
+  m920q_autopush_interval =
+    configs.m920q.config.systemd.user.timers.comin-autopush.timerConfig.OnUnitActiveSec;
 }

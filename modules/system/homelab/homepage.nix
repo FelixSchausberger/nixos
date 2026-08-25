@@ -117,8 +117,19 @@
       {
         "Zellij Web" = {
           icon = "mdi-console";
-          href = "http://192.168.178.2:${toString hl.zellijWeb.port}";
+          # Tailscale Serve endpoint (TLS, tailnet-only). The server binds
+          # loopback only, so the LAN IP is unreachable.
+          href = "https://${hl.zellijWeb.tailnetDomain}:${toString hl.zellijWeb.httpsPort}";
           description = "Terminal";
+        };
+      }
+    ]
+    ++ lib.optionals hl.opencodeWeb.enable [
+      {
+        "OpenCode" = {
+          icon = "mdi-robot";
+          href = "https://${hl.opencodeWeb.tailnetDomain}:${toString hl.opencodeWeb.httpsPort}";
+          description = "AI Agent";
         };
       }
     ];

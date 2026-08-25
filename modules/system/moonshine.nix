@@ -13,22 +13,20 @@ in {
       default = config.hostConfig.user or "schausberger";
       description = "User to run Moonshine as";
     };
-
-    uid = lib.mkOption {
-      type = lib.types.nullOr lib.types.int;
-      default = config.users.users.${cfg.user}.uid or null;
-      defaultText = lib.literalExpression "config.users.users.<user>.uid";
-      description = "User UID for Moonshine runtime directory";
-    };
   };
 
   config = lib.mkIf cfg.enable {
+    # Uses the services.moonshine module shipped in nixpkgs (upstreamed from
+    # hgaiser/moonshine); importing the flake alongside it collides on the
+    # services.moonshine option declarations.
     services.moonshine = {
       enable = true;
       inherit (cfg) user;
-      inherit (cfg) uid;
 
-      openFirewall = true;
+      # eno1 for LAN clients, tailscale0 for remote Moonlight sessions.
+      # The nixpkgs module replaces the old flake's global openFirewall;
+      # mkDefault lets consumers retarget other interface names (VM tests).
+      firewallInterfaces = lib.mkDefault ["eno1" "tailscale0"];
 
       settings = {
         name = "Moonshine";

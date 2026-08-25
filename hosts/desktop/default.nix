@@ -42,7 +42,6 @@ in {
       ../../modules/system/tailscale.nix
       ../../modules/system/backup.nix
       ../../modules/system/hardware/power-management.nix
-      inputs.moonshine.nixosModules.default
       ../../modules/system/moonshine.nix
       ../../modules/system/ssh.nix
       ../../modules/system/nixpkgs-overlays.nix

@@ -20,6 +20,7 @@
   networkmanager_disabled = true;
   nextcloud_enabled = true;
   ntfy_enabled = true;
+  opencode_web_enabled = true;
   performance_profile = "server-efficiency";
   power_lan_interface = "eno1";
   power_management_enabled = true;
@@ -27,6 +28,7 @@
   smartd_enabled = true;
   ssh_enabled = true;
   tailscale_enabled = true;
+  tailscale_openssh_enabled = true;
   tailscale_routes = [
     "192.168.178.0/24"
   ];

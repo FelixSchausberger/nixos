@@ -276,8 +276,13 @@ in {
   # Bluetooth is unused on this host; disable to suppress wireplumber bluez5 warnings
   hardware.bluetooth.enable = lib.mkForce false;
 
-  systemd.services."getty@tty1" = lib.mkIf (!config.hostConfig.isGui) {
-    serviceConfig.Restart = lib.mkForce "no";
+  # Headless rendering claims tty1 directly (airplay kmssink); a getty login
+  # prompt on the projector serves nobody and leaks hostname and username to
+  # the room. Disabling the instance keeps emergency shells (sulogin via
+  # rescue/emergency targets) and ssh access unaffected. A bare Restart=no
+  # here is not enough: getty@tty1 still starts from getty.target at boot.
+  systemd.units."getty@tty1" = lib.mkIf (!config.hostConfig.isGui) {
+    enable = false;
   };
 
   # Root ownership signals tmpfiles that subdirectory ownership transitions are intentional
@@ -326,6 +331,9 @@ in {
     comin = {
       enable = true;
       alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+      # Development host: push described local work into PRs before the next
+      # poll can converge over it.
+      autoPush.enable = true;
     };
     maintenance = {
       enable = true;
@@ -431,11 +439,18 @@ in {
     samba.enable = true;
     tailscale = {
       enable = true;
+      # Tailscale SSH for phone/Termux access: tailscaled authenticates
+      # tailnet clients by device identity, no key management needed.
+      openSSH = true;
       advertiseRoutes = ["192.168.178.0/24"];
       udpGROInterface = "eno1";
     };
     ssh.enable = true;
     zellijWeb = {
+      enable = true;
+      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+    };
+    opencodeWeb = {
       enable = true;
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
