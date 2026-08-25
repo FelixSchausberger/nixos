@@ -1,9 +1,24 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   cfg = config.modules.system.moonshine;
+
+  # Steam is single-instance per user: a leftover desktop Steam would receive
+  # the steam:// URL instead of Moonshine's compositor and the stream fails
+  # with a 503. Ask it to shut down and wait up to 30s before launching
+  # (recommended workaround from hgaiser/moonshine#134).
+  steamShutdown = pkgs.writeShellScript "moonshine-steam-pre-shutdown" ''
+    if ${pkgs.procps}/bin/pgrep -x steam >/dev/null; then
+      /run/current-system/sw/bin/steam -shutdown >/dev/null 2>&1 || true
+      for i in $(${pkgs.coreutils}/bin/seq 1 30); do
+        ! ${pkgs.procps}/bin/pgrep -x steam >/dev/null && break
+        ${pkgs.coreutils}/bin/sleep 1
+      done
+    fi
+  '';
 in {
   options.modules.system.moonshine = {
     enable = lib.mkEnableOption "Moonshine game streaming server (Moonlight protocol)";
@@ -37,9 +52,21 @@ in {
               "/run/current-system/sw/bin/steam"
               "steam://open/bigpicture"
             ];
+            # Journal logging keeps failed session launches diagnosable
+            # (the default discards all application output).
+            stdout = "journal";
+            stderr = "journal";
+            pre_command = [
+              ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
+            ];
           }
         ];
       };
     };
+
+    # Membership scopes the shipped polkit rule that lets Moonshine inhibit
+    # host sleep for the duration of a stream; without it streaming works but
+    # the host may suspend mid-session.
+    users.users.${cfg.user}.extraGroups = ["moonshine"];
   };
 }

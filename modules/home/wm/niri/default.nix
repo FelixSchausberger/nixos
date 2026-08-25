@@ -376,15 +376,6 @@ in {
         XCURSOR_SIZE = "24";
       };
 
-      # Startup applications (disable DP-3 by default so Sunshine always captures VIRTUAL-1)
-      spawn-at-startup = lib.optional (lib.any (o: o.name == "DP-3") cfg.outputs) {
-        command = [
-          "${pkgs.bash}/bin/bash"
-          "-c"
-          "while ! ${pkgs.niri}/bin/niri msg output DP-3 off 2>/dev/null; do sleep 0.2; done"
-        ];
-      };
-
       # Cursor configuration
       cursor = {
         theme = "Bibata-Modern-Classic";

@@ -12,11 +12,8 @@ in
     # Desktop-specific Hyprland configuration
     wm.hyprland = {
       # Monitor configuration for desktop setup
-      # Headless display pre-configured for Sunshine/Moonlight streaming (Pixel 9a: 1080x2400)
-      # Created dynamically via `hyprctl output create headless` on boot
       monitors = [
         ",preferred,auto,1" # Real monitor (auto-detect when connected)
-        "HEADLESS-1,1920x1080@60,auto,1" # Virtual display for remote streaming
       ];
 
       # Desktop-specific application preferences
@@ -93,17 +90,6 @@ in
         # GameMode is handled automatically by the system-level gamemode service
         # No need for manual LD_PRELOAD - gamemode daemon handles this
       ];
-
-      # Create headless output for Sunshine/Moonlight remote streaming
-      exec-once = ["hyprctl output create headless"];
-
-      # Streaming-optimized cursor settings
-      # Hide cursor on key press to reduce encoding overhead during gameplay
-      cursor = {
-        hide_on_key_press = true;
-        hide_on_touch = true;
-        no_hardware_cursors = false;
-      };
 
       # Desktop-specific window rules (including gaming)
       windowrulev2 = [

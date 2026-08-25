@@ -1,38 +1,15 @@
 # Desktop workstation host: AMD gaming/rendering machine with Niri as the only WM.
-# Moonshine provides headless game streaming in isolated Wayland compositors,
-# eliminating the need for virtual outputs (vkms/Virtual-1).
-# DP-3 can be toggled via `desktop-display-mode` for power saving.
+# Games stream headless via Moonshine — each Moonlight session runs in its own
+# compositor, so no local session or monitor is needed. greetd remains available
+# for occasional console logins.
 {
   inputs,
   lib,
-  pkgs,
   ...
 }: let
   hostLib = import ../lib.nix;
   hostName = "desktop";
   hostInfo = inputs.self.lib.hosts.${hostName};
-  inherit (inputs.self.lib) user;
-
-  desktopDisplayModeScript = pkgs.writeShellScriptBin "desktop-display-mode" ''
-    set -euo pipefail
-    case "''${1:-}" in
-      away)
-        niri msg output DP-3 off 2>/dev/null || true
-        echo away > /run/desktop-current-mode
-        ;;
-      home)
-        niri msg output DP-3 on 2>/dev/null || true
-        echo home > /run/desktop-current-mode
-        ;;
-      status)
-        cat /run/desktop-current-mode 2>/dev/null || echo unknown
-        ;;
-      *)
-        echo "Usage: desktop-display-mode {home|away|status}" >&2
-        exit 2
-        ;;
-    esac
-  '';
 in {
   imports =
     [
@@ -54,11 +31,6 @@ in {
     inherit (hostInfo) wms;
 
     zellijAutoAttach.sessionName = "desktop";
-
-    autoLogin = {
-      enable = true;
-      inherit (inputs.self.lib) user;
-    };
   };
 
   hardware = {
@@ -123,10 +95,6 @@ in {
 
   modules.system.ssh.enable = true;
 
-  environment.systemPackages = [
-    desktopDisplayModeScript
-  ];
-
   # Allow remote power off from m920q without password prompt
   security.sudo.extraRules = [
     {
@@ -134,10 +102,6 @@ in {
       commands = [
         {
           command = "/run/current-system/sw/bin/poweroff";
-          options = ["NOPASSWD"];
-        }
-        {
-          command = "/run/current-system/sw/bin/desktop-display-mode";
           options = ["NOPASSWD"];
         }
       ];
@@ -160,11 +124,13 @@ in {
     27036
   ];
 
-  # Moonshine game streaming for remote access via Moonlight
-  # Isolated compositor per stream; no virtual outputs needed
+  # Moonshine game streaming for remote access via Moonlight.
+  # Headless-first: no local session or Steam autostart, so Moonshine's
+  # per-stream compositor always launches the primary Steam instance
+  # (Steam is single-instance per user; a running desktop Steam would
+  # steal the steam:// URL and break the stream — upstream issue #134).
   modules.system.moonshine.enable = true;
   modules.system.gaming.enable = true;
-  modules.system.steam.autoStart = true;
 
   # OpenLDAP 2.6.13 test suite has a regression (provider/consumer DB mismatch).
   # Skip tests rather than wait for upstream fix; runtime is unaffected.

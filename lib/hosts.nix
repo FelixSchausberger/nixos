@@ -6,7 +6,7 @@
   desktop = {
     wms = ["niri"]; # Default WM; COSMIC/Hyprland available via specialisation
     isGui = true;
-    description = "Desktop with Hyprland as default WM for headless Sunshine streaming";
+    description = "Desktop workstation/gaming host with Niri WM; streams headless via Moonshine";
     ip = "192.168.178.3";
   };
 
