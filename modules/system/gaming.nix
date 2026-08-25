@@ -19,6 +19,11 @@
 
     modules.system.steam.enable = true;
 
+    # Required for gamemoderun to reach the daemon; without it optimizations
+    # are silently skipped (GPU tuning also needs the accept-responsibility
+    # path enabled in settings below).
+    users.users.${config.hostConfig.user}.extraGroups = ["gamemode"];
+
     # Security configuration for better gaming performance
     security.pam.loginLimits = [
       # Real-time scheduling for better audio/gaming performance
