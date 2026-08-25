@@ -176,7 +176,14 @@
 
   jjpushCmd = pkgs.writeShellApplication {
     name = "jjpush";
-    runtimeInputs = [pkgs.jujutsu pkgs.gh];
+    runtimeInputs = [
+      pkgs.jujutsu
+      pkgs.gh
+      pkgs.coreutils
+      pkgs.gnugrep
+      pkgs.gnused
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-slug
+    ];
     text = ''
       set -euo pipefail
 
@@ -209,9 +216,8 @@
           exit 1
         fi
 
-        # "feat: add widget" → "feat/add-widget"
-        # "feat(homelab): add X" → "feat/homelab-add-X"
-        bookmark="$(printf '%s' "$first_line" | sed -E 's/^([a-z]+)\(([^)]*)\):/\1\/\2/; s/^([a-z]+):[[:space:]]*/\1\//; s/ /-/g; s/[^a-zA-Z0-9_/-]//g')"
+        # "feat: add widget" → "feat/add-widget" (shared jj-slug helper)
+        bookmark="$(jj-slug "$first_line")"
         if ! printf '%s' "$bookmark" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9/._-]*$'; then
           printf "Invalid bookmark name: '%s'. Set manually with 'jj bookmark set <name>'.\n" "$bookmark" >&2
           exit 1
@@ -238,10 +244,16 @@
         exit 1
       fi
 
-      # Create PR with auto-merge label.
+      # Create PR with auto-merge label. Title/body come from the bookmarked
+      # commit's description instead of gh's --fill, which computes defaults
+      # via git log and can fail outright (observed: doubled-branch argument
+      # on long bookmark names).
       echo ""
       echo "Creating pull request with auto-merge..."
-      if ! gh pr create --fill --label auto-merge --head "$bookmark"; then
+      pr_title="$(jj log --no-graph -r "$bookmark" -T 'description.first_line()' 2>/dev/null)"
+      pr_body="$(jj log --no-graph -r "$bookmark" -T 'description' 2>/dev/null | tail -n +2 | sed '/./,$!d')"
+      [ -n "$pr_body" ] || pr_body="$pr_title"
+      if ! gh pr create --label auto-merge --head "$bookmark" --title "$pr_title" --body "$pr_body"; then
         # Re-run after a force-push: the branch may already have an open PR,
         # which is success (the push above updated it).
         if gh pr view "$bookmark" --json state --jq 'select(.state == "OPEN")' >/dev/null 2>&1; then
