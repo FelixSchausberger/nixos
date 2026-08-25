@@ -23,6 +23,9 @@
       # SSH connection manager
       dssh = pkgs.callPackage ../pkgs/dssh {};
 
+      # Bookmark slug derivation shared by jjpush and comin-autopush
+      jj-slug = pkgs.callPackage ../pkgs/jj-slug {};
+
       inherit
         (zellijPlugins)
         harpoon

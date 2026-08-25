@@ -23,6 +23,9 @@
   user = inputs.self.lib.user;
   homeDir = "/home/${user}";
 
+  # Shared bookmark-slug rule (same derivation as jjpush uses).
+  slugPkg = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-slug;
+
   # Wrapper bridges comin's postDeploymentCommand hook (absolute path, no
   # arguments) to the repo detector script and its ntfy configuration.
   postDeploy = pkgs.writeShellApplication {
@@ -39,9 +42,15 @@
   # Undescribed working-copy edits are never touched - comin cannot lose them
   # anyway (it deploys its own clone), they just never reach main until
   # described.
+  #
+  # Ordering invariant: the undescribed-WIP check MUST run before any repo
+  # mutation. jjwork rebases the working-copy commit, which re-materializes
+  # @'s last-snapshotted tree over the live checkout; running it while editor
+  # or agent changes sit unsnapshotted on disk clobbers them. With WIP
+  # present this timer is therefore a strict no-op instead of a rebase.
   autopush = pkgs.writeShellApplication {
     name = "comin-autopush";
-    runtimeInputs = with pkgs; [jujutsu gh git curl coreutils gnugrep gnused];
+    runtimeInputs = with pkgs; [jujutsu gh git curl coreutils gnugrep];
     text = ''
       set -euo pipefail
 
@@ -94,8 +103,27 @@
 
       [ "$(todo)" -eq 0 ] && exit 0
 
+      # Undescribed working-copy edits are never pushed (fabricating a commit
+      # message would auto-deploy half-done work once CI passes). Checked
+      # before jjwork per the ordering invariant above; a non-empty
+      # undescribed @ is a normal development state, so exit silently.
+      at_empty="$(jj log --no-graph -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')"
+      first_line="$(jj log --no-graph -r '@' -T 'description.first_line()' 2>/dev/null)"
+      if [ "$first_line" = "(no description set)" ]; then
+        if [ "$at_empty" != "true" ]; then
+          exit 0
+        fi
+        # Only an EMPTY @ may borrow its parent's description.
+        first_line="$(jj log --no-graph -r '@-' -T 'description.first_line()' 2>/dev/null)"
+      fi
+      if [ -z "$first_line" ] || [ "$first_line" = "(no description set)" ]; then
+        exit 0
+      fi
+
       # Rebase onto latest main first (fetch + cleanup); conflicts need human
-      # resolution and keep the work unpushed.
+      # resolution and keep the work unpushed. Reached only when the working
+      # copy carries described work (or is empty atop described work), so the
+      # rebase cannot race live edits.
       if ! jjwork >/dev/null 2>&1; then
         alert "jjwork failed in $repo (conflict or diverged main) - local commits are NOT being deployed; resolve manually"
         exit 1
@@ -103,29 +131,12 @@
 
       [ "$(todo)" -eq 0 ] && exit 0
 
-      # Undescribed working-copy edits are never pushed: fabricating a commit
-      # message would auto-deploy half-done work once CI passes. Only an
-      # EMPTY @ may borrow its parent's description.
-      at_empty="$(jj log --no-graph -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')"
-      first_line="$(jj log --no-graph -r '@' -T 'description.first_line()' 2>/dev/null)"
-      if [ "$first_line" = "(no description set)" ]; then
-        if [ "$at_empty" != "true" ]; then
-          alert "undescribed working-copy edits in $repo will not be auto-pushed; run 'jj describe' to include them"
-          exit 1
-        fi
-        first_line="$(jj log --no-graph -r '@-' -T 'description.first_line()' 2>/dev/null)"
-      fi
-      if [ -z "$first_line" ] || [ "$first_line" = "(no description set)" ]; then
-        alert "undescribed WIP in $repo will not be auto-pushed; run 'jj describe' to include it"
-        exit 1
-      fi
-
       # Ensure a feature bookmark exists so jjpush takes its bookmarked path
-      # (which folds an empty working copy into the commit). Sanitizer mirrors
-      # modules/home/shells/fish/functions/jj.nix.
+      # (which folds an empty working copy into the commit). Slug derivation
+      # uses the shared jj-slug helper: same naming rule as jjpush.
       bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main")' -T 'name' 2>/dev/null | head -1 | tr -d '[:space:]')"
       if [ -z "$bookmark" ]; then
-        bookmark="$(printf '%s' "$first_line" | sed -E 's/^([a-z]+)\(([^)]*)\):/\1\/\2/; s/^([a-z]+):[[:space:]]*/\1\//; s/ /-/g; s/[^a-zA-Z0-9_\/-]//g')"
+        bookmark="$(${slugPkg}/bin/jj-slug "$first_line")"
         jj bookmark set "$bookmark" >/dev/null
         echo "comin-autopush: created bookmark $bookmark"
       fi
