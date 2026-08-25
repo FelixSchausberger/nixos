@@ -13,7 +13,11 @@ jobs:
     steps:
       - name: Enable auto-merge for PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT is required instead of GITHUB_TOKEN: merges performed with
+          # GITHUB_TOKEN do not emit a push event, which would silently skip
+          # on: push workflows like cachix-push.yml (cachix would never warm
+          # for auto-merged commits).
+          GH_TOKEN: ${{ secrets.LOCKS_UPDATE_PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
