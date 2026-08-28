@@ -11,13 +11,13 @@
   has_zellij_web_port_assertion = true;
   monitoring_enabled = true;
   opencode_server_exec_start = [
-    "/nix/store/7ji0jdc33z9nqq823z68w7h1mkjl3bp0-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
+    "/nix/store/2bd2vamnfjy3807y0z1gwghr1pmrkp4v-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
   ];
   opencode_server_working_directory = "/per/etc/nixos";
   opencode_web_enabled = true;
   opencode_web_https_port = 8444;
   opencode_web_port = 4096;
-  opencode_web_serve_exec_start = "/nix/store/9snz6x61gj80ykbi3lk5zlvsl82yl52f-tailscale-serve-opencode-setup";
+  opencode_web_serve_exec_start = "/nix/store/rqrnwp40ckn5x28j8pa9rvpszwkkdi6n-tailscale-serve-opencode-setup";
   opencode_web_tailnet_domain = "m920q.tailf2f0ca.ts.net";
   prometheus_port = 9090;
   tailscale_enabled = true;
@@ -26,6 +26,6 @@
   zellij_web_https_port = 8443;
   zellij_web_linger = true;
   zellij_web_port = 8083;
-  zellij_web_service_exec_start = "/nix/store/qjsvlisipacrm271v14nx8f26z3l6gc0-zellij-0.45.0/bin/zellij web --start --ip 127.0.0.1 --port 8083";
+  zellij_web_service_exec_start = "/nix/store/mgzjlpnp30509n93iyzjm1jnxqdd7lyq-zellij-0.45.0/bin/zellij web --start --ip 127.0.0.1 --port 8083";
   zellij_web_tailnet_domain = "m920q.tailf2f0ca.ts.net";
 }
