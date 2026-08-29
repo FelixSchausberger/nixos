@@ -53,13 +53,6 @@
       color = "#a29bfe";
       caddy = null;
     };
-    remoteControl = {
-      label = "Remote Control";
-      port = hl.remoteControl.port;
-      cat = "Management";
-      color = "#fab1a0";
-      caddy = "remote-control";
-    };
     zellijWeb = {
       label = "Zellij Web";
       port = hl.zellijWeb.port;
@@ -157,7 +150,7 @@
       internet -> fritzbox: WAN
       fritzbox -> m920q: LAN
       fritzbox -> desktop: LAN
-      m920q -> desktop: "WoL + SSH"
+      m920q -> desktop: "SSH"
       tailscale -> m920q: tailnet
       tailscale -> desktop: tailnet
     ${caddyEdges}

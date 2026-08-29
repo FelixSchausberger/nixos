@@ -14,7 +14,6 @@ in {
   grafana_port = config.modules.system.homelab.monitoring.grafanaPort == ports.grafana;
   adguard_port = config.modules.system.homelab.adguardhome.port == ports.adguard;
   nextcloud_port = config.modules.system.homelab.nextcloud.port == ports.nextcloud;
-  remote_control_port = config.modules.system.homelab.remoteControl.port == ports.remoteControl;
   homepage_port = config.modules.system.homelab.homepage.port == ports.homepage;
 
   # Verify caddy-proxy actually reads the correct port values into its config.
@@ -23,5 +22,4 @@ in {
   caddy_config_has_navidrome_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.navidrome}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
   caddy_config_has_adguard_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.adguard}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
   caddy_config_has_nextcloud_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.nextcloud}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
-  caddy_config_has_remote_control_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.remoteControl}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
 }

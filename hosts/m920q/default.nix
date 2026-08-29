@@ -399,7 +399,11 @@ in {
           address = "192.168.178.2/24";
           gateway = "192.168.178.1";
         };
-        autoRebootForKernel = true;
+        # Reboots are opt-in: a kernel update only takes effect after a reboot,
+        # but that must not destroy the long-lived homelab Zellij session. The
+        # maintenance module already sends an ntfy "Reboot Pending" alert when a
+        # kernel is deployed-but-not-booted, so reboot manually when convenient.
+        autoRebootForKernel = false;
       };
       # m920q hosts the ntfy endpoint and is always on, so it watches the
       # lock-refresh CI for every host; interactive `update` failures are
@@ -481,12 +485,6 @@ in {
     };
     homepage.enable = true;
     ntfy.enable = true;
-    remoteControl = {
-      enable = true;
-      # Tailscale Serve replaced by Caddy reverse proxy; caddyProxy handles
-      # the HTTPS endpoint at remote-control.m920q.tailf2f0ca.ts.net.
-      enableTailscaleServe = false;
-    };
     samba.enable = true;
     tailscale = {
       enable = true;

@@ -6,6 +6,5 @@
   grafana = 3001; # modules/system/homelab/monitoring.nix
   adguard = 3000; # modules/system/homelab/adguardhome.nix
   nextcloud = 8081; # modules/system/homelab/nextcloud.nix
-  remoteControl = 8082; # modules/system/homelab/remote-control.nix
   homepage = 3002; # modules/system/homelab/homepage.nix
 }
