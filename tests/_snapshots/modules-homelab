@@ -11,7 +11,7 @@
   has_zellij_web_port_assertion = true;
   monitoring_enabled = true;
   opencode_server_exec_start = [
-    "/nix/store/2bd2vamnfjy3807y0z1gwghr1pmrkp4v-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
+    "/nix/store/nlaf55kpbfy6qcclnd3pp2ql87jnzlvn-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
   ];
   opencode_server_working_directory = "/per/etc/nixos";
   opencode_web_enabled = true;
