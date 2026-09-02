@@ -20,6 +20,19 @@
       default = true;
       description = "Enable emergency access during initrd stage";
     };
+
+    deadmanAutoRecover = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        When systemd lands in emergency/rescue mode, start a countdown that
+        reboots the machine after a grace period. Combined with systemd-boot
+        boot counting, this gives unattended self-recovery: a wedged boot is
+        rolled back to the last-known-good generation instead of idling in an
+        emergency shell that locks out SSH/Tailscale/network. A human reaching
+        the console during the grace window can stop the countdown.
+      '';
+    };
   };
 
   config = let
@@ -152,6 +165,27 @@
       boot.initrd.systemd.settings.Manager = {
         DefaultStandardOutput = "tty";
         DefaultStandardError = "tty";
+      };
+
+      # Deadman switch: only active in emergency/rescue mode. Starts a long
+      # countdown; if no human stops it before it elapses, the machine reboots
+      # so systemd-boot boot counting rolls back to the previous generation.
+      # A human at the console can cancel it (systemctl stop emergency-deadman).
+      systemd.services.emergency-deadman = lib.mkIf config.system.emergency.deadmanAutoRecover {
+        description = "Reboot after grace period in emergency/rescue mode";
+        wantedBy = ["emergency.target" "rescue.target"];
+        after = ["emergency.target" "rescue.target"];
+        unitConfig.RequiresMountsFor = "/run";
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = "${pkgs.writeShellScript "emergency-deadman" ''
+            echo "Emergency/rescue mode reached. Reboot in 1200s unless cancelled (systemctl stop emergency-deadman)." >&2
+            sleep 1200
+            echo "Deadman expired; rebooting to trigger boot-counting rollback." >&2
+            ${pkgs.systemd}/bin/systemctl reboot
+          ''}";
+        };
       };
     };
 }
