@@ -76,14 +76,48 @@ in {
     };
 
     # Improves UDP forwarding throughput for Tailscale when interface is specified
-    systemd.services.tailscale-udp-gro-fix = lib.mkIf (cfg.udpGROInterface != null) {
-      description = "Apply UDP GRO forwarding settings for Tailscale on ${cfg.udpGROInterface}";
-      after = ["network.target"];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = "${pkgs.ethtool}/bin/ethtool -K ${cfg.udpGROInterface} rx-udp-gro-forwarding on rx-gro-list off";
+    systemd = {
+      services."tailscale-udp-gro-fix" = lib.mkIf (cfg.udpGROInterface != null) {
+        description = "Apply UDP GRO forwarding settings for Tailscale on ${cfg.udpGROInterface}";
+        after = ["network.target"];
+        wantedBy = ["multi-user.target"];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = "${pkgs.ethtool}/bin/ethtool -K ${cfg.udpGROInterface} rx-udp-gro-forwarding on rx-gro-list off";
+        };
+      };
+
+      # Self-healing watchdog: if tailscaled is up but has not authenticated /
+      # joined the tailnet, restart the service to re-establish connectivity.
+      # Protects against a single transient failure (stale state, brief network
+      # outage at boot) stranding the host unreachable via Tailscale.
+      timers.tailscale-watchdog = {
+        description = "Ensure Tailscale stays connected";
+        wantedBy = ["timers.target"];
+        after = ["tailscaled.service"];
+        timerConfig = {
+          OnBootSec = "5min";
+          OnUnitActiveSec = "10min";
+          RandomizedDelaySec = "30s";
+        };
+      };
+
+      services.tailscale-watchdog = {
+        description = "Restart tailscaled if the tailnet link is down";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.writeShellScript "tailscale-watchdog" ''
+            if ! ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1; then
+              echo "tailscale status failed; restarting tailscaled" >&2
+              ${pkgs.systemd}/bin/systemctl restart tailscaled
+              sleep 15
+              # Re-establish the tailnet from the daemon's persisted config
+              # (routes/DNS/exit-node are held by tailscaled, not the CLI).
+              ${pkgs.tailscale}/bin/tailscale up || echo "tailscale reconnection failed" >&2
+            fi
+          ''}";
+        };
       };
     };
 

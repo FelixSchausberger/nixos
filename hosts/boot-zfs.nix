@@ -15,6 +15,17 @@
           consoleMode = "max";
           configurationLimit = 20;
 
+          # Boot counting: if a new generation fails to boot to a usable state
+          # (drops to emergency/rescue), systemd-boot auto-rolls back to the
+          # last-known-good entry on the next boot. A boot is only marked "good"
+          # after boot-complete.target is reached, so a wedged boot is never
+          # cached as usable. This is the native NixOS answer to failing over
+          # to the previous working generation.
+          bootCounting = {
+            enable = true;
+            tries = 3;
+          };
+
           extraEntries = {
             "nixos-emergency.conf" = ''
               title NixOS Emergency Mode
