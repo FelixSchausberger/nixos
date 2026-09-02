@@ -166,7 +166,20 @@ in {
   boot.kernelParams = lib.mkAfter [
     "zfs.zfs_arc_max=8589934592"
     "zfs.zfs_arc_min=536870912"
+    # Serial console on the second UART (ttyS0 at 115200 baud). Gives an
+    # out-of-band text console via AMT Serial-over-LAN even when systemd drops
+    # to emergency/rescue mode and all network services are down. tty1 stays
+    # primary on the local display.
+    "console=ttyS0,115200n8"
   ];
+
+  # A getty on the AMT serial console: recover a text login via Serial-over-LAN
+  # with no monitor attached. Works independently of the GUI/tty1 config.
+  systemd.services."serial-getty@ttyS0" = {
+    enable = true;
+    wantedBy = ["getty.target"];
+    unitConfig.After = ["dev-ttyS0.device"];
+  };
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
@@ -319,6 +332,15 @@ in {
 
   hardware.steam-hardware.enable = true;
 
+  # Headless homelab: if systemd ever lands in emergency/rescue, auto-reboot
+  # after a grace period so systemd-boot boot counting rolls back to a working
+  # generation instead of idling locked out of SSH/Tailscale/network. A human
+  # at the console can cancel with: systemctl stop emergency-deadman
+  system.emergency = {
+    enable = true;
+    deadmanAutoRecover = true;
+  };
+
   modules.system = {
     # GUI mode is opt-in: casting is handled headless by airplay-receiver, so
     # enter niri via the boot-menu specialisation entry or manually:
@@ -370,16 +392,24 @@ in {
     "bpool"
   ];
 
+  # Non-critical pools must never drag the whole system into emergency mode.
+  # A failing mount of dpool/data or bpool/backup (e.g. USB backup drive not
+  # present at boot) previously failed local-fs.target, which dropped systemd
+  # into emergency and locked out SSH/Tailscale/network entirely. Automount (+
+  # noauto) makes these lazy: they mount on first access instead of at boot,
+  # so a failure becomes a per-open error rather than a system-wide event.
   fileSystems = {
     "/per/mnt/data" = {
       device = "dpool/data";
       fsType = "zfs";
       neededForBoot = false;
+      options = ["noauto" "x-systemd.automount"];
     };
     "/per/mnt/backup" = {
       device = "bpool/backup";
       fsType = "zfs";
       neededForBoot = false;
+      options = ["noauto" "x-systemd.automount"];
     };
   };
 
