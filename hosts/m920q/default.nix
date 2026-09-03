@@ -2,6 +2,22 @@
 # mode (niri specialisation via boot menu or manual mode-switch). AirPlay
 # casting runs headless (kmssink, udev-triggered) without any session.
 # Prioritizes low idle power while keeping a Niri specialisation available for local media use.
+#
+# Optimal BIOS (Setup F1) for this NixOS config — not declaratively settable
+# via Nix (NVRAM, outside /nix/store); kept here as single source of truth:
+#  Startup:  UEFI Only, CSM Disabled, Secure Boot Disabled (systemd-boot unsigned),
+#            Boot Priority: NVMe rpool first, USB last, Network Boot Disabled
+#  Devices:  SATA AHCI, Serial Port Enabled 3F8/IRQ4 (for console=ttyS0 SOL),
+#            Video: Auto, Audio Disabled (headless), USB Legacy Enabled
+#  Advanced: CPU: VT-x Enabled, VT-d Enabled, TXT Disabled, Hyper-Threading Enabled,
+#            C-States Enabled, Turbo Enabled, Above 4G Decoding Disabled
+#            Intel Manageability: Enabled, Ctrl-P Enabled, SOL/IDER/KVM Enabled,
+#            VT-UTF8 115200n8, Network DHCP (reserve .10 in Fritz!Box), USB Prov Disabled
+#  Security: TPM Enabled (if present), SGX Software Controlled / State Disabled + nosgx
+#            kernel param (intentional, SGX deprecated, silences "SGX disabled" line),
+#            Secure Boot Disabled, Intel TXT Disabled, Computrace Disabled
+#  Power:    After Power Loss: Power On, Wake on LAN Enabled (eno1), Deep Sleep Disabled,
+#            Automatic Power On Disabled, Enhanced Power Saving Disabled
 {
   config,
   inputs,
@@ -171,6 +187,11 @@ in {
     # to emergency/rescue mode and all network services are down. tty1 stays
     # primary on the local display.
     "console=ttyS0,115200n8"
+    # SGX is deprecated/unused on this headless homelab and the BIOS leaves it
+    # disabled. Suppress the informational "x86/cpu: SGX disabled by BIOS"
+    # message that otherwise appears as the last log line before boot stalls on
+    # an unrelated failure, which misleads diagnosis.
+    "nosgx"
   ];
 
   # A getty on the AMT serial console: recover a text login via Serial-over-LAN
