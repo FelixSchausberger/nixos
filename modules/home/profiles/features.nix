@@ -3,6 +3,7 @@
   lib,
   pkgs,
   inputs,
+  osConfig,
   ...
 }: {
   options.features = {
@@ -128,7 +129,8 @@
       (lib.mkIf config.features.gaming.enable (
         with pkgs;
           lib.optionals (lib.elem "steam" config.features.gaming.platforms) [
-            steam # Gaming platform
+            # Steam client comes from programs.steam (modules/system/steam.nix),
+            # not a user package, so the FHS runtime and hardware udev rules apply
           ]
           ++ lib.optionals (lib.elem "lutris" config.features.gaming.platforms) [
             lutris
@@ -183,5 +185,88 @@
 
       git.enable = lib.mkDefault true;
     };
+
+    # Extra Steam library folders declared on the host via
+    # modules.system.steam.extraLibraryFolders, merged into
+    # libraryfolders.vdf (config copy, mirrored to the steamapps copy —
+    # current clients load the steamapps copy and rewrite both on launch).
+    # Steam populates apps/tallies itself on next launch. Skipped while
+    # Steam runs (it rewrites the file on exit) and when a folder has no
+    # steamapps dir (pool not mounted counts as absent, never created).
+    # STEAM_LIBRARIES_ALLOW_RUNNING=1 overrides the running check for
+    # testing only.
+    home.activation.steamLibraries = let
+      folders = lib.attrByPath ["modules" "system" "steam" "extraLibraryFolders"] [] osConfig;
+      register = pkgs.writeShellApplication {
+        name = "steam-register-libraries";
+        runtimeInputs = [pkgs.python3 pkgs.procps];
+        text = ''
+          set -euo pipefail
+          vdf="$HOME/.local/share/Steam/config/libraryfolders.vdf"
+          mirror="$HOME/.local/share/Steam/steamapps/libraryfolders.vdf"
+          if [[ ! -f $vdf ]]; then
+            echo "steam-libraries: $vdf missing (Steam never launched?), skipping"
+            exit 0
+          fi
+          if [[ -z "''${STEAM_LIBRARIES_ALLOW_RUNNING:-}" ]] && pgrep -x steam >/dev/null; then
+            echo "steam-libraries: Steam is running, skipping (close Steam and rebuild to apply)" >&2
+            exit 0
+          fi
+          before="$(${pkgs.coreutils}/bin/md5sum "$vdf" | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
+          for dir in "$@"; do
+            if [[ ! -d "$dir/steamapps" ]]; then
+              echo "steam-libraries: $dir/steamapps missing (pool not mounted?), skipping" >&2
+              continue
+            fi
+            ${pkgs.python3}/bin/python3 - "$vdf" "$dir" <<'PYEOF'
+          import re, sys
+          vdf, libdir = sys.argv[1], sys.argv[2]
+          text = open(vdf, encoding="utf-8").read()
+          if f'"path"\t\t"{libdir}"' in text:
+              print(f"steam-libraries: {libdir} already registered")
+              sys.exit(0)
+          indices = [int(m) for m in re.findall(r'^\t"(\d+)"$', text, re.M)]
+          if not indices:
+              print("steam-libraries: no library entries found, refusing to edit", file=sys.stderr)
+              sys.exit(1)
+          contentid = "0"
+          try:
+              with open(f"{libdir}/libraryfolder.vdf", encoding="utf-8") as f:
+                  m = re.search(r'"contentid"\s+"(\d+)"', f.read())
+                  if m:
+                      contentid = m.group(1)
+          except OSError:
+              pass
+          stripped = text.rstrip()
+          if not stripped.endswith("}"):
+              print("steam-libraries: unexpected VDF tail, refusing to edit", file=sys.stderr)
+              sys.exit(1)
+          block = (
+              f'\t"{max(indices) + 1}"\n\t{{\n'
+              f'\t\t"path"\t\t"{libdir}"\n'
+              '\t\t"label"\t\t""\n'
+              f'\t\t"contentid"\t\t"{contentid}"\n'
+              '\t\t"totalsize"\t\t"0"\n'
+              '\t\t"update_clean_bytes_tally"\t\t"0"\n'
+              '\t\t"time_last_update_verified"\t\t"0"\n'
+              '\t\t"apps"\n\t\t{\n\t\t}\n\t}\n'
+          )
+          open(vdf, "w", encoding="utf-8").write(stripped[: -1] + block + "}\n")
+          print(f"steam-libraries: registered {libdir}")
+          PYEOF
+          done
+          after="$(${pkgs.coreutils}/bin/md5sum "$vdf" | ${pkgs.coreutils}/bin/cut -d' ' -f1)"
+          if [[ $before != "$after" && -f $mirror ]]; then
+            ${pkgs.coreutils}/bin/cp "$vdf" "$mirror"
+            echo "steam-libraries: mirrored to steamapps copy"
+          fi
+        '';
+      };
+    in
+      lib.mkIf (config.features.gaming.enable && lib.elem "steam" config.features.gaming.platforms && folders != []) (
+        lib.hm.dag.entryAfter ["writeBoundary"] ''
+          $DRY_RUN_CMD ${register}/bin/steam-register-libraries ${lib.escapeShellArgs folders}
+        ''
+      );
   };
 }

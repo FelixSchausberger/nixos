@@ -19,19 +19,30 @@
       # Increase connection pools and timeouts
       CHROME_NET_TCP_SOCKET_CONNECT_TIMEOUT_MS = "60000";
       CHROME_NET_TCP_SOCKET_CONNECT_ATTEMPT_DELAY_MS = "2000";
-
-      # NixOS-specific optimizations for Zed
-      # Vulkan support (required for Zed) - Auto-detected drivers
-      VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json:/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json:/run/opengl-driver/share/vulkan/icd.d/intel_icd.x86_64.json";
-      # GPU library paths
-      LD_LIBRARY_PATH = "/run/opengl-driver/lib";
-      # Mesa GPU acceleration
-      MESA_GL_VERSION_OVERRIDE = "4.6";
     };
   };
 
   programs.zed-editor = {
     enable = true;
+
+    # GPU driver env scoped to Zed via wrapper. These must not live in
+    # sessionVariables: VK_DRIVER_FILES replaces ICD discovery for every
+    # process in the session (and references an nvidia ICD absent on AMD
+    # hosts), a global LD_LIBRARY_PATH breaks Nix library isolation, and
+    # MESA_GL_VERSION_OVERRIDE alters GL for all native titles.
+    package = pkgs.symlinkJoin {
+      name = "zed-editor-wrapped";
+      paths = [pkgs.zed-editor];
+      nativeBuildInputs = [pkgs.makeWrapper];
+      postBuild = ''
+        # Binary is zeditor, not zed (nixpkgs renames it to avoid the
+        # ZFS event daemon of the same name).
+        wrapProgram $out/bin/zeditor \
+          --set VK_DRIVER_FILES "/run/opengl-driver/share/vulkan/icd.d/radeon_icd.x86_64.json:/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json:/run/opengl-driver/share/vulkan/icd.d/intel_icd.x86_64.json" \
+          --prefix LD_LIBRARY_PATH : "/run/opengl-driver/lib" \
+          --set MESA_GL_VERSION_OVERRIDE "4.6"
+      '';
+    };
 
     # Extensions using Home Manager's built-in support
     extensions = [
