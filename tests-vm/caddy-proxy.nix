@@ -108,16 +108,6 @@
             default = ports.nextcloud;
           };
         };
-        remoteControl = {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = true;
-          };
-          port = lib.mkOption {
-            type = lib.types.port;
-            default = ports.remoteControl;
-          };
-        };
         homepage = {
           enable = lib.mkOption {
             type = lib.types.bool;

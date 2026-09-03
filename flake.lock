@@ -1264,15 +1264,16 @@
         "systems": "systems_6"
       },
       "locked": {
-        "lastModified": 1788097290,
-        "narHash": "sha256-bfwWkKPdRA3vE04ovn6b2DUyp1nDtDtN/6j0pVk9thA=",
+        "lastModified": 1786593252,
+        "narHash": "sha256-+1FZgqViuQYZkhjxvbAg9l8vvazyA5RACyVRL7ubWHQ=",
         "owner": "versenilvis",
         "repo": "IRIS",
-        "rev": "53b287e20a880210ec39de4762de2a595f1d9ad9",
+        "rev": "45d182f07287e4ab1a62169c6b194b4ca276bedc",
         "type": "github"
       },
       "original": {
         "owner": "versenilvis",
+        "ref": "v0.6.3",
         "repo": "IRIS",
         "type": "github"
       }

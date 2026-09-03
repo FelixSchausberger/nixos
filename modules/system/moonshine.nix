@@ -38,6 +38,11 @@ in {
       enable = true;
       inherit (cfg) user;
 
+      # Xwayland hosts X11 applications (notably Steam Big Picture) inside
+      # Moonshine's headless compositor; without it healthcheck warns
+      # "Xwayland not found in PATH".
+      extraPackages = [pkgs.xwayland];
+
       # eno1 for LAN clients, tailscale0 for remote Moonlight sessions.
       # The nixpkgs module replaces the old flake's global openFirewall;
       # mkDefault lets consumers retarget other interface names (VM tests).
