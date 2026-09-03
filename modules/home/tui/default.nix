@@ -22,6 +22,7 @@ in {
     ./ollama.nix # Get up and running with large language models locally
     ./rbw.nix # Unofficial Bitwarden CLI for password management
     ./rclone.nix # Sync files and directories to and from major cloud storage
+    ./amt.nix # Intel AMT SOL for m920q (amtterm + amttool via sops)
     ./sops.nix # Simple and flexible tool for managing secrets
     # ./spotify-player.nix # Terminal-based Spotify client with full feature parity
     ./typix.nix # Typst: A markup-based typesetting system
