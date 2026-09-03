@@ -20,11 +20,9 @@
     fi
   '';
   # Cover art for the Steam tile in Moonlight clients (silences the
-  # "No boxart defined" warning per launch). Valve store header logo.
-  steamBoxart = pkgs.fetchurl {
-    url = "https://store.cloudflare.steamstatic.com/public/images/v6/globalheader_logo.png";
-    sha256 = "1gccmwsnxazjqnxyqphmrw8kix0p5xpfcham02a1l8xdd91c6bmb";
-  };
+  # "No boxart defined" warning per launch). Round app icon shipped by the
+  # Steam client itself; verified present at this path in the nixpkgs build.
+  steamBoxart = "${pkgs.steam}/share/icons/hicolor/256x256/apps/steam.png";
 in {
   options.modules.system.moonshine = {
     enable = lib.mkEnableOption "Moonshine game streaming server (Moonlight protocol)";
