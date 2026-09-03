@@ -44,6 +44,7 @@ in {
       ./disko.nix
       ../shared-tui.nix
       ../boot-zfs.nix
+      ../../modules/system/boot-fallback.nix
       ../../modules/system/m920q.nix
       ../../modules/system/specialisations.nix
       ../../modules/system/homelab
@@ -215,6 +216,29 @@ in {
   systemd.settings.Manager = {
     RuntimeWatchdogSec = "30s";
     ShutdownWatchdogSec = "5min";
+  };
+
+  # Pre-userspace hang timer: initrd-stage systemd arms the iTCO watchdog,
+  # covering ZFS import/rollback/switch-root hangs. 60s margin for slow SMR
+  # pool imports (systemd pets continuously; only a stalled PID 1 stalls pets).
+  # boot.initrd.kernelModules forces iTCO_wdt into the initrd so /dev/watchdog
+  # exists before initrd systemd starts.
+  boot.initrd.kernelModules = ["iTCO_wdt"];
+  boot.initrd.systemd.settings.Manager = {
+    RuntimeWatchdogSec = "60s";
+    RebootWatchdogSec = "10min";
+  };
+
+  # Convert detectable lockups into panic=30 reboots so boot counting advances.
+  # Sysctl names verified present on the running kernel via sysctl -a.
+  # hung_task at 240s (not lower): SMR pool IO can legitimately stall tasks
+  # for minutes; a hair-trigger here would reboot-loop a healthy-but-busy server.
+  boot.kernel.sysctl = {
+    "kernel.nmi_watchdog" = 1;
+    "kernel.hardlockup_panic" = 1;
+    "kernel.softlockup_panic" = 1;
+    "kernel.hung_task_panic" = 1;
+    "kernel.hung_task_timeout_secs" = 240;
   };
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
@@ -392,6 +416,9 @@ in {
     m920q.enable = true;
     stylix-catppuccin.enable = true;
     containers.enable = true;
+    # Bless-driven cleanup: generations whose boot entries exhausted their
+    # tries are deleted once enough good generations exist (see module).
+    bootFallback.enable = true;
     # Pull-based GitOps: converge to main automatically. m920q hosts the ntfy
     # endpoint itself, so alerts go through the loopback address.
     comin = {
