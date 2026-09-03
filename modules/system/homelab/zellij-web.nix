@@ -5,7 +5,7 @@
 #   - `zellij web` runs as a systemd system service under the primary user so it
 #     can serve sessions that user starts via SSH. It binds to 127.0.0.1 only.
 #   - A tailscale serve oneshot terminates TLS on a dedicated HTTPS port and
-#     forwards to the local web server, mirroring remote-control.nix.
+#     forwards to the local web server.
 #   - Clients attach with the documented format
 #     `zellij attach https://<host>:<httpsPort>/<session-name>`. The URL path is
 #     the session name, so Zellij must be served at root (no path-routed Caddy
@@ -26,6 +26,14 @@
   # Matches the primary user UID already hardcoded in the m920q mode-switch script.
   uid = 1000;
   runtimeDir = "/run/user/${toString uid}";
+
+  # Port of the persistent shared opencode server (opencode-web HM user service).
+  # The web session seeds an attach pane to it so phone access survives reboots.
+  opencodePort = config.modules.system.homelab.opencodeWeb.port;
+  # Waits for the shared server, then attaches (avoids an empty pane if the user
+  # service is not up yet at seed time). Uses `opencode attach` (not a throwaway
+  # `opencode`) so it joins the same session store as the web UI and other clients.
+  opencodeSeedCmd = "${pkgs.bash}/bin/sh -c 'until ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString opencodePort} >/dev/null 2>&1; do sleep 2; done; exec opencode attach http://127.0.0.1:${toString opencodePort}'";
 in {
   options.modules.system.homelab.zellijWeb = {
     enable = lib.mkEnableOption "Zellij web server for remote terminal sessions";
@@ -33,7 +41,7 @@ in {
     port = lib.mkOption {
       type = lib.types.port;
       default = 8083;
-      description = "Local port the Zellij web server binds on (remote-control uses 8082)";
+      description = "Local port the Zellij web server binds on";
     };
 
     httpsPort = lib.mkOption {
@@ -54,10 +62,6 @@ in {
       {
         assertion = cfg.tailnetDomain != "";
         message = "modules.system.homelab.zellijWeb.tailnetDomain must be set (e.g. 'm920q.tailf2f0ca.ts.net')";
-      }
-      {
-        assertion = cfg.port != 8082;
-        message = "modules.system.homelab.zellijWeb.port must differ from 8082 (remote-control uses it)";
       }
     ];
 
@@ -84,9 +88,26 @@ in {
         Type = "simple";
         Restart = "always";
         RestartSec = "5";
-        ExecStart =
-          "${pkgs.zellij}/bin/zellij web --start "
-          + "--ip 127.0.0.1 --port ${toString cfg.port}";
+        ExecStart = pkgs.writeShellScript "zellij-web" ''
+          set -u
+          # Seed the web session with an opencode attach pane once the server is up.
+          # Runs in a subshell so `exec` below stays the service's main process
+          # (systemd manages the zellij web server correctly on stop/restart).
+          (
+            for _ in $(seq 1 30); do
+              if ${pkgs.zellij}/bin/zellij list-sessions --no-formatting 2>/dev/null | grep -qx web; then
+                break
+              fi
+              sleep 1
+            done
+            # Idempotent: skip if a pane already references opencode (e.g. after a
+            # service restart that preserved the session).
+            if ! ZELLIJ_SESSION_NAME=web ${pkgs.zellij}/bin/zellij action dump-layout 2>/dev/null | grep -q "opencode"; then
+              ZELLIJ_SESSION_NAME=web ${pkgs.zellij}/bin/zellij action new-pane -- ${opencodeSeedCmd} 2>/dev/null || true
+            fi
+          ) &
+          exec ${pkgs.zellij}/bin/zellij web --start --ip 127.0.0.1 --port ${toString cfg.port}
+        '';
         Environment = [
           "HOME=${homeDir}"
           # Login-equivalent PATH so sessions spawned by the web server can

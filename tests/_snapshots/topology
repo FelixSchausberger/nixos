@@ -6,7 +6,7 @@
   d2_has_m920q = true;
   d2_has_tailscale = true;
   d2_text_nonempty = true;
-  enabled_service_count = 8;
+  enabled_service_count = 7;
   enabled_services = [
     "adguardhome"
     "immich"
@@ -14,7 +14,6 @@
     "navidrome"
     "nextcloud"
     "ntfy"
-    "remoteControl"
     "zellijWeb"
   ];
   has_immich = true;

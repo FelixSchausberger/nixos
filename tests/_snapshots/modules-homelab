@@ -8,7 +8,6 @@
   has_monitoring_ports_assertion = true;
   has_opencode_web_https_assertion = true;
   has_tailscale_interface_assertion = true;
-  has_zellij_web_port_assertion = true;
   monitoring_enabled = true;
   opencode_server_exec_start = [
     "/nix/store/yfxklfz8hhgmk4lg3yr7qj1kl92ml9s7-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
@@ -26,6 +25,6 @@
   zellij_web_https_port = 8443;
   zellij_web_linger = true;
   zellij_web_port = 8083;
-  zellij_web_service_exec_start = "/nix/store/61sm1w21ywx919j91hnryqbmqw8sdbxp-zellij-0.45.1/bin/zellij web --start --ip 127.0.0.1 --port 8083";
+  zellij_web_service_exec_start = <derivation zellij-web>;
   zellij_web_tailnet_domain = "m920q.tailf2f0ca.ts.net";
 }
