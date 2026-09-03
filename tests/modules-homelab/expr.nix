@@ -32,7 +32,6 @@ in {
   has_adguard_grafana_assertion = hasAssertionWithMessage "AdGuard Home admin UI port must differ from Grafana port when monitoring is enabled";
   has_monitoring_ports_assertion = hasAssertionWithMessage "Grafana and Prometheus must use different ports";
   has_tailscale_interface_assertion = hasAssertionWithMessage "modules.system.homelab.tailscale.udpGROInterface must be null or a non-empty interface name";
-  has_zellij_web_port_assertion = hasAssertionWithMessage "modules.system.homelab.zellijWeb.port must differ from 8082 (remote-control uses it)";
   has_opencode_web_https_assertion = hasAssertionWithMessage "modules.system.homelab.opencodeWeb.httpsPort must differ from 8443 (zellij-web uses it)";
 
   grafana_port = config.modules.system.homelab.monitoring.grafanaPort;

@@ -72,13 +72,6 @@ in {
       description = "Expose Nextcloud via Tailscale at <tailnetDomain>/nextcloud";
     };
 
-    remoteControl = lib.mkOption {
-      type = lib.types.bool;
-      default = hl.remoteControl.enable;
-      defaultText = lib.literalExpression "config.modules.system.homelab.remoteControl.enable";
-      description = "Expose remote-control web UI via Tailscale at <tailnetDomain>/remote-control";
-    };
-
     homepage = lib.mkOption {
       type = lib.types.bool;
       default = hl.homepage.enable;
@@ -114,10 +107,6 @@ in {
         message = "caddyProxy.nextcloud requires modules.system.homelab.nextcloud.enable = true";
       }
       {
-        assertion = !cfg.remoteControl || hl.remoteControl.enable;
-        message = "caddyProxy.remoteControl requires modules.system.homelab.remoteControl.enable = true";
-      }
-      {
         assertion = !cfg.homepage || hl.homepage.enable;
         message = "caddyProxy.homepage requires modules.system.homelab.homepage.enable = true";
       }
@@ -144,7 +133,6 @@ in {
           + lib.optionalString cfg.grafana (mkRoute "grafana" hl.monitoring.grafanaPort)
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
-          + lib.optionalString cfg.remoteControl (mkRoute "remote-control" hl.remoteControl.port)
           + lib.optionalString cfg.homepage (mkRoute "homepage" hl.homepage.port)
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.

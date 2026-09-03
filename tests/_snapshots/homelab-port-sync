@@ -5,11 +5,9 @@
   caddy_config_has_immich_port = true;
   caddy_config_has_navidrome_port = true;
   caddy_config_has_nextcloud_port = true;
-  caddy_config_has_remote_control_port = true;
   grafana_port = true;
   homepage_port = true;
   immich_port = true;
   navidrome_port = true;
   nextcloud_port = true;
-  remote_control_port = true;
 }

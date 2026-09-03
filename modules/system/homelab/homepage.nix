@@ -8,25 +8,19 @@
   inherit (lib) mkIf;
 
   # Build services YAML from enabled homelab services
-  infraServices =
-    [
-      {
-        "M920q" = {
-          icon = "mdi-server";
-          href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
-          description = "Homelab Server";
-        };
-      }
-    ]
-    ++ lib.optionals hl.remoteControl.enable [
-      {
-        "Desktop" = {
-          icon = "mdi-desktop-tower";
-          href = "http://${hl.remoteControl.desktopIp}";
-          description = "Desktop Workstation";
-        };
-      }
-    ];
+  # Remote wake for the gaming PC lives on the router, not here:
+  # Fritz!Box Heimnetz → computer → "Computer starten" (or MyFRITZ!App
+  # when off-LAN). The Moonlight / Steam Link apps handle wake + presence
+  # on the LAN themselves. The Fritz!Box card under Network links there.
+  infraServices = [
+    {
+      "M920q" = {
+        icon = "mdi-server";
+        href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
+        description = "Homelab Server";
+      };
+    }
+  ];
 
   mediaServices =
     lib.optionals hl.immich.enable [
@@ -101,15 +95,6 @@
           icon = "mdi-bell";
           href = "http://192.168.178.2:2586";
           description = "Push Notifications";
-        };
-      }
-    ]
-    ++ lib.optionals hl.remoteControl.enable [
-      {
-        "Remote Control" = {
-          icon = "mdi-remote";
-          href = "https://${hl.caddyProxy.tailnetDomain}/remote-control";
-          description = "Device Control";
         };
       }
     ]

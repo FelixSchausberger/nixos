@@ -226,8 +226,11 @@
     };
 
     # Shell autocomplete assistant (fish-like completions for bash)
+    # Pinned to a release tag: upstream main has a stale vendorHash (go-modules
+    # FOD hash mismatch) that breaks m920q builds and the cachix push job. A
+    # ref-pinned input is not moved by the daily dependency update.
     iris = {
-      url = "github:versenilvis/IRIS";
+      url = "github:versenilvis/IRIS/v0.6.3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
