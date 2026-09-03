@@ -42,10 +42,9 @@ niri-reload:
     echo "Activating new home-manager generation..."
     /tmp/niri-home-config/activate
 
-    # Reload Niri config
-    echo "Reloading Niri..."
-    niri msg config-reload
-    echo "✓ Niri config reloaded successfully"
+    # No explicit reload needed: niri watches config.kdl via inotify and
+    # hot-reloads as soon as activation writes the new file above.
+    echo "✓ Niri config activated (niri hot-reloads automatically)"
 
 # Watch for Niri config changes and auto-validate
 niri-watch:

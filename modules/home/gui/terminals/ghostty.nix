@@ -51,6 +51,10 @@
         "ctrl+shift+plus=increase_font_size:1"
         "ctrl+shift+minus=decrease_font_size:1"
         "ctrl+shift+zero=reset_font_size"
+        # Ghostty defaults ctrl+enter to toggle_fullscreen, which steals the
+        # key from TUI apps (opencode uses ctrl+enter for line breaks).
+        # Unbind it so the keypress reaches the PTY instead.
+        "ctrl+enter=unbind"
       ];
     };
   };
