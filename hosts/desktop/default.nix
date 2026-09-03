@@ -128,6 +128,9 @@ in {
   # steal the steam:// URL and break the stream — upstream issue #134).
   modules.system.moonshine.enable = true;
   modules.system.gaming.enable = true;
+  # Steam game library on the games pool; registered into libraryfolders.vdf
+  # by home activation (skipped while Steam runs, applied on next rebuild)
+  modules.system.steam.extraLibraryFolders = ["/per/mnt/games/SteamLibrary"];
 
   # OpenLDAP 2.6.13 test suite has a regression (provider/consumer DB mismatch).
   # Skip tests rather than wait for upstream fix; runtime is unaffected.

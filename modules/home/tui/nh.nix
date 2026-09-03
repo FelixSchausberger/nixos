@@ -31,8 +31,9 @@ _: {
   # automatically through comin; `update` triggers CI and restarts comin for
   # immediate convergence. The downgrade guard is mandatory in the deploy
   # path and ALLOW_DOWNGRADE=1 (bulk bypass) is refused; intentional
-  # per-package downgrades go through ALLOW_DOWNGRADES or an input pin in
-  # flake.nix. Automated comin deployments cannot block, so they report
+  # per-package downgrades go through `deploy-allow <pkgs...>`, which passes
+  # ALLOW_DOWNGRADES through the same chain, or an input pin in flake.nix.
+  # Automated comin deployments cannot block, so they report
   # regressions to ntfy instead (modules/system/comin.nix).
   programs.fish.shellAliases = {
     # Build, block regressions, then switch the guarded store path
@@ -50,5 +51,16 @@ _: {
     clean = "nh clean all";
     osinfo = "nh os info";
     search = "nh search";
+  };
+
+  # Deploy with per-package downgrade allowance. Takes package names, not
+  # flags: `deploy-allow python3.14-smmap`. A separate function (rather than
+  # a `deploy` flag) because fish aliases expand to static strings and cannot
+  # forward arguments into the middle of the chain.
+  programs.fish.functions.deploy-allow = {
+    description = "Deploy with per-package downgrade allowance (e.g. deploy-allow python3.14-smmap)";
+    body = ''
+      jj --repository $NH_FLAKE status; and nh os build -S -o /tmp/nh-result; and ALLOW_DOWNGRADES="$argv" $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system
+    '';
   };
 }
