@@ -26,7 +26,29 @@
     then pkgs.wezterm
     else pkgs.ghostty;
 
-  fileManagerPkg = pkgs.cosmic-files;
+  # File manager lookup: package and desktop ID follow the fileManager
+  # option so switching managers updates install, env, and MIME defaults
+  # together. Unknown values fall back to COSMIC Files, matching the
+  # silent-fallback style of terminalPkg/browserPkg above.
+  fileManagerInfo =
+    {
+      cosmic-files = {
+        package = pkgs.cosmic-files;
+        desktopId = "com.system76.CosmicFiles.desktop";
+      };
+      nautilus = {
+        package = pkgs.nautilus;
+        desktopId = "org.gnome.Nautilus.desktop";
+      };
+    }
+    .${
+      cfg.fileManager
+    } or {
+      package = pkgs.cosmic-files;
+      desktopId = "com.system76.CosmicFiles.desktop";
+    };
+
+  fileManagerPkg = fileManagerInfo.package;
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
@@ -72,7 +94,7 @@ in {
     fileManager = lib.mkOption {
       type = lib.types.str;
       default = "cosmic-files";
-      description = "Default file manager";
+      description = "Default file manager (cosmic-files, nautilus)";
       example = "cosmic-files";
     };
 
@@ -124,13 +146,20 @@ in {
       avizo # OSD for volume/brightness
       inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
       udiskie # Auto-mount
-      cosmic-files # File manager
+      fileManagerPkg # File manager selected via wm.hyprland.fileManager
       # Cursor themes
       adwaita-icon-theme # For Adwaita cursor theme
       bibata-cursors # Better cursor theme
 
       # Screenshot tools provided by shared/satty.nix
     ];
+
+    # Directory MIME default follows the fileManager option. Without an
+    # explicit default, codium.desktop wins mimeinfo.cache sort order and
+    # captures xdg-open on directories (Steam "Browse Local Files" included).
+    xdg.mimeApps.defaultApplications = {
+      "inode/directory" = [fileManagerInfo.desktopId];
+    };
 
     wayland.windowManager.hyprland = {
       enable = true;

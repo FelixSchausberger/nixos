@@ -30,8 +30,7 @@ in
 
     # Desktop-specific packages (gaming and productivity)
     home.packages = with pkgs; [
-      # Core gaming
-      steam
+      # Core gaming (Steam client comes from programs.steam, not a user package)
       lutris
       bottles
 
