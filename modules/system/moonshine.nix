@@ -19,6 +19,12 @@
       done
     fi
   '';
+  # Cover art for the Steam tile in Moonlight clients (silences the
+  # "No boxart defined" warning per launch). Valve store header logo.
+  steamBoxart = pkgs.fetchurl {
+    url = "https://store.cloudflare.steamstatic.com/public/images/v6/globalheader_logo.png";
+    sha256 = "1gccmwsnxazjqnxyqphmrw8kix0p5xpfcham02a1l8xdd91c6bmb";
+  };
 in {
   options.modules.system.moonshine = {
     enable = lib.mkEnableOption "Moonshine game streaming server (Moonlight protocol)";
@@ -50,15 +56,40 @@ in {
 
       settings = {
         name = "Moonshine";
+
+        # German keyboard for in-game chat (upstream default is "us").
+        compositor.keyboard.layout = "de";
+
         application = [
           {
             title = "Steam";
+            boxart = "${steamBoxart}";
             command = [
               "/run/current-system/sw/bin/steam"
               "steam://open/bigpicture"
             ];
             # Journal logging keeps failed session launches diagnosable
             # (the default discards all application output).
+            stdout = "journal";
+            stderr = "journal";
+            pre_command = [
+              ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
+            ];
+          }
+        ];
+
+        # Per-game tiles straight in Moonlight: launch titles directly instead
+        # of navigating Big Picture on touch. Upstream default scanner with
+        # NixOS paths; same single-instance shutdown guard as above.
+        application_scanner = [
+          {
+            type = "steam";
+            library = "$HOME/.local/share/Steam";
+            command = [
+              "/run/current-system/sw/bin/steam"
+              "-bigpicture"
+              "steam://rungameid/{game_id}"
+            ];
             stdout = "journal";
             stderr = "journal";
             pre_command = [
