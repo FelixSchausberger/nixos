@@ -183,11 +183,13 @@ in {
   boot.kernelParams = lib.mkAfter [
     "zfs.zfs_arc_max=8589934592"
     "zfs.zfs_arc_min=536870912"
-    # Serial console on the second UART (ttyS0 at 115200 baud). Gives an
-    # out-of-band text console via AMT Serial-over-LAN even when systemd drops
-    # to emergency/rescue mode and all network services are down. tty1 stays
-    # primary on the local display.
-    "console=ttyS0,115200n8"
+    # Do NOT add "console=ttyS0,115200n8" here. The ttyS0 UART on this board
+    # is the ME/AMT virtual serial (PCI 00:16.3), not the physical COM port,
+    # and registering it as a kernel console hangs the boot silently right
+    # after the EFI stub (no console ever registers; Sep 2026: every bootable
+    # generation lacks it, five hanging generations across 6.18.48/6.12.107
+    # all had it, menu-editor removal test boots). Post-boot SOL login still
+    # works via serial-getty@ttyS0 below once AMT has an IP.
     # SGX is deprecated/unused on this headless homelab and the BIOS leaves it
     # disabled. Suppress the informational "x86/cpu: SGX disabled by BIOS"
     # message that otherwise appears as the last log line before boot stalls on
