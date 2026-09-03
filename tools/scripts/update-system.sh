@@ -76,7 +76,9 @@ else
 
 	echo "update: streaming run $run_id"
 	set +e
-	timeout "$TIMEOUT_SECS" gh_ run watch "$run_id" \
+	# timeout(1) execs a binary and cannot see the gh_() shell function,
+	# so call gh directly here (previously: timeout ... gh_ ... -> exit 127).
+	timeout "$TIMEOUT_SECS" gh -R "$REPO" run watch "$run_id" \
 		--exit-status --interval "$POLL_INTERVAL"
 	watch_rc=$?
 	set -e
