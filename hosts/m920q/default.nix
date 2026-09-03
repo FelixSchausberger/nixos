@@ -192,6 +192,12 @@ in {
     # message that otherwise appears as the last log line before boot stalls on
     # an unrelated failure, which misleads diagnosis.
     "nosgx"
+    # Hide informational spam (ACPI AE_ALREADY_EXISTS flood, ~56 lines) so a
+    # real hang point is visible on console/SOL photos. Errors still journaled.
+    "loglevel=3"
+    # Reboot 30s after a kernel panic instead of hanging forever, so boot
+    # counting can advance to a fallback entry. No effect on silent hangs.
+    "panic=30"
   ];
 
   # A getty on the AMT serial console: recover a text login via Serial-over-LAN
@@ -202,7 +208,24 @@ in {
     unitConfig.After = ["dev-ttyS0.device"];
   };
 
+  # iTCO watchdog (/dev/watchdog0, driver already autoloads): a wedged OS
+  # resets instead of idling unreachable. Covers runtime hangs only, not
+  # early-boot hangs (systemd not yet running) — those still need AMT power
+  # control until the 6.18 boot regression is resolved.
+  systemd.settings.Manager = {
+    RuntimeWatchdogSec = "30s";
+    ShutdownWatchdogSec = "5min";
+  };
+
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+
+  # 6.18.48 hangs before journald on this box (5 failed boots, zero journals;
+  # 6.18.45 boots). Pin LTS 6.12 until the 6.18 regression is diagnosed. If a
+  # 6.12 boot also hangs, the fault is in the initrd/closure, not the kernel.
+  # Unpin when a newer 6.18 boots cleanly. The ZFS module rebuild follows the
+  # pinned kernel via the hosts/boot-zfs.nix override. No new flake input:
+  # linuxPackages_6_12 ships in the existing nixpkgs pin (6.12.107, cached).
+  boot.kernelPackages = lib.mkForce pkgs.linuxPackages_6_12;
 
   services.xserver.videoDrivers = lib.mkDefault [
     "modesetting"
@@ -403,6 +426,8 @@ in {
         # but that must not destroy the long-lived homelab Zellij session. The
         # maintenance module already sends an ntfy "Reboot Pending" alert when a
         # kernel is deployed-but-not-booted, so reboot manually when convenient.
+        # (Also guards the 6.18.48 hang: no nightly auto-reboot into a
+        # hanging entry while boot entries are untrusted.)
         autoRebootForKernel = false;
       };
       # m920q hosts the ntfy endpoint and is always on, so it watches the
