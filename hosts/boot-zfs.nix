@@ -47,7 +47,7 @@
           efiSysMountPoint = "/boot"; # Adjust if your ESP is mounted elsewhere
         };
 
-        timeout = 0;
+        timeout = 5; # Non-zero so Space-menu / editor is reachable for one-shot debug without Space-hold timing
       };
 
       # Use default LTS kernel (automatically compatible with ZFS stable)
