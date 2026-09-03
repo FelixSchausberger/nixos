@@ -7,6 +7,7 @@ Automated daily update of flake inputs and required Namaka snapshots.
 No input revisions changed.
 
 **Validation:**
+
 - Namaka snapshot checks run in this workflow
 - CI validates flake evaluation and builds
 - PR is auto-merged when required checks pass
