@@ -171,7 +171,6 @@
     niri = {
       url = "github:epireyn/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.niri-unstable.url = "github:niri-wm/niri";
     };
 
     # Window manager and system tools

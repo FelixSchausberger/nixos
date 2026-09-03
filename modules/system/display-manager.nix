@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  inputs,
   config,
   hostConfig,
   ...
@@ -34,7 +35,7 @@
     else if wm == "cosmic"
     then "cosmic-session"
     else if wm == "niri"
-    then "${pkgs.niri}/bin/niri-session"
+    then "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable}/bin/niri-session"
     else "${pkgs.hyprland}/bin/Hyprland";
 
   # Auto-login command based on WM
@@ -82,7 +83,13 @@ in
               user = "greeter";
             };
           }
-          // lib.optionalAttrs (config.hostConfig ? autoLogin && config.hostConfig.autoLogin ? enable && config.hostConfig.autoLogin.enable) {
+          // lib.optionalAttrs
+          (
+            config.hostConfig ? autoLogin
+            && config.hostConfig.autoLogin ? enable
+            && config.hostConfig.autoLogin.enable
+          )
+          {
             initial_session = {
               command = autoLoginCommand;
               user = config.hostConfig.autoLogin.user or config.hostConfig.user;

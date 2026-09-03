@@ -6,6 +6,7 @@
   ...
 }: let
   cfg = config.wm.niri;
+  catppuccin = inputs.self.lib.catppuccinColors.mocha;
 
   # Package mappings for applications
   browserPkg =
@@ -343,10 +344,22 @@ in {
           {proportion = 0.66667;}
         ];
 
-        # Border width only - colors managed by Stylix integration
+        # Focus ring and border follow Catppuccin Mocha to match Hyprland
+        # theming. Stylix runs with autoEnable=false so it never themes niri;
+        # without explicit colors niri falls back to its default yellow
+        # focus ring on the active window.
+        focus-ring = {
+          enable = true;
+          width = 4;
+          active.color = catppuccin.blue;
+          inactive.color = catppuccin.surface1;
+        };
+
         border = {
           enable = true;
           width = 2;
+          active.color = catppuccin.blue;
+          inactive.color = catppuccin.surface1;
         };
       };
 

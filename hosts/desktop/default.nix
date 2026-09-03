@@ -74,7 +74,13 @@ in {
   };
 
   boot = {
-    # Auto-import the games data pool (1TB WD Blue SN5000) and USB backup pool (1TB SanDisk Extreme) on boot
+    # Auto-import the games data pool (1TB WD Blue SN5000, dpool/games at
+    # /per/mnt/games) and USB backup pool (1TB SanDisk Extreme, bpool/desktop
+    # at /per/mnt/backup) on boot. Their datasets carry native mountpoints and
+    # are mounted by zfs-mount.service (`zfs mount -a`) once all pools finish
+    # importing. Keep them out of fileSystems: mount(8) cannot mount non-legacy
+    # datasets, so fstab-generated units fail whenever they start before
+    # zfs-mount.service (USB pool enumeration timing varies per boot).
     zfs.extraPools = ["dpool" "bpool"];
   };
 
@@ -83,15 +89,6 @@ in {
   # Keep fwupd daemon available, but disable the auto-refresh unit/timer.
   systemd.services.fwupd-refresh.enable = false;
   systemd.timers.fwupd-refresh.enable = false;
-
-  # zfsutil is required: the datasets use native ZFS mountpoints, and
-  # mount(8) without zfsutil refuses non-legacy datasets (OpenZFS >= 2.4),
-  # which dropped boot into emergency mode.
-  fileSystems."/per/games" = {
-    device = "dpool/games";
-    fsType = "zfs";
-    options = ["defaults" "zfsutil"];
-  };
 
   modules.system.ssh.enable = true;
 
@@ -178,12 +175,5 @@ in {
         target = "bpool/desktop/per";
       };
     };
-  };
-
-  fileSystems."/per/mnt/backup" = {
-    device = "bpool/desktop";
-    fsType = "zfs";
-    neededForBoot = false;
-    options = ["defaults" "zfsutil"];
   };
 }
