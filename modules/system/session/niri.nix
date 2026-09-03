@@ -5,11 +5,12 @@
 {
   lib,
   pkgs,
+  inputs,
   hostConfig,
   ...
 }: let
   hasNiri = builtins.elem "niri" (hostConfig.wms or []);
-  niriPkg = pkgs.niri;
+  niriPkg = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable;
 in {
   config = lib.mkIf hasNiri {
     programs.uwsm.waylandCompositors.niri = {
