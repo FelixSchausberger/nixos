@@ -3,9 +3,137 @@
   pkgs,
   ...
 }: let
+  # Repository tidy janitor, split out of jjwork: drops merged leftover
+  # bookmarks and absorbs stale off-main revisions. Runs in the caller's repo
+  # checkout (bare jj/git invocations, like jjwork itself). Named jj-tidy to
+  # avoid colliding with the interactive `just jj-hygiene` review recipe.
+  # jjwork invokes it by default; automation wanting a bare fetch+rebase
+  # sets JJWORK_CLEANUP=0.
+  jjtidyCmd = pkgs.writeShellApplication {
+    name = "jj-tidy";
+    runtimeInputs = [
+      pkgs.jujutsu
+      pkgs.git
+    ];
+    text = ''
+      set -euo pipefail
+
+      # Garbage-collect leftover bookmarks whose remote branch no longer exists
+      # on origin. With GitHub "automatically delete head branches" + auto-merge,
+      # a gone @origin ref means the PR was merged and the branch deleted; the
+      # commits stay reachable in history, so dropping the pointer is safe.
+      # Deleting a conflicted bookmark also resolves its conflicting targets,
+      # and in this colocated repo removes the exported git branch.
+      #
+      # A bookmark is only deleted when its content is provably merged into
+      # main@origin (target is an ancestor of main@origin, or it introduces no
+      # diff on top of it) - so the working copy's own bookmark is cleaned up
+      # once its PR merges. Unmerged work and main are always kept.
+      #
+      # Invariant: origin auto-deletes head branches on merge; jj-tidy drops the
+      # local bookmark (and exported git branch) once @origin is gone. Requires
+      # remote.origin.prune=true in the colocated repo's git config.
+      echo "Cleaning up leftover bookmarks..."
+      for bm in $(jj bookmark list -T 'name ++ "\n"' 2>/dev/null | sort -u); do
+        [ "$bm" = "main" ] && continue
+
+        # Remote branch still exists on origin -> active work, keep it.
+        # With fetch.prune enabled, a remote-only deletion also lands here as a
+        # failed @origin lookup.
+        if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
+          continue
+        fi
+
+        if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & bookmarks(\"$bm\")" -T 'commit_id' 2>/dev/null)" ] \
+          || [ -z "$(jj diff --from 'main@origin' --to "bookmarks(\"$bm\")" --name-only 2>/dev/null)" ]; then
+          if jj bookmark delete "$bm" 2>/dev/null; then
+            echo "  deleted leftover bookmark: $bm"
+          fi
+        else
+          echo "  keeping unmerged work: $bm (differs from main@origin)" >&2
+        fi
+      done
+
+      # Stale local work: heads outside main@origin whose effect is provably
+      # already present there. Candidates are handled per revision (commit
+      # id), never per change id: a divergent change-id (several visible
+      # revisions) errors out when used directly, and each revision needs an
+      # independent keep-or-drop decision.
+      #
+      # A revision is abandoned only when ALL of these hold:
+      #   - not reachable from main@origin: revisions inside main pin merged
+      #     history (e.g. as second parent of a GitHub merge-commit node),
+      #     and rewriting them cascades into main and every descendant
+      #   - carries no active remote bookmark (in-flight PR)
+      #   - single parent (merge-node absorption semantics are ambiguous)
+      #   - childless (dropping a parent rewrites all of its children)
+      #   - fully absorbed: every file it touches ends at the same state on
+      #     main@origin, compared via git diff --quiet per path - exact,
+      #     unlike patch-id matching, and immune to how the content landed
+      # Anything else is reported for human review (just jj-hygiene).
+      absorbed_count=0
+      review_count=0
+      for cid in $(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'commit_id ++ "\n"' 2>/dev/null); do
+        desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
+        when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
+
+        # Merged-history revision: untouchable even though its off-main
+        # twins may be dropped alongside it.
+        if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & $cid" -T 'commit_id' 2>/dev/null)" ]; then
+          continue
+        fi
+
+        active_remote=0
+        for bm in $(jj bookmark list -r "$cid" -T 'name ++ "\n"' 2>/dev/null); do
+          if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
+            active_remote=1
+            break
+          fi
+        done
+        [ "$active_remote" = "1" ] && continue
+
+        if [ "$(jj log --no-graph -r "$cid-" -T 'commit_id ++ "\n"' 2>/dev/null | wc -l)" -gt 1 ]; then
+          echo "  $when [merge node] ''${desc:-<no description>}" >&2
+          review_count=$((review_count + 1))
+          continue
+        fi
+
+        if [ -n "$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null)" ]; then
+          echo "  $when [has descendants] $desc" >&2
+          review_count=$((review_count + 1))
+          continue
+        fi
+
+        differs=""
+        for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
+          if ! git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null; then
+            differs="$differs $f"
+          fi
+        done
+
+        if [ -z "$differs" ]; then
+          echo "  $when [absorbed] ''${desc:-<no description>} -> abandoned"
+          jj abandon "$cid" >/dev/null
+          absorbed_count=$((absorbed_count + 1))
+        else
+          echo "  $when [DIFFERS:$differs] $desc" >&2
+          review_count=$((review_count + 1))
+        fi
+      done
+
+      if [ "$absorbed_count" -gt 0 ] || [ "$review_count" -gt 0 ]; then
+        echo "  stale work: $absorbed_count abandoned, $review_count need review"
+        echo ""
+      fi
+    '';
+  };
+
   jjworkCmd = pkgs.writeShellApplication {
     name = "jjwork";
-    runtimeInputs = [pkgs.jujutsu];
+    runtimeInputs = [
+      pkgs.jujutsu
+      jjtidyCmd
+    ];
     text = ''
       set -euo pipefail
 
@@ -57,115 +185,11 @@
         exit 1
       fi
 
-      # Garbage-collect leftover bookmarks whose remote branch no longer exists
-      # on origin. With GitHub "automatically delete head branches" + auto-merge,
-      # a gone @origin ref means the PR was merged and the branch deleted; the
-      # commits stay reachable in history, so dropping the pointer is safe.
-      # Deleting a conflicted bookmark also resolves its conflicting targets,
-      # and in this colocated repo removes the exported git branch.
-      #
-      # A bookmark is only deleted when its content is provably merged into
-      # main@origin (target is an ancestor of main@origin, or it introduces no
-      # diff on top of it) - so the working copy's own bookmark is cleaned up
-      # once its PR merges. Unmerged work and main are always kept.
-      #
-      # Invariant: origin auto-deletes head branches on merge; jjwork drops the
-      # local bookmark (and exported git branch) once @origin is gone. Requires
-      # remote.origin.prune=true in the colocated repo's git config.
-      echo "Cleaning up leftover bookmarks..."
-      for bm in $(jj bookmark list -T 'name ++ "\n"' 2>/dev/null | sort -u); do
-        [ "$bm" = "main" ] && continue
-
-        # Remote branch still exists on origin -> active work, keep it.
-        # With fetch.prune enabled, a remote-only deletion also lands here as a
-        # failed @origin lookup.
-        if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
-          continue
-        fi
-
-        if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & bookmarks(\"$bm\")" -T 'commit_id' 2>/dev/null)" ] \
-          || [ -z "$(jj diff --from 'main@origin' --to "bookmarks(\"$bm\")" --name-only 2>/dev/null)" ]; then
-          if jj bookmark delete "$bm" 2>/dev/null; then
-            echo "  deleted leftover bookmark: $bm"
-          fi
-        else
-          echo "  keeping unmerged work: $bm (differs from main@origin)" >&2
-        fi
-      done
-
-      # Stale local work: heads outside main@origin whose effect is provably
-      # already present there. Candidates are handled per revision (commit
-      # id), never per change id: a divergent change-id (several visible
-      # revisions) errors out when used directly, and each revision needs an
-      # independent keep-or-drop decision.
-      #
-      # A revision is abandoned only when ALL of these hold:
-      #   - not reachable from main@origin: revisions inside main pin merged
-      #     history (e.g. as second parent of a GitHub merge-commit node),
-      #     and rewriting them cascades into main and every descendant
-      #   - carries no active remote bookmark (in-flight PR)
-      #   - single parent (merge-node absorption semantics are ambiguous)
-      #   - childless (dropping a parent rewrites all of its children)
-      #   - fully absorbed: every file it touches ends at the same state on
-      #     main@origin, compared via git diff --quiet per path - exact,
-      #     unlike patch-id matching, and immune to how the content landed
-      # Anything else is reported for human review (just jj-hygiene).
-      # Disable with JJWORK_CLEANUP=0.
+      # Bookmark GC and stale-work hygiene live in jj-tidy (same file,
+      # above): one tool, one job. Interactive use keeps the full tidy by
+      # default; automation wanting a bare fetch+rebase sets JJWORK_CLEANUP=0.
       if [ "''${JJWORK_CLEANUP:-1}" = "1" ]; then
-        absorbed_count=0
-        review_count=0
-        for cid in $(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'commit_id ++ "\n"' 2>/dev/null); do
-          desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
-          when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
-
-          # Merged-history revision: untouchable even though its off-main
-          # twins may be dropped alongside it.
-          if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & $cid" -T 'commit_id' 2>/dev/null)" ]; then
-            continue
-          fi
-
-          active_remote=0
-          for bm in $(jj bookmark list -r "$cid" -T 'name ++ "\n"' 2>/dev/null); do
-            if jj log --no-graph -r "$bm@origin" -T 'commit_id' >/dev/null 2>&1; then
-              active_remote=1
-              break
-            fi
-          done
-          [ "$active_remote" = "1" ] && continue
-
-          if [ "$(jj log --no-graph -r "$cid-" -T 'commit_id ++ "\n"' 2>/dev/null | wc -l)" -gt 1 ]; then
-            echo "  $when [merge node] ''${desc:-<no description>}" >&2
-            review_count=$((review_count + 1))
-            continue
-          fi
-
-          if [ -n "$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null)" ]; then
-            echo "  $when [has descendants] $desc" >&2
-            review_count=$((review_count + 1))
-            continue
-          fi
-
-          differs=""
-          for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
-            if ! git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null; then
-              differs="$differs $f"
-            fi
-          done
-
-          if [ -z "$differs" ]; then
-            echo "  $when [absorbed] ''${desc:-<no description>} -> abandoned"
-            jj abandon "$cid" >/dev/null
-            absorbed_count=$((absorbed_count + 1))
-          else
-            echo "  $when [DIFFERS:$differs] $desc" >&2
-            review_count=$((review_count + 1))
-          fi
-        done
-
-        if [ "$absorbed_count" -gt 0 ] || [ "$review_count" -gt 0 ]; then
-          echo "  stale work: $absorbed_count abandoned, $review_count need review"
-          echo ""
-        fi
+        jj-tidy
       fi
 
       echo ""
@@ -207,26 +231,32 @@
       # success because the local git-ref export already mirrors the intended
       # state - nothing reaches origin and PR creation then fails confusingly.
       # Abandoning an empty commit is lossless: jj rebases descendants over it.
-      for cid in $(
-        jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id' 2>/dev/null
-      ); do
-        em="$(jj log --no-graph -r "$cid" -T 'if(empty, "y", "n")' 2>/dev/null)"
-        fl="$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)"
-        if [ "$em" = "y" ] && { [ -z "$fl" ] || [ "$fl" = "(no description set)" ]; }; then
-          jj abandon "$cid" >/dev/null 2>&1 || true
-        fi
-      done
+      # NOTE: iterate newline-separated (one ID per line via ++ "\n") with a
+      # while-read loop, never `for cid in $(...)`: word splitting fuses
+      # multiple IDs into one token, `jj log -r` fails on it, and errexit
+      # kills the script with zero output.
+      jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id ++ "\n"' 2>/dev/null |
+        while IFS= read -r cid; do
+          [ -n "$cid" ] || continue
+          em="$(jj log --no-graph -r "$cid" -T 'if(empty, "y", "n")' 2>/dev/null || echo n)"
+          fl="$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null || true)"
+          if [ "$em" = "y" ] && { [ -z "$fl" ] || [ "$fl" = "(no description set)" ]; }; then
+            jj abandon "$cid" >/dev/null 2>&1 || true
+          fi
+        done
 
       # Anything else undescribed between main@origin and @ blocks the push
       # loudly instead of leaving origin without the work while every later
-      # push reports success.
+      # push reports success. Process substitution (not a pipe) keeps the
+      # loop in the current shell so $blockers survives it.
       blockers=""
-      for cid in $(jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id' 2>/dev/null); do
-        fl="$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)"
+      while IFS= read -r cid; do
+        [ -n "$cid" ] || continue
+        fl="$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null || true)"
         if [ -z "$fl" ] || [ "$fl" = "(no description set)" ]; then
-          blockers="$blockers ${"cid:0:8"}"
+          blockers="$blockers $(printf %.8s "$cid")"
         fi
-      done
+      done < <(jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id ++ "\n"' 2>/dev/null)
       if [ -n "$blockers" ]; then
         echo "Error: undescribed commits remain between main@origin and @:$blockers" >&2
         echo "Describe ('jj describe -r <change> -m \"...\"') or abandon them before pushing." >&2
@@ -310,7 +340,7 @@
     '';
   };
 in {
-  home.packages = [jjworkCmd jjpushCmd];
+  home.packages = [jjworkCmd jjpushCmd jjtidyCmd];
 
   programs.fish.functions = {
     # Jujutsu management commands
