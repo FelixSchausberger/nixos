@@ -39,6 +39,10 @@ in {
       wantedBy = ["multi-user.target"];
       after = ["multi-user.target"];
       serviceConfig.Type = "oneshot";
+      # NixOS prepends `set -e` to `script` wrappers, so every pipeline with
+      # an expected non-zero status (empty grep, entry without init=) must
+      # be guarded with `|| true` or an `if` condition. Otherwise the common
+      # case (no exhausted entries) fails the unit despite the `exit 0`s.
       script = ''
         set -uo pipefail
         PROFILE=/nix/var/nix/profiles/system
@@ -75,7 +79,7 @@ in {
 
         # init= store path of an entry file (empty when none, e.g. rescue entries).
         entry_init() {
-          grep -oE 'init=/nix/store/[A-Za-z0-9._-]+-nixos-system-[^ [:space:]"]*' "$1" 2>/dev/null | head -1
+          grep -oE 'init=/nix/store/[A-Za-z0-9._-]+-nixos-system-[^ [:space:]"]*' "$1" 2>/dev/null | head -1 || true
         }
 
         # Good generations: blessed (suffixless) entries plus the running one
@@ -83,7 +87,7 @@ in {
         good_gens=""
         for entry in /boot/loader/entries/nixos-*.conf; do
           case "$entry" in *+*-*.conf) continue ;; esac
-          init=$(entry_init "$entry")
+          init=$(entry_init "$entry" || true)
           [ -n "$init" ] || continue
           g=$(gen_of_toplevel "$(dirname "''${init#init=}")") || continue
           good_gens="$good_gens $g"
@@ -91,12 +95,14 @@ in {
         if g=$(gen_of_toplevel "$current_toplevel"); then
           good_gens="$good_gens $g"
         fi
-        good_count=$(echo "$good_gens" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -nu | wc -l)
+        good_count=$(echo "$good_gens" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -nu | wc -l || true)
+        good_count=$(echo "$good_count" | tr -d '[:space:]')
+        [ -n "$good_count" ] || good_count=0
 
         # Bad generations: exhausted (+0-3) entries mapping to a profile gen.
         bad_gens=""
         for entry in /boot/loader/entries/nixos-*+0-3.conf; do
-          init=$(entry_init "$entry")
+          init=$(entry_init "$entry" || true)
           if [ -z "$init" ]; then
             echo "$TAG: skip $(basename "$entry") (no init= path; likely specialisation)"
             continue
@@ -112,7 +118,7 @@ in {
             echo "$TAG: skip $(basename "$entry") (toplevel not a profile generation)"
           fi
         done
-        bad_gens=$(echo "$bad_gens" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -nu | tr '\n' ' ')
+        bad_gens=$(echo "$bad_gens" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -nu | tr '\n' ' ' || true)
 
         if [ -z "''${bad_gens// }" ]; then
           echo "$TAG: no exhausted entries ($good_count good generations)"
@@ -143,7 +149,7 @@ in {
         # sibling entry can be selected later. Emergency/rescue extraEntries
         # carry no "Generation N" version line and are never matched.
         for g in $ok_gens; do
-          grep -lE "Generation $g NixOS" /boot/loader/entries/nixos-*.conf 2>/dev/null | while read -r f; do
+          { grep -lE "Generation $g NixOS" /boot/loader/entries/nixos-*.conf 2>/dev/null || true; } | while read -r f; do
             rm -f "$f" && echo "$TAG: removed $(basename "$f")"
           done
         done

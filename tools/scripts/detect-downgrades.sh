@@ -16,6 +16,12 @@
 # Exit codes: 0 = nothing to report or alert sent, 1 = unexpected state
 set -euo pipefail
 
+# Shared downgrade predicate (single implementation with guard-downgrades.sh).
+# SC1091: dynamic sibling path (same dir in repo, store, and unit-test
+# bundles); the lib file is linted directly, so no coverage is lost.
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-downgrade-compare.sh"
+
 # Failed deployments leave the previous generation active; nothing changed.
 if [[ "${COMIN_STATUS:-}" != "done" ]]; then
 	exit 0
@@ -58,24 +64,7 @@ while IFS= read -r line; do
 	[[ "$line" =~ ^([^:]+):\ ([^ →]+)\ →\ ([^ ,]+) ]] || continue
 	old_v="${BASH_REMATCH[2]}"
 	new_v="${BASH_REMATCH[3]}"
-	# Only version-to-version changes can be downgrades: diff-closures marks
-	# added packages as "∅ → v" and removed ones as "v → ε", and sort -V
-	# ranks those symbols below any number, which would report every package
-	# addition as a downgrade.
-	if [[ ! "$old_v" =~ ^[0-9] || ! "$new_v" =~ ^[0-9] ]]; then
-		continue
-	fi
-	# Git short revs are opaque identifiers: version sort ranks them
-	# lexically ("387bb7f" < "42416fc"), flagging forward lock bumps as
-	# downgrades. Skip whenever either side is rev-shaped; requiring an
-	# [a-f] letter keeps pure-decimal versions (dates, build ids) on the
-	# normal comparison path.
-	if [[ "$old_v" =~ ^[0-9a-f]{7,40}$ && "$old_v" =~ [a-f] ]] ||
-		[[ "$new_v" =~ ^[0-9a-f]{7,40}$ && "$new_v" =~ [a-f] ]]; then
-		continue
-	fi
-	# versionOlder new old -> true means new is older (a downgrade)
-	if [[ "$new_v" != "$old_v" && "$(printf '%s\n%s\n' "$old_v" "$new_v" | sort -V | head -n1)" == "$new_v" ]]; then
+	if is_downgrade "$old_v" "$new_v"; then
 		downgrades+="${line%%,*}"$'\n'
 	fi
 done <<<"$diff_output"
