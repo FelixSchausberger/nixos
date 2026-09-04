@@ -38,6 +38,16 @@ in {
     # Uses the services.moonshine module shipped in nixpkgs (upstreamed from
     # hgaiser/moonshine); importing the flake alongside it collides on the
     # services.moonshine option declarations.
+    # Xwayland requires /tmp/.X11-unix to pre-exist (it does not create it)
+    # or every session fails with "Could not find a free socket for the
+    # XServer". A tmpfiles `d` rule cannot do this here: persistence.nix
+    # overrides tmpfiles-setup with --exclude-prefix=/tmp (which also
+    # neuters niri.nix's identical rule), so create it as root via
+    # ExecStartPre ("+" prefix) on every service start instead.
+    systemd.services.moonshine.serviceConfig.ExecStartPre = lib.mkBefore [
+      "+${pkgs.coreutils}/bin/install -d -m 1777 -o root -g root /tmp/.X11-unix"
+    ];
+
     services.moonshine = {
       enable = true;
       inherit (cfg) user;
@@ -66,6 +76,9 @@ in {
               "/run/current-system/sw/bin/steam"
               "steam://open/bigpicture"
             ];
+            # Steam cold start exceeds the 2s upstream default (observed
+            # session-launch timeout in the journal); allow 20s.
+            launch_timeout_secs = 20;
             # Journal logging keeps failed session launches diagnosable
             # (the default discards all application output).
             stdout = "journal";
@@ -88,6 +101,7 @@ in {
               "-bigpicture"
               "steam://rungameid/{game_id}"
             ];
+            launch_timeout_secs = 20;
             stdout = "journal";
             stderr = "journal";
             pre_command = [

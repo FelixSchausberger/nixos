@@ -9,12 +9,19 @@
 # Usage:
 #   guard-downgrades.sh [NEW_TOPLEVEL]   # default: ./result
 #
-# Overrides (escapes the guard deliberately):
-#   ALLOW_DOWNGRADE=1                    allow every downgrade
+# Override (deliberate escape, per-package only):
 #   ALLOW_DOWNGRADES="pkg1 pkg2"         allow downgrades only for these pkgs
+# There is intentionally no allow-everything bypass: every exception is named
+# (via `deploy-allow pkg1 pkg2`) so regressions stay auditable.
 #
 # Exit codes: 0 = ok, 1 = downgrade(s) found, 2 = usage/error
 set -euo pipefail
+
+# Shared downgrade predicate (single implementation with detect-downgrades.sh).
+# SC1091: dynamic sibling path (same dir in repo and store bundle);
+# the lib file is linted directly, so no coverage is lost.
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-downgrade-compare.sh"
 
 NEW="${1:-./result}"
 OLD="/nix/var/nix/profiles/system"
@@ -29,22 +36,13 @@ if [[ ! -e "$OLD" ]]; then
 	exit 2
 fi
 
-if [[ "${ALLOW_DOWNGRADE:-}" == "1" ]]; then
-	echo "ALLOW_DOWNGRADE=1 set — skipping downgrade guard"
-	exit 0
-fi
-
 declare -a allowed=()
 if [[ -n "${ALLOW_DOWNGRADES:-}" ]]; then
 	IFS=' ' read -r -a allowed <<<"$ALLOW_DOWNGRADES"
 fi
 
-# Packages that expose their flake git-rev short-hash as the version (e.g.
-# iris: 994ff83) always look like a downgrade to the naive version-sort, even
-# when the rev moves forward. They are pinned by the nixpkgs/inputs lock, not
-# the semver channel, so exempt them permanently.
-declare -a non_versioned_pkgs=(iris)
-allowed+=("${non_versioned_pkgs[@]}")
+# Git-rev-versioned packages need no exemption here: the shared predicate
+# skips rev-shaped versions generically.
 
 in_allowed() {
 	local pkg="$1"
@@ -66,8 +64,7 @@ while IFS= read -r line; do
 	old="${BASH_REMATCH[2]}"
 	new="${BASH_REMATCH[3]}"
 
-	# versionOlder new old -> true means new is older (a downgrade)
-	if [[ "$(printf '%s\n%s\n' "$old" "$new" | sort -V | head -n1)" == "$new" && "$old" != "$new" ]]; then
+	if is_downgrade "$old" "$new"; then
 		if ! in_allowed "$pkg"; then
 			downgrades+=("$pkg: $old → $new")
 		fi
@@ -80,8 +77,9 @@ if [[ ${#downgrades[@]} -gt 0 ]]; then
 		echo "  $d"
 	done
 	echo ""
-	echo "To allow all downgrades:  ALLOW_DOWNGRADE=1 guard-downgrades.sh"
-	echo "To allow specific pkgs:   ALLOW_DOWNGRADES=\"pkg1 pkg2\" guard-downgrades.sh"
+	echo "To allow specific pkgs (fish):  deploy-allow pkg1 pkg2"
+	echo "To allow specific pkgs (any shell):  ALLOW_DOWNGRADES=\"pkg1 pkg2\" /per/etc/nixos/tools/scripts/guard-downgrades.sh"
+	echo "Bulk bypass is intentionally unsupported; name each package."
 	exit 1
 fi
 
