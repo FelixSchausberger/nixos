@@ -204,12 +204,14 @@ main, after which every host converges back within one poll period.
 Override to allow downgrades deliberately (for pinned versions):
 
 ```bash
-ALLOW_DOWNGRADES="pkg1 pkg2" deploy                        # Allow specific packages
-just guard-build                                           # Check current host without switching
+deploy-allow pkg1 pkg2                                       # Allow specific packages (fish)
+ALLOW_DOWNGRADES="pkg1 pkg2" deploy                          # Same, any shell
+just guard-build                                             # Check current host without switching
 ```
 
-Note: `ALLOW_DOWNGRADE=1` (allow all downgrades) is only honored by `deploy`,
-never by `update`.
+There is intentionally no allow-everything bypass: every exception names its
+packages so regressions stay auditable. `deploy-allow` with no package names
+is identical to `deploy`.
 
 ### Quick VM Installation with nixos-anywhere (Recommended)
 

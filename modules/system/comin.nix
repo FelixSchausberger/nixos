@@ -26,6 +26,16 @@
   # Shared bookmark-slug rule (same derivation as jjpush uses).
   slugPkg = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-slug;
 
+  # Detector bundle: exactly the two files the post-deploy detector needs.
+  # detect-downgrades.sh sources its sibling lib-downgrade-compare.sh at
+  # runtime via BASH_SOURCE, so both must land in the store together — but the
+  # whole scripts directory would ship unrelated tooling into every closure.
+  detectorBundle = pkgs.runCommand "comin-downgrade-detector" {} ''
+    mkdir -p $out
+    cp ${../../tools/scripts/detect-downgrades.sh} $out/detect-downgrades.sh
+    cp ${../../tools/scripts/lib-downgrade-compare.sh} $out/lib-downgrade-compare.sh
+  '';
+
   # Wrapper bridges comin's postDeploymentCommand hook (absolute path, no
   # arguments) to the repo detector script and its ntfy configuration.
   postDeploy = pkgs.writeShellApplication {
@@ -33,7 +43,7 @@
     runtimeInputs = with pkgs; [coreutils curl nix];
     text = ''
       export COMIN_NTFY_URL=${lib.escapeShellArg (toString cfg.alertNtfyUrl)}
-      exec ${pkgs.bash}/bin/bash ${../../tools/scripts/detect-downgrades.sh}
+      exec ${pkgs.bash}/bin/bash ${detectorBundle}/detect-downgrades.sh
     '';
   };
 

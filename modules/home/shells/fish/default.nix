@@ -23,15 +23,16 @@
       #
       # ZELLIJ and ZELLIJ_PANE_ID are exported by Zellij inside its panes, so an
       # unset value here means "not inside zellij" — this prevents nested sessions.
-      # "attach --create" is avoided (it can race when the server considers the
-      # session current); instead list-sessions is checked and the session is
-      # attached or created. zellij is not exec'd — on detach, fish resumes as a
-      # plain shell.
+      # (0.45+ also handles nested sessions natively over SSH.)
       #
-      # Stale-session guard: a session whose server has no live pane shells
-      # (e.g. created by an interrupted web attach) renders as an empty pane and
-      # strands every SSH login on it. Verify liveness before attaching; if the
-      # session is a zombie, kill it and start a fresh one.
+      # Robustness: `zellij attach --create` is atomic server-side, so concurrent
+      # SSH logins simply share the session instead of racing. No pgrep
+      # heuristics: liveness is decided by the attach exit status itself. A dead
+      # session (metadata without live panes, e.g. from an interrupted web
+      # attach) makes attach fail; only then we kill, poll until the name
+      # disappears (kill is async), and recreate with the same atomic primitive.
+      # Concurrent recreates are harmless: the second `attach --create` just
+      # joins the fresh session.
       if status is-interactive
           and ${lib.boolToString attachEnabled}
           and not __emergency_check
@@ -41,21 +42,23 @@
           and command -q zellij
         set -l session_name "${attachSession}"
         if test -n "$session_name"
-          if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
-            if command -q pgrep
-              set -l server_pid (pgrep -f "zellij.*--server.*/$session_name" 2>/dev/null | head -1)
-              if test -n "$server_pid"; and pgrep -P "$server_pid" >/dev/null 2>&1
-                zellij attach "$session_name"
-              else
-                echo "ssh-attach: session '$session_name' has no live panes; recreating" >&2
-                zellij kill-session "$session_name" 2>/dev/null
-                zellij --session "$session_name"
+          # Already attached here (e.g. nested 0.45 session marked current):
+          # attaching again would panic, so do nothing.
+          if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*\(current\)"
+          else if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
+            if not zellij attach "$session_name"
+              echo "ssh-attach: session '$session_name' is dead; recreating" >&2
+              zellij kill-session "$session_name" 2>/dev/null
+              for i in (seq 1 50)
+                if not zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
+                  break
+                end
+                sleep 0.1
               end
-            else
-              zellij attach "$session_name"
+              zellij attach --create "$session_name"
             end
           else
-            zellij --session "$session_name"
+            zellij attach --create "$session_name"
           end
         end
       end

@@ -245,13 +245,18 @@ in {
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  # 6.18.48 hangs before journald on this box (5 failed boots, zero journals;
-  # 6.18.45 boots). Pin LTS 6.12 until the 6.18 regression is diagnosed. If a
-  # 6.12 boot also hangs, the fault is in the initrd/closure, not the kernel.
-  # Unpin when a newer 6.18 boots cleanly. The ZFS module rebuild follows the
-  # pinned kernel via the hosts/boot-zfs.nix override. No new flake input:
-  # linuxPackages_6_12 ships in the existing nixpkgs pin (6.12.107, cached).
-  boot.kernelPackages = lib.mkForce pkgs.linuxPackages_6_12;
+  # Follow the 6.18 line (currently 6.18.48, also the nixpkgs default again
+  # since the #142 lock refresh). History: #133 pinned LTS 6.12 because 6.18.48
+  # appeared to hang before journald (5 failed boots), but the hangs were later
+  # traced to the ME/AMT console=ttyS0 UART (see kernelParams above; removal
+  # test boots), not the kernel — so 6.18.48 gets a retest instead of a fresh
+  # unpin. The explicit pin (not the floating default) holds this line if
+  # upstream flips the default again. If a 6.18 boot hangs, boot the previous
+  # generation from the systemd-boot menu; boot-fallback-cleanup removes only
+  # proven-exhausted entries. The ZFS module rebuild follows the pinned kernel
+  # via the hosts/boot-zfs.nix override. No new flake input:
+  # linuxPackages_6_18 ships in the existing nixpkgs pin (cached).
+  boot.kernelPackages = lib.mkForce pkgs.linuxPackages_6_18;
 
   services.xserver.videoDrivers = lib.mkDefault [
     "modesetting"
