@@ -124,7 +124,9 @@ esac
 # Surface what landed so the user sees the effect without opening GitHub.
 old_head=$(git -C "$FLAKE" rev-parse HEAD)
 echo "update: syncing working copy onto main"
-jjwork
+# Subshell cd: jjwork operates on the calling cwd (bare jj invocations), so
+# `update` works from any directory, not just the flake checkout.
+(cd "$FLAKE" && jjwork)
 new_head=$(git -C "$FLAKE" rev-parse HEAD)
 if [[ "$new_head" != "$old_head" ]]; then
 	echo "update: changes landed on main:"

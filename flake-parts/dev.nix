@@ -18,6 +18,7 @@
         detect-downgrades = pkgs.runCommand "detect-downgrades-unit-test" {} ''
           mkdir scripts
           cp ${../tools/scripts/detect-downgrades.sh} scripts/detect-downgrades.sh
+          cp ${../tools/scripts/lib-downgrade-compare.sh} scripts/lib-downgrade-compare.sh
           cp ${../tools/scripts/test-detect-downgrades.sh} scripts/test-detect-downgrades.sh
           chmod +x scripts/*.sh
           ${pkgs.bash}/bin/bash scripts/test-detect-downgrades.sh
