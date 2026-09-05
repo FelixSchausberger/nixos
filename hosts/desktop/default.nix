@@ -22,6 +22,7 @@ in {
       ../../modules/system/moonshine.nix
       ../../modules/system/ssh.nix
       ../../modules/system/nixpkgs-overlays.nix
+      ../../modules/vitals.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
@@ -128,9 +129,21 @@ in {
   # steal the steam:// URL and break the stream — upstream issue #134).
   modules.system.moonshine.enable = true;
   modules.system.gaming.enable = true;
+
+  # Vitals health monitoring, same daemon+CLI as m920q but in GUI mode:
+  # headless=false binds the user daemon to graphical-session.target (Niri)
+  # instead of default.target.
+  services.vitals = {
+    enable = true;
+    headless = false;
+  };
   # Steam game library on the games pool; registered into libraryfolders.vdf
   # by home activation (skipped while Steam runs, applied on next rebuild)
   modules.system.steam.extraLibraryFolders = ["/per/mnt/games/SteamLibrary"];
+  # No Rest for the Wicked ships a non-functional Linux depot that makes Steam
+  # default to the scout runtime and exec the .exe directly; force GE-Proton
+  # per game (priority 250 wins over the global default at 75).
+  modules.system.steam.compatTools = {"1371980" = "GE-Proton";};
 
   # OpenLDAP 2.6.13 test suite has a regression (provider/consumer DB mismatch).
   # Skip tests rather than wait for upstream fix; runtime is unaffected.

@@ -268,5 +268,89 @@
           $DRY_RUN_CMD ${register}/bin/steam-register-libraries ${lib.escapeShellArgs folders}
         ''
       );
+
+    # Per-game Steam Play compatibility tools declared on the host via
+    # modules.system.steam.compatTools, forced in config.vdf CompatToolMapping
+    # with priority 250 (user override beats Valve defaults and native).
+    # Required for titles shipping a broken Linux depot that makes Steam
+    # default to the scout runtime and exec the .exe directly. Skipped while
+    # Steam runs (it rewrites the file on exit). STEAM_COMPAT_ALLOW_RUNNING=1
+    # overrides the running check for testing only.
+    home.activation.steamCompatTools = let
+      tools = lib.attrByPath ["modules" "system" "steam" "compatTools"] {} osConfig;
+      pairs = lib.mapAttrsToList (appid: tool: "${appid}=${tool}") tools;
+      force = pkgs.writeShellApplication {
+        name = "steam-force-compat-tools";
+        runtimeInputs = [pkgs.python3 pkgs.procps];
+        text = ''
+          set -euo pipefail
+          vdf="$HOME/.local/share/Steam/config/config.vdf"
+          if [[ ! -f $vdf ]]; then
+            echo "steam-compat-tools: $vdf missing (Steam never launched?), skipping"
+            exit 0
+          fi
+          if [[ -z "''${STEAM_COMPAT_ALLOW_RUNNING:-}" ]] && pgrep -x steam >/dev/null; then
+            echo "steam-compat-tools: Steam is running, skipping (close Steam and rebuild to apply)" >&2
+            exit 0
+          fi
+          if [[ $# -eq 0 ]]; then
+            exit 0
+          fi
+          ${pkgs.python3}/bin/python3 - "$vdf" "$@" <<'PYEOF'
+          import re, sys
+          vdf, pairs = sys.argv[1], sys.argv[2:]
+          text = open(vdf, encoding="utf-8").read()
+          if '"CompatToolMapping"' not in text:
+              print("steam-compat-tools: no CompatToolMapping block, refusing to edit", file=sys.stderr)
+              sys.exit(1)
+          changed = False
+          for pair in pairs:
+              appid, _, tool = pair.partition("=")
+              if not re.fullmatch(r"\d+", appid) or not re.fullmatch(r"[A-Za-z0-9_.+~-]+", tool):
+                  print(f"steam-compat-tools: invalid mapping {pair!r}, refusing to edit", file=sys.stderr)
+                  sys.exit(1)
+              block = (
+                  f'\t\t\t\t\t"{appid}"\n\t\t\t\t\t{{\n'
+                  f'\t\t\t\t\t\t"name"\t\t"{tool}"\n'
+                  '\t\t\t\t\t\t"config"\t\t""\n'
+                  '\t\t\t\t\t\t"priority"\t\t"250"\n'
+                  '\t\t\t\t\t}\n'
+              )
+              pat = re.compile(
+                  r'^[ \t]*"' + re.escape(appid) + r'"[ \t]*\n'
+                  r'[ \t]*\{[ \t]*\n'
+                  r'[ \t]*"name"[ \t]*"[^\n"]*"\n'
+                  r'[ \t]*"config"[ \t]*"[^\n"]*"\n'
+                  r'[ \t]*"priority"[ \t]*"[^\n"]*"\n'
+                  r'[ \t]*\}[ \t]*\n',
+                  re.M,
+              )
+              m = pat.search(text)
+              if m:
+                  if f'"name"\t\t"{tool}"' in m.group(0) and '"priority"\t\t"250"' in m.group(0):
+                      print(f"steam-compat-tools: {appid} already forced to {tool}")
+                      continue
+                  text = text[: m.start()] + block + text[m.end():]
+                  print(f"steam-compat-tools: {appid} updated to {tool}")
+                  changed = True
+              else:
+                  anchor = re.search(r'^[ \t]*"CompatToolMapping"[ \t]*\n[ \t]*\{[ \t]*\n', text, re.M)
+                  if not anchor:
+                      print("steam-compat-tools: malformed CompatToolMapping block, refusing to edit", file=sys.stderr)
+                      sys.exit(1)
+                  text = text[: anchor.end()] + block + text[anchor.end():]
+                  print(f"steam-compat-tools: {appid} forced to {tool}")
+                  changed = True
+          if changed:
+              open(vdf, "w", encoding="utf-8").write(text)
+          PYEOF
+        '';
+      };
+    in
+      lib.mkIf (config.features.gaming.enable && lib.elem "steam" config.features.gaming.platforms && pairs != []) (
+        lib.hm.dag.entryAfter ["writeBoundary"] ''
+          $DRY_RUN_CMD ${force}/bin/steam-force-compat-tools ${lib.escapeShellArgs pairs}
+        ''
+      );
   };
 }
