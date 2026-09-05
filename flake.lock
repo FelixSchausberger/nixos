@@ -2512,11 +2512,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1788607979,
-        "narHash": "sha256-pVL9SAGM0tcrN4KTcToT1V6U5saihUt3MuAurAa/k68=",
+        "lastModified": 1788609164,
+        "narHash": "sha256-TeABZCf44QnhcuiPdSyS20Il/2LXH1I0VMM0Vva+6EU=",
         "owner": "FelixSchausberger",
         "repo": "vitals",
-        "rev": "7a721830e585b46583bb3cac448e308244c447cf",
+        "rev": "a4e406d3929091057925d9a415b09ca9a4086e3b",
         "type": "github"
       },
       "original": {
