@@ -12,8 +12,9 @@
       # ];
 
       # Theme and colors — stylix provides theme = stylix via its HM integration
-      background-opacity = 0.75; # More transparent for better blur effect
-      background-blur-radius = 20; # Add blur effect (requires compositor support)
+      # Transparency lets the compositor (Niri/Hyprland) blur apply.
+      # Ghostty's own background-blur is KDE/macOS-only, so it stays unset.
+      background-opacity = 0.75;
 
       # Window configuration
       window-decoration = false; # Keep minimal - no decorations

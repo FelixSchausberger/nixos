@@ -13,6 +13,12 @@
       description = "Additional Steam library folders to register in libraryfolders.vdf (e.g. a games pool mount)";
       example = ["/per/mnt/games/SteamLibrary"];
     };
+    compatTools = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = "Per-game Steam Play compatibility tools (appid -> tool name), forced in config.vdf CompatToolMapping with priority 250";
+      example = {"1371980" = "GE-Proton";};
+    };
   };
 
   config = lib.mkIf config.modules.system.steam.enable {

@@ -266,13 +266,10 @@ in {
       };
     };
 
-    xdg.configFile = lib.mkIf (cfg.terminal == "ghostty") {
-      "ghostty/config.ghostty".text = ''
-        command = ${pkgs.fish}/bin/fish
-        shell-integration = fish
-        background_blur = 1
-      '';
-    };
+    # Ghostty command and shell integration live in
+    # modules/home/gui/terminals/ghostty.nix (single source).
+    # Ghostty background-blur stays unset: it is KDE/macOS-only,
+    # transparency here lets the Niri compositor blur show through.
 
     # Directory MIME default follows the fileManager option. Without an
     # explicit default, codium.desktop wins mimeinfo.cache sort order and

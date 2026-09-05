@@ -36,4 +36,21 @@ in {
   # Moonshine replaces Sunshine — no GUI assertions needed (Moonshine is headless-first)
   has_gaming_gui_assertion = hasAssertionWithMessage "modules.system.gaming.enable requires hostConfig.isGui = true";
   has_steam_gamemode_assertion = hasAssertionWithMessage "modules.system.steam.enable requires programs.gamemode.enable for GAMEMODERUN integration";
+
+  # Moonshine XWayland socket guard (Sep 2026: every session failed with
+  # "Could not find a free socket for the XServer" because persistence.nix
+  # neuters the /tmp tmpfiles rule; the unit must create /tmp/.X11-unix
+  # itself via ExecStartPre on every start)
+  moonshine_x11_socket_guard =
+    builtins.any
+    (cmd: builtins.match ".*/tmp/.X11-unix" cmd != null)
+    config.systemd.services.moonshine.serviceConfig.ExecStartPre;
+
+  # Vitals parity with m920q, in GUI mode (user daemon on
+  # graphical-session.target instead of default.target)
+  vitals_enabled = config.services.vitals.enable;
+  vitals_gui_mode = !config.services.vitals.headless;
+  vitals_daemon_gui_target =
+    builtins.elem "graphical-session.target"
+    config.home-manager.users.schausberger.systemd.user.services.vitals-daemon.Unit.After;
 }
