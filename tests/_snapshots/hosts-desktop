@@ -11,7 +11,11 @@
   is_gui = true;
   maintenance_enabled = true;
   monitoring_enabled = true;
+  moonshine_x11_socket_guard = true;
   qmk_enabled = true;
   user_exists = true;
+  vitals_daemon_gui_target = true;
+  vitals_enabled = true;
+  vitals_gui_mode = true;
   wm_count = 1;
 }
