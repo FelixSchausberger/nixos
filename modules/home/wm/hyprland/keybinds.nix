@@ -9,6 +9,16 @@
   safeNotifySend = import ../../../../home/lib/safe-notify-send.nix {inherit pkgs config lib;};
   safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 
+  # Launcher follows the active shell: walker for custom/wayle, noctalia's
+  # built-in launcher for noctalia. Wired test/restart binds only make
+  # sense while wired runs (custom shell).
+  shellIsNoctalia = (config.wm.shell or "custom") == "noctalia";
+  walkerBin = "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker";
+  launcherExec =
+    if shellIsNoctalia
+    then "noctalia msg panel-toggle launcher"
+    else walkerBin;
+
   # Directional key mappings for programmatic keybind generation
   directions = {
     left = {
@@ -61,8 +71,8 @@ in {
           "$mod, e, exec, $fileManager"
           "$mod, c, exec, ${pkgs.helix}/bin/hx"
 
-          # Application launcher
-          "$mod, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker"
+          # Application launcher (walker, or noctalia IPC on the noctalia shell)
+          "$mod, D, exec, ${launcherExec}"
           # "$mod, R, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules runner"
           # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules hyprland"
 
@@ -111,14 +121,6 @@ in {
           "SHIFT, Print, exec, ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           "$mod SHIFT, Print, exec, ${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && ${safeNotifyBin} 'Screenshot' 'Saved to Pictures/Screenshots'"
           # Utilities
-          "$mod, V, exec, ${
-            inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
-          }/bin/walker --modules clipboard"
-          "$mod, period, exec, ${
-            inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
-          }/bin/walker --modules emoji" # Emoji picker
-
-          # Color picker
           "$mod SHIFT, C, exec, ${pkgs.hyprpicker}/bin/hyprpicker -a && ${safeNotifyBin} 'Color picked' 'Copied to clipboard'"
 
           # Audio controls
@@ -160,10 +162,8 @@ in {
             inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland
           }/bin/hyprctl dispatch layoutmsg swapwithmaster"
 
-          # Notification controls (Wired)
-          "$mod, Escape, exec, ${safeNotifyBin} 'Test' 'Wired notification system'" # Test notification
-          "$mod SHIFT, Escape, exec, pkill -SIGUSR1 wired" # Close all notifications
-          "$mod CTRL, Escape, exec, systemctl --user restart wired" # Restart wired
+          # Notification controls (wired) live in the shell-conditional
+          # appends below (custom/wayle only)
 
           # System controls
           "$mod CTRL, R, exec, ${
@@ -234,34 +234,57 @@ in {
       ];
 
       # Media controls and special keys
-      bindl = [
-        ", XF86AudioMute, exec, ${pkgs.avizo}/bin/volumectl toggle-mute"
-        ", XF86AudioMicMute, exec, ${pkgs.avizo}/bin/volumectl -m toggle-mute"
-        ", XF86AudioPlay, exec, ${pkgs.playerctl}/bin/playerctl play-pause"
-        ", XF86AudioPause, exec, ${pkgs.playerctl}/bin/playerctl play-pause"
-        ", XF86AudioNext, exec, ${pkgs.playerctl}/bin/playerctl next"
-        ", XF86AudioPrev, exec, ${pkgs.playerctl}/bin/playerctl previous"
-        ", XF86AudioStop, exec, ${pkgs.playerctl}/bin/playerctl stop"
+      bindl =
+        [
+          ", XF86AudioMute, exec, ${pkgs.avizo}/bin/volumectl toggle-mute"
+          ", XF86AudioMicMute, exec, ${pkgs.avizo}/bin/volumectl -m toggle-mute"
+          ", XF86AudioPlay, exec, ${pkgs.playerctl}/bin/playerctl play-pause"
+          ", XF86AudioPause, exec, ${pkgs.playerctl}/bin/playerctl play-pause"
+          ", XF86AudioNext, exec, ${pkgs.playerctl}/bin/playerctl next"
+          ", XF86AudioPrev, exec, ${pkgs.playerctl}/bin/playerctl previous"
+          ", XF86AudioStop, exec, ${pkgs.playerctl}/bin/playerctl stop"
 
-        # Laptop special keys
-        ", XF86Display, exec, ${pkgs.wdisplays}/bin/wdisplays"
-        ", XF86WLAN, exec, ${pkgs.networkmanagerapplet}/bin/nm-connection-editor"
-        ", XF86Bluetooth, exec, hypr-scratchpad bluetui"
-        ", XF86Tools, exec, ${pkgs.gnome-control-center}/bin/gnome-control-center"
-        ", XF86Search, exec, ${
-          inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
-        }/bin/walker"
-        ", XF86LaunchA, exec, ${cfg.fileManager}"
-        ", XF86Explorer, exec, ${cfg.fileManager}"
+          # Laptop special keys
+          ", XF86Display, exec, ${pkgs.wdisplays}/bin/wdisplays"
+          ", XF86WLAN, exec, ${pkgs.networkmanagerapplet}/bin/nm-connection-editor"
+          ", XF86Bluetooth, exec, hypr-scratchpad bluetui"
+          ", XF86Tools, exec, ${pkgs.gnome-control-center}/bin/gnome-control-center"
+          # XF86Search follows the shell (walker vs noctalia) via the
+          # shell-conditional appends below
+          ", XF86LaunchA, exec, ${cfg.fileManager}"
+          ", XF86Explorer, exec, ${cfg.fileManager}"
 
-        # Power management
-        ", XF86PowerOff, exec, ${pkgs.systemd}/bin/systemctl suspend"
-        ", XF86Sleep, exec, ${pkgs.systemd}/bin/systemctl suspend"
-        ", XF86Suspend, exec, ${pkgs.systemd}/bin/systemctl suspend"
-      ];
+          # Power management
+          ", XF86PowerOff, exec, ${pkgs.systemd}/bin/systemctl suspend"
+          ", XF86Sleep, exec, ${pkgs.systemd}/bin/systemctl suspend"
+          ", XF86Suspend, exec, ${pkgs.systemd}/bin/systemctl suspend"
+        ]
+        # Walker clipboard/emoji pickers and search key (custom/wayle shells)
+        ++ lib.optionals (!shellIsNoctalia) [
+          "$mod, V, exec, ${walkerBin} --modules clipboard"
+          "$mod, period, exec, ${walkerBin} --modules emoji" # Emoji picker
+          ", XF86Search, exec, ${walkerBin}"
+          # Notification controls (Wired)
+          "$mod, Escape, exec, ${safeNotifyBin} 'Test' 'Wired notification system'" # Test notification
+          "$mod SHIFT, Escape, exec, pkill -SIGUSR1 wired" # Close all notifications
+          "$mod CTRL, Escape, exec, systemctl --user restart wired" # Restart wired
+        ]
+        # Noctalia IPC binds (noctalia shell)
+        ++ lib.optionals shellIsNoctalia [
+          ", XF86Search, exec, noctalia msg panel-toggle launcher"
+          "$mod, S, exec, noctalia msg panel-toggle control-center"
+          "$mod, comma, exec, noctalia msg settings-toggle"
+          ", XF86AudioRaiseVolume, exec, noctalia msg volume-up"
+          ", XF86AudioLowerVolume, exec, noctalia msg volume-down"
+          ", XF86AudioMute, exec, noctalia msg volume-mute"
+          ", XF86MonBrightnessUp, exec, noctalia msg brightness-up"
+          ", XF86MonBrightnessDown, exec, noctalia msg brightness-down"
+        ];
 
       # Global keybinds (work even when apps have focus)
-      bindel = [
+      # avizo volume keys belong to the custom/wayle shells; noctalia
+      # handles media keys via its own IPC binds appended above.
+      bindel = lib.optionals (!shellIsNoctalia) [
         # Global media controls
         ", XF86AudioRaiseVolume, exec, ${pkgs.avizo}/bin/volumectl -u up"
         ", XF86AudioLowerVolume, exec, ${pkgs.avizo}/bin/volumectl -u down"

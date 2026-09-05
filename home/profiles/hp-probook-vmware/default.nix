@@ -17,6 +17,12 @@
     fileManager = "cosmic-files";
   };
 
+  # Shell trial venue: wayle owns bar/notifications/OSD here while walker,
+  # cthulock, awww, and stasis stay active (wayle ships no launcher, lock
+  # screen, wallpaper engine mandate, or idle manager of its own).
+  # All other hosts keep wm.shell = "custom".
+  wm.shell = "wayle";
+
   # Feature-based configuration for development environment
   features = {
     development = {

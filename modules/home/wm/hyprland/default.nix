@@ -54,6 +54,10 @@ in {
     inputs.cosmic-manager.homeManagerModules.default
     ./animations.nix
     ../shared/ironbar.nix
+    # Desktop shell implementations parameterized by session target.
+    # wm.shell selects which one activates; custom keeps the modules below.
+    (import ../shared/wayle.nix "hyprland-session.target") # Rust/GTK4 shell: bar, notifications, OSD
+    (import ../shared/noctalia.nix "hyprland-session.target") # Native C++ shell: full layer replacement
     ./keybinds.nix
     ./scratchpads.nix
     ./workspaces.nix
@@ -138,21 +142,26 @@ in {
     # Enable which-key for keybind discovery
     wm.which-key.enable = true;
 
-    home.packages = with pkgs; [
-      # Home-specific utilities
-      hyprpolkitagent # Authentication agent
-      swappy # Screenshot annotation
-      cliphist # Clipboard history
-      avizo # OSD for volume/brightness
-      inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
-      udiskie # Auto-mount
-      fileManagerPkg # File manager selected via wm.hyprland.fileManager
-      # Cursor themes
-      adwaita-icon-theme # For Adwaita cursor theme
-      bibata-cursors # Better cursor theme
+    home.packages = with pkgs;
+      [
+        # Home-specific utilities
+        hyprpolkitagent # Authentication agent
+        swappy # Screenshot annotation
+        cliphist # Clipboard history
+        udiskie # Auto-mount
+        fileManagerPkg # File manager selected via wm.hyprland.fileManager
+        # Cursor themes
+        adwaita-icon-theme # For Adwaita cursor theme
+        bibata-cursors # Better cursor theme
 
-      # Screenshot tools provided by shared/satty.nix
-    ];
+        # Screenshot tools provided by shared/satty.nix
+      ]
+      # Noctalia replaces the launcher (walker) and the OSD (avizo) with its
+      # own. Wayle has no launcher, so walker stays for custom and wayle.
+      ++ lib.optionals ((config.wm.shell or "custom") != "noctalia") [
+        inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
+        avizo # OSD for volume/brightness (noctalia renders its own OSD)
+      ];
 
     # Directory MIME default follows the fileManager option. Without an
     # explicit default, codium.desktop wins mimeinfo.cache sort order and
@@ -387,15 +396,20 @@ in {
         ];
 
         # Startup applications
-        exec-once = [
-          "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-          "${pkgs.avizo}/bin/avizo-service"
-          "${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"
-          "${pkgs.udiskie}/bin/udiskie --tray"
-          "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store"
-          "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store"
-          "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent"
-        ];
+        # avizo-service and ironbar belong to the custom shell; noctalia
+        # and wayle start via their own systemd user services.
+        exec-once =
+          [
+            "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
+            "${pkgs.udiskie}/bin/udiskie --tray"
+            "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store"
+            "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store"
+            "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent"
+          ]
+          ++ lib.optionals ((config.wm.shell or "custom") == "custom") [
+            "${pkgs.avizo}/bin/avizo-service"
+            "${inputs.ironbar.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/ironbar"
+          ];
       };
     };
   };
