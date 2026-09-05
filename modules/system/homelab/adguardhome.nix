@@ -135,9 +135,10 @@
     # it creates cannot write to directories it doesn't own.
     # A static user sidesteps both problems, matching the pattern used by rustdesk.nix.
     systemd.services.adguardhome = {
-      # When tailscaled or network interfaces restart, AdGuard's static bind_hosts
-      # (e.g. 100.105.37.12) may not immediately be assigned to an interface.
-      # IP_FREEBIND allows binding before the interface address is fully configured.
+      # Startup is ordered after tailscaled so the static bind_hosts
+      # (e.g. 100.105.37.12) are assigned before AdGuard binds them.
+      # FreeBind= cannot cover the remaining race: it exists only for
+      # [Socket] units, and AdGuard binds its own sockets directly.
       after = [
         "network.target"
         "tailscaled.service"
@@ -151,7 +152,6 @@
         Group = lib.mkForce "adguardhome";
         Restart = lib.mkForce "on-failure";
         RestartSec = lib.mkForce "5s";
-        IPFreebind = true;
       };
     };
 
