@@ -12,4 +12,4 @@ No input revisions changed.
 - PR is auto-merged when required checks pass
 
 ---
-Triggered by: `workflow_dispatch`
+Triggered by: `schedule`
