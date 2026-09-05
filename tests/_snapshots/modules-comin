@@ -36,7 +36,7 @@
     state_persisted = true;
   };
   m920q_autopush_interval = "600s";
-  m920q_autopush_service = "/nix/store/q7qrbf7rz3y7l3plbi58qyw4lz2z22xg-comin-autopush/bin/comin-autopush";
+  m920q_autopush_service = "/nix/store/yyqkm2glqkji7lgmyh30p0rd985cvy5z-comin-autopush/bin/comin-autopush";
   portable = {
     autopush_enabled = false;
     comin_enabled = true;

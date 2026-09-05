@@ -10,7 +10,7 @@
   has_tailscale_interface_assertion = true;
   monitoring_enabled = true;
   opencode_server_exec_start = [
-    "/nix/store/yfxklfz8hhgmk4lg3yr7qj1kl92ml9s7-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
+    "/nix/store/r6nkgrhxbzww6wnkg9h90nrapwypm6bx-opencode-wrapped-wrapped-/bin/opencode serve --port 4096 --hostname 127.0.0.1"
   ];
   opencode_server_working_directory = "/per/etc/nixos";
   opencode_web_enabled = true;
