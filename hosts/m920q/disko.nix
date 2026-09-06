@@ -3,7 +3,7 @@
 # Disk layout:
 #   - main (256GB NVMe): ZFS rpool with impermanence
 #   - data (2TB SATA WD Green): dpool at /per/mnt/data
-#   - backup (1TB SanDisk Extreme): bpool at /per/mnt/backup
+#   - backup (4TB Micron X10 Pro): bpool at /per/mnt/backup
 {
   disko.devices = {
     disk = {
