@@ -29,8 +29,11 @@
       # SSH logins simply share the session instead of racing. No pgrep
       # heuristics: liveness is decided by the attach exit status itself. A dead
       # session (metadata without live panes, e.g. from an interrupted web
-      # attach) makes attach fail; only then we kill, poll until the name
-      # disappears (kill is async), and recreate with the same atomic primitive.
+      # attach) makes attach fail; only then we delete, poll until the name
+      # disappears (delete is async), and recreate with the same atomic primitive.
+      # delete-session (not kill-session): kill targets live sessions and is a
+      # no-op on EXITED metadata, leaving `attach --create` to fail with
+      # "already exists, but is dead" — delete removes the metadata instead.
       # Concurrent recreates are harmless: the second `attach --create` just
       # joins the fresh session.
       if status is-interactive
@@ -48,7 +51,7 @@
           else if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
             if not zellij attach "$session_name"
               echo "ssh-attach: session '$session_name' is dead; recreating" >&2
-              zellij kill-session "$session_name" 2>/dev/null
+              zellij delete-session "$session_name" 2>/dev/null
               for i in (seq 1 50)
                 if not zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
                   break
