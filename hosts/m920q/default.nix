@@ -344,14 +344,14 @@ in {
     dbus.implementation = lib.mkForce "dbus";
 
     journald = {
-      extraConfig = ''
-        RateLimitIntervalSec=30s
-        RateLimitBurst=100
-        SystemMaxUse=500M
-        SystemMaxFileSize=50M
-        Compress=yes
-        ForwardToSyslog=no
-      '';
+      settings.Journal = {
+        RateLimitIntervalSec = "30s";
+        RateLimitBurst = 100;
+        SystemMaxUse = "500M";
+        SystemMaxFileSize = "50M";
+        Compress = "yes";
+        ForwardToSyslog = "no";
+      };
     };
 
     pipewire.wireplumber.extraConfig."10-disable-bluez" = {
