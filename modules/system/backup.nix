@@ -107,13 +107,15 @@ in {
             # Pools whose filesystems are all `noauto` import only on first
             # mount access, so after a reboot they stay exported until
             # something touches the mountpoint — which syncoid never does
-            # (it addresses datasets by name). Requiring the import units
-            # makes each run self-sufficient: no-op when already imported,
-            # retried while USB devices enumerate, immediate dependency
-            # failure when the drive is absent. Pulled in only by the backup
-            # timer, never by boot.
+            # (it addresses datasets by name). Pulling the import units makes
+            # each run self-sufficient: no-op when already imported, retried
+            # while USB devices enumerate. Wants (not Requires): consumers
+            # without import units (e.g. the VM test, which creates pools
+            # ad-hoc) must still start, and a failed import is caught below
+            # by the fail-fast guard with a clearer message. Pulled in only
+            # by the backup timer, never by boot.
             after = importUnits;
-            requires = importUnits;
+            wants = importUnits;
             preStart = ''
               set -eu
               # Abort any broken partial receive before starting sync
