@@ -8,13 +8,19 @@
 # service has no WantedBy (started only by HDMI-hotplug udev), so it stays
 # inert in a VM while Avahi, firewall, and package configuration are tested
 # against the real module.
-_: {
+{pkgs, ...}: let
+  # Evaluating system for the test package set below. Must come from the
+  # outer pkgs: the node-level pkgs would recurse (nixpkgs.pkgs is defined
+  # in terms of it).
+  hostSystem = pkgs.stdenv.hostPlatform.system;
+in {
   name = "streaming-services";
 
   nodes = {
     server = {
       lib,
       pkgs,
+      inputs,
       ...
     }: {
       imports = [
@@ -31,6 +37,15 @@ _: {
       };
 
       config = {
+        # Production allows unfree globally, but the test harness pins
+        # nixpkgs.config read-only, so provide a package set permitting it:
+        # moonshine.nix references pkgs.steam (boxart icon path) at
+        # evaluation time.
+        nixpkgs.pkgs = lib.mkForce (import inputs.nixpkgs {
+          system = hostSystem;
+          config.allowUnfree = true;
+        });
+
         users.users.schausberger = {
           isNormalUser = true;
           uid = 1000;
