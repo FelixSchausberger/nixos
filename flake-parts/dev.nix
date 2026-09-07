@@ -40,6 +40,7 @@
         jq # JSON processing for profiling and build scripts
         just # Task runner for development workflows
         markdownlint-cli # Markdown linter used by the treefmt markdownlint formatter
+        nix-update # Bump versions/hashes of pinned packages in pkgs/
         prettier
         shellcheck # Shell script linting for pre-commit hooks
         pre-commit-hook-ensure-sops
