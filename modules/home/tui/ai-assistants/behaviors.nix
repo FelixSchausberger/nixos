@@ -121,6 +121,20 @@
       priority = 10; # Highest priority
     };
 
+    prefer-gh-cli-for-github = {
+      content = ''
+        For GitHub data — issues, pull requests, releases, file contents, commit
+        history — prefer the `gh` CLI (`gh api`, `gh pr view`, `gh issue view`) or
+        raw.githubusercontent.com URLs via Bash instead of webfetch on github.com
+        pages. Rendered GitHub pages embed tens of thousands of tokens of
+        navigation chrome around the actual content; the CLI and raw endpoints
+        return dense text. Use webfetch on github.com only for content `gh`
+        cannot retrieve.
+      '';
+      enabled = true;
+      description = "Prefer gh CLI / raw URLs over webfetch for GitHub content";
+    };
+
     additional-context = {
       content = ''
         Unless otherwise specified: DRY, YAGNI, KISS, Pragmatic. Ask questions for clarifications. When doing a plan or research-like request, present your findings and halt for confirmation. Use raggy first to find documentation. Speak the facts, don't sugar coat statements. Your opinion matters. End all responses with an emoji of an animal
