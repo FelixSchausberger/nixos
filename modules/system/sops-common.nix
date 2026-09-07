@@ -82,20 +82,6 @@ in {
     mode = "0400";
   };
 
-  # iwd network config for systemd-networkd-based WiFi (e.g., m920q specialisation)
-  sops.templates."wifi/iwd" = {
-    content = ''
-      [Security]
-      Passphrase=${config.sops.placeholder."wifi/pretty-fly-for-a-wifi"}
-
-      [Settings]
-      AutoConnect=true
-    '';
-    owner = "root";
-    group = "root";
-    mode = "0600";
-  };
-
   # Create system mount directories for rclone
   systemd.tmpfiles.rules = [
     "d ${defaults.paths.mountDirs.base} 0755 root root -"
