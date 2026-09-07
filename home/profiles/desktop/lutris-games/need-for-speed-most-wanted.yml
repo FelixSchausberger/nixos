@@ -1,0 +1,9 @@
+name: NFS Most Wanted
+game_slug: need-for-speed-most-wanted
+slug: need-for-speed-most-wanted
+runner: wine
+version: Windows
+game:
+  exe: /per/mnt/games/Electronic Arts/Need for Speed Most Wanted/speed.exe
+  prefix: /per/mnt/games/Lutris/prefixes/need-for-speed-most-wanted
+  arch: win32

@@ -16,6 +16,7 @@ in {
       ./disko.nix
       ./base-config.nix
       ../../modules/system/gaming.nix
+      ../../modules/system/emulation.nix
       ../../modules/system/tailscale.nix
       ../../modules/system/backup.nix
       ../../modules/system/hardware/power-management.nix
@@ -129,6 +130,7 @@ in {
   # steal the steam:// URL and break the stream — upstream issue #134).
   modules.system.moonshine.enable = true;
   modules.system.gaming.enable = true;
+  modules.system.emulation.enable = true;
 
   # Vitals health monitoring, same daemon+CLI as m920q but in GUI mode:
   # headless=false binds the user daemon to graphical-session.target (Niri)
