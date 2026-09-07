@@ -54,6 +54,11 @@ in {
     settings = {
       model = "github-copilot/gpt-5-mini";
       small_model = "github-copilot/gpt-5-mini";
+      # Hide unused providers from the model list. Zen's gateway id is
+      # "opencode" (distinct from the "opencode-go" subscription provider);
+      # ollama-cloud is auto-detected from the OLLAMA_API_KEY environment,
+      # hidden here as a guard alongside the removed export below.
+      disabled_providers = ["opencode" "ollama-cloud"];
       agent = {
         explore.model = "github-copilot/gpt-5-mini";
         general.model = "github-copilot/gpt-5-mini";
@@ -122,9 +127,6 @@ in {
     if test -f ${config.sops.secrets."github/token".path}
       set -gx GITHUB_TOKEN (cat ${config.sops.secrets."github/token".path})
     end
-    if test -f ${config.sops.secrets."ollama/api-key".path}
-      set -gx OLLAMA_API_KEY (cat ${config.sops.secrets."ollama/api-key".path})
-    end
   '';
 
   xdg.configFile."opencode/agents/code-simplifier.md".text = ''
@@ -183,21 +185,22 @@ in {
     enableSkillAnalysis = true;
   };
 
-  # Quota display policy for Zen free tier: no remote quota API exists upstream,
-  # so silence toasts/sidebar/prompt-bar but keep the compact status line and
-  # local /tokens_* reports. Re-enable when Zen exposes a balance/usage API.
+  # Quota display policy: active OpenCode Go subscription provides remote
+  # quota via the official usage API, so toasts/sidebar/reset notifications
+  # are enabled and pinned to opencode-go. Compact status line stays on.
   xdg.configFile."opencode/opencode-quota/quota-toast.json".text = builtins.toJSON {
-    enabledProviders = "auto";
+    enabledProviders = ["opencode-go"];
     formatStyle = "singleWindow";
     percentDisplayMode = "remaining";
     accountingDetail = "summary";
     tuiCommandDisplay = "inline";
-    enableToast = false;
+    enableToast = true;
     resetNotifications = {
-      enabled = false;
+      enabled = true;
+      windows = ["weekly"];
     };
     tuiSidebarPanel = {
-      enabled = false;
+      enabled = true;
     };
     tuiCompactStatus = {
       enabled = true;
