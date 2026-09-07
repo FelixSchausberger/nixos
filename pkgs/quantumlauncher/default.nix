@@ -32,19 +32,20 @@
 in
   rustPlatform.buildRustPackage rec {
     pname = "quantumlauncher";
-    version = "0.4.2";
+    version = "0.5.1";
 
     src = fetchFromGitHub {
       owner = "Mrmayman";
       repo = "quantumlauncher";
       rev = "v${version}";
-      hash = "sha256-9dMSFxSZTfyh3xkEYU0Xrak3n8K7ocaLI1OKI62fTMQ=";
+      hash = "sha256-98KlD6O91Em02K+Hs9XPQ/ybYjMeEsoVUZpYpi8vkfc=";
     };
 
-    cargoHash = "sha256-2v3/ROoA/Ri8BXhK+lr+4lhN2HHvjZ9ejZ2/EDw7r3w=";
+    cargoHash = "sha256-xCbTkU+aocl03LC5RD4I9kKyjw8kySj7BJwFFaf1iMQ=";
 
-    # Skip doctests due to upstream test issues
-    cargoTestFlags = ["--bins" "--lib"];
+    # Skip doctests due to upstream test issues; 0.5.1 has no library target,
+    # so --lib must not be requested here.
+    cargoTestFlags = ["--bins"];
 
     nativeBuildInputs = [
       pkg-config
