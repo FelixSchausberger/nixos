@@ -32,6 +32,16 @@ in {
       default = config.hostConfig.user or "schausberger";
       description = "User to run Moonshine as";
     };
+
+    extraApplications = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = [];
+      description = ''
+        Additional Moonlight application tiles, merged after the Steam tile.
+        Lets other modules (e.g. emulation.nix) contribute launchers without
+        touching the Steam entry.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -68,26 +78,28 @@ in {
         # German keyboard for in-game chat (upstream default is "us").
         compositor.keyboard.layout = "de";
 
-        application = [
-          {
-            title = "Steam";
-            boxart = "${steamBoxart}";
-            command = [
-              "/run/current-system/sw/bin/steam"
-              "steam://open/bigpicture"
-            ];
-            # Steam cold start exceeds the 2s upstream default (observed
-            # session-launch timeout in the journal); allow 20s.
-            launch_timeout_secs = 20;
-            # Journal logging keeps failed session launches diagnosable
-            # (the default discards all application output).
-            stdout = "journal";
-            stderr = "journal";
-            pre_command = [
-              ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
-            ];
-          }
-        ];
+        application =
+          [
+            {
+              title = "Steam";
+              boxart = "${steamBoxart}";
+              command = [
+                "/run/current-system/sw/bin/steam"
+                "steam://open/bigpicture"
+              ];
+              # Steam cold start exceeds the 2s upstream default (observed
+              # session-launch timeout in the journal); allow 20s.
+              launch_timeout_secs = 20;
+              # Journal logging keeps failed session launches diagnosable
+              # (the default discards all application output).
+              stdout = "journal";
+              stderr = "journal";
+              pre_command = [
+                ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
+              ];
+            }
+          ]
+          ++ cfg.extraApplications;
 
         # Per-game tiles straight in Moonlight: launch titles directly instead
         # of navigating Big Picture on touch. Upstream default scanner with

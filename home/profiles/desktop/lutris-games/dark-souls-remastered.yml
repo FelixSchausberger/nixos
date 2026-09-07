@@ -1,0 +1,9 @@
+name: Dark Souls Remastered
+game_slug: dark-souls-remastered
+slug: dark-souls-remastered
+runner: wine
+version: Windows
+game:
+  exe: /per/mnt/games/Dark-Souls/Dark Souls Remastered/DarkSoulsRemastered.exe
+  prefix: /per/mnt/games/Lutris/prefixes/dark-souls-remastered
+  arch: win64
