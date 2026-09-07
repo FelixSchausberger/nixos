@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  config,
   inputs,
   ...
 }: {
@@ -73,7 +74,7 @@
       samba # provides smbclient, smbpasswd, net
 
       # Remote coding from phone via SSH
-      inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
+      (config.ai-assistants.safeRm.wrap inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default)
 
       # Vitals health monitoring CLI
       inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.cli
