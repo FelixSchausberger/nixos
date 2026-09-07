@@ -9,7 +9,8 @@ compatibility: opencode
 
 Token usage debugger for opencode sessions. Uses the TokenScope plugin
 (`@ramtinj95/opencode-tokenscope`) for per-session forensics. Never used for
-remote quota display; Zen free tier exposes no quota API.
+remote quota display; that is the opencode-quota plugin's job (OpenCode Go
+subscription via the official usage API).
 
 ## When to Use
 
