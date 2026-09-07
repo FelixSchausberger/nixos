@@ -157,6 +157,17 @@ in {
     services.homepage-dashboard = {
       enable = true;
       listenPort = cfg.port;
+      # Caddy terminates TLS for the tailnet domain and proxies with the
+      # original Host header, so Homepage must allow it. Without this every
+      # tailnet request fails with HTTP 400 "Host validation failed" while
+      # localhost still works. Local entries preserve direct loopback checks.
+      allowedHosts = lib.concatStringsSep "," (
+        lib.optionals hl.caddyProxy.enable [hl.caddyProxy.tailnetDomain]
+        ++ [
+          "localhost:${toString cfg.port}"
+          "127.0.0.1:${toString cfg.port}"
+        ]
+      );
       services = allServices;
       settings = {
         title = "Homelab";

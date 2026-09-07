@@ -1,6 +1,6 @@
 ---
 name: nix-expert
-description: Nix ecosystem expert guidance for flakes, derivations, overlays, NixOS, Home Manager, and development environments.
+description: Use when editing flakes, derivations, overlays, NixOS modules, Home Manager config, nixpkgs packaging, or dev shells. Nix ecosystem expert guidance.
 license: MIT
 compatibility: opencode
 ---

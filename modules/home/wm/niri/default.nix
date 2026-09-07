@@ -50,11 +50,19 @@
     };
 
   fileManagerPkg = fileManagerInfo.package;
+
+  # Noctalia replaces the launcher (walker) and the OSD (avizo) with its
+  # own. Wayle has no launcher, so walker stays for custom and wayle.
+  shellKeepsWalker = (config.wm.shell or "custom") != "noctalia";
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
     ./keybinds.nix
     ../shared/ironbar.nix # Floating pill bar with dynamic workspaces and popup widgets
+    # Desktop shell implementations parameterized by session target.
+    # wm.shell selects which one activates; custom keeps the modules below.
+    (import ../shared/wayle.nix "niri-session.target") # Rust/GTK4 shell: bar, notifications, OSD
+    (import ../shared/noctalia.nix "niri-session.target") # Native C++ shell: full layer replacement
     # Shared options and imports (imported once)
     ../shared-imports.nix # Shared homeManager module imports
     ../shared/options.nix
@@ -243,8 +251,6 @@ in {
           terminalPkg # Default terminal for this profile (e.g. ghostty)
           swappy # Screenshot annotation
           cliphist # Clipboard history
-          avizo # OSD for volume/brightness
-          inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
           udiskie # Auto-mount
           fileManagerPkg # File manager selected via wm.niri.fileManager
           # Cursor themes
@@ -254,6 +260,12 @@ in {
           hicolor-icon-theme # Base icon theme
 
           # Screenshot tools provided by shared/satty.nix
+        ]
+        ++ lib.optionals shellKeepsWalker [
+          inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
+        ]
+        ++ lib.optionals ((config.wm.shell or "custom") != "noctalia") [
+          avizo # OSD for volume/brightness (noctalia renders its own OSD)
         ]
         ++ lib.optionals (cfg.browser != "zen") [
           browserPkg # Zen is provided by programs.zen-browser

@@ -1,6 +1,6 @@
 ---
 name: nix-testing
-description: Nix testing and quality assurance best practices for derivations, packages, and module validation.
+description: Use when writing or running tests for Nix derivations, packages, NixOS modules, namaka snapshots, or VM tests. Nix testing and quality assurance best practices.
 license: MIT
 compatibility: opencode
 ---

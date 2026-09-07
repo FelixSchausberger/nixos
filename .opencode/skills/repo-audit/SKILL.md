@@ -1,6 +1,6 @@
 ---
 name: repo-audit
-description: Read-only audit of the NixOS flake for over-engineering and hard-way patterns, producing a ranked findings report.
+description: Use when asked to plan or execute a NixOS flake over-engineering audit. Phase 1 plans only; Phase 2 fixes confirmed findings on explicit follow-up.
 license: MIT
 compatibility: opencode
 ---
@@ -10,18 +10,33 @@ compatibility: opencode
 Repository auditor for the NixOS flake. Finds places where custom machinery
 solves a problem whose tool, protocol, or platform already provides the
 primitive — especially when the custom version has worse failure modes.
-Produces a report; never fixes anything.
+
+Two phases, strictly separated:
+
+- **Phase 1 — Plan (default).** Read-only. Writes an audit plan and halts.
+  Never edits repo code, never runs rebuilds, never creates bookmarks.
+- **Phase 2 — Execute (only on explicit follow-up such as "execute plan
+  `<path>`").** Runs the approved plan, writes the findings report, and fixes
+  `confirmed` findings only. `suspected` findings stay report-only.
 
 ## Hard Constraints
 
-1. **Read-only.** No edits, no rebuilds, no commits (except the tracking
-   bookmark in step 7). Fixes are separate user-approved work.
+1. **Phase separation.** Phase 1 makes no repo edits, runs no rebuilds, runs
+   no `jjwork` (fetch+rebase would mutate the working copy), and creates no
+   bookmarks. All mutation belongs to Phase 2 after explicit user approval.
 2. **No speculation.** Every claimed alternative must be verified: nixpkgs
    option via the nixos MCP server (`search`, `type=options`), a man page
    section, or an upstream doc/issue. Unverifiable claims are filed as
    `suspected`, never `confirmed`.
 3. **No churn proposals.** Ugly but robust and simple-enough code goes on the
    do-not-touch list, not the findings list.
+4. **Confirmed-only fixes.** Phase 2 edits code only for `confirmed`
+   findings. `suspected` findings get a `TBD verification` migration sketch
+   and no code change.
+5. **No permanent rebuilds.** `nixos-rebuild switch`, `nh os switch`, and
+   `deploy` are prohibited. Commits and pushes go through the
+   `jj-commit-workflow` skill; this skill stops at validated working-copy
+   changes.
 
 ## Modes
 
@@ -31,11 +46,12 @@ Produces a report; never fixes anything.
 - **full**: sweep the entire scope. Use when no bookmark exists (report the
   fallback explicitly) or when the user asks for a full sweep.
 
-Determine the incremental base:
+Determine the incremental base (read-only — never run `jjwork` in Phase 1):
 
 ```bash
-jjwork
 jj bookmark list | grep '^audit/'
+jj status
+jj diff --stat
 ```
 
 Use the newest `audit/YYYY-MM-DD` bookmark. Enumerate changes since it:
@@ -43,6 +59,11 @@ Use the newest `audit/YYYY-MM-DD` bookmark. Enumerate changes since it:
 ```bash
 jj diff --from audit/<latest> --to @ --stat
 ```
+
+If the newest `audit/` bookmark points at `@` itself (or its parent with an
+empty diff), the bookmark-based diff is empty by construction. Fall back to
+uncommitted-changes mode (`jj diff`, `jj status`) and declare the fallback
+explicitly in the plan header.
 
 ## Scope
 
@@ -119,6 +140,52 @@ Treat these as worked instances of the anti-pattern class:
 5. **Silent failure modes.** A service with zero journal output turned a
    30-second diagnosis into an evening of archaeology.
 
+## Phase 1 — Plan output
+
+Write the plan to `.opencode/audits/plan-<YYYY-MM-DD>-<mode>.md` (create the
+directory if needed; the directory is gitignored). Per candidate:
+
+```markdown
+### <N>. <Short title>
+- Target: <path:lines>
+- Intent question: <what the code tries to achieve vs what it does>
+- Verification: <exact MCP search / man page / upstream doc to check>
+- Fix permission: <confirmed-only | report-only>
+```
+
+Then present the candidate list to the user and halt. Do not write an
+`audit-*.md` report in Phase 1. Do not edit code. Do not create bookmarks.
+
+## Phase 2 — Execute (explicit follow-up only)
+
+Run only when the user says to execute a specific plan file (e.g. "execute
+plan `.opencode/audits/plan-<date>-incremental.md`").
+
+1. Rebase context first (mutation is now expected):
+
+   ```bash
+   jjwork
+   ```
+
+2. Run the signal greps, deep-read each hit with intent analysis, and verify
+   every claimed alternative before writing it up.
+3. Fix `confirmed` findings only, keeping each fix minimal and explicit.
+   `suspected` findings stay report-only.
+4. Validate repo edits:
+
+   ```bash
+   nix fmt
+   prek run --all-files
+   namaka check
+   nix flake check
+   ```
+
+   Then tell the user to test deployment (never run permanent rebuilds):
+
+   ```bash
+   sudo nixos-rebuild test --flake .
+   ```
+
 ## Report Format
 
 Rank by likelihood-of-production-breakage × complexity-cost. Per finding:
@@ -145,9 +212,11 @@ flag-file recovery mechanism.
 
 1. Write the report to `.opencode/audits/audit-<YYYY-MM-DD>-<mode>.md`
    (create the directory if needed; the directory is gitignored).
-2. Present the ranked summary to the user and halt. Do not implement fixes.
-3. Record the baseline for the next incremental run:
+2. Present the ranked summary to the user and halt. Fixes are limited to
+   `confirmed` findings from the approved plan; everything else is report-only.
+3. Record the baseline for the next incremental run only if the bookmark does
+   not already exist:
 
-```bash
-jj bookmark create audit/<YYYY-MM-DD>
-```
+   ```bash
+   jj bookmark list | grep '^audit/<YYYY-MM-DD>$' || jj bookmark create audit/<YYYY-MM-DD>
+   ```

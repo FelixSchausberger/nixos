@@ -25,7 +25,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && (config.wm.shell or "custom") != "noctalia") {
     home.packages = [pkgs.awww];
 
     # awww daemon for workspace wallpapers (default namespace)

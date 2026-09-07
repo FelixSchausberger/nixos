@@ -6,6 +6,10 @@
 }: let
   cfg = config.wm.niri;
 
+  # Launcher key follows the active shell: walker for custom/wayle,
+  # noctalia's built-in launcher for noctalia.
+  shellIsNoctalia = (config.wm.shell or "custom") == "noctalia";
+  shellIsCustom = (config.wm.shell or "custom") == "custom";
   # Package mappings for applications
 
   terminalPkg =
@@ -65,7 +69,10 @@ in {
         # Open terminal with herdr for AI agent sessions
         "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.herdr}/bin/herdr"];
 
-        "Mod+D".action.spawn = "walker";
+        "Mod+D".action.spawn =
+          if shellIsNoctalia
+          then ["sh" "-c" "noctalia msg panel-toggle launcher"]
+          else "walker";
 
         # ===== WINDOW MANAGEMENT =====
         "Mod+Q".action.close-window = {};
@@ -199,17 +206,30 @@ in {
         ];
 
         # ===== IDLE INHIBITOR =====
-        "Mod+Z".action.spawn = ["stasis-toggle"];
+        # (stasis-toggle bind appended below; stasis only runs on
+        # custom/wayle shells, and lib.mkIf must not nest inside binds
+        # values because niri-flake renders them as literal KDL)
 
-        # ===== OVERVIEW + IRONBAR TOGGLE =====
+        # ===== OVERVIEW (+ IRONBAR TOGGLE ON CUSTOM SHELL) =====
         # Using spawn workaround since Niri doesn't support multiple actions per keybind yet
         # Reference: https://github.com/YaLTeR/niri/issues/965
         "Mod+Tab".action.spawn = [
           "bash"
           "-c"
-          "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"
+          (
+            if shellIsCustom
+            then "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"
+            else "niri msg action toggle-overview 2>/dev/null"
+          )
         ];
       }
+
+      # stasis-toggle only exists when stasis runs (custom/wayle shells).
+      # optionalAttrs at merge level: lib.mkIf must not nest inside binds
+      # values because niri-flake renders them as literal KDL.
+      (lib.optionalAttrs (!shellIsNoctalia) {
+        "Mod+Z".action.spawn = ["stasis-toggle"];
+      })
 
       # Generated directional keybinds (Colemak-DH canonical + Vim + Arrow variants)
       # Window focus: Mod+N/E/I/O (and H/J/K/L, arrows)

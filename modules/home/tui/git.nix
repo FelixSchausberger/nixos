@@ -43,6 +43,15 @@ in {
           User git
           IdentityFile ~/.ssh/id_ed25519
 
+      # Pixel 9a via Termux sshd over Tailscale (MagicDNS short name
+      # resolves via 100.100.100.100; port 8022 is Termux sshd default).
+      # Key auth: ssh-copy-id -p 8022 u0_a397@pixel
+      Host pixel
+          HostName pixel-9a
+          User u0_a397
+          Port 8022
+          IdentityFile ~/.ssh/id_ed25519
+
       # GitHub (using port 443 due to corporate firewall)
       Host github.com
           HostName ssh.github.com

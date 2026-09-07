@@ -11,6 +11,7 @@
       "https://yazi.cachix.org"
       "https://claude-code.cachix.org"
       "https://niri-epireyn.cachix.org"
+      "https://noctalia.cachix.org"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
@@ -21,6 +22,7 @@
       "yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA="
       "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk="
       "niri-epireyn.cachix.org-1:tlVyFN7CtsDT+ZcLPS+ekFWeT1X6X4OqvWqbBMyIzFA="
+      "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
     ];
     # Cache robustness settings
     narinfo-cache-positive-ttl = 3600; # 1 hour for R2 presigned URLs
@@ -204,6 +206,13 @@
       url = "github:Toqozz/wired-notify";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
+    };
+    # Noctalia shell (native C++ Wayland shell). Pinned to the cachix
+    # branch so pre-built binaries hit the cache; deliberately WITHOUT
+    # nixpkgs.follows, which would change the derivation hash and force
+    # local rebuilds (see https://docs.noctalia.dev/noctalia/getting-started/nixos/).
+    noctalia = {
+      url = "github:noctalia-dev/noctalia/cachix";
     };
 
     # GUI Applications

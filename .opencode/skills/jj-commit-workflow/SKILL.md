@@ -1,6 +1,6 @@
 ---
 name: jj-commit-workflow
-description: Validate, commit, and push changes using jj across the NixOS flake.
+description: Use when asked to commit, describe, push, or open a PR for NixOS flake changes. Validates, commits, and pushes with jj (jjwork, jjdescribe, jjpush).
 license: MIT
 compatibility: opencode
 ---
