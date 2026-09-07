@@ -61,7 +61,9 @@ in {
         summary.model = "github-copilot/gpt-5-mini";
         compaction.model = "github-copilot/gpt-5-mini";
       };
-      plugin = ["@slkiser/opencode-quota" "@mohak34/opencode-notifier"];
+      # tokenscope is server-side only (debugging tool, no TUI pane).
+      # Quota stays in tui.plugin for the compact status line.
+      plugin = ["@slkiser/opencode-quota" "@ramtinj95/opencode-tokenscope@latest" "@mohak34/opencode-notifier"];
       permission = {
         bash = {
           "git reset*" = "deny";
@@ -157,6 +159,57 @@ in {
     4. Validate that semantics are unchanged.
     5. Report meaningful simplifications only.
   '';
+
+  # TokenScope slash command: invokes the plugin tool and prints the report verbatim.
+  # Required by @ramtinj95/opencode-tokenscope; plugin alone does not register /tokenscope.
+  xdg.configFile."opencode/command/tokenscope.md".text = ''
+    ---
+    description: Analyze token usage across the current session with detailed breakdowns by category
+    ---
+
+    Call the tokenscope tool directly without delegating to other agents.
+    Leave sessionID unset unless the user explicitly asked to analyze a different session.
+    Then read the exact unique report path returned by TokenScope.
+    Return that file verbatim without additional text or formatting.
+  '';
+
+  # TokenScope feature flags. Stable user override read once at startup.
+  xdg.configFile."opencode/tokenscope-config.json".text = builtins.toJSON {
+    enableContextBreakdown = true;
+    enableToolSchemaEstimation = true;
+    enableCacheEfficiency = true;
+    enableSubagentAnalysis = true;
+    enableDetailedSubagentCostBreakdown = false;
+    enableSkillAnalysis = true;
+  };
+
+  # Quota display policy for Zen free tier: no remote quota API exists upstream,
+  # so silence toasts/sidebar/prompt-bar but keep the compact status line and
+  # local /tokens_* reports. Re-enable when Zen exposes a balance/usage API.
+  xdg.configFile."opencode/opencode-quota/quota-toast.json".text = builtins.toJSON {
+    enabledProviders = "auto";
+    formatStyle = "singleWindow";
+    percentDisplayMode = "remaining";
+    accountingDetail = "summary";
+    tuiCommandDisplay = "inline";
+    enableToast = false;
+    resetNotifications = {
+      enabled = false;
+    };
+    tuiSidebarPanel = {
+      enabled = false;
+    };
+    tuiCompactStatus = {
+      enabled = true;
+      homeBottom = true;
+      sessionPrompt = false;
+    };
+    tuiPromptBar = {
+      enabled = false;
+    };
+    showSessionTokens = true;
+    sessionTokenScope = "current";
+  };
 
   xdg.configFile."opencode/opencode-notifier.json".text = builtins.toJSON {
     sound = true;
