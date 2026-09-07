@@ -40,9 +40,6 @@ in
       gamemode
       gamescope
 
-      # Game launchers
-      prismlauncher # Minecraft
-
       # Emulation
       dolphin-emu
       pcsx2
@@ -177,7 +174,6 @@ in
         # Quick launch games
         "$mod, G, exec, steam"
         "$mod SHIFT, L, exec, lutris"
-        "$mod SHIFT, M, exec, prismlauncher"
 
         # Gaming utilities
         "$mod CTRL, M, exec, mangohud"
@@ -240,7 +236,6 @@ in
         whitelist=steam
         whitelist=lutris
         whitelist=heroic
-        whitelist=prismlauncher
 
         [gpu]
         apply_gpu_optimisations=accept-responsibility
