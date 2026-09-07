@@ -1,0 +1,9 @@
+name: N-Ball
+game_slug: n-ball
+slug: n-ball
+runner: wine
+version: Windows
+game:
+  exe: /per/mnt/games/Rag Doll/nball/nball/N-Ball v2.2.exe
+  prefix: /per/mnt/games/Lutris/prefixes/n-ball
+  arch: win32

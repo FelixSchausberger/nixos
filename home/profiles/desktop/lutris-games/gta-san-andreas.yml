@@ -1,0 +1,9 @@
+name: GTA San Andreas
+game_slug: gta-san-andreas
+slug: gta-san-andreas
+runner: wine
+version: Windows
+game:
+  exe: /per/mnt/games/Rockstar Games/Grand Theft Auto San Andreas/gta_sa.exe
+  prefix: /per/mnt/games/Lutris/prefixes/gta-san-andreas
+  arch: win32
