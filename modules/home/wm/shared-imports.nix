@@ -5,6 +5,7 @@
   imports = [
     inputs.wired.homeManagerModules.default # Wired notification daemon
     ../wallpapers # Wallpaper management module
+    ./shared/shell.nix # Desktop shell selector (wm.shell: custom/wayle/noctalia)
     ./shared/ala-lape.nix # Idle inhibitor (gamepad/process-based)
     ./shared/walker.nix # Walker application launcher (shared between WMs)
     ./shared/wlr-which-key.nix # Which-key keybind discovery (shared between WMs)

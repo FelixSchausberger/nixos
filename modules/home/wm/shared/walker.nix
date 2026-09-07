@@ -33,12 +33,15 @@
     }
   ];
   # Note: Niri doesn't have a walker module yet, so no niri-specific modules
+  # Walker serves the custom and wayle shells. Noctalia ships its own
+  # launcher, so walker stays disabled there to keep one launcher owner.
+  shellKeepsWalker = (config.wm.shell or "custom") != "noctalia";
 in {
   imports = [
     inputs.walker.homeManagerModules.default
   ];
 
-  config = lib.mkIf (config.wm.hyprland.enable or config.wm.niri.enable or false) {
+  config = lib.mkIf ((config.wm.hyprland.enable or config.wm.niri.enable or false) && shellKeepsWalker) {
     programs.walker = {
       enable = true;
       runAsService = false;

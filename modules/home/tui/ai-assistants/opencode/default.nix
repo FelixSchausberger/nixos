@@ -198,31 +198,6 @@ in {
     };
   };
 
-  # Ensure opencode's AGENTS.md always includes the jjwork rule
-  # This is appended to the auto-generated file on activation
-  home.activation.opencode-agents = lib.mkAfter ''
-        AGENTS_FILE="$HOME/.config/opencode/AGENTS.md"
-        if [ -f "$AGENTS_FILE" ] && [ -w "$AGENTS_FILE" ] && ! grep -q "jjwork" "$AGENTS_FILE"; then
-          cat >> "$AGENTS_FILE" << 'AGENTS_EOF'
-
-
-    ---
-
-    # Prevents working copy divergence (critical workflow rule)
-
-    CRITICAL: Always rebase the working copy onto main before starting any work.
-
-    Before making any changes, run:
-    ```bash
-    jjwork
-    ```
-    This fetches from remote, rebases onto main, and creates a clean empty commit.
-
-    This prevents the working copy from diverging into orphan branches that create messy merge histories and lost files. Every opencode session MUST start with `jjwork`.
-    AGENTS_EOF
-        fi
-  '';
-
   sops.secrets = {
     "ollama/api-key" = {};
     "github/token" = {};
