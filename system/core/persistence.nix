@@ -10,9 +10,11 @@
 
   # System-level persistence configuration
   # This defines what system data survives reboots in an impermanent setup
+  # /var/empty is provisioned by nixpkgs' activation module as 0555 with the
+  # immutable bit set (sshd privilege-separation dir). Adding a chmod rule for
+  # it here fails with EPERM on every boot after the immutable bit is applied.
   systemd.tmpfiles.rules = [
     "d /per/repos 0755 schausberger users -"
-    "d /var/empty 0755 root root -"
   ];
 
   # Impermanence can leave cleanup paths transiently unavailable for tmpfiles jobs.
