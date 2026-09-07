@@ -16,7 +16,23 @@
     )
   );
 
-  sharedSkills = ../skills;
+  # Typst authoring skills (local docs mirrors for typst + touying).
+  # Upstream: https://github.com/apcamargo/typst-skills
+  typstSkillsSrc = pkgs.fetchFromGitHub {
+    owner = "apcamargo";
+    repo = "typst-skills";
+    rev = "93978422d58d4e5c21efe4bfa9f3e6dd9940cf96";
+    hash = "sha256-Tmf8xoKNF0wxNvS+av3sOp6Pe0j2MwfeaxrUvlD9VFU=";
+  };
+
+  # Merge repo-local skills with the vendored typst skills; the skills
+  # option maps attr names to skill directory names.
+  sharedSkills =
+    lib.mapAttrs (name: _: ../skills + "/${name}") (builtins.readDir ../skills)
+    // {
+      typst-author = "${typstSkillsSrc}/typst-author";
+      touying-author = "${typstSkillsSrc}/touying-author";
+    };
 
   avoidAgreementHook = pkgs.writeShellScript "avoid-agreement.sh" (
     builtins.readFile ./hooks/avoid-agreement.sh
