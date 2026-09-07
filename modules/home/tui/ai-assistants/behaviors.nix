@@ -40,6 +40,8 @@
         This fetches from remote, rebases onto main, and creates a clean empty commit.
 
         This prevents the working copy from diverging into orphan branches that create messy merge histories and lost files. Every session MUST start with `jjwork`.
+
+        If `jjwork` refuses with undescribed working-copy changes, do NOT bypass it with JJWORK_ALLOW_WIP=1. Report the listed files to the user and halt: the previous work was never described and must be described first.
       '';
       enabled = true;
       description = "Rebase onto main with jjwork before starting any work";
