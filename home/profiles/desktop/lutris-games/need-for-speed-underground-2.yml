@@ -1,0 +1,9 @@
+name: NFS Underground 2
+game_slug: need-for-speed-underground-2
+slug: need-for-speed-underground-2
+runner: wine
+version: Windows
+game:
+  exe: /per/mnt/games/Electronic Arts/Need for Speed Underground 2/speed2.exe
+  prefix: /per/mnt/games/Lutris/prefixes/need-for-speed-underground-2
+  arch: win32
