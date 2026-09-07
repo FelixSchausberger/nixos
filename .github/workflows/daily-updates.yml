@@ -78,6 +78,7 @@ jobs:
             fi
             echo ""
             echo "**Validation:**"
+            echo ""
             echo "- Namaka snapshot checks run in this workflow"
             echo "- CI validates flake evaluation and builds"
             echo "- PR is auto-merged when required checks pass"
