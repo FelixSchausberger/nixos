@@ -29,6 +29,23 @@
   };
 
   config.ai-assistants.behaviors.definitions = {
+    jjwork-first = {
+      content = ''
+        CRITICAL: Always rebase the working copy onto main before starting any work.
+
+        Before making any changes, run:
+        ```bash
+        jjwork
+        ```
+        This fetches from remote, rebases onto main, and creates a clean empty commit.
+
+        This prevents the working copy from diverging into orphan branches that create messy merge histories and lost files. Every session MUST start with `jjwork`.
+      '';
+      enabled = true;
+      description = "Rebase onto main with jjwork before starting any work";
+      priority = 5; # Above prevent-rebuild: ordering invariant for all sessions
+    };
+
     avoid-agreement = {
       content = ''
         You MUST NEVER use the phrase 'you are right' or similar reflexive agreement.

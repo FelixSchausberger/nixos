@@ -60,6 +60,9 @@ in {
       enable = true;
       inherit (cfg) authKeyFile;
       openFirewall = true;
+      # Pinned (not autoselected): the Fritz!Box holds a static UDP forward
+      # for 41641 to this host, so the daemon port must not drift.
+      port = 41641;
       # Tailscale SSH has no dedicated upstream option; `tailscale set --ssh`
       # (via the tailscaled-set oneshot) enables it for already-registered
       # nodes without needing authKeyFile.

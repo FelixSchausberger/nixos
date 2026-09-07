@@ -1,7 +1,13 @@
 # Shared wl-gammarelay service wiring for color-temperature automation in Wayland sessions.
 # Uses session-target ordering so gamma control starts only after compositor availability.
-sessionTarget: {pkgs, ...}: {
-  config = {
+# Disabled for noctalia, which provides its own night-light service.
+sessionTarget: {
+  lib,
+  config,
+  pkgs,
+  ...
+}: {
+  config = lib.mkIf ((config.wm.shell or "custom") != "noctalia") {
     # Provide package
     home.packages = with pkgs; [wl-gammarelay-rs];
 

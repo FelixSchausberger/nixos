@@ -5,10 +5,11 @@
   avoid_agreement_enabled = true;
   avoid_agreement_exists = true;
   avoid_agreement_has_content = true;
-  behavior_count = 3;
+  behavior_count = 4;
   behavior_names = [
     "additional-context"
     "avoid-agreement"
+    "jjwork-first"
     "prevent-rebuild"
   ];
   github_mcp_command = "github-mcp-server";
