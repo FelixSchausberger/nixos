@@ -137,6 +137,26 @@
     text = ''
       set -euo pipefail
 
+      # WIP guard: refuse to rebase an undescribed non-empty working copy.
+      # `jj rebase` preserves the diff, so it never overwrites files — the
+      # loss vectors are --skip-emptied dropping an @ whose diff emptied
+      # against the new parent, and undescribed work becoming unreferenced
+      # after a later `jj new`/abandon. Forcing describe-or-override first
+      # keeps every change anchored. Automation carrying WIP intentionally
+      # sets JJWORK_ALLOW_WIP=1 (comin-autopush never reaches jjwork with
+      # undescribed WIP; see the ordering invariant in modules/system/comin.nix).
+      if [ "''${JJWORK_ALLOW_WIP:-0}" != "1" ] && [ -n "$(jj diff --name-only 2>/dev/null)" ]; then
+        wip_desc="$(jj log --no-graph -r '@' -T 'description.first_line()' 2>/dev/null || true)"
+        if [ -z "$wip_desc" ] || [ "$wip_desc" = "(no description set)" ]; then
+          echo "Refusing to rebase: working copy has undescribed changes:" >&2
+          jj diff --name-only 2>/dev/null >&2
+          echo "" >&2
+          echo "Describe first ('jjdescribe'), or re-run with JJWORK_ALLOW_WIP=1" >&2
+          echo "to carry the WIP across the rebase." >&2
+          exit 1
+        fi
+      fi
+
       echo "Fetching from remote..."
       jj git fetch
 
