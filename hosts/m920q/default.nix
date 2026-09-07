@@ -121,29 +121,6 @@ in {
           ];
         };
       };
-
-      wifi = {
-        wms = null;
-        profile = "server-efficiency";
-        extraConfig = {
-          pkgs,
-          config,
-          ...
-        }: {
-          systemd.services.deploy-iwd-wifi = {
-            wantedBy = ["multi-user.target"];
-            after = ["sops-nix.service"];
-            before = ["iwd.service"];
-            serviceConfig = {
-              Type = "oneshot";
-              ExecStart =
-                "${pkgs.coreutils}/bin/install -m 0600 -o root -g root "
-                + "${config.sops.templates."wifi/iwd".path} "
-                + "/var/lib/iwd/PrettyFlyForAWiFi.psk";
-            };
-          };
-        };
-      };
     };
   };
 
@@ -314,8 +291,6 @@ in {
       message = "m920q: 10-eno1 must keep gateway 192.168.178.1 (network-maintenance sanity gate depends on it)";
     }
   ];
-
-  networking.wireless.iwd.enable = true;
 
   boot.kernelModules = ["vkms"];
 
