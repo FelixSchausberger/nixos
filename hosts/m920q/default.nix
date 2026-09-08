@@ -356,6 +356,7 @@ in {
   hardware.profiles.powerManagement = {
     enable = true;
     lanInterface = "eno1";
+    lanMacAddress = "e8:6a:64:9f:a0:50";
     suppressLeds = true;
     # thermald >= 2.5.12 refuses to start on non-mobile ACPI platform profiles
     # (upstream intel/thermal_daemon#562); kernel TCC throttling and RAPL limits
