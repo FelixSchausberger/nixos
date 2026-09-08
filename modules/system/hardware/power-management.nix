@@ -18,6 +18,11 @@ in {
       description = "Wired ethernet interface for Wake-on-LAN";
     };
 
+    lanMacAddress = lib.mkOption {
+      type = lib.types.str;
+      description = "Permanent MAC address of the LAN interface, used to match the WoL udev .link file";
+    };
+
     suppressLeds = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -71,15 +76,18 @@ in {
       "intel_idle.max_cstate=6"
     ];
 
-    # Allow waking the host via magic packet.
-    systemd.services.wol-lan = {
-      description = "Wake-on-LAN on ${cfg.lanInterface}";
-      after = ["network.target"];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = "${pkgs.ethtool}/bin/ethtool -s ${cfg.lanInterface} wol g";
+    # Allow waking the host via magic packet. net_setup_link applies this at
+    # every udev device-add event, so arming survives clean shutdowns, networkd
+    # restarts, and power-button force-offs, unlike a boot-time ethtool service.
+    # A matching .link file replaces 99-default.link for the device, so the
+    # default NamePolicy/MACAddressPolicy must be carried over or the interface
+    # is never renamed and networkd's Name= match silently breaks.
+    systemd.network.links."10-wol-${cfg.lanInterface}" = {
+      matchConfig.PermanentMACAddress = cfg.lanMacAddress;
+      linkConfig = {
+        WakeOnLan = "magic";
+        NamePolicy = ["kernel" "database" "onboard" "slot" "path"];
+        MACAddressPolicy = "persistent";
       };
     };
 

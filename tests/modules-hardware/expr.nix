@@ -24,8 +24,8 @@ in {
     power_lan_interface = configs.desktop.config.hardware.profiles.powerManagement.lanInterface;
     # auto-cpufreq service should exist
     has_autocpufreq = builtins.hasAttr "auto-cpufreq" configs.desktop.config.systemd.services;
-    # wol-lan service should exist
-    has_wol_lan = builtins.hasAttr "wol-lan" configs.desktop.config.systemd.services;
+    # Persistent WoL .link file should arm magic-packet wake
+    wol_link_wake_on_lan = configs.desktop.config.systemd.network.links."10-wol-eno1".linkConfig.WakeOnLan;
   };
 
   # m920q: power management profile
@@ -34,6 +34,6 @@ in {
     power_lan_interface = configs.m920q.config.hardware.profiles.powerManagement.lanInterface;
     power_suppress_leds = configs.m920q.config.hardware.profiles.powerManagement.suppressLeds;
     has_autocpufreq = builtins.hasAttr "auto-cpufreq" configs.m920q.config.systemd.services;
-    has_wol_lan = builtins.hasAttr "wol-lan" configs.m920q.config.systemd.services;
+    wol_link_wake_on_lan = configs.m920q.config.systemd.network.links."10-wol-eno1".linkConfig.WakeOnLan;
   };
 }
