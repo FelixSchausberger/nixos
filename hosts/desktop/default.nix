@@ -10,6 +10,7 @@
   hostLib = import ../lib.nix;
   hostName = "desktop";
   hostInfo = inputs.self.lib.hosts.${hostName};
+  lanMac = "10:ff:e0:e1:53:55";
 in {
   imports =
     [
@@ -48,6 +49,7 @@ in {
   hardware.profiles.powerManagement = {
     enable = true;
     lanInterface = "eno1";
+    lanMacAddress = lanMac;
     # thermald >= 2.5.12 refuses to start on non-mobile ACPI platform profiles
     # (upstream intel/thermal_daemon#562); kernel TCC throttling and RAPL limits
     # provide thermal protection on this desktop.
@@ -63,7 +65,7 @@ in {
       matchConfig.Name = "eno1";
       linkConfig = {
         RequiredForOnline = "routable";
-        MACAddress = "10:ff:e0:e1:53:55";
+        MACAddress = lanMac;
       };
       networkConfig.DHCP = "no";
       address = ["192.168.178.3/24"];
