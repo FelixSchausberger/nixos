@@ -12,15 +12,15 @@
   };
   desktop_power = {
     has_autocpufreq = true;
-    has_wol_lan = true;
     power_lan_interface = "eno1";
     power_management_enabled = true;
+    wol_link_wake_on_lan = "magic";
   };
   m920q_power = {
     has_autocpufreq = true;
-    has_wol_lan = true;
     power_lan_interface = "eno1";
     power_management_enabled = true;
     power_suppress_leds = true;
+    wol_link_wake_on_lan = "magic";
   };
 }
