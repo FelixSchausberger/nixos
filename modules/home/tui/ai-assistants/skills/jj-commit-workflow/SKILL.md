@@ -10,6 +10,14 @@ Jujutsu workflow assistant for validating and committing changes in any
 jj-managed repository. Handles the full path from rebase to PR creation.
 Validation steps are detected per repo — never assume a specific stack.
 
+## Scope
+
+Run the entire workflow in the current jj workspace — the repository that
+contains the working directory where the skill was invoked. Never switch to
+a different repository mid-workflow. If the cwd is a subdirectory, resolve
+the workspace root with `jj root` and run root-relative commands (nix fmt,
+prek, just, namaka, cargo) from there.
+
 ## Workflow Steps
 
 Always execute these steps in order. Stop and report if any step fails.
