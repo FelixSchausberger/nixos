@@ -16,7 +16,7 @@
       ".cache/pip"
       ".vscode"
 
-      # Trash bin for rm-improved
+      # Graveyard for rip2 (safe deletion, shared by AI rm shim)
       ".local/share/graveyard"
 
       # Rclone cache for faster access to cloud files
