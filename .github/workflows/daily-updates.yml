@@ -86,6 +86,27 @@ jobs:
             echo "---"
             echo "Triggered by: \`${{ github.event_name }}\`"
           } > pr-body.md
+      - name: Check binary cache coverage
+        run: |
+          # Hosts converge via comin and expect store paths to substitute.
+          # A freshly locked revision that no cache has built for heavy
+          # packages (CAD/GUI/kernels) would keep hosts compiling locally
+          # for hours. Refuse to open the lock PR and let the next daily
+          # run retry after caches catch up. A handful of local-only
+          # wrapper derivations is normal and still passes.
+          HEAVY='freecad|krita|blender|prusa-slicer|inkscape|linux-[0-9]'
+          cold=0
+          for host in desktop surface portable hp-probook-wsl hp-probook-vmware m920q; do
+            output=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1 || true)
+            if echo "$output" | grep -qE "$HEAVY"; then
+              cold=1
+              echo "::error::new lock is not cached for a heavy package on $host: $(echo "$output" | grep -E "$HEAVY" | head -3 | tr '\n' ' ')"
+            fi
+          done
+          if [ "$cold" -eq 1 ]; then
+            echo "Dry-runs listed heavy uncached derivations - first failing update" >&2
+            exit 1
+          fi
       - name: Create or update PR
         uses: peter-evans/create-pull-request@v8
         with:
