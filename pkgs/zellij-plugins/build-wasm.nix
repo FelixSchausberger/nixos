@@ -9,9 +9,13 @@
   # (tuple-style Action variants became struct variants in 0.44), so prebuilt
   # wasm releases from GitHub are often incompatible and panic at runtime.
   #
-  # We therefore build every plugin from source with `wasm32-wasip1` and patch
-  # the upstream source to compile against `zellij-tile 0.44.3`, matching the
-  # pinned zellij server.
+  # We therefore build every plugin from source with `wasm32-wasip1` and force
+  # the tile dependency to `tileVersion` (derived from the nixpkgs zellij
+  # version by the caller), regardless of what upstream's Cargo.toml pins.
+  # Source-level API ports beyond the version bump live in the per-plugin
+  # cargoPatches. Changing tileVersion also requires regenerating each
+  # plugin's Cargo.lock (cargo generate-lockfile) — the lock must contain the
+  # forced tile version or the build fails on lock mismatch.
   wasm = pkgs.pkgsCross.wasm32-wasip1;
 in {
   buildZellijPlugin = {
@@ -22,7 +26,10 @@ in {
     rev,
     hash,
     cargoLock,
-    # Source patches: bump zellij-tile to 0.44.3 and port any API changes.
+    # zellij-tile/zellij-tile-utils version forced into Cargo.toml. Must match
+    # the running zellij server (nixpkgs zellij) and the pinned Cargo.lock.
+    tileVersion,
+    # Source patches: port Action variant shapes and other tile API changes.
     cargoPatches ? [],
     binaryName ? pname,
     description,
@@ -37,6 +44,9 @@ in {
       cargoLock.lockFile = cargoLock;
       inherit cargoPatches;
       postPatch = ''
+        ${lib.getExe pkgs.gnused} -i -E \
+          's|(zellij-tile(-utils)? = )"[^"]*"|\1"${tileVersion}"|' \
+          Cargo.toml
         cp ${cargoLock} Cargo.lock
       '';
       nativeBuildInputs = [wasm.lld];
