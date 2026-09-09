@@ -2,6 +2,15 @@
 {flake, ...}: let
   configs = flake.nixosConfigurations;
 
+  # Strip the volatile store hash (changes on every lock update) while keeping
+  # the derivation name and path tail, so semantic changes stay visible.
+  stripStoreHash = v: let
+    m = builtins.match "^/nix/store/[a-z0-9]+-(.*)" (toString v);
+  in
+    if m != null
+    then "/nix/store/<hash>/" + builtins.head m
+    else v;
+
   # Common comin assertions for a host config
   testComin = hostName: config: {
     inherit hostName;
@@ -44,7 +53,7 @@ in {
 
   # m920q-specific reconciler wiring
   m920q_autopush_service =
-    configs.m920q.config.systemd.user.services.comin-autopush.serviceConfig.ExecStart;
+    stripStoreHash configs.m920q.config.systemd.user.services.comin-autopush.serviceConfig.ExecStart;
   m920q_autopush_interval =
     configs.m920q.config.systemd.user.timers.comin-autopush.timerConfig.OnUnitActiveSec;
 }
