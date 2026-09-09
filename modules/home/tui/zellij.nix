@@ -14,10 +14,14 @@
           plugin location="zjstatus" {
             format_left   "{mode}"
             format_center "{tabs}"
-            format_right  "{pipe_zjstatus_hints} {datetime}"
+            format_right  "{pipe_zjstatus_hints} {pipe_opencode_quota} {datetime}"
             format_space  ""
 
             pipe_zjstatus_hints_format "{output}"
+
+            // Fed by the opencode-quota-bridge user timer
+            // (zellij-quota-bridge.nix) via zellij pipe.
+            pipe_opencode_quota_format "#[fg=${catppuccin.peach}] {output} "
 
             border_enabled "false"
             hide_frame_for_single_pane "false"
@@ -67,6 +71,7 @@ in {
         RunCommands
         ChangeApplicationState
         ReadApplicationState
+        ReadCliPipes
     }
     "${defaults.paths.homeDir}/.config/zellij/plugins/zjstatus-hints.wasm" {
         MessageAndLaunchOtherPlugins
