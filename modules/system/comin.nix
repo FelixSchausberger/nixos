@@ -212,6 +212,11 @@ in {
     (lib.mkIf cfg.enable {
       services.comin = {
         enable = true;
+        # Upstream default is 1800s and applies to the whole build, not per
+        # derivation: a single derivation larger than the timeout gets killed
+        # and restarted from scratch every poll, wedging convergence forever
+        # (FreeCAD-sized builds need hours).
+        buildTimeout = 7200;
         remotes = [
           {
             name = "origin";

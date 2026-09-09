@@ -3,11 +3,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-# A newer push to main supersedes any stale run; racing runs would push the
-# same paths and waste runner minutes.
+# A newer push to main queues behind the running one instead of cancelling
+# it. Cancelling used to break the warm-up chain: cancelled runs never
+# uploaded their closures, so hosts converged from an empty cache and spent
+# hours compiling large packages locally. cachix uploads are idempotent
+# per path, so queued serialized runs only cost runner minutes.
 concurrency:
   group: cachix-push-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 permissions:
   contents: read
 env:
