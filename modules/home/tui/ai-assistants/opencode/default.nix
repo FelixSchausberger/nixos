@@ -38,7 +38,9 @@ in {
   programs.opencode = {
     enable = true;
 
-    package = pkgs.symlinkJoin {
+    # PATH-prefixed with the rm shim so every bash tool call from the shared
+    # server (TUI and web sessions alike) deletes to the rip2 graveyard.
+    package = config.ai-assistants.safeRm.wrap (pkgs.symlinkJoin {
       name = "opencode-wrapped";
       paths = [pkgs.opencode];
       buildInputs = [pkgs.makeWrapper];
@@ -48,7 +50,7 @@ in {
           --set NODE_TLS_REJECT_UNAUTHORIZED "0"
       '';
       meta.mainProgram = "opencode";
-    };
+    });
 
     # Enable programs.mcp integration - HM module correctly transforms command+args+env
     enableMcpIntegration = true;
