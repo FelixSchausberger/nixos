@@ -5,7 +5,8 @@
   inputs,
   ...
 }: let
-  claudeCodePackage = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  # Wrapped so every bash tool call resolves rm to the rip2 shim.
+  claudeCodePackage = config.ai-assistants.safeRm.wrap inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   sharedMcp = config.ai-assistants.mcpServers.definitions;
   sharedBehaviors = config.ai-assistants.behaviors.definitions;
