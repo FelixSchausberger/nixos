@@ -3,6 +3,21 @@
   inherit (flake.nixosConfigurations.m920q) config;
 
   hasAssertionWithMessage = message: builtins.any (assertion: (assertion.message or "") == message) config.assertions;
+
+  # Strip the volatile store hash (changes on every lock update) while keeping
+  # the derivation name and path tail, so semantic changes stay visible.
+  # systemd ExecStart values may be a list or a string; handles both.
+  stripStoreHash = v: let
+    go = x: let
+      m = builtins.match "^/nix/store/[a-z0-9]+-(.*)" (toString x);
+    in
+      if m != null
+      then "/nix/store/<hash>/" + builtins.head m
+      else x;
+  in
+    if builtins.isList v
+    then map go v
+    else go v;
 in {
   adguard_enabled = config.modules.system.homelab.adguardhome.enable;
   monitoring_enabled = config.modules.system.homelab.monitoring.enable;
@@ -21,10 +36,10 @@ in {
   opencode_web_https_port = config.modules.system.homelab.opencodeWeb.httpsPort;
   opencode_web_tailnet_domain = config.modules.system.homelab.opencodeWeb.tailnetDomain;
   opencode_web_serve_exec_start =
-    config.systemd.services.tailscale-serve-opencode-web.serviceConfig.ExecStart;
+    stripStoreHash config.systemd.services.tailscale-serve-opencode-web.serviceConfig.ExecStart;
   # HM-level server unit: loopback bind and project-scoped CWD
   opencode_server_exec_start =
-    config.home-manager.users.schausberger.systemd.user.services.opencode-web.Service.ExecStart;
+    stripStoreHash config.home-manager.users.schausberger.systemd.user.services.opencode-web.Service.ExecStart;
   opencode_server_working_directory =
     config.home-manager.users.schausberger.systemd.user.services.opencode-web.Service.WorkingDirectory;
 
