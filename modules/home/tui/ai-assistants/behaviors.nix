@@ -121,6 +121,23 @@
       priority = 10; # Highest priority
     };
 
+    safe-deletion = {
+      content = ''
+        In your shell environment, `rm` is a shim that forwards to `rip` (rip2):
+        deletions go to a graveyard and stay restorable.
+
+        - Use `rip` directly: `rip <path>...` (directories need no -r)
+        - List what can be restored: `rip -s`
+        - Restore: `rip -u` (last deletion), `rip -u <path>`, or `rip -su` (everything deleted from the current directory)
+        - The shim strips all rm-style flags; never rely on rm semantics
+        - `sudo rm` bypasses the shim and deletes irreversibly — avoid it
+        - Permanent deletion is a deliberate act: `rip -d`
+      '';
+      enabled = true;
+      description = "rm is shimmed to rip; deletions restorable from the graveyard";
+      priority = 30;
+    };
+
     prefer-gh-cli-for-github = {
       content = ''
         For GitHub data — issues, pull requests, releases, file contents, commit
