@@ -14,6 +14,7 @@
     has_autocpufreq = true;
     power_lan_interface = "eno1";
     power_management_enabled = true;
+    wol_link_name = "eno1";
     wol_link_wake_on_lan = "magic";
   };
   m920q_power = {
@@ -21,6 +22,7 @@
     power_lan_interface = "eno1";
     power_management_enabled = true;
     power_suppress_leds = true;
+    wol_link_name = "eno1";
     wol_link_wake_on_lan = "magic";
   };
 }
