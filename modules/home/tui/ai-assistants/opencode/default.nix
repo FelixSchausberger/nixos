@@ -90,7 +90,15 @@ in {
       };
       # tokenscope is server-side only (debugging tool, no TUI pane).
       # Quota stays in tui.plugin for the compact status line.
-      plugin = ["@slkiser/opencode-quota" "@ramtinj95/opencode-tokenscope@latest" "@mohak34/opencode-notifier"];
+      # opencode-zellij-indicator renames the tab of per-instance opencode
+      # sessions with agent status. 0.7.0 is the last release for the V1
+      # plugin API; bump to 2.0.0 when opencode 2 lands in nixpkgs.
+      plugin = [
+        "@slkiser/opencode-quota"
+        "@ramtinj95/opencode-tokenscope@latest"
+        "opencode-zellij-indicator@0.7.0"
+        "@mohak34/opencode-notifier"
+      ];
       permission = {
         bash = {
           "git reset*" = "deny";

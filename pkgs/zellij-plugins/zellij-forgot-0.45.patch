@@ -1,0 +1,20 @@
+--- a/src/helper.rs
++++ b/src/helper.rs
+@@ -108,6 +108,7 @@
+             Action::Run {
+                 command,
+                 near_current_pane: _,
++                no_focus: _,
+             } => format!("Run({:?})", command),
+             Action::SetPaneColor { .. } => "SetPaneColor".to_string(),
+             Action::Detach => "Detach".to_string(),
+@@ -229,6 +230,9 @@
+             Action::PreviousSwapLayoutByTabId { .. } => "PreviousSwapLayoutByTabId".to_string(),
+             Action::NextSwapLayoutByTabId { .. } => "NextSwapLayoutByTabId".to_string(),
+             Action::MoveTabByTabId { .. } => "MoveTabByTabId".to_string(),
++            // Tile 0.45.1 keeps adding Action variants; the match no longer
++            // stays exhaustively in sync with upstream ports.
++            _ => "Unknown Action".to_string(),
+         })
+         .collect::<Vec<String>>()
+         .join(", ")
