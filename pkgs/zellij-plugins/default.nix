@@ -1,7 +1,11 @@
 {
   lib,
   callPackage,
+  zellij,
 }: let
+  # Tile version must match the running zellij server (nixpkgs zellij); each
+  # plugin's Cargo.lock pins the same version.
+  tileVersion = zellij.version;
   builder = callPackage ./build-wasm.nix {};
 in {
   # Auto-global plugins (loaded via load_plugins / HM programs.zellij.plugins)
@@ -14,6 +18,7 @@ in {
     hash = "sha256-4KceZNBUuc2+V6sER0c7eouP0KcMEqdKgSjaddSXhGY=";
     cargoLock = ./zjstatus-hints.Cargo.lock;
     cargoPatches = [./zjstatus-hints.patch];
+    inherit tileVersion;
     description = "Wrap zjstatus and render keybind hints for the current mode";
     homepage = "https://github.com/b0o/zjstatus-hints";
     license = lib.licenses.mit;
@@ -28,6 +33,7 @@ in {
     hash = "sha256-JmYcbzxIF6qZs2/RKuspHqNpyDibGp9CVQJj47y/BOQ=";
     cargoLock = ./harpoon.Cargo.lock;
     cargoPatches = [./harpoon.patch];
+    inherit tileVersion;
     description = "Jumplist for quickly navigating between often-used panes";
     homepage = "https://github.com/Nacho114/harpoon";
     license = lib.licenses.mit;
@@ -40,7 +46,12 @@ in {
     rev = "64001df4d23267796c254bc4c0810890fc5af75b";
     hash = "sha256-QS09lC6yyUZA13PHERrdY/phfo1QoHAmRPpQUGL3pP8=";
     cargoLock = ./zellij-forgot.Cargo.lock;
-    cargoPatches = [./zellij-forgot.patch];
+    # Second patch: tile 0.45 added the `no_focus` field to Action::Run.
+    cargoPatches = [
+      ./zellij-forgot.patch
+      ./zellij-forgot-0.45.patch
+    ];
+    inherit tileVersion;
     binaryName = "zellij_forgot";
     description = "Searchable keybind reference for the current mode";
     homepage = "https://github.com/karimould/zellij-forgot";
