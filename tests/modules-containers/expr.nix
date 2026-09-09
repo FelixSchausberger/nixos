@@ -2,6 +2,15 @@
 {flake, ...}: let
   # Get the hp-probook-wsl config (which has containers enabled) from the flake
   inherit (flake.nixosConfigurations.hp-probook-wsl) config;
+
+  # Strip the volatile store root (hash + derivation name — nss-cacert carries
+  # a version that changes on every lock update), keeping the path suffix.
+  stripStorePath = v: let
+    m = builtins.match "^/nix/store/[a-z0-9]+-[^/]+/(.*)" (toString v);
+  in
+    if m != null
+    then "/nix/store/<nixpkgs>/" + builtins.head m
+    else v;
 in {
   # Test: Containers module is enabled
   containers_enabled = config.modules.system.containers.enable;
@@ -17,8 +26,8 @@ in {
   has_dns = builtins.isList (config.virtualisation.docker.daemon.settings.dns or null);
 
   # Test: SSL certificates configured for Docker
-  docker_ssl_cert = config.systemd.services.docker.environment.SSL_CERT_FILE or null;
-  docker_curl_ca = config.systemd.services.docker.environment.CURL_CA_BUNDLE or null;
+  docker_ssl_cert = stripStorePath (config.systemd.services.docker.environment.SSL_CERT_FILE or null);
+  docker_curl_ca = stripStorePath (config.systemd.services.docker.environment.CURL_CA_BUNDLE or null);
 
   # Test: Nix SSL certificate file set
   nix_ssl_cert = config.nix.settings.ssl-cert-file or null;
