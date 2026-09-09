@@ -79,15 +79,17 @@ in {
     # Allow waking the host via magic packet. net_setup_link applies this at
     # every udev device-add event, so arming survives clean shutdowns, networkd
     # restarts, and power-button force-offs, unlike a boot-time ethtool service.
-    # A matching .link file replaces 99-default.link for the device, so the
-    # default NamePolicy/MACAddressPolicy must be carried over or the interface
-    # is never renamed and networkd's Name= match silently breaks.
+    # The device is matched by permanent MAC and the name is pinned: firmware
+    # naming data (ID_NET_NAME_ONBOARD) proved unreliable across boots on this
+    # hardware, and a rename would silently break the Name= match in the
+    # .network file. A matching .link file replaces 99-default.link, so the
+    # default MACAddressPolicy is carried over.
     systemd.network.links."10-wol-${cfg.lanInterface}" = {
       matchConfig.PermanentMACAddress = cfg.lanMacAddress;
       linkConfig = {
-        WakeOnLan = "magic";
-        NamePolicy = ["kernel" "database" "onboard" "slot" "path"];
+        Name = cfg.lanInterface;
         MACAddressPolicy = "persistent";
+        WakeOnLan = "magic";
       };
     };
 
