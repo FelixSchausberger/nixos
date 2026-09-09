@@ -73,7 +73,10 @@ in {
     pik # Process Interactive Kill
     # quickemu # Quickly create and run virtual machines
     ripgrep # Utility that combines the usability of The Silver Searcher with the raw speed of grep
-    rm-improved # Replacement for rm (replaces both rip.nix and provides better rm)
+    # rip2 provides bin/rip; ai-assistants/safe-rm.nix also installs rip2, and
+    # buildEnv collides when both rm-improved and rip2 ship bin/rip. rip2 is a
+    # drop-in superset of rm-improved (same --graveyard/-s/-u/-d/-i flags).
+    rip2
     scooter # Interactive find and replace in the terminal
     # superfile # Pretty fancy and modern terminal file manager
     systemd-manager-tui # Program for managing systemd services through a tui
