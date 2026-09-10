@@ -244,6 +244,25 @@ in {
         #     end
         #   end
         # end
+
+        # Name the Zellij tab after the current directory, so plain shell tabs
+        # never show zellij's misleading "Tab #<id>" default. Leaf-only and
+        # length-capped so a deep/long path cannot widen the status bar. No-op
+        # outside Zellij.
+        function __zellij_tab_name --on-variable PWD --description "Name the Zellij tab after the cwd"
+          if not set -q ZELLIJ
+            return 0
+          end
+          set -l name (basename $PWD)
+          if test "$PWD" = "$HOME"
+            set name "~"
+          end
+          if test (string length -- $name) -gt 16
+            set name (string sub -l 16 -- $name)…
+          end
+          command zellij action rename-tab "$name" >/dev/null 2>&1 &
+        end
+        __zellij_tab_name
       end
 
 
