@@ -90,13 +90,15 @@ in {
       };
       # tokenscope is server-side only (debugging tool, no TUI pane).
       # Quota stays in tui.plugin for the compact status line.
-      # opencode-zellij-indicator renames the tab of per-instance opencode
-      # sessions with agent status. 0.7.0 is the last release for the V1
-      # plugin API; bump to 2.0.0 when opencode 2 lands in nixpkgs.
+      # zellij-indicator-felix: vendored fork of opencode-zellij-indicator
+      # @0.7.0 (last V1-API release; 2.0.0 targets opencode 2) with session
+      # titles truncated at ingestion - zjstatus has no per-name truncation
+      # and full auto-generated titles overflow the tab bar. Relative path
+      # resolves from ~/.config/opencode/opencode.json.
       plugin = [
         "@slkiser/opencode-quota"
         "@ramtinj95/opencode-tokenscope@latest"
-        "opencode-zellij-indicator@0.7.0"
+        "./plugins/zellij-indicator-felix"
         "@mohak34/opencode-notifier"
       ];
       permission = {
@@ -159,6 +161,12 @@ in {
       set -gx GITHUB_TOKEN (cat ${config.sops.secrets."github/token".path})
     end
   '';
+
+  # Vendored fork of opencode-zellij-indicator@0.7.0 with title truncation
+  # (provenance in its package.json). Deployed as a plugin package directory;
+  # referenced above via a relative path from the global opencode.json.
+  xdg.configFile."opencode/plugins/zellij-indicator-felix".source =
+    ./zellij-indicator-felix;
 
   xdg.configFile."opencode/agents/code-simplifier.md".text = ''
     ---

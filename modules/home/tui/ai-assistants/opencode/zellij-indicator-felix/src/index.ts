@@ -1,11 +1,15 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { ASK_TOOLS, POLL_MS, STOPWATCH_ENABLED, log, type Phase } from "./config"
+import { ASK_TOOLS, POLL_MS, STOPWATCH_ENABLED, log, truncateTitle, type Phase } from "./config"
 import { formatStopwatch, iconFor, stripIcons } from "./format"
 import { playSound } from "./sound"
 import { isFocused, renameTab, resolvePane } from "./zellij"
 
 // ---------------------------------------------------------------------------
 // opencode-zellij-indicator
+//
+// VENDORED FORK of opencode-zellij-indicator@0.7.0 (v0.7.0 tag,
+// aidan-gallagher, MIT): patches and provenance in package.json.
+// Only delta: session titles are truncated at ingestion (TITLE_MAX).
 //
 // A pure opencode plugin that shows each opencode session's state on its Zellij
 // tab. No fork, no WASM, no status-bar replacement — it just shells out to the
@@ -188,7 +192,7 @@ export const ZellijStatus: Plugin = async ({ $ }) => {
           if (info.parentID) {
             subagents.add(info.id)
           } else if (info.title && info.title !== title) {
-            title = info.title
+            title = truncateTitle(info.title)
             await render()
           }
           break
