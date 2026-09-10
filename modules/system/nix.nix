@@ -85,9 +85,6 @@
       # Note: This is set via extraOptions since it needs runtime secret path
       # access-tokens config is handled below in extraOptions
 
-      # WSL-specific configuration for better performance
-      use-sqlite-wal = true; # Better database performance on WSL
-
       # Network optimization for faster downloads
       max-substitution-jobs = 4; # Parallel downloads
       http-connections = 25; # More HTTP connections
