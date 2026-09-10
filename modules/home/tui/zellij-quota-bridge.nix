@@ -63,6 +63,10 @@ in {
     };
     Service = {
       Type = "oneshot";
+      # Fired both by the 5-minute timer and by the path unit below when a
+      # Zellij session appears; a short delay lets the new session's zjstatus
+      # plugin finish loading before we pipe to it.
+      ExecStartPre = "${pkgs.coreutils}/bin/sleep 3";
       ExecStart = "${quotaBridge}/bin/opencode-quota-bridge";
       # Network + credential read; failure is non-fatal by script design.
       Restart = "no";
@@ -80,6 +84,22 @@ in {
     };
     Install = {
       WantedBy = ["timers.target"];
+    };
+  };
+
+  # Push the quota as soon as a Zellij session exists, instead of waiting up to
+  # 5 minutes for the timer. Each session creates a socket under this runtime
+  # directory; PathChanged fires on create/delete and starts the service.
+  systemd.user.paths.opencode-quota-bridge = {
+    Unit = {
+      Description = "Push OpenCode Go quota when a Zellij session appears";
+    };
+    Path = {
+      PathChanged = "%t/zellij/contract_version_1";
+      Unit = "opencode-quota-bridge.service";
+    };
+    Install = {
+      WantedBy = ["paths.target"];
     };
   };
 }
