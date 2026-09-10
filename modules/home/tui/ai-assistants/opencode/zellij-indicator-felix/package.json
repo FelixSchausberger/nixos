@@ -1,0 +1,38 @@
+{
+    "name": "zellij-indicator-felix",
+    "version": "0.7.0+truncate.1",
+    "description": "Vendored fork of opencode-zellij-indicator@0.7.0 (v0.7.0, aidan-gallagher, MIT). Only patch: session-title truncation at ingestion (config.ts truncateTitle, max OPENCODE_ZELLIJ_TITLE_MAX, default 24). Drop this vendored copy when upstream ships a truncation option.",
+    "type": "module",
+    "main": "src/index.ts",
+  "files": [
+    "src",
+    "sounds",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "zellij",
+    "terminal",
+    "tab",
+    "status"
+  ],
+  "author": "Aidan Gallagher",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidan-gallagher/opencode-zellij-indicator.git"
+  },
+  "homepage": "https://github.com/aidan-gallagher/opencode-zellij-indicator#readme",
+  "bugs": {
+    "url": "https://github.com/aidan-gallagher/opencode-zellij-indicator/issues"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "1.4.8",
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}
