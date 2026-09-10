@@ -179,14 +179,6 @@ in {
         sectigoEccDv
       ];
 
-      # Ensure proper SSL certificate paths in /etc
-      # When useEnhanced is false, explicitly set bundle paths
-      # When useEnhanced is true, let security.pki create the merged bundle
-      environment.etc = lib.mkIf (!cfg.bundle.useEnhanced) {
-        "ssl/certs/ca-bundle.crt".source = lib.mkDefault cfg.bundle.standard;
-        "ssl/certs/ca-certificates.crt".source = lib.mkDefault cfg.bundle.standard;
-      };
-
       # System-wide SSL/TLS certificate environment variables
       environment.variables = lib.mapAttrs (_: lib.mkDefault) sslEnvVars;
 
