@@ -71,6 +71,9 @@
       #     main@origin, compared via git diff --quiet per path - exact,
       #     unlike patch-id matching, and immune to how the content landed
       # Anything else is reported for human review (just jj-hygiene).
+      # Actionable divergence (outside main@origin) is reported at the end;
+      # immutable merge-era divergence inside main@origin is intentionally
+      # not enumerated - see the divergence block below.
       absorbed_count=0
       review_count=0
       for cid in $(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'commit_id ++ "\n"' 2>/dev/null); do
@@ -120,6 +123,23 @@
           review_count=$((review_count + 1))
         fi
       done
+
+      # Divergence has two classes, and only one is actionable:
+      #   - outside main@origin: mutable revisions, resolvable with
+      #     `jj converge` (or `jj abandon` / `jj metaedit --update-change-id`
+      #     on the redundant revision)
+      #   - inside main@origin: merge-era duplicates where the same change
+      #     landed twice under one change-id (a feature-branch draft pinned as
+      #     the second parent of a GitHub merge commit, plus a later draft).
+      #     Those are immutable; resolving them rewrites main and every
+      #     descendant, so jj converge refuses by design. Report only the
+      #     actionable set so this stays a signal, not recurring noise.
+      divergent=$(jj log --no-graph -r 'divergent() & ~::main@origin' -T 'change_id.short() ++ "\n"' 2>/dev/null)
+      if [ -n "$divergent" ]; then
+        echo "  divergent changes outside main@origin (resolve with 'jj converge'):" >&2
+        jj log --no-graph -r 'divergent() & ~::main@origin' -T '"    " ++ change_id.short() ++ " " ++ commit_id.short() ++ " " ++ description.first_line() ++ "\n"' >&2
+        review_count=$((review_count + 1))
+      fi
 
       if [ "$absorbed_count" -gt 0 ] || [ "$review_count" -gt 0 ]; then
         echo "  stale work: $absorbed_count abandoned, $review_count need review"
