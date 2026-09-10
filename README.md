@@ -95,6 +95,39 @@ jjpush
 # → Auto-merges when all checks pass ✅
 ```
 
+### Clean History Practices
+
+`main` is linear from the squash-merge boundary onward: every PR lands as a
+single commit, so one PR must carry exactly one concern.
+
+- **One concern per change and per PR.** A squash-merged PR collapses to one
+  commit; bundling unrelated changes produces one unrelated commit.
+- **Split before pushing.** `jj split` breaks a mixed working copy into
+  per-concern changes; `jj absorb` folds follow-up fixes into the commit they
+  belong to; `jj parallelize` turns accidentally-stacked independent changes
+  into siblings.
+- **Rebase only with jj.** In this colocated repo `git rebase`,
+  `git commit --amend`, and `gh stack` rebase/sync verbs run a second rebase
+  engine and produce divergent change-ids. Use `jj rebase -d main@origin`.
+- **One writer per clone.** `comin-autopush` rewrites and pushes on a timer; do
+  not run interactive jj mutations against the same clone while it fires.
+- **Describe every change.** `jjpush` refuses undescribed commits between
+  `main@origin` and `@`.
+
+### Divergent Change-ids
+
+`jj log` warns about divergent changes. Divergence outside `main@origin` is
+actionable: resolve it with `jj converge` (or `jj abandon` /
+`jj metaedit --update-change-id` on the redundant revision), and `jjwork`
+reports it. Divergence *inside* `main@origin` is immutable: it records the
+pre-squash merge-commit era (2026-04 through 2026-08-24) where the same change
+landed twice under one change-id. `jj converge` refuses to rewrite it by design;
+leave it alone. To see only the actionable set:
+
+```bash
+jj log -r 'divergent() & ~::main@origin'
+```
+
 ### Git Workflow (Traditional)
 
 ```bash

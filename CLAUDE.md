@@ -248,6 +248,21 @@ named branch. The lock-update workflow (daily cron) manages that branch automati
 - Validation enforced via prek hook
 - CI validates all changes automatically
 
+**Clean history:**
+
+- One concern per change and per PR. Squash-merge collapses a PR to one commit,
+  so bundling unrelated changes mixes concerns.
+- Split before pushing with `jj split`; fold follow-up fixes into their commit
+  with `jj absorb`; turn accidentally-stacked independent changes into siblings
+  with `jj parallelize`.
+- Rebase only with jj (`jj rebase -d main@origin`). `git rebase`,
+  `git commit --amend`, and `gh stack` rebase/sync verbs run a second rebase
+  engine and cause divergent change-ids in this colocated repo.
+- One writer per clone: do not run interactive jj mutations while
+  `comin-autopush` is active on the same clone.
+- `jjwork` reports actionable divergence (`divergent() & ~::main@origin`).
+  Immutable merge-era divergence inside `main@origin` is benign and left alone.
+
 **Auto-push reconciler (m920q):** comin converges the deployed system to `main` every 60s, so
 unpushed local commits get silently reverted in deployment when main moves. The `comin-autopush`
 user timer (every 10min) mitigates this: described commits ahead of `main@origin` are automatically

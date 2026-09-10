@@ -1,14 +1,15 @@
 ---
 name: jj-commit-workflow
-description: Use when asked to commit, describe, push, or open a PR for changes in any jj-managed repo. Validates with repo-appropriate checks, then commits and pushes with jj (jjwork, jj describe, jjpush).
+description: Use when asked to commit, describe, push, or open a PR for changes in any jj-managed repo. Splits changes per concern, validates with repo-appropriate checks, then commits and pushes with jj (jjwork, jj describe, jjpush).
 license: MIT
 ---
 
 ## Role
 
 Jujutsu workflow assistant for validating and committing changes in any
-jj-managed repository. Handles the full path from rebase to PR creation.
-Validation steps are detected per repo — never assume a specific stack.
+jj-managed repository. Handles the full path from rebase to PR creation with
+one concern per commit and per PR. Validation steps are detected per repo —
+never assume a specific stack.
 
 ## Scope
 
@@ -17,6 +18,28 @@ contains the working directory where the skill was invoked. Never switch to
 a different repository mid-workflow. If the cwd is a subdirectory, resolve
 the workspace root with `jj root` and run root-relative commands (nix fmt,
 prek, just, namaka, cargo) from there.
+
+## Principles
+
+These govern every step; follow them even when not restated below.
+
+1. **One concern = one commit = one PR.** Most forges squash-merge a PR into a
+   single commit, so unrelated changes bundled in one PR become one unrelated
+   commit. Put separate concerns in separate PRs.
+2. **Linear history.** Rebase only with jj: `jj rebase -d main@origin`. Never
+   run `git rebase`, `git commit --amend`, or `gh stack` rebase/sync verbs in a
+   colocated repo — a second rebase engine produces divergent change-ids.
+3. **Split before committing.** Reorganize with jj, not by hand: `jj split`,
+   `jj absorb`, `jj squash`, `jj parallelize` (see step 4).
+4. **Describe every change.** Conventional commits; no undescribed commits
+   between `main@origin` and `@` (jjpush refuses them). The body explains why.
+5. **Single writer per clone.** Automation (e.g. `comin-autopush`) may rewrite
+   and push on a timer; do not run jj mutations concurrently on the same clone.
+6. **Keep divergence actionable.** Divergence outside `main@origin`
+   (`divergent() & ~::main@origin`) is resolvable with `jj converge`.
+   Divergence inside `main@origin` is immutable merge-era history: leave it.
+7. **Safety.** `jj op log`, `jj undo`, and `jj evolog` are the net; jj
+   operations are reversible.
 
 ## Workflow Steps
 
@@ -31,6 +54,9 @@ jjwork
 Skip if the repo has no remote configured (bare `git remote -v` check) —
 report that jjwork was skipped.
 
+`jjwork` also reports actionable divergence, stale local work, and leftover
+bookmarks. Surface anything it flags before continuing.
+
 If `jjwork` reports conflicts, run `jj resolve --list` and report them to the
 user. Do not proceed past conflicts.
 
@@ -44,9 +70,11 @@ provisional message. Never bypass the guard with `JJWORK_ALLOW_WIP=1`.
 ```bash
 jj status
 jj diff --stat
+jj log -r 'main@origin..@' --no-graph -T 'commit_id.short() ++ " " ++ description.first_line() ++ "\n"'
 ```
 
-Review the changed files. If the change set looks wrong (unintended files,
+Review the changed files and decide: **one concern or several?** A mixed
+working copy goes to step 4. If the change set looks wrong (unintended files,
 missing expected changes), report to the user before proceeding.
 
 ### 3. Validate (repo-adaptive detection)
@@ -85,17 +113,31 @@ jj split <paths-of-next-concern> -m "<message>"
 jj describe -m "<message-for-remainder>"
 ```
 
+- Use `jj split -p <paths>` when the concerns are independent (siblings)
+  rather than sequential.
+- For hunks within a single file, `jj split -i` opens an interactive diff
+  editor. If the agent cannot drive the editor, stop and ask the user to split
+  that file, or leave a clearly-marked follow-up.
+- Use `jj absorb` to move stray edits into the change they belong to, and
+  `jj squash` to fold a change into its parent.
+- Order commits so each is independently buildable where practical, and
+  re-check with `jj log -r 'main@origin..@'` that each carries one concern.
+
 Generate a conventional message per commit. Follow the format:
 
 ```text
 type(scope): description
 
-- bullet points for notable changes
+- bullet points for notable changes (why, not what)
 ```
 
-Types: feat, fix, chore, refactor, docs, test, perf.
+Types: feat, fix, chore, refactor, docs, test, perf, ci.
 
-### 5. Push and create PR
+### 5. Push and create PRs
+
+- **One concern:** `jjpush`.
+- **Several concerns:** push each as its own PR (one bookmark per concern), or
+  as a stack if the repo supports it. Never combine unrelated concerns in one PR.
 
 ```bash
 jjpush
@@ -118,5 +160,7 @@ to main), use `jj git push` instead.
 | `git checkout -- file` | `jj restore file` |
 | `git checkout -b feat/x` | `jj bookmark create feat/x` |
 | `git stash` / `git stash pop` | `jj shelve` / `jj unshelve` |
-| `git merge main` | `jj rebase -d main` |
+| `git merge main` | `jj rebase -d main@origin` |
+| `git rebase -i` (split/reorder) | `jj split` / `jj squash` / `jj absorb` / `jj parallelize` |
+| `git commit --fixup` + autosquash | `jj absorb` |
 | `git push` | `jj git push` |

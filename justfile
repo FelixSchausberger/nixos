@@ -68,10 +68,12 @@ niri-rebuild:
 
 # Review local work outside main@origin. Two sections:
 #   1. loose heads - offers abandoning provably redundant ones
-#   2. divergent changes (same change-id, multiple visible revisions) -
-#      per-revision facts; offers dropping only revisions that are absorbed
-#      by main, childless, and NOT reachable from main (those pin history;
-#      dropping them would rewrite main and cascade)
+#   2. divergent changes (same change-id, multiple visible revisions) - only
+#      revisions OUTSIDE main@origin are actionable; inside main@origin they
+#      are immutable merge-era duplicates (draft pinned as a GitHub merge
+#      commit's second parent), summarized rather than enumerated. Actionable
+#      revisions are shown per-revision; dropping is offered only when the
+#      revision is absorbed by main and childless
 # Anything unique or structurally pinned is display-only and needs a manual
 # decision (land it as a PR or abandon it knowingly).
 jj-hygiene:
@@ -124,50 +126,60 @@ jj-hygiene:
     fi
 
     # --- section 2: divergent changes ---
-    mapfile -t divs < <(jj log --no-graph -r 'divergent()' -T 'change_id ++ "\n"' 2>/dev/null | sort -u)
-    if [ "''${#divs[@]}" -eq 0 ]; then
+    # Divergence inside main@origin is immutable merge-era history: the same
+    # change landed twice under one change-id (a feature-branch draft pinned as
+    # the second parent of a GitHub merge commit, plus a later draft). Resolving
+    # it would rewrite main and every descendant, so `jj converge` refuses by
+    # design. It is summarized, never enumerated. Only divergence outside
+    # main@origin is mutable and actionable.
+    all_divs=$(jj log --no-graph -r 'divergent()' -T 'change_id ++ "\n"' 2>/dev/null | sort -u | wc -l)
+    act_divs=$(jj log --no-graph -r 'divergent() & ~::main@origin' -T 'change_id ++ "\n"' 2>/dev/null | sort -u | wc -l)
+    if [ "$all_divs" -eq 0 ]; then
         echo "No divergent changes."
     else
-        echo "Divergent changes (multiple visible revisions share one change-id): ''${#divs[@]}"
-        echo ""
-        for c in "''${divs[@]}"; do
-            echo "=== ${c:0:12}"
-            for i in 0 1 2 3 4 5 6 7; do
-                cid=$(jj log --no-graph -r "$c/$i" -T 'commit_id' 2>/dev/null) || continue
-                [ -z "$cid" ] && continue
-                desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
-                when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
-
-                if [ -n "$(jj log --no-graph -r "ancestors(main@origin) & $cid" -T 'commit_id' 2>/dev/null)" ]; then
-                    echo "    /$i $when ${cid:0:8} IN MAIN HISTORY (keep): $desc"
-                    continue
-                fi
-
-                nchild=$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null | wc -l)
-                differs=""
-                for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
-                    git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null || differs="$differs $f"
-                done
-
-                if [ "$nchild" -gt 0 ]; then
-                    echo "    /$i $when ${cid:0:8} PINNED by $nchild child commit(s): $desc"
-                elif [ -z "$differs" ]; then
-                    echo "    /$i $when ${cid:0:8} redundant copy (absorbed by main)"
-                    read -rp "        drop this revision? [y/N] " answer
-                    case "$answer" in
-                        y|Y)
-                            jj abandon "$cid" >/dev/null
-                            echo "        dropped."
-                            abandoned=$((abandoned + 1))
-                            ;;
-                    esac
-                else
-                    echo "    /$i $when ${cid:0:8} UNIQUE:$differs"
-                    echo "        decide manually: land as PR or jj abandon $cid"
-                fi
-            done
+        echo "Divergent changes: $all_divs change-id(s), $act_divs actionable outside main@origin."
+        if [ "$act_divs" -eq 0 ]; then
+            echo "  All are immutable merge-era duplicates inside main@origin; nothing to resolve."
+            echo "  Resolving them would rewrite main, so 'jj converge' refuses by design."
             echo ""
-        done
+        else
+            mapfile -t divs < <(jj log --no-graph -r 'divergent() & ~::main@origin' -T 'change_id ++ "\n"' 2>/dev/null | sort -u)
+            for c in "''${divs[@]}"; do
+                echo "=== ${c:0:12}"
+                for i in 0 1 2 3 4 5 6 7; do
+                    cid=$(jj log --no-graph -r "$c/$i" -T 'commit_id' 2>/dev/null) || continue
+                    [ -z "$cid" ] && continue
+                    # Only off-main revisions are actionable.
+                    [ -n "$(jj log --no-graph -r "ancestors(main@origin) & $cid" -T 'commit_id' 2>/dev/null)" ] && continue
+                    desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
+                    when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
+
+                    nchild=$(jj log --no-graph -r "$cid+" -T 'commit_id' 2>/dev/null | wc -l)
+                    differs=""
+                    for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
+                        git diff --quiet "main@origin" "$cid" -- "$f" 2>/dev/null || differs="$differs $f"
+                    done
+
+                    if [ "$nchild" -gt 0 ]; then
+                        echo "    /$i $when ${cid:0:8} PINNED by $nchild child commit(s): $desc"
+                    elif [ -z "$differs" ]; then
+                        echo "    /$i $when ${cid:0:8} redundant copy (absorbed by main)"
+                        read -rp "        drop this revision? [y/N] " answer
+                        case "$answer" in
+                            y|Y)
+                                jj abandon "$cid" >/dev/null
+                                echo "        dropped."
+                                abandoned=$((abandoned + 1))
+                                ;;
+                        esac
+                    else
+                        echo "    /$i $when ${cid:0:8} UNIQUE:$differs"
+                        echo "        decide manually: land as PR or jj abandon $cid"
+                    fi
+                done
+                echo ""
+            done
+        fi
     fi
     echo "Done. ''${abandoned} revision(s) abandoned."
 
