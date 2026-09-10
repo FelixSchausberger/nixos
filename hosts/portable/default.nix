@@ -1,120 +1,144 @@
-# Portable recovery host: TUI-first system with ZFS+impermanence and hardware rescue tooling.
-# Includes a recovery specialisation for disk diagnostics and data recovery workflows.
+# Portable recovery ISO: a TUI-first live USB image with ZFS support and the
+# disk-recovery tool suite. Built as packages.installer-iso-portable.
+#
+# This is deliberately not a nixosConfiguration: it boots a live squashfs
+# environment, has no persistent root, and is never converged by comin. The
+# deployed fleet lives in nixosConfigurations (see hosts/default.nix).
 {
-  config,
+  lib,
+  pkgs,
   inputs,
+  modulesPath,
   ...
 }: let
   hostName = "portable";
-  hostInfo = inputs.self.lib.hosts.${hostName};
+  authorizedKeysFile = ../installer/authorized_keys;
+  hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
 in {
   imports = [
-    ./disko.nix
+    (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
+    ../default/10-sops.nix
+    ../../system/core
+    ../../system/hardware
+    ../../system/network.nix
     ../shared-tui.nix
-    ../boot-zfs.nix # Portable needs ZFS support for recovery
-    inputs.stylix.nixosModules.stylix
-    ../../modules/system/stylix-catppuccin.nix
     ../../modules/system/recovery-tools.nix
-    ../../modules/system/nixpkgs-overlays.nix
-    ../../modules/system/specialisations.nix
-    ../../modules/system/performance-profiles.nix
-    ../../modules/system/tailscale.nix
   ];
 
-  # Host-specific configuration using centralized host mapping
   hostConfig = {
     inherit hostName;
-    inherit (hostInfo) isGui;
-    inherit (hostInfo) wms;
-    # user and system use defaults from lib/defaults.nix
-
-    zellijAutoAttach.sessionName = "portable";
-
-    # Portable-specific specialisations for recovery scenarios
-    specialisations = {
-      # Enhanced recovery mode with additional tools
-      recovery = {
-        wms = null; # Inherit from parent (TUI-only)
-        profile = "default";
-        extraConfig = {pkgs, ...}: {
-          # Additional recovery and diagnostic tools
-          environment.systemPackages = with pkgs; [
-            testdisk # Data recovery (includes photorec)
-            ddrescue # Disk rescue
-            gpart # Partition recovery
-            hdparm # Hard disk parameters
-            smartmontools # SMART monitoring
-            ntfs3g # NTFS support
-            exfatprogs # exFAT support
-          ];
-        };
-      };
-    };
+    isGui = false;
+    wms = [];
   };
 
-  # Hardware compatibility enhancements for portable use
+  # Isolate from removed nixpkgs aliases that would otherwise throw during
+  # ISO evaluation (same workaround as the installer images).
+  nixpkgs.config.allowAliases = false;
+  nixpkgs.overlays = [
+    (final: _prev: {
+      nixfmt-classic = final.nixfmt;
+      nixfmt-rfc-style = final.nixfmt;
+    })
+    # ceph pulls python311 and breaks evaluation on current nixpkgs; the ISO
+    # does not need ceph-enabled qemu.
+    (_final: prev: {
+      qemu = prev.qemu.override {ceph = null;};
+    })
+  ];
+
+  # Live ISO: no persistent filesystem.
+  environment.persistence = lib.mkForce {};
+
   boot = {
-    kernelParams = [
-      "nohibernate"
-      # Add parameters for better hardware compatibility
-      "i915.force_probe=*" # Force Intel GPU drivers
-      "nvidia.NVreg_PreserveVideoMemoryAllocations=1" # Better NVIDIA compatibility
-      "usbcore.autosuspend=-1" # Prevent USB devices from auto-suspending
+    supportedFilesystems = [
+      "zfs"
+      "ext4"
+      "btrfs"
+      "xfs"
+      "ntfs"
     ];
-
-    # Extra kernel modules for better hardware compatibility
-    extraModulePackages = with config.boot.kernelPackages; [
-      v4l2loopback # For virtual webcam support
-    ];
-
-    # Load additional kernel modules for better hardware compatibility
     kernelModules = [
-      "v4l2loopback"
-      # Common hardware support
-      "thunderbolt"
-      "uvcvideo"
-      "hid_multitouch"
+      "zfs"
     ];
   };
 
-  # Essential hardware support for portable use
-  hardware = {
-    # Better GPU compatibility
-    graphics = {
-      enable = true;
-      enable32Bit = true;
+  networking.hostName = hostName;
+
+  users.users = {
+    root = {
+      hashedPassword = lib.mkForce null;
+      password = "nixos";
+      openssh.authorizedKeys.keyFiles =
+        lib.optionals hasAuthorizedKeys [authorizedKeysFile];
     };
-    enableRedistributableFirmware = true;
-    enableAllFirmware = true;
-  };
 
-  # XDG portals - minimal configuration for TUI-only system
-  # xdg.portal = {
-  #   enable = true;
-  #   config.common.default = "*"; # Use any available portal backend
-  # };
-
-  # ZFS with impermanence (matching physical hosts)
-  # Disko creates the filesystems, but we need to set neededForBoot for impermanence
-  # Required for impermanence: filesystems must be mounted early in boot
-  fileSystems."/per".neededForBoot = true;
-  fileSystems."/home".neededForBoot = true;
-
-  modules.system.maintenance = {
-    enable = true;
-    monitoring = {
-      enable = true;
-      alerts = true;
-      ntfyUrl = "http://m920q:2586/homelab-alerts";
+    schausberger = {
+      hashedPasswordFile = lib.mkForce null;
+      password = "";
     };
   };
 
-  # Pull-based GitOps: converge to main automatically, alert on downgrades
-  modules.system.comin = {
-    enable = true;
-    alertNtfyUrl = "http://m920q:2586/homelab-alerts";
+  services.getty.autologinUser = lib.mkForce "schausberger";
+
+  systemd.tmpfiles.rules = [
+    "d /per 0755 root root -"
+    "d /per/etc 0755 root root -"
+    "d /per/system 0755 root root -"
+  ];
+
+  system.activationScripts.installRepo = ''
+    mkdir -p /per/etc
+    ln -sfn ${inputs.self} /per/etc/nixos
+  '';
+
+  system.activationScripts.portableWelcome = ''
+    cat > /etc/issue << 'EOF'
+
+    NixOS Portable Recovery Environment
+    TUI-only live image with ZFS and disk-recovery tooling.
+
+    Configuration: /per/etc/nixos
+    Deployed hosts: desktop, hp-probook-wsl, m920q
+
+    EOF
+  '';
+
+  environment.systemPackages = with pkgs; [
+    vim
+    nano
+    parted
+    gptfdisk
+    curl
+    wget
+    git
+    tmux
+  ];
+
+  environment.sessionVariables = {
+    NIXOS_CONFIG_ROOT = "/per/etc/nixos";
   };
 
-  # Tailscale for fixed reachability across networks (MagicDNS)
-  modules.system.homelab.tailscale.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      # recovery-tools.nix hardens this to false; the live image wants
+      # password auth for convenience, matching the installer ISOs.
+      PasswordAuthentication = lib.mkForce true;
+    };
+  };
+
+  networking.networkmanager.enable = true;
+  networking.wireless.enable = lib.mkForce false;
+  networking.wireless.iwd.enable = lib.mkForce false;
+
+  security.sudo-rs.enable = lib.mkForce false;
+  system.stateVersion = lib.mkForce "26.05";
+
+  image.fileName = "nixos-portable.iso";
+  isoImage = {
+    volumeID = "NIXOS_PORTABLE";
+    makeEfiBootable = true;
+    makeUsbBootable = true;
+  };
 }

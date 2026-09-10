@@ -25,9 +25,6 @@
   };
 in {
   desktop = testDev "desktop" configs.desktop.config;
-  portable = testDev "portable" configs.portable.config;
-  surface = testDev "surface" configs.surface.config;
-  hp-probook-vmware = testDev "hp-probook-vmware" configs.hp-probook-vmware.config;
   hp-probook-wsl = testDev "hp-probook-wsl" configs.hp-probook-wsl.config;
   m920q = testDev "m920q" configs.m920q.config;
 }

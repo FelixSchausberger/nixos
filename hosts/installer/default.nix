@@ -115,7 +115,7 @@ in {
             (Note: -E flag preserves environment)
       4. Reboot into your new system
 
-    Available hosts: desktop, surface, portable, hp-probook-vmware
+    Available hosts: desktop, hp-probook-wsl, m920q
 
     Alternative: Install via SSH from dev machine
       ssh root@<this-ip> and run the same commands

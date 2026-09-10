@@ -2,8 +2,8 @@
 #
 # Parameterized template for ZFS-based systems used by:
 # - desktop (16GB swap, /dev/disk/by-id/changeme)
-# - portable (no swap, /dev/disk/by-id/changeme)
-# - hp-probook-vmware (8GB swap, /dev/sda)
+# - surface (shelf config, 8GB swap)
+# - hp-probook-vmware (shelf config, 8GB swap, /dev/sda)
 #
 # Defines disk layout with:
 # - EFI System Partition (512MB) at /boot

@@ -364,7 +364,7 @@ guard-build:
 build-push-cache:
     #!/usr/bin/env bash
     set -euo pipefail
-    HOSTS="desktop surface portable hp-probook-wsl hp-probook-vmware m920q"
+    HOSTS="desktop hp-probook-wsl m920q"
     PATHS=()
     for host in $HOSTS; do
       echo "Building $host toplevel..."
@@ -372,5 +372,7 @@ build-push-cache:
       echo "Building $host home activation..."
       PATHS+=("$(nix build ".#nixosConfigurations.$host.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths)")
     done
+    echo "Building installer-iso-portable..."
+    PATHS+=("$(nix build .#installer-iso-portable --print-out-paths)")
     echo "Pushing to felixschausberger.cachix.org..."
     cachix push felixschausberger "${PATHS[@]}"
