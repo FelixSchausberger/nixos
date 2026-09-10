@@ -538,5 +538,18 @@ in {
       enable = true;
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
+    # LAN power relay for the desktop. Binds to this host's Tailscale
+    # address so remote wake/shutdown requests from the phone arrive over
+    # the tailnet; magic packets themselves cannot traverse Tailscale
+    # (tailscale/tailscale#306), so they are replayed as LAN broadcast.
+    powerRelay = {
+      enable = true;
+      bindAddress = "100.105.37.12";
+      macAddress = "10:ff:e0:e1:53:55";
+      broadcastAddress = "192.168.178.255";
+      hostAddress = "192.168.178.3";
+      sshHost = "desktop";
+      ntfyTopic = "desktop-power";
+    };
   };
 }

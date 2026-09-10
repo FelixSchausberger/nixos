@@ -45,7 +45,9 @@ in {
     };
   };
 
-  # Wake-on-LAN on the wired ethernet interface
+  # Wake-on-LAN on the wired ethernet interface. Wake is LAN-local: magic
+  # packets cannot traverse Tailscale (tailscale/tailscale#306), so remote
+  # wake and shutdown go through the power-relay on m920q.
   hardware.profiles.powerManagement = {
     enable = true;
     lanInterface = "eno1";
