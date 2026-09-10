@@ -22,10 +22,16 @@ and which finished five minutes ago.
 
 ## Naming
 
-OpenCode gives each session an auto-generated title, and the plugin uses that
-as the Zellij tab name. To change it, run OpenCode's built-in `/rename` slash
-command. In this vendored fork, titles are additionally truncated to
-`OPENCODE_ZELLIJ_TITLE_MAX` characters (default 24; `0` disables).
+OpenCode gives each session an auto-generated title. By default this fork shows
+only the **status icon** on the tab, so the Zellij tab renders as just its index
+plus the icon (e.g. `2 ⏳`) - the most compact form, which leaves room in the
+status bar for the quota and clock.
+
+To show titles instead, set `OPENCODE_ZELLIJ_TITLE_MAX` to a positive number.
+Titles are then budgeted to the status bar (count- and width-aware, `format.ts`
+`adaptiveTitleMax`): the more tabs are open and the narrower the bar, the shorter
+the title, collapsing back to the icon when there is no room. `0` (the default)
+always shows the icon only.
 
 ## Stopwatch
 
