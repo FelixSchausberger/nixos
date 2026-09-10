@@ -17,6 +17,14 @@
             format_right  "{pipe_zjstatus_hints} {pipe_opencode_quota} {datetime}"
             format_space  ""
 
+            // Keep the bar within the pane. When segments would overlap,
+            // zjstatus drops the lowest-priority one instead of emitting an
+            // overlong line (which zellij wraps, hiding the left/center).
+            // "clr" = Center(tabs) > Left(mode) > Right, so the tab index and
+            // agent icon survive even on a crowded bar.
+            format_hide_on_overlength "true"
+            format_precedence "clr"
+
             pipe_zjstatus_hints_format "{output}"
 
             // Fed by the opencode-quota-bridge user timer
@@ -37,8 +45,8 @@
             mode_session     "#[bg=${catppuccin.pink},fg=${catppuccin.base},bold] SESSION "
             mode_entersearch "#[bg=${catppuccin.red},fg=${catppuccin.base},bold] ENTERSEARCH "
 
-            tab_normal      "#[fg=${catppuccin.overlay1}] {name} "
-            tab_active      "#[fg=${catppuccin.text},bold] {name} "
+            tab_normal      "#[fg=${catppuccin.overlay1}] {index} {name} "
+            tab_active      "#[fg=${catppuccin.text},bold] {index} {name} "
             tab_separator   "#[fg=${catppuccin.surface1}]|"
 
             datetime         "#[fg=${catppuccin.subtext0}] {format}"
@@ -144,7 +152,16 @@ in {
       # should start eagerly. UI plugins remain layout/on-demand driven.
       load_plugins = lib.mkForce {
         _children = [
-          {"zjstatus-hints" = [];}
+          {
+            "zjstatus-hints" = {
+              _children = [
+                # Bound the keybind hints so they cannot overrun the bar.
+                # zellij-indicator-felix assumes the same cap when budgeting
+                # adaptive tab-name lengths.
+                {max_length = ["40"];}
+              ];
+            };
+          }
         ];
       };
     };
@@ -246,6 +263,9 @@ in {
           bind "Esc" {
             UndoRenameTab
             SwitchToMode "tab"
+          }
+          bind "Enter" {
+            SwitchToMode "Locked"
           }
         }
 
