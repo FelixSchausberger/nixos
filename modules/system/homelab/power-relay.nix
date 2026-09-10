@@ -287,7 +287,9 @@ in {
             ]
             ++ lib.optionals (cfg.token != null) ["--token ${cfg.token}"];
         in
-          lib.concatStringsSep " " (["${script}/bin/power-relay"] ++ args);
+          # writers.writePython3's out is already the executable symlink,
+          # so the reference must be the derivation output itself.
+          lib.concatStringsSep " " (["${script}"] ++ args);
         DynamicUser = true;
         PrivateTmp = true;
         Restart = "on-failure";
