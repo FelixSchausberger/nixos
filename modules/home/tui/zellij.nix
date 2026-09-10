@@ -12,9 +12,9 @@
         children
         pane size=1 borderless=true {
           plugin location="zjstatus" {
-            format_left   "{mode}"
+            format_left   "{mode} {pipe_zjstatus_hints}"
             format_center "{tabs}"
-            format_right  "{pipe_zjstatus_hints} {pipe_opencode_quota} {datetime}"
+            format_right  "{pipe_opencode_quota}"
             format_space  ""
 
             // Keep the bar within the pane. When segments would overlap,
@@ -48,10 +48,6 @@
             tab_normal      "#[fg=${catppuccin.overlay1}] {index} {name} "
             tab_active      "#[fg=${catppuccin.text},bold] {index} {name} "
             tab_separator   "#[fg=${catppuccin.surface1}]|"
-
-            datetime         "#[fg=${catppuccin.subtext0}] {format}"
-            datetime_format  "%H:%M"
-            datetime_timezone "Europe/Vienna"
           }
         }
       }
