@@ -59,6 +59,9 @@
 
       # Certificate directories and registry CA links — created declaratively
       # before Docker starts (tmpfiles runs before most services).
+      # The system CA paths (/etc/ssl/certs/*) are deliberately absent: an
+      # `L+` rule there clobbers security.pki's merged bundle at every boot,
+      # bypassing security.pki.certificateFiles/certificates.
       tmpfiles.rules = [
         "d /etc/docker 0755 root root - -"
         "d /etc/docker/certs.d 0755 root root - -"
@@ -74,8 +77,6 @@
         "L+ /etc/docker/certs.d/docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
         "L+ /etc/docker/certs.d/auth.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
         "L+ /etc/docker/certs.d/production.cloudflare.docker.com/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/ssl/certs/ca-certificates.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/ssl/certs/ca-bundle.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
       ];
 
       # Prepares act runner environment with NixOS certificates.

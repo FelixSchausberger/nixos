@@ -33,7 +33,11 @@
   # Waits for the shared server, then attaches (avoids an empty pane if the user
   # service is not up yet at seed time). Uses `opencode attach` (not a throwaway
   # `opencode`) so it joins the same session store as the web UI and other clients.
-  opencodeSeedCmd = "${pkgs.bash}/bin/sh -c 'until ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString opencodePort} >/dev/null 2>&1; do sleep 2; done; exec opencode attach http://127.0.0.1:${toString opencodePort}'";
+  # The wait is bounded because this runs inside a zellij pane, where no systemd
+  # timeout applies: an unbounded poll would hang the pane forever if the user
+  # service never starts. On timeout it warns and attaches anyway.
+  seedWaitAttempts = 30;
+  opencodeSeedCmd = "${pkgs.bash}/bin/sh -c 'n=0; while ! ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString opencodePort} >/dev/null 2>&1; do n=$((n + 1)); if [ \"$n\" -ge ${toString seedWaitAttempts} ]; then echo \"warning: opencode server not ready after $(( ${toString seedWaitAttempts} * 2 ))s; attaching anyway\" >&2; break; fi; sleep 2; done; exec opencode attach http://127.0.0.1:${toString opencodePort}'";
 in {
   options.modules.system.homelab.zellijWeb = {
     enable = lib.mkEnableOption "Zellij web server for remote terminal sessions";

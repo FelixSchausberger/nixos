@@ -164,7 +164,7 @@ in {
 
     # WSL terminates without clean systemd shutdown, which corrupts persistent journals.
     # Volatile storage avoids corruption and is appropriate since WSL state is ephemeral.
-    services.journald.storage = "volatile";
+    services.journald.settings.Journal.Storage = "volatile";
 
     home-manager.users.${hostConfig.user} = {
       programs.fish.shellAliases = {
