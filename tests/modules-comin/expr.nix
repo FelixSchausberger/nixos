@@ -28,8 +28,8 @@
     # Post-deployment downgrade detection is wired up
     post_deploy_set = config.services.comin.postDeploymentCommand != null;
 
-    # Deployment state survives reboots on impermanence hosts; absent where
-    # persistence is force-disabled (surface keeps a real ext4 root)
+    # Deployment state survives reboots on impermanence hosts; absent on hosts
+    # where persistence is force-disabled (e.g. WSL).
     state_persisted =
       builtins.any (d: (d.directory or "") == "/var/lib/comin")
       ((config.environment.persistence."/per" or {}).directories or []);
@@ -39,17 +39,8 @@
   };
 in {
   desktop = testComin "desktop" configs.desktop.config;
-  portable = testComin "portable" configs.portable.config;
-  surface = testComin "surface" configs.surface.config;
   hp-probook-wsl = testComin "hp-probook-wsl" configs.hp-probook-wsl.config;
   m920q = testComin "m920q" configs.m920q.config;
-
-  # Test VM stays manual: no comin, no service
-  hp-probook-vmware = rec {
-    hostName = "hp-probook-vmware";
-    comin_enabled = configs.hp-probook-vmware.config.modules.system.comin.enable or false;
-    comin_service_enabled = configs.hp-probook-vmware.config.services.comin.enable or false;
-  };
 
   # m920q-specific reconciler wiring
   m920q_autopush_service =

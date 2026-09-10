@@ -58,6 +58,9 @@
       # Full installer ISO (comprehensive recovery environment)
       installer-iso-full = makeISO [../hosts/installer];
 
+      # Portable recovery ISO (TUI-only live USB with ZFS + recovery tooling)
+      installer-iso-portable = makeISO [../hosts/portable];
+
       # NixOS VM Integration Tests
       test-m920q-mode-switch =
         (import ../tests-vm {

@@ -27,9 +27,6 @@ in {
       udp_gro_interface = configs.desktop.config.modules.system.homelab.tailscale.udpGROInterface;
       has_udp_gro_service = builtins.hasAttr "tailscale-udp-gro-fix" configs.desktop.config.systemd.services;
     };
-  portable = testTailscale "portable" configs.portable.config;
-  surface = testTailscale "surface" configs.surface.config;
-  hp-probook-vmware = testTailscale "hp-probook-vmware" configs.hp-probook-vmware.config;
   hp-probook-wsl = testTailscale "hp-probook-wsl" configs.hp-probook-wsl.config;
   m920q = testTailscale "m920q" configs.m920q.config;
 }

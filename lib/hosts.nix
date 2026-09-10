@@ -16,12 +16,6 @@
     description = "Surface tablet with Niri WM";
   };
 
-  portable = {
-    wms = [];
-    isGui = false;
-    description = "TUI-only emergency/recovery system";
-  };
-
   hp-probook-wsl = {
     wms = [];
     isGui = false;
