@@ -24,6 +24,44 @@
     stderr = "journal";
   };
 
+  # GLideN64 (RMG's N64 video plugin) defaults to a 640x480 fullscreen mode and
+  # renders the GL viewport at exactly that size without scaling to the window,
+  # so on a Moonshine virtual display (sized to the Moonlight client's
+  # requested resolution) the game appears in a small block in one corner.
+  # Point the plugin's fullscreen mode at the client resolution before each
+  # launch; Moonshine exports MOONSHINE_CLIENT_WIDTH/HEIGHT/FRAMERATE for every
+  # application it starts, and GLideN64 reads these values from
+  # GLideN64.ini ([General] profile=User -> [User] video\fullscreen*).
+  rmgMoonshine = pkgs.writeShellApplication {
+    name = "rmg-moonshine";
+    runtimeInputs = with pkgs; [crudini coreutils];
+    text = ''
+      ini="''${HOME}/.config/RMG/GLideN64.ini"
+
+      # A failed edit must not block the stream; log and launch with the
+      # existing configuration instead.
+      set_ini() {
+        crudini --set "$ini" User "$1" "$2" \
+          || echo "rmg-moonshine: could not set $1 in $ini" >&2
+      }
+
+      # Local launches without a client resolution keep the existing config.
+      if [ -n "''${MOONSHINE_CLIENT_WIDTH:-}" ] && [ -n "''${MOONSHINE_CLIENT_HEIGHT:-}" ]; then
+        if [ ! -f "$ini" ]; then
+          mkdir -p "$(dirname "$ini")"
+          printf '[General]\nprofile=User\n\n[User]\n' > "$ini"
+        fi
+        set_ini 'video\fullscreenWidth' "$MOONSHINE_CLIENT_WIDTH"
+        set_ini 'video\fullscreenHeight' "$MOONSHINE_CLIENT_HEIGHT"
+        if [ -n "''${MOONSHINE_CLIENT_FRAMERATE:-}" ]; then
+          set_ini 'video\fullscreenRefresh' "$MOONSHINE_CLIENT_FRAMERATE"
+        fi
+      fi
+
+      exec ${pkgs.rmg}/bin/RMG --fullscreen "$@"
+    '';
+  };
+
   # ROM paths relative to /per/mnt/games/Emulator
   gcGames = {
     "F-Zero GX" = "Gamecube/Games/F-Zero GX (USA).iso";
@@ -94,8 +132,7 @@ in {
       ++ (lib.mapAttrsToList
         (title: rom:
           appTile title [
-            "${pkgs.rmg}/bin/RMG"
-            "--fullscreen"
+            "${rmgMoonshine}/bin/rmg-moonshine"
             "${romDir}/${rom}"
           ])
         n64Games)
