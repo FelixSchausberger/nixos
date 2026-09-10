@@ -26,6 +26,22 @@ benefit for single quick changes.
 
 ## Workflow
 
+0. Check for active claims before starting. The jj graph itself is the
+   claim table — every workspace's `@` commit, its description, and its
+   timestamp identify who owns which workspace and on what task:
+
+   ```bash
+   jj log -r 'working_copies()' --no-graph
+   ```
+
+   An undescribed or unfinished `@` in another workspace means: do not touch
+   that workspace. Report the conflict to the user and halt (same policy as
+   the `jjwork` undescribed-WIP guard). No liveness signal is needed — an
+   abandoned workspace is as much a hazard as an active one. Optionally, an
+   opencode server call (`GET /session`, `GET /session/status` on a reachable
+   server) can enrich this with busy/idle session titles; it is decorative and
+   may not exist in opencode 2.
+
 1. Create the workspace as a **sibling directory** (never a subdirectory —
    child dirs get tracked by jj):
 
@@ -41,7 +57,11 @@ benefit for single quick changes.
    jj edit <change-id>   # or jj new -m "describe the task first"
    ```
 
-3. Describe before editing. The `jjwork` guard refuses to rebase an
+3. Describe before editing. The change description **is** the claim:
+   creating the workspace and giving its `@` a description registers
+   ownership atomically in the graph, with no external registry to prune or
+   repair. A workspace with no description is by definition unclaimed and a
+   hazard to other sessions. The `jjwork` guard refuses to rebase an
    undescribed non-empty working copy — in any workspace. Describe first,
    then implement.
 
@@ -56,6 +76,17 @@ benefit for single quick changes.
    jj workspace forget <task>   # unregisters; commits are preserved
    rm -rf ../nixos-ws-<task>    # forget does NOT delete the directory
    ```
+
+## Naming Convention
+
+Use one task string in three places so `working_copies()` output is
+self-explanatory across sessions:
+
+- workspace name: `nixos-ws-<task>`
+- change description prefix: `"<task>: ..."`
+- optionally, the opencode session title
+
+A reader can then map any workspace `@` to its session without a registry.
 
 ## Rules
 
