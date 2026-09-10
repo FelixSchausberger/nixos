@@ -46,6 +46,16 @@ in {
     (cmd: builtins.match ".*/tmp/.X11-unix" cmd != null)
     config.systemd.services.moonshine.serviceConfig.ExecStartPre;
 
+  # GLideN64 renders fullscreen at its configured resolution (640x480 default)
+  # without scaling to the window, so N64 tiles must route through the
+  # resolution-setting wrapper instead of calling RMG directly
+  fzero_x_uses_rmg_wrapper = let
+    tile =
+      builtins.head
+      (builtins.filter (app: app.title == "F-Zero X") config.services.moonshine.settings.application);
+  in
+    builtins.any (arg: builtins.match ".*rmg-moonshine.*" arg != null) tile.command;
+
   # Vitals parity with m920q, in GUI mode (user daemon on
   # graphical-session.target instead of default.target)
   vitals_enabled = config.services.vitals.enable;

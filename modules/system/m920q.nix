@@ -88,9 +88,24 @@ in {
         # systemd manager. Stopping niri-session.target / graphical-session.target
         # also stops niri.service (BindsTo graphical-session.target), ending the
         # session and all bound services without relying on socket discovery.
-        sudo -u ${user} /run/current-system/sw/bin/systemctl --user -M ${user}@ stop niri-session.target 2>/dev/null || true
-        sudo -u ${user} /run/current-system/sw/bin/systemctl --user -M ${user}@ stop graphical-session.target 2>/dev/null || true
-        timeout 15 ${pkgs.bash}/bin/bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
+        # Only do this when a user manager is actually running: `systemctl
+        # --user -M` starts one when none exists, and starting one from a state
+        # with no live session (the VM test, or niri already gone) leaves a
+        # manager shutting down while switch-to-configuration enumerates users
+        # via logind. Its user-unit reload then fails with status 4 and aborts
+        # the whole switch even though the system switch succeeded. In
+        # production niri owns a live manager, so this guard is transparent.
+        uid=$(/run/current-system/sw/bin/id -u ${user})
+        if /run/current-system/sw/bin/systemctl is-active --quiet "user@$uid.service"; then
+          sudo -u ${user} /run/current-system/sw/bin/systemctl --user -M ${user}@ stop niri-session.target 2>/dev/null || true
+          sudo -u ${user} /run/current-system/sw/bin/systemctl --user -M ${user}@ stop graphical-session.target 2>/dev/null || true
+          timeout 15 ${pkgs.bash}/bin/bash -c 'while /run/current-system/sw/bin/systemctl --user -M ${user}@ is-active niri.service 2>/dev/null; do sleep 0.5; done' || true
+          # Wait for the manager to finish exiting so switch-to-configuration
+          # takes its "user manager not running" path instead of racing the
+          # shutdown. Bounded: with linger enabled the manager stays up and the
+          # switch performs an ordinary, successful reload.
+          timeout 15 ${pkgs.bash}/bin/bash -c "while /run/current-system/sw/bin/systemctl is-active --quiet 'user@$uid.service'; do sleep 0.5; done" || true
+        fi
         # Kill any stray compositor/UWSM processes that escaped the teardown.
         /run/current-system/sw/bin/pkill -u ${user} -f 'niri|uwsm' 2>/dev/null || true
         # greetd is deliberately left running here: switch-to-configuration
