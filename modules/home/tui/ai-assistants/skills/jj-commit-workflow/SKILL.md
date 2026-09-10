@@ -34,6 +34,11 @@ report that jjwork was skipped.
 If `jjwork` reports conflicts, run `jj resolve --list` and report them to the
 user. Do not proceed past conflicts.
 
+If `jjwork` refuses because the working copy has undescribed changes, give the
+working copy a provisional conventional description (`jj describe -m
+"wip: <summary>"`), then re-run `jjwork`. The split in step 4 replaces the
+provisional message. Never bypass the guard with `JJWORK_ALLOW_WIP=1`.
+
 ### 2. Assess current state
 
 ```bash
@@ -58,9 +63,29 @@ and say so in the final report. Fix any issues, then re-run until clean.
 | `Cargo.toml` | `cargo build --release` and `cargo test` |
 | none of the above | compile/smoke-test the change directly if applicable, else report validation skipped |
 
-### 4. Commit
+### 4. Split into logical commits
 
-Generate a conventional commit message from the diff. Follow the format:
+Review the diff and group the changed paths by concern. Each concern a
+reviewer could evaluate on its own gets its own commit — features, fixes,
+docs, refactors, and formatting/lockfile churn are separate commits. Only a
+genuinely atomic change (a single concern with no separable parts) stays as
+one commit.
+
+Keep coupled changes together: a config change plus the code that consumes it,
+or a rename plus its call-site updates, must not be split into commits that
+would individually fail validation.
+
+Split the working copy bottom-up with `jj split`. The selected paths go into
+the parent commit; everything else stays in `@`, so the first split ends up
+lowest in the stack and the final remainder is the top commit:
+
+```bash
+jj split <paths-of-first-concern> -m "<message>"
+jj split <paths-of-next-concern> -m "<message>"
+jj describe -m "<message-for-remainder>"
+```
+
+Generate a conventional message per commit. Follow the format:
 
 ```text
 type(scope): description
@@ -69,12 +94,6 @@ type(scope): description
 ```
 
 Types: feat, fix, chore, refactor, docs, test, perf.
-
-Apply the message:
-
-```bash
-jj describe -m "<generated message>"
-```
 
 ### 5. Push and create PR
 
