@@ -96,7 +96,7 @@ jobs:
           # wrapper derivations is normal and still passes.
           HEAVY='freecad|krita|blender|prusa-slicer|inkscape|linux-[0-9]'
           cold=0
-          for host in desktop surface portable hp-probook-wsl hp-probook-vmware m920q; do
+          for host in desktop hp-probook-wsl m920q; do
             output=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1 || true)
             if echo "$output" | grep -qE "$HEAVY"; then
               cold=1

@@ -58,11 +58,9 @@
     };
   };
 in {
-  # Test all hosts
+  # Deployed hosts only. Shelf configs in flake.legacyConfigurations are
+  # opt-in and intentionally not evaluated by CI.
   desktop = getCriticalPaths "desktop" configs.desktop.config;
-  portable = getCriticalPaths "portable" configs.portable.config;
-  surface = getCriticalPaths "surface" configs.surface.config;
-  hp-probook-vmware = getCriticalPaths "hp-probook-vmware" configs.hp-probook-vmware.config;
   hp-probook-wsl = getCriticalPaths "hp-probook-wsl" configs.hp-probook-wsl.config;
   m920q = getCriticalPaths "m920q" configs.m920q.config;
 }

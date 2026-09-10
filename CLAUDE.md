@@ -6,9 +6,10 @@ code in this repository.
 ## Project Overview
 
 This is a personal NixOS and Home Manager configuration using flakes and
-flake-parts architecture. The configuration supports multiple hosts
-(desktop, portable, surface, hp-probook-wsl) with modular
-system and home configurations.
+flake-parts architecture. The deployed fleet is `desktop`, `m920q`, and
+`hp-probook-wsl`. Additional configs (`surface`, `hp-probook-vmware`) are
+kept opt-in under `flake.legacyConfigurations`, and `hosts/portable` builds
+the portable recovery ISO (`.#installer-iso-portable`).
 
 ## AI Workflow Guidelines
 

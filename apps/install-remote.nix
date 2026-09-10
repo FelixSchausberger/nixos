@@ -32,7 +32,7 @@ in {
             echo "Available hosts: ${hostListSpace}" >&2
             echo "" >&2
             echo "Example:" >&2
-            echo "  nix run .#install-remote hp-probook-vmware 192.168.1.100" >&2
+            echo "  nix run .#install-remote desktop 192.168.1.100" >&2
             echo "" >&2
             echo "Prerequisites:" >&2
             echo "  - Target booted with custom NixOS ISO (installer-iso-minimal)" >&2

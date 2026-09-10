@@ -65,23 +65,13 @@
         ++ extraModules;
     };
 in {
+  # Deployed fleet. These are built by CI (cachix-push, daily-updates) and
+  # converged by comin on each host.
   flake.nixosConfigurations = {
     desktop = mkHostConfig {
       hostName = "desktop";
       baseModules = desktop;
       extraModules = [./desktop.nix];
-    };
-
-    surface = mkHostConfig {
-      hostName = "surface";
-      baseModules = laptop;
-      extraModules = [./surface.nix];
-    };
-
-    portable = mkHostConfig {
-      hostName = "portable";
-      baseModules = desktop;
-      extraModules = [./portable.nix];
     };
 
     hp-probook-wsl = mkHostConfig {
@@ -90,16 +80,30 @@ in {
       extraModules = [./hp-probook-wsl.nix];
     };
 
-    hp-probook-vmware = mkHostConfig {
-      hostName = "hp-probook-vmware";
-      baseModules = laptop;
-      extraModules = [./hp-probook-vmware.nix];
-    };
-
     m920q = mkHostConfig {
       hostName = "m920q";
       baseModules = server;
       extraModules = [./m920q.nix];
+    };
+  };
+
+  # Opt-in shelf configurations for hardware that is not currently deployed.
+  # Keeping them out of nixosConfigurations means CI does not build them and
+  # `nix flake check` does not evaluate them, while the configs stay in-tree
+  # for easy revival. Access on demand, for example:
+  #   nix build .#legacyConfigurations.surface.config.system.build.toplevel
+  # To revive a host, move its entry back into nixosConfigurations.
+  flake.legacyConfigurations = {
+    surface = mkHostConfig {
+      hostName = "surface";
+      baseModules = laptop;
+      extraModules = [./surface.nix];
+    };
+
+    hp-probook-vmware = mkHostConfig {
+      hostName = "hp-probook-vmware";
+      baseModules = laptop;
+      extraModules = [./hp-probook-vmware.nix];
     };
   };
 }

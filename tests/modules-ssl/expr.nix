@@ -22,9 +22,6 @@
   };
 in {
   desktop = testSsl "desktop" configs.desktop.config;
-  portable = testSsl "portable" configs.portable.config;
-  surface = testSsl "surface" configs.surface.config;
-  hp-probook-vmware = testSsl "hp-probook-vmware" configs.hp-probook-vmware.config;
   hp-probook-wsl = testSsl "hp-probook-wsl" configs.hp-probook-wsl.config;
   m920q = testSsl "m920q" configs.m920q.config;
 }

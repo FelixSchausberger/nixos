@@ -17,10 +17,11 @@ opt-in state, and sops-nix secret management.
 .
 ├── flake.nix              # Main flake configuration with inputs and outputs
 ├── hosts/                 # System-level configurations per machine
-│   ├── desktop/
-│   ├── portable/
-│   ├── surface/
-│   └── hp-probook-wsl/
+│   ├── desktop/           # deployed
+│   ├── hp-probook-wsl/    # deployed
+│   ├── m920q/             # deployed
+│   ├── portable/          # portable recovery ISO (.#installer-iso-portable)
+│   └── surface/           # shelf config (flake.legacyConfigurations)
 ├── home/profiles/         # User-specific configurations per machine
 ├── modules/               # Reusable system and home manager modules
 │   ├── system/            # System-level modules
@@ -270,7 +271,7 @@ For VMware/VirtualBox VMs, use nixos-anywhere instead of building a custom ISO.
 3. **Install from your dev machine** (fully automated)
 
    ```bash
-   nix run .#install-vm hp-probook-vmware <vm-ip-address>
+   nix run .#install-remote desktop <vm-ip-address>
    ```
 
 This automatically:
@@ -326,7 +327,7 @@ If you prefer using a standard NixOS ISO:
 3. **Install from your dev machine**
 
    ```bash
-   nix run .#install-vm hp-probook-vmware <vm-ip-address>
+   nix run .#install-remote desktop <vm-ip-address>
    ```
 
 #### Manual Installation
@@ -341,13 +342,13 @@ For manual control or custom configurations:
 
    ```bash
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#hp-probook-vmware \
+     --flake .#desktop \
      root@<vm-ip-address>
    ```
 
    **Note**: The disk device (`/dev/sda`) is configured in the disko
    configuration file. If your VM uses a different disk device (like
-   `/dev/nvme0n1`), update it in `hosts/hp-probook-vmware/disko/disko.nix`.
+   `/dev/nvme0n1`), update it in `hosts/desktop/disko.nix`.
 
 4. **Post-installation setup** (manual only)
 
@@ -465,10 +466,8 @@ flake-checker --no-telemetry                     # Disable telemetry
 flake-checker --check-outdated --check-owner     # Specific checks only
 
 # VM testing
-nix run .#vm-desktop
-nix run .#vm-portable
-nix run .#vm-surface
-nix run .#vm-hp-probook-wsl
+nix run .#install-remote desktop <target-ip>
+nix run .#install-remote m920q <target-ip>
 
 # Local CI testing (requires Docker)
 act pull_request                                 # Run full PR workflow
