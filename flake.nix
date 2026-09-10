@@ -38,12 +38,14 @@
     # === CORE INPUTS (Used by all hosts) ===
     # Core Nix infrastructure (always needed)
 
-    # Nixpkgs source: the nixos-unstable channel branch. Channel refs only
-    # advance after Hydra completes a full eval cycle, so cache.nixos.org is
-    # populated for the locked revision - rolling FlakeHub "0.1" picked
-    # commits faster than any cache could build them, repeatedly forcing
-    # multi-hour source builds of large packages on every host.
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Nixpkgs source: the nixos-unstable *channel* tarball, not the GitHub
+    # branch of the same name. The channel publishes a revision only after
+    # Hydra completes an eval cycle for it, so cache.nixos.org is populated
+    # for the locked revision; the branch tip can race ahead of the cache
+    # and the daily-updates cache-coverage gate would then refuse to open
+    # the lock PR. Rolling FlakeHub "0.1" had the same problem and also
+    # forced multi-hour source builds on every host.
+    nixpkgs.url = "tarball+https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz";
     # Shared rust-overlay and flake-utils; all inputs that use them follow these
     # to avoid fetching and evaluating duplicate copies during flake evaluation
     rust-overlay = {
