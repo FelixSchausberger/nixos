@@ -147,13 +147,15 @@ in {
 
 
             def record_wake():
-                deadline = time.monotonic() + ARGS.wakeTimeout
+                t0 = time.monotonic()
+                deadline = t0 + ARGS.wakeTimeout
                 while time.monotonic() < deadline:
                     if reachable():
+                        elapsed = int(time.monotonic() - t0)
                         notify(
                             "Desktop is up",
-                            "desktop is awake (wake succeeded)",
-                            "low", "electric_plug",
+                            f"reachable {elapsed}s after the wake request",
+                            "default", "electric_plug",
                         )
                         return
                     time.sleep(5)
@@ -165,13 +167,15 @@ in {
 
 
             def record_shutdown():
-                deadline = time.monotonic() + ARGS.shutdownTimeout
+                t0 = time.monotonic()
+                deadline = t0 + ARGS.shutdownTimeout
                 while time.monotonic() < deadline:
                     if not reachable():
+                        elapsed = int(time.monotonic() - t0)
                         notify(
                             "Desktop is off",
-                            f"desktop powered down (within {ARGS.shutdownTimeout}s)",
-                            "low", "moon",
+                            f"powered down {elapsed}s after the poweroff request",
+                            "default", "crescent_moon",
                         )
                         return
                     time.sleep(3)
