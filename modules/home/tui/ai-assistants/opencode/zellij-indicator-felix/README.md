@@ -10,7 +10,7 @@ and which finished five minutes ago.
 ## The four states
 
 | Icon | When | What it means for you |
-|------|------|-----------------------|
+| ------ | ------ | ----------------------- |
 | ⏳ | working | OpenCode is busy — ignore it for now |
 | ❓ | needs you | blocked on a permission prompt or a question — go unblock it |
 | 🔔 | done, unseen | it finished while you were away — go check the result |
@@ -22,37 +22,47 @@ and which finished five minutes ago.
 
 ## Naming
 
-OpenCode gives each session an auto-generated title, and the plugin uses that as the Zellij tab name. To change it, run OpenCode's built-in `/rename` slash command.
+OpenCode gives each session an auto-generated title, and the plugin uses that
+as the Zellij tab name. To change it, run OpenCode's built-in `/rename` slash
+command. In this vendored fork, titles are additionally truncated to
+`OPENCODE_ZELLIJ_TITLE_MAX` characters (default 24; `0` disables).
 
 ## Stopwatch
-  
-Show how long a session has been running. After a minute, the elapsed minutes appear next to the icon:
+
+Show how long a session has been running. After a minute, the elapsed minutes
+appear next to the icon:
 
 ![Stopwatch on a running tab](docs/stopwatch.png)
 
 To disable the stopwatch set env variable `OPENCODE_ZELLIJ_STOPWATCH=0`.
 
 ## Sound
-When a non-focused zellij tab finishes (🔔) or needs you (❓) an audio notification is played.
 
-To disable the sound set env variable `OPENCODE_ZELLIJ_SOUND=0`.  
-To override the default sound with your own set env variable `OPENCODE_ZELLIJ_SOUND_CMD="pw-play ~/alert.wav"`.
+When a non-focused zellij tab finishes (🔔) or needs you (❓) an audio
+notification is played.
+
+To disable the sound set env variable `OPENCODE_ZELLIJ_SOUND=0` or override
+the player with `OPENCODE_ZELLIJ_SOUND_CMD="pw-play ~/alert.wav"`.
 
 ## Install
 
 **1. Install Zellij and OpenCode.**  
 Requires Zellij ≥ 0.44.0
 
-**2. Enable the plugin.**   
+**2. Enable the plugin.**
 Add the following to your `opencode.json`
+
 ```json
 {
   "plugin": ["opencode-zellij-indicator"]
 }
 ```
-Outside Zellij the plugin does nothing (it exits immediately), so it's safe to leave enabled everywhere at no cost.
+
+Outside Zellij the plugin does nothing (it exits immediately), so it's safe to
+leave it deployed everywhere at no cost.
 
 **3. Run OpenCode inside Zellij.**
+
 ```sh
 zellij      # opens the Zellij workspace
 opencode    # run this inside Zellij
