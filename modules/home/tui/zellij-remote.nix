@@ -6,13 +6,39 @@
 # The web auth token is created once on the server (`zellij web --create-token`)
 # and stored here via sops. `-r` remembers auth on the client for 4 weeks, but
 # reading the token fresh each run keeps rotation in a single place (sops).
-{config, ...}: let
+{
+  config,
+  pkgs,
+  ...
+}: let
   host = "m920q.tailf2f0ca.ts.net";
   httpsPort = "8443";
   session = "homelab";
   tokenFile = config.sops.secrets."zellij-token".path;
+
+  # Create (or recreate) a Zellij session with a client attached at startup.
+  #
+  # Do NOT use `zellij attach --create-background` for this: the server then
+  # starts with no client, the first tab's zjstatus status-bar plugin
+  # initialises in that client-less window, gets empty host-query replies, and
+  # renders an empty bar forever (verified 2026-09-10, A/B test). This helper
+  # spawns a real PTY client so the bar initialises correctly, then detaches.
+  zellijNew = pkgs.writeShellApplication {
+    name = "zellij-new";
+    runtimeInputs = [pkgs.python3 pkgs.zellij];
+    text = ''
+      exec python3 ${./zellij-new.py} "$@"
+    '';
+  };
 in {
+  home.packages = [zellijNew];
+
   sops.secrets."zellij-token" = {};
+
+  programs.fish.functions.znew = {
+    description = "Create a Zellij session with a client attached at startup (avoids the empty status-bar bug)";
+    body = "zellij-new $argv";
+  };
 
   programs.fish.functions.zr = {
     description = "Attach to the homelab Zellij session over HTTPS (auto-reconnects on drops)";

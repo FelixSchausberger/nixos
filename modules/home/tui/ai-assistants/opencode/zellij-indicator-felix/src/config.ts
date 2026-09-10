@@ -28,11 +28,12 @@ export const ALL_ICONS = [
 
 export const STOPWATCH_ENABLED = process.env.OPENCODE_ZELLIJ_STOPWATCH !== "0"
 
-// Truncate session titles added in this fork: auto-generated titles are whole
-// sentences and overflow the zjstatus tab bar. Applied where the title enters
-// the plugin so every consumer (label, log, rename bookkeeping) sees the same
-// short name. Invalid or non-positive values (incl. 0) disable truncation.
-export const TITLE_MAX = Number.parseInt(env("OPENCODE_ZELLIJ_TITLE_MAX", "24"), 10)
+// Session-title budget. 0 (default) hides the title entirely so the tab shows
+// only the status icon - the most compact form. A positive value shows the
+// title, adaptively capped at that many characters (see format.ts
+// adaptiveTitleMax). Titles are also truncated here at ingestion so every
+// consumer (label, log, rename bookkeeping) sees the same short name.
+export const TITLE_MAX = Number.parseInt(env("OPENCODE_ZELLIJ_TITLE_MAX", "0"), 10)
 
 export const truncateTitle = (t: string): string =>
   TITLE_MAX > 0 && t.length > TITLE_MAX ? `${t.slice(0, TITLE_MAX).trimEnd()}…` : t

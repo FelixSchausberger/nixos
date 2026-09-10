@@ -1,6 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { ASK_TOOLS, POLL_MS, STOPWATCH_ENABLED, log, truncateTitle, type Phase } from "./config"
-import { formatStopwatch, iconFor, stripIcons } from "./format"
+import { formatStopwatch, fitTitle, adaptiveTitleMax, iconFor, stripIcons } from "./format"
 import { playSound } from "./sound"
 import { isFocused, renameTab, resolvePane } from "./zellij"
 
@@ -9,7 +9,8 @@ import { isFocused, renameTab, resolvePane } from "./zellij"
 //
 // VENDORED FORK of opencode-zellij-indicator@0.7.0 (v0.7.0 tag,
 // aidan-gallagher, MIT): patches and provenance in package.json.
-// Only delta: session titles are truncated at ingestion (TITLE_MAX).
+// Deltas: session titles are truncated at ingestion (TITLE_MAX ceiling) and
+// budgeted adaptively to the status bar (see format.ts adaptiveTitleMax).
 //
 // A pure opencode plugin that shows each opencode session's state on its Zellij
 // tab. No fork, no WASM, no status-bar replacement — it just shells out to the
@@ -42,6 +43,10 @@ export const ZellijStatus: Plugin = async ({ $ }) => {
   let title: string | undefined
   let baseName: string | undefined
   let tabId: number | undefined
+  // Metrics for the adaptive title budget, refreshed on every render and by
+  // the metrics poll (tab count / bar width change without an opencode event).
+  let tabCount = 1
+  let barWidth = 0
   const subagents = new Set<string>()
   // Permission prompts currently awaiting an answer (by permission id). opencode
   // asks permission *before* firing tool.execute.before, so we track the pending
@@ -77,6 +82,8 @@ export const ZellijStatus: Plugin = async ({ $ }) => {
     const resolved = await resolvePane($, paneId)
     if (!resolved) return
     tabId = resolved.tabId
+    tabCount = resolved.tabCount
+    barWidth = resolved.barWidth
     if (baseName === undefined) {
       baseName = stripIcons(resolved.tabName)
       log(`resolved tab: id=${tabId} baseName=${JSON.stringify(baseName)}`)
@@ -86,15 +93,19 @@ export const ZellijStatus: Plugin = async ({ $ }) => {
   async function render() {
     await refreshTab()
     if (tabId === undefined) return
-    const label = (title && title.trim()) || (baseName && baseName.trim()) || ""
-    const stopwatch = formatStopwatch(runStartedAt, phase)
+    // Shrink the title as tabs accumulate / the bar narrows; cap 0 means the
+    // name collapses to the status icon alone ("{index} {icon}").
+    const cap = adaptiveTitleMax(tabCount, barWidth)
+    const raw = (title && title.trim()) || (baseName && baseName.trim()) || ""
+    const label = fitTitle(raw, cap)
+    const stopwatch = cap > 0 ? formatStopwatch(runStartedAt, phase) : undefined
     const icon = iconFor(phase, seen)
     const name = label
       ? stopwatch ? `${label} ${icon} (⏱ ${stopwatch})` : `${label} ${icon}`
       : stopwatch ? `${icon} (⏱ ${stopwatch})` : icon
     if (name === lastName) return
     lastName = name
-    log(`rename tab ${tabId} -> ${JSON.stringify(name)} (phase=${phase} seen=${seen} stopwatch=${stopwatch})`)
+    log(`rename tab ${tabId} -> ${JSON.stringify(name)} (cap=${cap} tabs=${tabCount} width=${barWidth} phase=${phase} seen=${seen} stopwatch=${stopwatch})`)
     await renameTab($, tabId, name)
   }
 
@@ -117,6 +128,24 @@ export const ZellijStatus: Plugin = async ({ $ }) => {
       }
     }, POLL_MS)
     pollTimer.unref?.()
+  }
+
+  // Tab count / bar width can change without any opencode event (opening or
+  // closing other tabs). Poll cheaply and re-render only when they move, so the
+  // adaptive title budget stays correct.
+  const METRICS_MS = 3000
+  let metricsTimer: ReturnType<typeof setInterval> | undefined
+  function startMetricsPoll() {
+    if (metricsTimer) return
+    metricsTimer = setInterval(async () => {
+      const before = `${tabCount}x${barWidth}`
+      await refreshTab()
+      if (`${tabCount}x${barWidth}` !== before) {
+        log(`tab metrics changed -> ${tabCount} tabs, ${barWidth} cols`)
+        await render()
+      }
+    }, METRICS_MS)
+    metricsTimer.unref?.()
   }
 
   async function setRunning() {
@@ -159,6 +188,8 @@ export const ZellijStatus: Plugin = async ({ $ }) => {
     await render()
     if (!wasPermission && !(await isFocused($, paneId))) void playSound($)
   }
+
+  startMetricsPoll()
 
   return {
     event: async ({ event }) => {
