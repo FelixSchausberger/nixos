@@ -56,6 +56,41 @@ in {
   in
     builtins.any (arg: builtins.match ".*rmg-moonshine.*" arg != null) tile.command;
 
+  # Dolphin has no --fullscreen flag and its stored config launches windowed,
+  # so the GameCube tiles must force fullscreen through the config override.
+  # The Moonshine compositor only auto-fills Steam windows.
+  fzero_gx_forces_fullscreen = let
+    tile =
+      builtins.head
+      (builtins.filter (app: app.title == "F-Zero GX") config.services.moonshine.settings.application);
+  in
+    builtins.elem "Dolphin.Display.Fullscreen=True" tile.command;
+
+  # snes9x's X11 fullscreen path only scales when the Xvideo path is enabled;
+  # without it the SNES image is drawn at a fixed 2x centered in the output.
+  fzero_snes_uses_xvideo = let
+    tile =
+      builtins.head
+      (builtins.filter (app: app.title == "F-Zero") config.services.moonshine.settings.application);
+  in
+    builtins.elem "-xvideo" tile.command;
+
+  # Every console ROM tile must ship box art for the Moonlight app grid.
+  rom_tiles_have_boxart = let
+    tileFor = title: builtins.head (builtins.filter (app: app.title == title) config.services.moonshine.settings.application);
+    hasBoxart = title: ((tileFor title).boxart or null) != null;
+  in
+    builtins.all hasBoxart [
+      "F-Zero GX"
+      "Zelda Collector's Edition"
+      "Zelda Wind Waker"
+      "Super Monkey Ball"
+      "Pokemon Stadium"
+      "F-Zero X"
+      "F-Zero"
+      "Zelda A Link to the Past"
+    ];
+
   # Vitals parity with m920q, in GUI mode (user daemon on
   # graphical-session.target instead of default.target)
   vitals_enabled = config.services.vitals.enable;
