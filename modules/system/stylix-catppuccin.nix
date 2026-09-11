@@ -97,6 +97,17 @@
       # This avoids loading Stylix kmscon defaults that rely on removed nixpkgs options.
       autoEnable = false;
 
+      # Wallpaper source for Stylix wallpaper targets (e.g. noctalia). Mirrors
+      # the wallpapers module default (solar-system) so a shell that owns the
+      # wallpaper does not receive a null path. Palette is set explicitly via
+      # base16Scheme below, so this image is not used for color generation.
+      image = ../home/wallpapers/solar-system.jpg;
+
+      # Catppuccin Mocha is a dark scheme. Stylix defaults polarity to
+      # "either"; pin it so dark-only targets (e.g. noctalia's theme mode) do
+      # not resolve to light.
+      polarity = "dark";
+
       # Use Catppuccin Mocha colors via base16 scheme
       base16Scheme = {
         base00 = catppuccin.base; # Default background

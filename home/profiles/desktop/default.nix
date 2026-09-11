@@ -5,6 +5,11 @@
 }: {
   imports = [];
 
+  # Desktop shell stack. Trialed against wayle/noctalia; noctalia is a full
+  # replacement (bar, launcher, notifications, lock, wallpaper, idle, OSD),
+  # so the custom-stack daemons gate themselves off.
+  wm.shell = "noctalia";
+
   # Seed Lutris game entries for the manually-installed Windows games
   # (slugs must match the lutris:rungame/<slug> Moonlight tiles from
   # modules/system/emulation.nix). Copies each seed only when absent so
