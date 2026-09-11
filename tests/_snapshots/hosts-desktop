@@ -3,6 +3,8 @@
   alerts_enabled = true;
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
+  fzero_gx_forces_fullscreen = true;
+  fzero_snes_uses_xvideo = true;
   fzero_x_uses_rmg_wrapper = true;
   has_display_manager_gui_assertion = true;
   has_gaming_gui_assertion = true;
@@ -14,6 +16,7 @@
   monitoring_enabled = true;
   moonshine_x11_socket_guard = true;
   qmk_enabled = true;
+  rom_tiles_have_boxart = true;
   user_exists = true;
   vitals_daemon_gui_target = true;
   vitals_enabled = true;
