@@ -38,6 +38,75 @@
       -d "$SMARTD_FAILTYPE on $SMARTD_DEVICESTRING: $SMARTD_MESSAGE" \
       http://127.0.0.1:2586/homelab-alerts
   '';
+
+  # Desktop power control, invoked over Tailscale SSH from the phone:
+  #   ssh m920q desktop-power on|off|status
+  # Magic packets are L2 broadcasts and cannot traverse Tailscale
+  # (tailscale/tailscale#306), so this runs on the always-on, LAN-connected
+  # m920q and replays them as a LAN broadcast; shutdown is a key-based ssh
+  # to the desktop. The invoking user's persisted SSH key authenticates the
+  # m920q -> desktop hop, and the desktop's user-scoped NOPASSWD rule
+  # authorizes poweroff.
+  desktopPower = pkgs.writeShellApplication {
+    name = "desktop-power";
+    runtimeInputs = with pkgs; [wakeonlan iputils openssh curl coreutils];
+    text = ''
+      host=192.168.178.3
+      mac=10:ff:e0:e1:53:55
+      broadcast=192.168.178.255
+
+      up() { ping -c 1 -W 1 "$host" >/dev/null 2>&1; }
+
+      notify() {
+        curl -s -o /dev/null -H "Title: $1" -H "Priority: $3" -H "Tags: $4" -d "$2" \
+          http://127.0.0.1:2586/desktop-power || true
+      }
+
+      case "''${1:-}" in
+        on | wake)
+          if up; then echo "desktop already up"; exit 0; fi
+          wakeonlan -i "$broadcast" "$mac"
+          for _ in $(seq 1 48); do
+            if up; then
+              notify "Desktop is up" "reachable after wake request" default electric_plug
+              echo "desktop up"
+              exit 0
+            fi
+            sleep 5
+          done
+          notify "Desktop did not wake" "still unreachable after 240s" high warning
+          echo "desktop did not wake" >&2
+          exit 1
+          ;;
+        off | shutdown)
+          if ! up; then echo "desktop already off"; exit 0; fi
+          if ! ssh -o BatchMode=yes -o ConnectTimeout=5 desktop sudo -n /run/current-system/sw/bin/poweroff; then
+            notify "Desktop shutdown failed" "poweroff over SSH failed" high warning
+            echo "poweroff over ssh failed" >&2
+            exit 1
+          fi
+          for _ in $(seq 1 30); do
+            if ! up; then
+              notify "Desktop is off" "powered down after request" default crescent_moon
+              echo "desktop off"
+              exit 0
+            fi
+            sleep 3
+          done
+          notify "Desktop still on" "poweroff accepted but host stayed reachable" high warning
+          echo "desktop still reachable after poweroff" >&2
+          exit 1
+          ;;
+        status)
+          if up; then echo up; else echo down; fi
+          ;;
+        *)
+          echo "usage: desktop-power on|off|status" >&2
+          exit 2
+          ;;
+      esac
+    '';
+  };
 in {
   imports =
     [
@@ -132,6 +201,7 @@ in {
   environment.systemPackages = with pkgs;
     [
       wakeonlan # Send magic packets to wake desktop from homelab
+      desktopPower # Wake/shut down the desktop over Tailscale SSH from the phone
       powertop # CPU C-state residency, wakeups/sec, power estimation
       iotop # Per-process disk IO monitoring
       htop # Process monitoring (already included via btop but useful)
@@ -537,19 +607,6 @@ in {
     opencodeWeb = {
       enable = true;
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
-    };
-    # LAN power relay for the desktop. Binds to this host's Tailscale
-    # address so remote wake/shutdown requests from the phone arrive over
-    # the tailnet; magic packets themselves cannot traverse Tailscale
-    # (tailscale/tailscale#306), so they are replayed as LAN broadcast.
-    powerRelay = {
-      enable = true;
-      bindAddress = "100.105.37.12";
-      macAddress = "10:ff:e0:e1:53:55";
-      broadcastAddress = "192.168.178.255";
-      hostAddress = "192.168.178.3";
-      sshHost = "desktop";
-      ntfyTopic = "desktop-power";
     };
   };
 }

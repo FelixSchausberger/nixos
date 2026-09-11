@@ -57,4 +57,13 @@ in {
 
   # Test: Backup configured
   backup_enabled = config.modules.system.homelab.backup.enable;
+
+  # Test: desktop-power helper is packaged and the HTTP power-relay is gone
+  desktop_power_helper =
+    builtins.any (
+      p: (p.pname or "") == "desktop-power" || (p.name or "") == "desktop-power"
+    )
+    config.environment.systemPackages;
+  power_relay_service_absent = !(config.systemd.services ? "power-relay");
+  power_relay_option_absent = !(config.modules.system.homelab ? powerRelay);
 }

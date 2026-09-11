@@ -12,7 +12,6 @@
     ./nextcloud.nix
     ./ntfy.nix
     ./opencode-web.nix
-    ./power-relay.nix
     ./samba.nix
     ./ssh-hardened.nix
     ./zellij-web.nix

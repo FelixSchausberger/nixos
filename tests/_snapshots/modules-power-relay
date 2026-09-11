@@ -1,2 +1,0 @@
-#json
-{"power_relay_bind_address":"100.105.37.12","power_relay_broadcast":"192.168.178.255","power_relay_enabled":true,"power_relay_firewall_allowed_tcp":[22,53,139,445,2283,2586,3000,3001,4533,7000,7001,7100,8081],"power_relay_mac":"10:ff:e0:e1:53:55","power_relay_port":8691,"power_relay_service_after":["network-online.target","tailscaled.service","ntfy-sh.service"],"power_relay_tokenless":true,"power_relay_topic":"desktop-power"}

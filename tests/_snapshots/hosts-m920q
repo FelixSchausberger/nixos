@@ -5,6 +5,7 @@
   caddy_proxy_enabled = true;
   containers_enabled = true;
   deferred_restarts_enabled = true;
+  desktop_power_helper = true;
   has_192_168_178_route = true;
   has_deferred_services = true;
   has_gateway = true;
@@ -24,6 +25,8 @@
   performance_profile = "server-efficiency";
   power_lan_interface = "eno1";
   power_management_enabled = true;
+  power_relay_option_absent = true;
+  power_relay_service_absent = true;
   samba_enabled = true;
   smartd_enabled = true;
   ssh_enabled = true;
