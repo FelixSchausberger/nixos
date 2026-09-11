@@ -22,6 +22,12 @@ in {
   ];
 
   config = lib.mkIf enabled {
+    # Stylix theme target (HM-only). With stylix.autoEnable = false the target
+    # must be enabled explicitly; it writes programs.noctalia.settings.theme and
+    # customPalettes.stylix from the active base16 scheme, plus fonts/opacities
+    # and the wallpaper from stylix.image.
+    stylix.targets.noctalia.enable = true;
+
     programs.noctalia = {
       enable = true;
       # Upstream systemd user service (bound to graphical-session.target,
