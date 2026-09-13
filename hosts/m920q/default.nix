@@ -245,9 +245,6 @@ in {
     # Hide informational spam (ACPI AE_ALREADY_EXISTS flood, ~56 lines) so a
     # real hang point is visible on console/SOL photos. Errors still journaled.
     "loglevel=3"
-    # Reboot 30s after a kernel panic instead of hanging forever, so boot
-    # counting can advance to a fallback entry. No effect on silent hangs.
-    "panic=30"
   ];
 
   # A getty on the AMT serial console: recover a text login via Serial-over-LAN
@@ -258,37 +255,10 @@ in {
     unitConfig.After = ["dev-ttyS0.device"];
   };
 
-  # iTCO watchdog (/dev/watchdog0, driver already autoloads): a wedged OS
-  # resets instead of idling unreachable. Covers runtime hangs only, not
-  # early-boot hangs (systemd not yet running) — those still need AMT power
-  # control until the 6.18 boot regression is resolved.
-  systemd.settings.Manager = {
-    RuntimeWatchdogSec = "30s";
-    ShutdownWatchdogSec = "5min";
-  };
-
-  # Pre-userspace hang timer: initrd-stage systemd arms the iTCO watchdog,
-  # covering ZFS import/rollback/switch-root hangs. 60s margin for slow SMR
-  # pool imports (systemd pets continuously; only a stalled PID 1 stalls pets).
-  # boot.initrd.kernelModules forces iTCO_wdt into the initrd so /dev/watchdog
-  # exists before initrd systemd starts.
-  boot.initrd.kernelModules = ["iTCO_wdt"];
-  boot.initrd.systemd.settings.Manager = {
-    RuntimeWatchdogSec = "60s";
-    RebootWatchdogSec = "10min";
-  };
-
-  # Convert detectable lockups into panic=30 reboots so boot counting advances.
-  # Sysctl names verified present on the running kernel via sysctl -a.
-  # hung_task at 240s (not lower): SMR pool IO can legitimately stall tasks
-  # for minutes; a hair-trigger here would reboot-loop a healthy-but-busy server.
-  boot.kernel.sysctl = {
-    "kernel.nmi_watchdog" = 1;
-    "kernel.hardlockup_panic" = 1;
-    "kernel.softlockup_panic" = 1;
-    "kernel.hung_task_panic" = 1;
-    "kernel.hung_task_timeout_secs" = 240;
-  };
+  # Unattended hang recovery (hardware watchdog, lockup-to-panic, emergency
+  # deadman) is configured under modules.system.watchdog below. It covers
+  # runtime hangs only; early-boot hangs (systemd not yet running) still need
+  # AMT or the console.
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
@@ -453,16 +423,19 @@ in {
 
   hardware.steam-hardware.enable = true;
 
-  # Headless homelab: if systemd ever lands in emergency/rescue, auto-reboot
-  # after a grace period so systemd-boot boot counting rolls back to a working
-  # generation instead of idling locked out of SSH/Tailscale/network. A human
-  # at the console can cancel with: systemctl stop emergency-deadman
-  system.emergency = {
-    enable = true;
-    deadmanAutoRecover = true;
-  };
-
   modules.system = {
+    # Unattended hang recovery. The hardware watchdog resets a wedged kernel;
+    # detectable lockups become panics that reboot (panic=30); and if systemd
+    # lands in emergency/rescue the deadman auto-reboots after a grace period
+    # so systemd-boot boot counting rolls back to a working generation instead
+    # of idling locked out of SSH/Tailscale/network. A human at the console can
+    # cancel the deadman with: systemctl stop emergency-deadman.
+    # iTCO_wdt is the watchdog device on this Intel chipset.
+    watchdog = {
+      enable = true;
+      watchdogKernelModules = ["iTCO_wdt"];
+    };
+
     # GUI mode is opt-in: casting is handled headless by airplay-receiver, so
     # enter niri via the boot-menu specialisation entry or manually:
     #   echo niri > /run/m920q-desired-mode && systemctl start m920q-mode-switch

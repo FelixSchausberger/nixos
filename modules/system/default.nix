@@ -19,5 +19,6 @@
     ./security-hardening.nix
     ./ssl-config.nix
     ./tailscale.nix
+    ./watchdog.nix
   ];
 }
