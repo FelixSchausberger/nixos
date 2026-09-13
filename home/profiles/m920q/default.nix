@@ -5,8 +5,9 @@
   inputs,
   ...
 }: {
-  # Server home profile: TUI-only, SSH-accessible dev environment.
-  # No WM configuration — GUI is handled by the niri system specialisation.
+  # Server home profile: TUI-first dev environment, plus the pieces needed by
+  # the on-demand niri projector session (see ./niri.nix). The full desktop app
+  # suite is deliberately not imported here.
 
   features = {
     development = {

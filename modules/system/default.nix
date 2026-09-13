@@ -10,6 +10,7 @@
     ./development.nix
     ./display-manager.nix
     ./emergency-shell.nix
+    ./firmware.nix
     ./fonts.nix
     ./hardware/battery.nix
     ./home-manager.nix
@@ -17,6 +18,7 @@
     ./persistence-postgresql.nix
     ./nix.nix
     ./security-hardening.nix
+    ./session-on-demand.nix
     ./ssl-config.nix
     ./tailscale.nix
     ./watchdog.nix

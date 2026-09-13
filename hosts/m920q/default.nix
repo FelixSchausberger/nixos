@@ -1,7 +1,9 @@
-# ThinkCentre M920q dual-role host: headless homelab server with opt-in GUI
-# mode (niri specialisation via boot menu or manual mode-switch). AirPlay
-# casting runs headless (kmssink, udev-triggered) without any session.
-# Prioritizes low idle power while keeping a Niri specialisation available for local media use.
+# ThinkCentre M920q dual-role host: always-on homelab server whose niri
+# session starts on demand when the bedroom projector is hotplugged
+# (modules.system.sessionOnDemand). The GUI stack lives in the base closure, so
+# no NixOS specialisation switch is involved. AirPlay casting renders into the
+# running session over Wayland. Prioritizes low idle power: the compositor only
+# runs while a display is connected.
 #
 # Optimal BIOS (Setup F1) for this NixOS config — not declaratively settable
 # via Nix (NVRAM, outside /nix/store); kept here as single source of truth:
@@ -114,8 +116,6 @@ in {
       ../shared-tui.nix
       ../boot-zfs.nix
       ../../modules/system/boot-fallback.nix
-      ../../modules/system/m920q.nix
-      ../../modules/system/specialisations.nix
       ../../modules/system/homelab
       ../../modules/system/tailscale.nix
       ../../modules/system/backup.nix
@@ -135,63 +135,20 @@ in {
 
     zellijAutoAttach.sessionName = "homelab";
 
-    specialisations = {
-      niri = {
-        wms = ["niri"];
-        profile = "default";
-        extraConfig = {
-          pkgs,
-          lib,
-          ...
-        }: {
-          imports = [
-            ../../modules/system/wm/niri.nix
-          ];
-
-          modules.system.airplayReceiver.mode = "gui";
-
-          hostConfig.isGui = lib.mkForce true;
-
-          hardware.graphics = {
-            enable = true;
-            enable32Bit = true;
-          };
-
-          programs.niri = {
-            enable = lib.mkForce true;
-            package = pkgs.niri;
-          };
-          # Single-compositor guarantee: greetd owns tty1 and autologins into
-          # niri-session, which starts niri.service and graphical-session.target.
-          # UWSM would launch a second niri instance racing the home-module units.
-          programs.uwsm.enable = lib.mkForce false;
-
-          services.greetd = {
-            enable = true;
-            settings = {
-              # Fallback text login prompt on tty1 after the niri session exits.
-              # Never reached during normal operation (initial_session wins).
-              default_session = {
-                command = "${pkgs.greetd}/bin/agreety";
-                user = "greeter";
-              };
-              initial_session = {
-                command = "${pkgs.niri}/bin/niri-session";
-                user = inputs.self.lib.user;
-              };
-            };
-          };
-
-          services.dbus.implementation = lib.mkForce "dbus";
-
-          # wm/niri home module auto-imports via home/profiles/shared.nix from hostConfig.wms
-          home-manager.users.${inputs.self.lib.user}.imports = [
-            ../../home/profiles/m920q/niri.nix.specialisation
-          ];
-        };
-      };
-    };
+    # The GUI stack is part of the base closure (niri via hostInfo.wms), but the
+    # session starts on projector hotplug through modules.system.sessionOnDemand
+    # rather than a display manager at boot.
+    autoStartSession = false;
   };
+
+  # Single-compositor guarantee: the on-demand service runs niri-session
+  # directly, so UWSM must not also launch niri.
+  programs.uwsm.enable = lib.mkForce false;
+
+  modules.system.sessionOnDemand.enable = true;
+
+  # Firmware updates are a hardware concern independent of the session.
+  modules.system.firmware.enable = true;
 
   services.vitals = {
     enable = true;
@@ -384,12 +341,12 @@ in {
     };
   };
 
-  # Headless rendering claims tty1 directly (airplay kmssink); a getty login
-  # prompt on the projector serves nobody and leaks hostname and username to
-  # the room. Disabling the instance keeps emergency shells (sulogin via
-  # rescue/emergency targets) and ssh access unaffected. A bare Restart=no
-  # here is not enough: getty@tty1 still starts from getty.target at boot.
-  systemd.units."getty@tty1" = lib.mkIf (!config.hostConfig.isGui) {
+  # Headless-first host: no login prompt on tty1 (it would leak hostname and
+  # username to the projector room, and the on-demand compositor uses the DRM
+  # seat directly). Emergency shells (sulogin via rescue/emergency) and SSH are
+  # unaffected. A bare Restart=no is not enough: getty@tty1 still starts from
+  # getty.target at boot.
+  systemd.units."getty@tty1" = {
     enable = false;
   };
 
@@ -421,10 +378,14 @@ in {
 
   modules.system.mediaClient.enable = true;
 
-  # AirPlay receiver runs headless (kmssink, udev-triggered) so casting from
-  # the MacBook works without booting into the niri specialisation; the niri
-  # leaf overrides the mode to gui above.
-  modules.system.airplayReceiver.enable = true;
+  # AirPlay receiver renders into the on-demand niri session (waylandsink), so a
+  # MacBook mirror appears as a fullscreen window over the desktop and
+  # disappears when mirroring stops. It starts and stops with the session
+  # (niri-session.target), which only runs while a display is connected.
+  modules.system.airplayReceiver = {
+    enable = true;
+    mode = "gui";
+  };
 
   hardware.steam-hardware.enable = true;
 
@@ -441,10 +402,6 @@ in {
       watchdogKernelModules = ["iTCO_wdt"];
     };
 
-    # GUI mode is opt-in: casting is handled headless by airplay-receiver, so
-    # enter niri via the boot-menu specialisation entry or manually:
-    #   echo niri > /run/m920q-desired-mode && systemctl start m920q-mode-switch
-    m920q.enable = true;
     stylix-catppuccin.enable = true;
     containers.enable = true;
     # Bless-driven cleanup: generations whose boot entries exhausted their
@@ -580,6 +537,15 @@ in {
       openSSH = true;
       advertiseRoutes = ["192.168.178.0/24"];
       udpGROInterface = "eno1";
+      # The phone has dropped off the tailnet for unexplained multi-minute
+      # stretches (on the move and, once, on home WiFi). This host is always
+      # on, so it probes the phone and timestamps transitions, alerting via
+      # the local ntfy instance.
+      peerMonitor = {
+        enable = true;
+        peer = "pixel-9a";
+        alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+      };
     };
     ssh.enable = true;
     zellijWeb = {
