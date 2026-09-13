@@ -101,9 +101,10 @@ in {
 
   # Unattended hang recovery for a headless-first machine: a wedged kernel or a
   # failed boot would otherwise stay unreachable until someone reaches the
-  # console. sp5100_tco is the AMD FCH watchdog device; the lockup panics,
-  # panic=30 and emergency deadman still apply if no hardware watchdog binds,
-  # so verify /dev/watchdog exists after the first test rebuild.
+  # console. The AMD FCH TCO watchdog binds on this board: /dev/watchdog0
+  # reports "SP5100 TCO timer" (driver heartbeat 60s, nowayout=0), and the
+  # lockup panics, panic=30 and emergency deadman cover hangs the watchdog
+  # cannot see (e.g. a boot that never reaches userspace).
   modules.system.watchdog = {
     enable = true;
     watchdogKernelModules = ["sp5100_tco"];

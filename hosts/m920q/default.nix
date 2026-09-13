@@ -368,16 +368,21 @@ in {
         ForwardToSyslog = "no";
       };
     };
-
-    pipewire.wireplumber.extraConfig."10-disable-bluez" = {
-      "monitor.bluez.properties" = {
-        "bluez5.enabled" = false;
-      };
-    };
   };
 
-  # Bluetooth is unused on this host; disable to suppress wireplumber bluez5 warnings
-  hardware.bluetooth.enable = lib.mkForce false;
+  # Bluetooth drives the JBL Flip 6 audio sink (projector kiosk and general
+  # music playback) and a BT Steam Controller if one is used. Pairings persist
+  # via environment.persistence."/per" below. Experimental exposes device
+  # battery; KernelExperimental enables ISO sockets for recent controllers.
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+    settings.General = {
+      ControllerMode = "dual";
+      Experimental = true;
+      KernelExperimental = true;
+    };
+  };
 
   # Headless rendering claims tty1 directly (airplay kmssink); a getty login
   # prompt on the projector serves nobody and leaks hostname and username to
@@ -548,6 +553,10 @@ in {
       alerting.enable = true;
     };
     navidrome = {
+      enable = true;
+      openFirewall = true;
+    };
+    jellyfin = {
       enable = true;
       openFirewall = true;
     };

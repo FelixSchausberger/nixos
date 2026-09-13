@@ -40,6 +40,18 @@
           description = "Music Streaming";
         };
       }
+    ]
+    ++ lib.optionals hl.jellyfin.enable [
+      {
+        "Jellyfin" = {
+          icon = "mdi-filmstrip";
+          # Served directly on the LAN/tailnet port. Jellyfin client apps
+          # expect to be reached at the server root, so it is not path-routed
+          # through Caddy like the other services.
+          href = "http://192.168.178.2:8096";
+          description = "Movies & Series";
+        };
+      }
     ];
 
   monitoringServices = lib.optionals hl.monitoring.enable [

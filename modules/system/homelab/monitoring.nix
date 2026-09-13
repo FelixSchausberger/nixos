@@ -121,7 +121,9 @@ in {
 
       scrapeConfigs = let
         hasAppTargets =
-          config.modules.system.homelab.immich.enable || config.modules.system.homelab.nextcloud.enable;
+          config.modules.system.homelab.immich.enable
+          || config.modules.system.homelab.nextcloud.enable
+          || config.modules.system.homelab.jellyfin.enable;
         # One static_config per service so each probe carries an "app" label:
         # the relabeling below sets instance to the probed URL, which contains
         # no service name, so alert rules must select by label instead of
@@ -142,6 +144,13 @@ in {
             {
               targets = ["http://127.0.0.1:${toString config.modules.system.homelab.nextcloud.port}/status.php"];
               labels.app = "nextcloud";
+            }
+          ]
+          ++ lib.optionals config.modules.system.homelab.jellyfin.enable [
+            {
+              # /health returns 200 once the server is up, independent of auth.
+              targets = ["http://127.0.0.1:8096/health"];
+              labels.app = "jellyfin";
             }
           ];
       in
@@ -443,6 +452,11 @@ in {
                   (mkAlert "immich-down" "urgent" "ImmichDown"
                     "Immich is not responding to HTTP health probes"
                     ''probe_success{job="blackbox",app="immich"} == bool 0'')
+                ])
+                ++ (lib.optionals config.modules.system.homelab.jellyfin.enable [
+                  (mkAlert "jellyfin-down" "urgent" "JellyfinDown"
+                    "Jellyfin is not responding to HTTP health probes"
+                    ''probe_success{job="blackbox",app="jellyfin"} == bool 0'')
                 ])
                 ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
                   (mkAlert "adguard-down" "urgent" "AdGuardDown"
