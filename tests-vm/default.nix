@@ -22,7 +22,6 @@
         }
     );
 in {
-  m920q-mode-switch = runTest ./m920q-mode-switch.nix;
   caddy-proxy = runTest ./caddy-proxy.nix;
   zfs-backup = runTest ./zfs-backup.nix;
   streaming-services = runTest ./streaming-services.nix;

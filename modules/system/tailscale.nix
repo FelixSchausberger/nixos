@@ -5,6 +5,72 @@
   ...
 }: let
   cfg = config.modules.system.homelab.tailscale;
+
+  # Probes a peer and records reachability transitions in the journal, so an
+  # outage can be timestamped after the fact (e.g. a phone that vanishes while
+  # commuting). State lives in /run (tmpfs) because only transitions matter;
+  # losing it on reboot at worst re-reports one down interval.
+  peerMonitorScript = pkgs.writeShellScript "tailscale-peer-monitor" ''
+    set -eu
+
+    state_dir=/run/tailscale-peer-monitor
+    state_file="$state_dir/state"
+    ${pkgs.coreutils}/bin/mkdir -p "$state_dir"
+
+    peer=${lib.escapeShellArg cfg.peerMonitor.peer}
+    threshold=${toString cfg.peerMonitor.failureThreshold}
+    tailscale=${pkgs.tailscale}/bin/tailscale
+
+    down_since=0
+    fail_count=0
+    if [ -f "$state_file" ]; then
+      # shellcheck disable=SC1090
+      . "$state_file" || true
+    fi
+
+    now=$(${pkgs.coreutils}/bin/date +%s)
+    ts=$(${pkgs.coreutils}/bin/date -Is)
+
+    ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl != null) ''
+      ntfy_url=${lib.escapeShellArg cfg.peerMonitor.alertNtfyUrl}
+      notify() {
+        ${pkgs.curl}/bin/curl -s -o /dev/null \
+          -H "Title: Tailscale peer $1" \
+          -H "Priority: $2" \
+          -H "Tags: tailscale,warning" \
+          -d "$3" "$ntfy_url" || true
+      }
+    ''}
+    ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl == null) ''
+      notify() { :; }
+    ''}
+
+    if out=$("$tailscale" ping --c=3 --timeout=5s "$peer" 2>&1); then
+      path=$(printf '%s' "$out" | ${pkgs.gnugrep}/bin/grep -oE 'via .* in [0-9.]+ms' || printf '%s' "$out")
+      if [ "$down_since" -ne 0 ]; then
+        duration=$(($now - down_since))
+        msg="peer $peer recovered after ''${duration}s ($path)"
+        echo "$ts $msg"
+        notify "recovered" "default" "$msg"
+        down_since=0
+      else
+        echo "$ts peer $peer reachable ($path)"
+      fi
+      fail_count=0
+    else
+      fail_count=$((fail_count + 1))
+      if [ "$down_since" -eq 0 ] && [ "$fail_count" -ge "$threshold" ]; then
+        down_since=$now
+        msg="peer $peer unreachable ($fail_count consecutive failed probes)"
+        echo "$ts $msg" >&2
+        notify "unreachable" "urgent" "$msg"
+      else
+        echo "$ts peer $peer probe failed ($fail_count/$threshold)"
+      fi
+    fi
+
+    printf 'down_since=%s\nfail_count=%s\n' "$down_since" "$fail_count" > "$state_file"
+  '';
 in {
   options.modules.system.homelab.tailscale = {
     enable = lib.mkEnableOption "Tailscale VPN";
@@ -46,6 +112,30 @@ in {
       default = null;
       description = "Network interface to apply UDP GRO forwarding fix for Tailscale throughput";
     };
+    peerMonitor = {
+      enable = lib.mkEnableOption "periodic tailnet peer connectivity monitor";
+      peer = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "pixel-9a";
+        description = "Tailnet peer (MagicDNS name or 100.x address) probed each interval.";
+      };
+      intervalSec = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 60;
+        description = "Seconds between connectivity probes.";
+      };
+      failureThreshold = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 2;
+        description = "Consecutive failed probes before the peer is reported unreachable.";
+      };
+      alertNtfyUrl = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Optional ntfy topic URL notified on reachability transitions.";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -53,6 +143,10 @@ in {
       {
         assertion = cfg.udpGROInterface == null || cfg.udpGROInterface != "";
         message = "modules.system.homelab.tailscale.udpGROInterface must be null or a non-empty interface name";
+      }
+      {
+        assertion = !cfg.peerMonitor.enable || cfg.peerMonitor.peer != "";
+        message = "modules.system.homelab.tailscale.peerMonitor.peer must be set when peerMonitor.enable is true";
       }
     ];
 
@@ -120,6 +214,32 @@ in {
               ${pkgs.tailscale}/bin/tailscale up || echo "tailscale reconnection failed" >&2
             fi
           ''}";
+        };
+      };
+
+      # Peer reachability probe: records every transition in the journal so a
+      # later outage can be dated without relying on the user's memory. Kept
+      # separate from the watchdog, which only acts on the local daemon.
+      services.tailscale-peer-monitor = lib.mkIf cfg.peerMonitor.enable {
+        description = "Probe tailnet peer ${cfg.peerMonitor.peer} and log reachability transitions";
+        after = ["tailscaled.service"];
+        wants = ["tailscaled.service"];
+        serviceConfig = {
+          Type = "oneshot";
+          RuntimeDirectory = "tailscale-peer-monitor";
+          RuntimeDirectoryPreserve = "yes";
+          ExecStart = "${peerMonitorScript}";
+        };
+      };
+
+      timers.tailscale-peer-monitor = lib.mkIf cfg.peerMonitor.enable {
+        description = "Periodic tailnet peer connectivity probe";
+        wantedBy = ["timers.target"];
+        after = ["tailscaled.service"];
+        timerConfig = {
+          OnBootSec = "2min";
+          OnUnitActiveSec = "${toString cfg.peerMonitor.intervalSec}s";
+          RandomizedDelaySec = "10s";
         };
       };
     };

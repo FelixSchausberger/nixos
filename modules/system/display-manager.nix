@@ -54,7 +54,7 @@
   #   )
   #   hostConfig.wms);
 in
-  lib.mkIf (hostConfig.wms != [] && !(hostConfig.isWsl or false)) {
+  lib.mkIf (hostConfig.wms != [] && !(hostConfig.isWsl or false) && (hostConfig.autoStartSession or true)) {
     assertions = [
       {
         assertion = hostConfig.isGui;

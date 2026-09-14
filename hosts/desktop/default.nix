@@ -99,6 +99,17 @@ in {
 
   modules.system.ssh.enable = true;
 
+  # Unattended hang recovery for a headless-first machine: a wedged kernel or a
+  # failed boot would otherwise stay unreachable until someone reaches the
+  # console. The AMD FCH TCO watchdog binds on this board: /dev/watchdog0
+  # reports "SP5100 TCO timer" (driver heartbeat 60s, nowayout=0), and the
+  # lockup panics, panic=30 and emergency deadman cover hangs the watchdog
+  # cannot see (e.g. a boot that never reaches userspace).
+  modules.system.watchdog = {
+    enable = true;
+    watchdogKernelModules = ["sp5100_tco"];
+  };
+
   # Allow remote power off from m920q without password prompt
   security.sudo.extraRules = [
     {

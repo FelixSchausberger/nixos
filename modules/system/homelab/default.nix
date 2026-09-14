@@ -7,6 +7,7 @@
     ./caddy-proxy.nix
     ./homepage.nix
     ./immich.nix
+    ./jellyfin.nix
     ./monitoring.nix
     ./navidrome.nix
     ./nextcloud.nix

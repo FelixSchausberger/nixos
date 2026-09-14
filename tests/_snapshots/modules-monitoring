@@ -25,7 +25,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 7;
+  rule_count = 8;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -44,6 +44,15 @@
       severity = "urgent";
       title = "ImmichDown";
       uid = "immich-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox\",app=\"jellyfin\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "JellyfinDown";
+      uid = "jellyfin-down";
     }
     {
       datasource_uid = "prometheus";
