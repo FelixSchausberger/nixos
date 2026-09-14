@@ -55,7 +55,9 @@ repos:
         entry: actionlint
         language: system
         files: ^\.github/workflows/.*\.ya?ml$
-        pass_filenames: false
+        # Pass the matching files: actionlint's own project detection needs a
+        # .git directory, which a jj secondary workspace does not have.
+        pass_filenames: true
       - id: alejandra
         name: Alejandra Nix formatter
         entry: alejandra

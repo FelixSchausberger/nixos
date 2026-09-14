@@ -350,6 +350,15 @@
       # commit's description instead of gh's --fill, which computes defaults
       # via git log and can fail outright (observed: doubled-branch argument
       # on long bookmark names).
+      #
+      # gh resolves the repository from the git checkout unless told otherwise,
+      # and a jj secondary workspace has no .git. Derive owner/repo from the
+      # origin remote so PR creation works there too.
+      if [ -z "''${GH_REPO:-}" ]; then
+        remote_url="$(jj git remote list 2>/dev/null | sed -n 's/^origin[[:space:]]\{1,\}//p')"
+        GH_REPO="$(printf '%s' "$remote_url" | sed -E 's#\.git$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')"
+        export GH_REPO
+      fi
       echo ""
       echo "Creating pull request with auto-merge..."
       pr_title="$(jj log --no-graph -r "$bookmark" -T 'description.first_line()' 2>/dev/null)"
@@ -538,6 +547,12 @@ in {
           end
           set pr_ref $bookmark
         end
+        # Resolve the repo explicitly: gh cannot infer it without a .git, which
+        # a jj secondary workspace does not have.
+        set -l repo (command jj git remote list 2>/dev/null | sed -n 's/^origin[[:space:]]\{1,\}//p' | sed -E 's#\.git$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')
+        if test -n "$repo"
+          set -lx GH_REPO $repo
+        end
         command gh pr view $pr_ref $argv[2..]
       '';
     };
@@ -553,6 +568,10 @@ in {
             return 1
           end
           set pr_ref $bookmark
+        end
+        set -l repo (command jj git remote list 2>/dev/null | sed -n 's/^origin[[:space:]]\{1,\}//p' | sed -E 's#\.git$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')
+        if test -n "$repo"
+          set -lx GH_REPO $repo
         end
         command gh pr view --web $pr_ref
       '';
