@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   pkgs,
   ...
@@ -8,6 +9,15 @@ in {
   imports = [
     ../shells/fish/functions/jj.nix
   ];
+
+  # The OpenCode V2 launcher runs with XDG_CONFIG_HOME=~/.config/opencode-v2,
+  # which hides the standard config directories from the tools it starts (jj
+  # loses its identity, gh loses its auth). Point both at their real locations
+  # explicitly so they keep working inside an OpenCode session.
+  home.sessionVariables = {
+    JJ_CONFIG = "${config.xdg.configHome}/jj/config.toml";
+    GH_CONFIG_DIR = "${config.xdg.configHome}/gh";
+  };
 
   home.packages = with pkgs;
     [
