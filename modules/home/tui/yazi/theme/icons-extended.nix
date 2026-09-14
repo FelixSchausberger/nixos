@@ -3,7 +3,7 @@
   lib,
   ...
 }: {
-  programs.yazi.theme.icon.rules = lib.mkIf (config.hostConfig.isGui or false) [
+  programs.yazi.theme.icon.rules = lib.mkIf (config.hostConfig.guiApps or false) [
     # Documents
     {
       name = "*.csv";

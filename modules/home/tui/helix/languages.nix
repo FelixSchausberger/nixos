@@ -28,7 +28,7 @@
         inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-lsp # Conflict resolution LSP for jj
       ])
 
-    (lib.mkIf (config.features.development.enable or config.hostConfig.isGui or false) (with pkgs; [
+    (lib.mkIf (config.features.development.enable or config.hostConfig.guiApps or false) (with pkgs; [
       # Development language servers
       clang-tools # C/C++ tools (includes clangd)
       typescript-language-server # TypeScript/JavaScript LSP

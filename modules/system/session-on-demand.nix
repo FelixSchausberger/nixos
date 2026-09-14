@@ -16,6 +16,7 @@
   cfg = config.modules.system.sessionOnDemand;
   inherit (hostConfig) user;
   hasNiri = builtins.elem "niri" (hostConfig.wms or []);
+  hotplug = import ./display-hotplug.nix {inherit pkgs;};
 in {
   options.modules.system.sessionOnDemand = {
     enable = lib.mkEnableOption "start the graphical session on demand when a display is hotplugged";
@@ -55,25 +56,13 @@ in {
         Type = "oneshot";
         # Must outlive the debounce sleep in the stop path.
         TimeoutStartSec = "120s";
-        ExecStart = pkgs.writeShellScript "display-hotplug" ''
-          # HDMI-A is matched deliberately: the vkms virtual connector is
-          # permanently "connected" and would otherwise keep the session up.
-          if grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-            exec ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start niri.service
-          fi
-          # Projector warm-up bounces HPD (~68s on m920q), which would kill a
-          # healthy session if acted on from a single read. Re-read the CURRENT
-          # state after the window instead of trusting the triggering event: a
-          # reconnect during it keeps the session, a genuine loss stops it. The
-          # stop criterion is the negation of start -- unused connectors always
-          # read "disconnected", so a positive "connected" match keeps it alive.
-          sleep 45
-          if ! grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-            # Stopping graphical-session.target tears down niri.service, the
-            # session target, and every unit bound to them.
-            exec ${pkgs.systemd}/bin/systemctl --user -M ${user}@ stop graphical-session.target
-          fi
-        '';
+        ExecStart = pkgs.writeShellScript "display-hotplug" (hotplug.hotplugScript {
+          inherit user;
+          startUnit = "niri.service";
+          # Stopping graphical-session.target tears down niri.service, the
+          # session target, and every unit bound to them.
+          stopUnit = "graphical-session.target";
+        });
       };
     };
 
@@ -86,11 +75,10 @@ in {
       after = ["systemd-user-sessions.service"];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = pkgs.writeShellScript "session-on-demand-boot" ''
-          if grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-            ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start niri.service
-          fi
-        '';
+        ExecStart = pkgs.writeShellScript "session-on-demand-boot" (hotplug.startScript {
+          inherit user;
+          startUnit = "niri.service";
+        });
       };
     };
 

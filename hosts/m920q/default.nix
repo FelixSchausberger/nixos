@@ -291,9 +291,10 @@ in {
 
   boot.kernelModules = ["vkms"];
 
-  # KillMode "mixed": SIGTERM to the main process, SIGKILL to the remaining
-  # cgroup. Avoids the ~90s stop timeout during specialisation mode switches
-  # while still ensuring the whole cgroup (workers) is torn down.
+  # KillMode "mixed": SIGTERM to the daemon, SIGKILL to the rest of its cgroup.
+  # A nix-daemon restart during switch-to-configuration otherwise waits on the
+  # daemon's worker processes to exit, which can stall a rebuild; mixed bounds
+  # that wait while still tearing the whole cgroup down.
   systemd.services.nix-daemon.serviceConfig.KillMode = lib.mkForce "mixed";
 
   systemd.sockets.nix-daemon.enable = false;
