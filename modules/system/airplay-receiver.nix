@@ -13,6 +13,7 @@
   ...
 }: let
   cfg = config.modules.system.airplayReceiver;
+  hotplug = import ./display-hotplug.nix {inherit pkgs;};
 in {
   options.modules.system.airplayReceiver = {
     enable = lib.mkEnableOption "AirPlay receiver support (UxPlay + Avahi)";
@@ -90,8 +91,6 @@ in {
       };
 
       # udev runs as root; reach the lingering user manager via machined.
-      # Start is immediate on connect; stop is debounced below because a
-      # single sysfs read cannot distinguish a real unplug from an HPD flap.
       systemd.services.uxplay-hotplug = {
         description = "Start/stop UxPlay AirPlay receiver on HDMI hotplug";
         serviceConfig = {
@@ -99,22 +98,11 @@ in {
           # Debounce must outlive the sleep in the stop path; explicit rather
           # than relying on defaults that vary between systemd releases.
           TimeoutStartSec = "120s";
-          ExecStart = pkgs.writeShellScript "uxplay-hotplug" ''
-            if grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-              exec ${pkgs.systemd}/bin/systemctl --user -M ${cfg.user}@ start uxplay.service
-            fi
-            # Projector warm-up bounces HPD (~68s after connect on m920q),
-            # which killed healthy sessions when acting on a single read.
-            # Re-read CURRENT state after the window instead of trusting the
-            # triggering event: a reconnect during it leaves the session up,
-            # a genuine loss stops it. The stop criterion is the negation of
-            # start -- unused connectors always read "disconnected", so any
-            # positive "connected" match must keep the session alive.
-            sleep 45
-            if ! grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-              exec ${pkgs.systemd}/bin/systemctl --user -M ${cfg.user}@ stop uxplay.service
-            fi
-          '';
+          ExecStart = pkgs.writeShellScript "uxplay-hotplug" (hotplug.hotplugScript {
+            inherit (cfg) user;
+            startUnit = "uxplay.service";
+            stopUnit = "uxplay.service";
+          });
         };
       };
 
