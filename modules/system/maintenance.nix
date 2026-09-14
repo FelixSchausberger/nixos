@@ -67,9 +67,11 @@
     };
 
     # Daily check that the lock-refresh CI (single flake.lock writer) actually
-    # succeeded. GitHub runners cannot reach a LAN ntfy, so workflow-side
-    # failure() steps cannot alert; this local watchdog closes that gap - the
-    # Aug 2026 cron failures stayed unnoticed for two days without it.
+    # advanced the lock. GitHub runners cannot reach a LAN ntfy, so
+    # workflow-side failure() steps cannot alert; this local watchdog closes
+    # that gap - the Aug 2026 cron failures stayed unnoticed for two days
+    # without it. It alerts on a real CI failure, a dead cron, or a lock that
+    # stays behind the published channel past the staleness threshold.
     lockRefreshWatch = {
       enable = lib.mkEnableOption "daily watchdog for the lock-refresh CI workflow";
       repository = lib.mkOption {
@@ -81,6 +83,16 @@
         type = lib.types.str;
         default = "daily-updates.yml";
         description = "Workflow file checked for failures and staleness";
+      };
+      maxStalenessHours = lib.mkOption {
+        type = lib.types.int;
+        default = 168;
+        description = ''
+          Hours a newer nixos-unstable channel revision may exist before the
+          lock is considered stale. The refresh job prefers Hydra and only
+          self-builds after its grace window, so this bounds how long a cache
+          outage can go unnoticed.
+        '';
       };
     };
   };
@@ -438,8 +450,22 @@
 
             conclusion=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .conclusion)
             run_id=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .id)
-            age_hours=$(( ($(date +%s) - $(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r '.created_at | fromdateiso8601')) / 3600 ))
+            run_age_hours=$(( ($(date +%s) - $(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r '.created_at | fromdateiso8601')) / 3600 ))
 
+            # No completed run in over a day means the cron stopped firing.
+            if [[ "$run_age_hours" -gt 26 ]]; then
+              echo "ERROR: latest lock-refresh run ($run_id) is $run_age_hours h old" >&2
+              ${pkgs.curl}/bin/curl -s -o /dev/null \
+                -H "Title: Lock refresh missing on ${cfgWatch.repository}" \
+                -H "Priority: high" -H "Tags: warning,cd" \
+                -d "Latest completed run ($run_id) is $run_age_hours hours old; cron did not fire" \
+                "${ntfyUrl}" || true
+              exit 0
+            fi
+
+            # Cache misses exit 0 now (the workflow waits for Hydra and builds
+            # the gap only after its grace window), so a non-success run is a
+            # genuine failure: nix flake update, namaka, or the warm-up build.
             if [[ "$conclusion" != "success" ]]; then
               echo "ERROR: lock-refresh run $run_id concluded '$conclusion'" >&2
               ${pkgs.curl}/bin/curl -s -o /dev/null \
@@ -447,15 +473,38 @@
                 -H "Priority: high" -H "Tags: warning,cd" \
                 -d "Run $run_id concluded '$conclusion'; flake.lock is stale until fixed. Check: gh run view $run_id -R ${cfgWatch.repository} --log-failed" \
                 "${ntfyUrl}" || true
-            elif [[ "$age_hours" -gt 26 ]]; then
-              echo "ERROR: last successful lock-refresh run is $age_hours h old" >&2
+              exit 0
+            fi
+
+            # A healthy run does not mean the lock is current: cache coverage
+            # can keep every run in its wait path. Compare the locked nixpkgs
+            # revision against the published channel and alert once a newer
+            # channel rev has gone unadopted past the threshold.
+            flake_lock=$(${pkgs.curl}/bin/curl -sfL \
+              "https://raw.githubusercontent.com/${cfgWatch.repository}/main/flake.lock") \
+              || { echo "WARN: flake.lock unreachable; staleness check skipped" >&2; exit 0; }
+
+            locked_node=$(printf '%s' "$flake_lock" | ${pkgs.jq}/bin/jq -r '.nodes.root.inputs.nixpkgs')
+            locked_rev=$(printf '%s' "$flake_lock" | ${pkgs.jq}/bin/jq -r --arg n "$locked_node" '.nodes[$n].locked.rev')
+            locked_ts=$(printf '%s' "$flake_lock" | ${pkgs.jq}/bin/jq -r --arg n "$locked_node" '.nodes[$n].locked.lastModified')
+            if [[ ! "$locked_ts" =~ ^[0-9]+$ ]]; then
+              echo "WARN: could not read locked nixpkgs timestamp; staleness check skipped" >&2
+              exit 0
+            fi
+
+            channel_rev=$(${pkgs.curl}/bin/curl -sfL "https://channels.nixos.org/nixos-unstable/git-revision") \
+              || { echo "WARN: channel revision unreachable; staleness check skipped" >&2; exit 0; }
+
+            lock_age_hours=$(( ($(date +%s) - locked_ts) / 3600 ))
+            if [[ -n "$channel_rev" && "$channel_rev" != "$locked_rev" && "$lock_age_hours" -ge ${toString cfgWatch.maxStalenessHours} ]]; then
+              echo "ERROR: lock pinned to $locked_rev for $lock_age_hours h while channel is at $channel_rev" >&2
               ${pkgs.curl}/bin/curl -s -o /dev/null \
                 -H "Title: Lock refresh stale on ${cfgWatch.repository}" \
                 -H "Priority: high" -H "Tags: warning,cd" \
-                -d "Last completed run ($run_id) is $age_hours hours old; cron did not fire" \
+                -d "Channel $channel_rev has been available for ''${lock_age_hours}h but flake.lock is still pinned to $locked_rev; cache coverage likely unmet" \
                 "${ntfyUrl}" || true
             else
-              echo "Lock refresh healthy: run $run_id succeeded $age_hours h ago"
+              echo "Lock refresh healthy: run $run_id succeeded, lock at $locked_rev ($lock_age_hours h old)"
             fi
           '';
           serviceConfig = {

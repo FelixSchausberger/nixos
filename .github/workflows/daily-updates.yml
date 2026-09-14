@@ -2,8 +2,12 @@ name: Daily Dependency Updates
 on:
   workflow_dispatch:
   schedule:
-    # Hosts converge via comin, so a fresh lock reaches them within minutes.
-    - cron: "0 3 * * *"
+    # Poll every 6h: hosts converge via comin, so moving flake.lock is the
+    # whole job. A PR is opened only once the candidate closure is
+    # substitutable - either cache.nixos.org/Hydra already covered it, or,
+    # after a 24h grace, the heavy gap is built here and pushed to
+    # felixschausberger.cachix.org so no host ever compiles it.
+    - cron: "0 */6 * * *"
 # Parallel triggers (cron + on-demand update-system.sh) would race the same
 # PR branch; serialize instead of cancelling an in-flight lock refresh.
 concurrency:
@@ -19,21 +23,33 @@ env:
     experimental-features = nix-command flakes
     accept-flake-config = true
     ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    extra-substituters = https://cache.nixos.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+    # The probe and the build share this list: a path substitutable here is
+    # never compiled, on the runner or on the hosts.
+    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://felixschausberger.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org https://yazi.cachix.org https://claude-code.cachix.org
+    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc= yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA= claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=
     narinfo-cache-positive-ttl = 3600
     connect-timeout = 5
     stalled-download-timeout = 30
+    # Cap parallelism so heavy closures cannot starve the hosted runner.
+    max-jobs = 2
+    cores = 2
 jobs:
   update-flake:
     name: Update Flake Inputs and Snapshots
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      decision: ${{ steps.classify.outputs.decision }}
+      base_sha: ${{ steps.base.outputs.sha }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
+      - name: Record base revision
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Setup SSL certificates
         uses: ./.github/actions/setup-ssl
       - name: Install Nix
@@ -86,27 +102,128 @@ jobs:
             echo "---"
             echo "Triggered by: \`${{ github.event_name }}\`"
           } > pr-body.md
-      - name: Check binary cache coverage
+      - name: Classify cache coverage
+        id: classify
         run: |
-          # Hosts converge via comin and expect store paths to substitute.
-          # A freshly locked revision that no cache has built for heavy
-          # packages (CAD/GUI/kernels) would keep hosts compiling locally
-          # for hours. Refuse to open the lock PR and let the next daily
-          # run retry after caches catch up. A handful of local-only
-          # wrapper derivations is normal and still passes.
-          HEAVY='freecad|krita|blender|prusa-slicer|inkscape|linux-[0-9]'
-          cold=0
+          set -euo pipefail
+          # Package the lock/snapshot delta so the build and PR jobs reproduce
+          # the candidate tree without re-running `nix flake update`.
+          git add -A -- flake.lock tests/_snapshots
+          if git diff --cached --quiet -- flake.lock tests/_snapshots; then
+            echo "No lock or snapshot changes; nothing to publish."
+            echo "decision=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --cached --binary -- flake.lock tests/_snapshots > lock.patch
+
+          # A dry-run lists derivations to *build* (uncached, expensive) and
+          # paths to *fetch* (substitutable, cheap). Only the built set is a
+          # gap; a cached GUI package is not one. The pattern is anchored to
+          # the 32-char hash so util-linux, libselinux and initrd-linux do
+          # not match.
+          HEAVY='(^|/)[0-9a-z]{32}-(freecad|krita|blender|prusa-slicer|inkscape)-|(^|/)[0-9a-z]{32}-linux-[0-9]'
+          gap=0
           for host in desktop hp-probook-wsl m920q; do
             output=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1 || true)
-            if echo "$output" | grep -qE "$HEAVY"; then
-              cold=1
-              echo "::error::new lock is not cached for a heavy package on $host: $(echo "$output" | grep -E "$HEAVY" | head -3 | tr '\n' ' ')"
+            built=$(printf '%s\n' "$output" | awk '/derivations will be built/{f=1;next} /paths will be fetched/{f=0} f' | grep -E '^[[:space:]]+/nix/store/' || true)
+            if printf '%s\n' "$built" | grep -qE "$HEAVY"; then
+              gap=1
+              echo "::notice::$host lacks cached heavy derivations:"
+              printf '%s\n' "$built" | grep -E "$HEAVY" | head -5
+            else
+              echo "$host: heavy closure substitutable"
             fi
           done
-          if [ "$cold" -eq 1 ]; then
-            echo "Dry-runs listed heavy uncached derivations - first failing update" >&2
-            exit 1
+
+          if [ "$gap" -eq 0 ]; then
+            echo "decision=fast" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # Prefer Hydra: give the channel a grace window before compiling the
+          # gap ourselves. The channel tarball's lastModified is when the rev
+          # was published, which approximates how long Hydra has had.
+          locked_node=$(jq -r '.nodes.root.inputs.nixpkgs' flake.lock)
+          locked_ts=$(jq -r --arg n "$locked_node" '.nodes[$n].locked.lastModified' flake.lock)
+          age_hours=$(( ($(date +%s) - locked_ts) / 3600 ))
+          if [ "$age_hours" -lt 24 ]; then
+            echo "Heavy gap, channel rev ${age_hours}h old (<24h); waiting for Hydra."
+            echo "decision=wait" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Heavy gap, channel rev ${age_hours}h old; building into Cachix."
+          echo "decision=build" >> "$GITHUB_OUTPUT"
+      - name: Upload candidate tree
+        if: steps.classify.outputs.decision == 'fast' || steps.classify.outputs.decision == 'build'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lock-candidate
+          path: |
+            lock.patch
+            pr-body.md
+          retention-days: 1
+  # Pre-merge warm-up: build exactly the delta the substituters lack (Nix
+  # still fetches anything Hydra did build) and push it to our own cache.
+  # By the time the PR merges and comin converges, every host substitutes.
+  build-and-push:
+    name: Build and push ${{ matrix.host }}
+    needs: update-flake
+    if: needs.update-flake.outputs.decision == 'build'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [desktop, hp-probook-wsl, m920q]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.update-flake.outputs.base_sha }}
+          fetch-depth: 0
+      - name: Setup SSL certificates
+        uses: ./.github/actions/setup-ssl
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            ${{ env.NIX_CONFIG }}
+      - name: Restore candidate tree
+        uses: actions/download-artifact@v4
+        with:
+          name: lock-candidate
+      - name: Apply candidate lock
+        run: git apply --verbose lock.patch
+      - name: Install Cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: felixschausberger
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build and push closure
+        run: |
+          nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --print-out-paths
+          nix build ".#nixosConfigurations.${{ matrix.host }}.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths
+  create-pr:
+    name: Open lock PR
+    needs: [update-flake, build-and-push]
+    if: |
+      always() &&
+      (needs.update-flake.outputs.decision == 'fast' ||
+       (needs.update-flake.outputs.decision == 'build' && needs.build-and-push.result == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.update-flake.outputs.base_sha }}
+          fetch-depth: 0
+      - name: Restore candidate tree
+        uses: actions/download-artifact@v4
+        with:
+          name: lock-candidate
+      - name: Apply candidate lock
+        run: git apply --verbose lock.patch
       - name: Create or update PR
         uses: peter-evans/create-pull-request@v8
         with:
