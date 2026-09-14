@@ -82,7 +82,7 @@
 
     prevent-rebuild = {
       content = ''
-        CRITICAL: Claude Code is strictly prohibited from automatically running system rebuild commands.
+        CRITICAL: AI agents are strictly prohibited from automatically running system rebuild commands.
 
         PROHIBITED COMMANDS (Permanent Changes):
         These commands make PERMANENT changes and must NEVER be run automatically:
@@ -104,7 +104,7 @@
         - nh os test (temporary, no bootloader changes)
 
         REQUIRED BEHAVIOR:
-        When changes require a rebuild, Claude must:
+        When changes require a rebuild, the agent must:
         1. Explain what changes require a rebuild
         2. Recommend testing first with 'nixos-rebuild test'
         3. Ask the user to run permanent commands manually
