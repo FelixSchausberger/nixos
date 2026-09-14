@@ -1,6 +1,6 @@
 ---
 name: repo-audit
-description: Use when asked to plan or execute a NixOS flake over-engineering audit. Phase 1 plans only; Phase 2 fixes confirmed findings on explicit follow-up.
+description: Use when asked to audit a NixOS flake for over-engineering, or to critique a pre-implementation plan for more elegant solutions. Code target plans then reports; plan target annotates the plan and writes no report.
 license: MIT
 compatibility: opencode
 ---
@@ -13,17 +13,34 @@ primitive — especially when the custom version has worse failure modes.
 
 Two phases, strictly separated:
 
-- **Phase 1 — Plan (default).** Read-only. Writes an audit plan and halts.
-  Never edits repo code, never runs rebuilds, never creates bookmarks.
+- **Phase 1 — Plan (default).** Read-only for a `code` target; for a `plan`
+  target it additionally annotates the plan document. Halts for user approval.
+  Never edits code, never runs rebuilds, never creates bookmarks.
 - **Phase 2 — Execute (only on explicit follow-up such as "execute plan
   `<path>`").** Runs the approved plan, writes the findings report, and fixes
   `confirmed` findings only. `suspected` findings stay report-only.
 
+## Run Target (decide first)
+
+- **code** (default): changed or existing repository files. Phase 1 writes an
+  audit plan; Phase 2 writes a findings report.
+- **plan**: a design or implementation plan supplied by the user or written
+  during planning, before any code exists. The skill verifies the plan's
+  candidates read-only and folds the results back into the plan document. It
+  never writes an `audit-*.md` report.
+
+The target is `plan` when the user points at a plan, asks to "check/review the
+plan", or the work is pre-implementation. Otherwise it is `code`. Ask when the
+target is ambiguous. All constraints and methodology below apply to both
+targets.
+
 ## Hard Constraints
 
-1. **Phase separation.** Phase 1 makes no repo edits, runs no rebuilds, runs
-   no `jjwork` (fetch+rebase would mutate the working copy), and creates no
-   bookmarks. All mutation belongs to Phase 2 after explicit user approval.
+1. **Phase separation.** Phase 1 makes no repo edits and no code edits (the
+   single exception is annotating the plan document when the target is `plan`),
+   runs no rebuilds, runs no `jjwork` (fetch+rebase would mutate the working
+   copy), and creates no bookmarks. All other mutation belongs to Phase 2 after
+   explicit user approval.
 2. **No speculation.** Every claimed alternative must be verified: nixpkgs
    option via the nixos MCP server (`search`, `type=options`), a man page
    section, or an upstream doc/issue. Unverifiable claims are filed as
@@ -39,6 +56,9 @@ Two phases, strictly separated:
    changes.
 
 ## Modes
+
+Applies to a `code` target. For a `plan` target the scope is the plan's
+candidates and the bookmark logic below does not apply.
 
 - **incremental** (default): audit only modules touched since the last audit
   bookmark, plus their reverse dependencies (hosts importing them, tests
@@ -142,6 +162,8 @@ Treat these as worked instances of the anti-pattern class:
 
 ## Phase 1 — Plan output
 
+### code target
+
 Write the plan to `.opencode/audits/plan-<YYYY-MM-DD>-<mode>.md` (create the
 directory if needed; the directory is gitignored). Per candidate:
 
@@ -156,10 +178,36 @@ directory if needed; the directory is gitignored). Per candidate:
 Then present the candidate list to the user and halt. Do not write an
 `audit-*.md` report in Phase 1. Do not edit code. Do not create bookmarks.
 
+### plan target
+
+Read the plan, turn each design choice into a candidate, and verify every claim
+read-only (nixos MCP option search, upstream docs, nixpkgs module source, `man`
+pages, and the repository's own prior decisions). Then edit the plan document
+in place — do not create a second file — adding per candidate:
+
+```markdown
+### <N>. <Short title>
+- Candidate: <the plan's proposed mechanism>
+- Intent: <the outcome the plan wants, not the mechanism it chose>
+- Verification: <exact check performed>
+- Evidence: <result> | Verdict: confirmed | rejected | suspected
+- Simplification: <lines/parts removed, failure modes eliminated> | Risk: <low/med/high>
+```
+
+Where the plan chose a more complex mechanism than a verified primitive
+provides, replace it in place with the simpler mechanism. Fold in a
+rejected-options list and a do-not-touch list. Present the updated plan and
+halt. Do not write an `audit-*.md` report, edit code, run rebuilds, or create
+bookmarks.
+
 ## Phase 2 — Execute (explicit follow-up only)
 
 Run only when the user says to execute a specific plan file (e.g. "execute
 plan `.opencode/audits/plan-<date>-incremental.md`").
+
+For a **plan target** there is no code to fix: re-verify, finalize the plan
+document, write no report, and halt. The steps below apply to a **code
+target**.
 
 1. Rebase context first (mutation is now expected):
 
@@ -210,12 +258,14 @@ flag-file recovery mechanism.
 
 ## Finish
 
-1. Write the report to `.opencode/audits/audit-<YYYY-MM-DD>-<mode>.md`
-   (create the directory if needed; the directory is gitignored).
+1. **code target only:** write the report to
+   `.opencode/audits/audit-<YYYY-MM-DD>-<mode>.md` (create the directory if
+   needed; the directory is gitignored). A **plan target** writes no report:
+   the plan document edited in Phase 1 is the deliverable.
 2. Present the ranked summary to the user and halt. Fixes are limited to
    `confirmed` findings from the approved plan; everything else is report-only.
-3. Record the baseline for the next incremental run only if the bookmark does
-   not already exist:
+3. **code target only:** record the baseline for the next incremental run only
+   if the bookmark does not already exist:
 
    ```bash
    jj bookmark list | grep '^audit/<YYYY-MM-DD>$' || jj bookmark create audit/<YYYY-MM-DD>
