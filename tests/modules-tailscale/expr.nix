@@ -28,5 +28,14 @@ in {
       has_udp_gro_service = builtins.hasAttr "tailscale-udp-gro-fix" configs.desktop.config.systemd.services;
     };
   hp-probook-wsl = testTailscale "hp-probook-wsl" configs.hp-probook-wsl.config;
-  m920q = testTailscale "m920q" configs.m920q.config;
+  m920q =
+    (testTailscale "m920q" configs.m920q.config)
+    // {
+      # Peer connectivity monitor: probes the phone and logs transitions.
+      has_peer_monitor_service =
+        builtins.hasAttr "tailscale-peer-monitor" configs.m920q.config.systemd.services;
+      has_peer_monitor_timer =
+        builtins.hasAttr "tailscale-peer-monitor" configs.m920q.config.systemd.timers;
+      peer_monitor_peer = configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.peer;
+    };
 }

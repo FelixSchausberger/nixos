@@ -17,8 +17,11 @@
     tailscale_service_enabled = true;
   };
   m920q = {
+    has_peer_monitor_service = true;
+    has_peer_monitor_timer = true;
     has_tailscale_trusted_interface = true;
     hostName = "m920q";
+    peer_monitor_peer = "pixel-9a";
     tailscale_enabled = true;
     tailscale_open_firewall = true;
     tailscale_service_enabled = true;

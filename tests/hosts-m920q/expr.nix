@@ -5,8 +5,10 @@ in {
   # Test: Host name is set correctly
   hostname = config.networking.hostName;
 
-  # Test: System is TUI-only (headless homelab server)
+  # Test: GUI stack is present but the session starts on demand
   is_gui = config.hostConfig.isGui;
+  auto_start_session = config.hostConfig.autoStartSession;
+  session_on_demand_enabled = config.modules.system.sessionOnDemand.enable;
   wm_count = builtins.length config.hostConfig.wms;
 
   # Test: Performance profile set to server-efficiency
@@ -21,12 +23,12 @@ in {
   has_gateway = builtins.elem "192.168.178.1" (config.systemd.network.networks."10-eno1".gateway or []);
 
   # Test: Homelab modules enabled
-  m920q_module_enabled = config.modules.system.m920q.enable;
   containers_enabled = config.modules.system.containers.enable;
 
   # Test: Key homelab services enabled
   adguardhome_enabled = config.modules.system.homelab.adguardhome.enable;
   immich_enabled = config.modules.system.homelab.immich.enable;
+  jellyfin_enabled = config.modules.system.homelab.jellyfin.enable;
   navidrome_enabled = config.modules.system.homelab.navidrome.enable;
   nextcloud_enabled = config.modules.system.homelab.nextcloud.enable;
   caddy_proxy_enabled = config.modules.system.homelab.caddyProxy.enable;

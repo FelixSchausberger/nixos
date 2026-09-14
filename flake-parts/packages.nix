@@ -62,11 +62,6 @@
       installer-iso-portable = makeISO [../hosts/portable];
 
       # NixOS VM Integration Tests
-      test-m920q-mode-switch =
-        (import ../tests-vm {
-          inherit pkgs inputs;
-          inherit (inputs) self;
-        }).m920q-mode-switch;
       test-caddy-proxy =
         (import ../tests-vm {
           inherit pkgs inputs;

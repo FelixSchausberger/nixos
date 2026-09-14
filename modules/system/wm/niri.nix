@@ -58,42 +58,16 @@
       XDG_SESSION_DESKTOP = lib.mkDefault "niri";
     };
 
-    # Services configuration
+    # Services configuration. Only what the session itself needs; desktop
+    # conveniences (printing, firmware, gvfs, power, thumbnails, keyring) are
+    # separate concerns declared in modules/system/gui.nix and
+    # modules/system/firmware.nix so a session does not drag them in.
     services = {
       # Enable dbus for proper IPC
       dbus.enable = true;
 
       # Enable udev for device management
       udev.enable = true;
-      udev.packages = with pkgs; [
-        gnome-settings-daemon # For consistent hardware handling
-      ];
-
-      # Power management
-      upower.enable = true;
-      thermald.enable = true;
-
-      # Printing (if needed)
-      printing.enable = true;
-
-      # Location services (for gammastep/redshift)
-      geoclue2.enable = true;
-
-      # Thumbnail generation
-      tumbler.enable = true;
-
-      # GNOME keyring (for credential management)
-      gnome.gnome-keyring.enable = true;
-
-      # Auto-mounting
-      gvfs.enable = true;
-      udisks2.enable = true;
-
-      # Firmware updates
-      fwupd.enable = true;
-
-      # System monitoring
-      smartd.enable = true;
     };
 
     # Systemd configuration for better Wayland integration

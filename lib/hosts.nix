@@ -30,9 +30,9 @@
   };
 
   m920q = {
-    wms = [];
-    isGui = false;
-    description = "Lenovo ThinkCentre M920q homelab server (headless, niri-gui specialisation available)";
+    wms = ["niri"];
+    isGui = true;
+    description = "Lenovo ThinkCentre M920q homelab server (headless base; niri session starts on projector hotplug)";
     ip = "192.168.178.2";
   };
 }

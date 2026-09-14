@@ -46,6 +46,17 @@ in {
           description = "Whether this host enables a graphical session";
         };
 
+        autoStartSession = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Whether the graphical session is started automatically at boot by a
+            display manager. Set to false for hosts that keep the GUI stack
+            available but start the session on demand (e.g. when a projector is
+            hotplugged). Only meaningful when isGui is true.
+          '';
+        };
+
         isWsl = lib.mkOption {
           type = lib.types.bool;
           default = false;
