@@ -20,12 +20,6 @@
 }: let
   cfg = config.modules.system.comin;
 
-  user = inputs.self.lib.user;
-  homeDir = "/home/${user}";
-
-  # Shared bookmark-slug rule (same derivation as jjpush uses).
-  slugPkg = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-slug;
-
   # Detector bundle: exactly the two files the post-deploy detector needs.
   # detect-downgrades.sh sources its sibling lib-downgrade-compare.sh at
   # runtime via BASH_SOURCE, so both must land in the store together — but the
@@ -44,119 +38,6 @@
     text = ''
       export COMIN_NTFY_URL=${lib.escapeShellArg (toString cfg.alertNtfyUrl)}
       exec ${pkgs.bash}/bin/bash ${detectorBundle}/detect-downgrades.sh
-    '';
-  };
-
-  # Auto-push reconciler: turns locally committed (described) work into PRs
-  # before comin's next poll can converge the deployed system over it.
-  # Undescribed working-copy edits are never touched - comin cannot lose them
-  # anyway (it deploys its own clone), they just never reach main until
-  # described.
-  #
-  # Ordering invariant: the undescribed-WIP check MUST run before any repo
-  # mutation. jjwork rebases the working-copy commit, which re-materializes
-  # @'s last-snapshotted tree over the live checkout; running it while editor
-  # or agent changes sit unsnapshotted on disk clobbers them. With WIP
-  # present this timer is therefore a strict no-op instead of a rebase.
-  autopush = pkgs.writeShellApplication {
-    name = "comin-autopush";
-    runtimeInputs = with pkgs; [jujutsu gh git curl coreutils gnugrep];
-    text = ''
-      set -euo pipefail
-
-      repo="${cfg.autoPush.repoPath}"
-      cd "$repo"
-
-      # Alert helper: ntfy with signature-based dedupe so the poll timer does
-      # not spam while a failure persists; re-alerts on changed reason or
-      # after 6 hours.
-      alert() {
-        echo "comin-autopush: $*" >&2
-        if [ -n "''${COMIN_NTFY_URL:-}" ]; then
-          state="''${XDG_STATE_HOME:-$HOME/.local/state}/comin-autopush"
-          mkdir -p "$state"
-          now=$(date +%s)
-          sig=$(printf '%s' "$*" | ${pkgs.coreutils}/bin/md5sum | cut -c1-16)
-          last_sig=$(cat "$state/signature" 2>/dev/null || true)
-          last_ts=$(cat "$state/timestamp" 2>/dev/null || echo 0)
-          if [ "$sig" != "$last_sig" ] || [ $((now - last_ts)) -gt 21600 ]; then
-            curl -fsS --max-time 10 \
-              -H "Title: comin-autopush: unpushed work on $(hostname)" \
-              -H "Tags: warning" \
-              -d "$*" \
-              "$COMIN_NTFY_URL" >/dev/null 2>&1 || true
-            printf '%s' "$sig" >"$state/signature"
-            printf '%s' "$now" >"$state/timestamp"
-          fi
-        fi
-      }
-
-      # Commits neither merged into origin main nor carried by a pushed
-      # branch. Everything else is either deployed state or represented by
-      # an open PR - both safe to leave alone.
-      #
-      # Implemented with git plumbing on the colocated repo rather than jj
-      # revsets: `jj log '(main@origin..@) ~ (::heads(remote_bookmarks()))'`
-      # evaluated inconsistently under non-interactive shells on jj 0.44
-      # (empty result set despite matching revisions), while rev-list's
-      # --not --remotes is deterministic and sees the same object graph.
-      # The working-copy commit id comes from jj because git HEAD may lag
-      # behind jj @ in colocated repos (detached by non-jj git usage);
-      # range ends there (= jj @): jj snapshots edits into the
-      # working-copy commit, so freshly described work typically sits IN @.
-      todo() {
-        local at
-        at="$(jj log -r '@' --no-graph -T 'commit_id' 2>/dev/null)" || return 1
-        [ -n "$at" ] || return 1
-        git rev-list --count "origin/main..''${at}" --not --remotes=origin 2>/dev/null || echo 1
-      }
-
-      [ "$(todo)" -eq 0 ] && exit 0
-
-      # Undescribed working-copy edits are never pushed (fabricating a commit
-      # message would auto-deploy half-done work once CI passes). Checked
-      # before jjwork per the ordering invariant above; a non-empty
-      # undescribed @ is a normal development state, so exit silently.
-      at_empty="$(jj log --no-graph -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')"
-      first_line="$(jj log --no-graph -r '@' -T 'description.first_line()' 2>/dev/null)"
-      if [ "$first_line" = "(no description set)" ]; then
-        if [ "$at_empty" != "true" ]; then
-          exit 0
-        fi
-        # Only an EMPTY @ may borrow its parent's description.
-        first_line="$(jj log --no-graph -r '@-' -T 'description.first_line()' 2>/dev/null)"
-      fi
-      if [ -z "$first_line" ] || [ "$first_line" = "(no description set)" ]; then
-        exit 0
-      fi
-
-      # Rebase onto latest main first (fetch + cleanup); conflicts need human
-      # resolution and keep the work unpushed. Reached only when the working
-      # copy carries described work (or is empty atop described work), so the
-      # rebase cannot race live edits.
-      if ! jjwork >/dev/null 2>&1; then
-        alert "jjwork failed in $repo (conflict or diverged main) - local commits are NOT being deployed; resolve manually"
-        exit 1
-      fi
-
-      [ "$(todo)" -eq 0 ] && exit 0
-
-      # Ensure a feature bookmark exists so jjpush takes its bookmarked path
-      # (which folds an empty working copy into the commit). Slug derivation
-      # uses the shared jj-slug helper: same naming rule as jjpush.
-      bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main")' -T 'name' 2>/dev/null | head -1 | tr -d '[:space:]')"
-      if [ -z "$bookmark" ]; then
-        bookmark="$(${slugPkg}/bin/jj-slug "$first_line")"
-        jj bookmark set "$bookmark" >/dev/null
-        echo "comin-autopush: created bookmark $bookmark"
-      fi
-
-      if ! jjpush >/dev/null 2>&1; then
-        alert "jjpush failed in $repo - inspect with journalctl --user -u comin-autopush"
-        exit 1
-      fi
-
-      echo "comin-autopush: pushed local work; CI decides deployment via auto-merge"
     '';
   };
 in {
@@ -186,24 +67,26 @@ in {
       '';
     };
 
-    autoPush = {
+    localRemote = {
       enable = lib.mkEnableOption ''
-        auto-push reconciler for development hosts. Periodically turns
-        described local commits into PRs (CI + auto-merge decide deployment),
-        so comin's convergence to origin/main cannot silently revert recent
-        local work. Undescribed working-copy edits are never pushed.
+        local polling remote for fast iteration on a development host.
+        comin fetches the colocated checkout directly and applies its
+        testing-<hostname> branch with switch-to-configuration test -
+        without touching the bootloader and without a GitHub round trip.
+        The checkout is user-writable, so any process that can move the
+        testing bookmark can cause comin to build and activate code.
       '';
 
-      repoPath = lib.mkOption {
+      path = lib.mkOption {
         type = lib.types.path;
         default = "/per/etc/nixos";
-        description = "Path of the jj colocated config repository to reconcile";
+        description = "Colocated checkout polled for the testing branch";
       };
 
-      intervalSec = lib.mkOption {
+      pollPeriod = lib.mkOption {
         type = lib.types.ints.positive;
-        default = 600;
-        description = "Seconds between reconciler runs";
+        default = 5;
+        description = "Seconds between fetches of the local checkout";
       };
     };
   };
@@ -217,13 +100,38 @@ in {
         # and restarted from scratch every poll, wedging convergence forever
         # (FreeCAD-sized builds need hours).
         buildTimeout = 7200;
-        remotes = [
-          {
-            name = "origin";
-            url = cfg.remoteUrl;
-            poller.period = cfg.pollPeriod;
-          }
-        ];
+        remotes =
+          [
+            {
+              name = "origin";
+              url = cfg.remoteUrl;
+              poller.period = cfg.pollPeriod;
+              branches = {
+                # main is the durable channel: always switched.
+                main = {
+                  name = "main";
+                  operation = "switch";
+                };
+                # Testing is served by the local remote only. Disabling it
+                # here keeps a stray GitHub testing branch from being selected.
+                testing.name = "";
+              };
+            }
+          ]
+          ++ lib.optional cfg.localRemote.enable {
+            name = "local";
+            url = toString cfg.localRemote.path;
+            poller.period = cfg.localRemote.pollPeriod;
+            branches = {
+              # No main on the local remote: origin/main stays the single
+              # source of truth. `jjtest` sets testing-<hostname> on top of it.
+              main.name = "";
+              testing = {
+                name = "testing-${config.networking.hostName}";
+                operation = "test";
+              };
+            };
+          };
         postDeploymentCommand = lib.getExe postDeploy;
       };
 
@@ -238,39 +146,6 @@ in {
           mode = "0750";
         }
       ];
-    })
-
-    (lib.mkIf (cfg.enable && cfg.autoPush.enable) {
-      # User-level units: jjpush needs the user's gh/git credentials, which are
-      # only reachable from the user manager with a full HOME. Linger (set in
-      # zellij-web.nix on m920q) keeps the timer alive while logged out.
-      systemd.user.services.comin-autopush = {
-        description = "Auto-push described local commits ahead of comin convergence";
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = lib.getExe autopush;
-          TimeoutStartSec = "30min";
-          Environment = [
-            "HOME=${homeDir}"
-            "COMIN_NTFY_URL=${toString cfg.alertNtfyUrl}"
-            "XDG_STATE_HOME=${homeDir}/.local/state"
-            # Login-equivalent PATH: jjwork/jjpush and git credential helpers
-            # live in the user profile.
-            "PATH=/etc/profiles/per-user/${user}/bin:/run/wrappers/bin:${homeDir}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
-          ];
-        };
-      };
-
-      systemd.user.timers.comin-autopush = {
-        description = "Periodic auto-push of local config work";
-        wantedBy = ["timers.target"];
-        timerConfig = {
-          OnBootSec = "5min";
-          OnUnitActiveSec = "${toString cfg.autoPush.intervalSec}s";
-          RandomizedDelaySec = "45";
-          Persistent = true;
-        };
-      };
     })
   ];
 }

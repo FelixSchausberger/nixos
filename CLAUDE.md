@@ -259,16 +259,19 @@ named branch. The lock-update workflow (daily cron) manages that branch automati
 - Rebase only with jj (`jj rebase -d main@origin`). `git rebase`,
   `git commit --amend`, and `gh stack` rebase/sync verbs run a second rebase
   engine and cause divergent change-ids in this colocated repo.
-- One writer per clone: do not run interactive jj mutations while
-  `comin-autopush` is active on the same clone.
+- Deploy WIP with `jjtest`, not a background timer: it points
+  `testing-<hostname>` at a change for the comin local remote (applied with
+  `switch-to-configuration test`). `jjpush` lands changes on `main`.
 - `jjwork` reports actionable divergence (`divergent() & ~::main@origin`).
   Immutable merge-era divergence inside `main@origin` is benign and left alone.
 
-**Auto-push reconciler (m920q):** comin converges the deployed system to `main` every 60s, so
-unpushed local commits get silently reverted in deployment when main moves. The `comin-autopush`
-user timer (every 10min) mitigates this: described commits ahead of `main@origin` are automatically
-rebased (`jjwork`) and pushed as PRs (`jjpush`); CI + auto-merge then decide deployment.
-Undescribed WIP is never pushed — it triggers an ntfy alert and stays local until described.
+**Testing branch (m920q):** comin converges the deployed system to `main`, so a
+locally switched WIP generation is replaced when `main` moves. `jjtest` deploys
+WIP the supported way instead: it points the per-host `testing-<hostname>`
+bookmark at a change, and the optional local remote on m920q applies it with
+`switch-to-configuration test` (no bootloader change) within a few seconds.
+Landing still goes through `jjpush` → PR → `main` → `switch`. Nothing rewrites
+the checkout in the background.
 
 For complete workflow details, see [README.md Development Workflow](README.md#development-workflow):
 

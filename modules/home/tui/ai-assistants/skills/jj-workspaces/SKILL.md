@@ -66,9 +66,9 @@ benefit for single quick changes.
    then implement.
 
 4. Integration runs from the workspace itself: `jjwork` (rebases that
-   workspace's `@` onto `main@origin`), then `jjpush`. The comin-autopush
-   timer only watches the primary checkout (`/per/etc/nixos`) — secondary
-   workspaces are never auto-pushed; the agent must push its own work.
+   workspace's `@` onto `main@origin`), then `jjpush`. Nothing pushes
+   background work: the primary checkout and secondary workspaces alike are
+   pushed only by an explicit `jjpush` (or `jjtest` for a test deploy).
 
 5. Cleanup after the PR merges:
 

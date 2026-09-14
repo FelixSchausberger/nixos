@@ -412,9 +412,10 @@ in {
     comin = {
       enable = true;
       alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
-      # Development host: push described local work into PRs before the next
-      # poll can converge over it.
-      autoPush.enable = true;
+      # Development host: poll the local checkout so jjtest deploys
+      # testing-m920q with switch-to-configuration test (no bootloader change)
+      # seconds after the bookmark moves, without a GitHub round trip.
+      localRemote.enable = true;
     };
     maintenance = {
       enable = true;

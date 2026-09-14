@@ -33,8 +33,9 @@ These govern every step; follow them even when not restated below.
    `jj absorb`, `jj squash`, `jj parallelize` (see step 4).
 4. **Describe every change.** Conventional commits; no undescribed commits
    between `main@origin` and `@` (jjpush refuses them). The body explains why.
-5. **Single writer per clone.** Automation (e.g. `comin-autopush`) may rewrite
-   and push on a timer; do not run jj mutations concurrently on the same clone.
+5. **One writer per clone.** No background job rewrites this repo; use `jjtest`
+   for a test deploy and `jjpush` to land work. Do not run two writers
+   concurrently on the same clone.
 6. **Keep divergence actionable.** Divergence outside `main@origin`
    (`divergent() & ~::main@origin`) is resolvable with `jj converge`.
    Divergence inside `main@origin` is immutable merge-era history: leave it.
