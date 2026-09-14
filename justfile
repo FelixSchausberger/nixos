@@ -205,7 +205,7 @@ test:
 review:
     namaka review
 
-# Run specific VM integration test (e.g., just test-vm m920q-mode-switch)
+# Run specific VM integration test (e.g., just test-vm caddy-proxy)
 test-vm NAME:
     nix build .#packages.x86_64-linux.test-{{NAME}} -L
 
@@ -213,7 +213,7 @@ test-vm NAME:
 test-vm-all:
     #!/usr/bin/env bash
     set -euo pipefail
-    for test in m920q-mode-switch caddy-proxy zfs-backup streaming-services deferred-maintenance monitoring-alerting; do
+    for test in caddy-proxy zfs-backup streaming-services deferred-maintenance monitoring-alerting; do
         echo "=== Running VM Test: $test ==="
         nix build ".#packages.x86_64-linux.test-$test" -L
     done

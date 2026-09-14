@@ -23,7 +23,7 @@
 
   user = inputs.self.lib.user;
   homeDir = "/home/${user}";
-  # Matches the primary user UID already hardcoded in the m920q mode-switch script.
+  # Must match the primary user's UID in system/core/users.nix.
   uid = 1000;
   runtimeDir = "/run/user/${toString uid}";
 

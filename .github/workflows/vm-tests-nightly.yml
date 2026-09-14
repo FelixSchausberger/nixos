@@ -45,7 +45,6 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - m920q-mode-switch
           - caddy-proxy
           - zfs-backup
           - streaming-services
