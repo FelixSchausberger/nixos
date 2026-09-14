@@ -5,6 +5,10 @@
 }: {
   imports = [];
 
+  # OpenCode 2 beta spike (opencode2), isolated from the V1 config. Opt-in;
+  # see modules/home/tui/ai-assistants/opencode/v2.nix.
+  ai-assistants.opencodeV2.enable = true;
+
   # Desktop shell stack. Trialed against wayle/noctalia; noctalia is a full
   # replacement (bar, launcher, notifications, lock, wallpaper, idle, OSD),
   # so the custom-stack daemons gate themselves off.

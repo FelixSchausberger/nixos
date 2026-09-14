@@ -124,6 +124,21 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # OpenCode 2 beta, pinned to a commit for reproducibility. The flake
+    # builds packages/cli as the `opencode2` binary (distinct from V1's
+    # `opencode`). Beta: server and plugin APIs may change, and its data store
+    # (`opencode.db`) is separate from V1's (`opencode-stable.db`).
+    #
+    # Pinned to a v2 commit rather than the v2.0.3 tag: the tag's
+    # nix/opencode.nix installs `dist/cli-*/bin/opencode2`, but the build
+    # produces `bin/opencode`, so it fails. This commit (the first v2 state
+    # with the corrected installPhase and the Wayland LD_LIBRARY_PATH needed
+    # for OpenTUI clipboard images) builds. Bump deliberately; the daily
+    # lock-update workflow must not float it.
+    opencode-v2 = {
+      url = "github:anomalyco/opencode/f1149efee7ce08f7d819c48d8b69482441bd0592";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Yazi plugins
     yazi-clipboard = {

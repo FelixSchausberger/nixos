@@ -4,31 +4,17 @@
   lib,
   ...
 }: let
-  sharedBehaviors = config.ai-assistants.behaviors.definitions;
+  # Shared config source rendered into both the V1 and V2 harnesses.
+  shared = import ./shared.nix {inherit config lib pkgs;};
+  inherit (shared) model;
 
-  combinedRules = lib.concatStringsSep "\n\n---\n\n" (
-    lib.mapAttrsToList (_name: behavior: "# ${behavior.description}\n\n${behavior.content}") (
-      lib.filterAttrs (_n: v: v.enabled) sharedBehaviors
+  # V1 groups permission effects per tool; derive the bash map from the
+  # canonical ordered rule list so the two harnesses cannot drift.
+  v1BashPermissions = lib.listToAttrs (
+    map (rule: lib.nameValuePair rule.resource rule.effect) (
+      builtins.filter (rule: rule.action == "shell") shared.permissionRules
     )
   );
-
-  # Typst authoring skills (local docs mirrors for typst + touying).
-  # Upstream: https://github.com/apcamargo/typst-skills
-  typstSkillsSrc = pkgs.fetchFromGitHub {
-    owner = "apcamargo";
-    repo = "typst-skills";
-    rev = "93978422d58d4e5c21efe4bfa9f3e6dd9940cf96";
-    hash = "sha256-Tmf8xoKNF0wxNvS+av3sOp6Pe0j2MwfeaxrUvlD9VFU=";
-  };
-
-  # Merge repo-local skills with the vendored typst skills; the skills
-  # option maps attr names to skill directory names.
-  sharedSkills =
-    lib.mapAttrs (name: _: ../skills + "/${name}") (builtins.readDir ../skills)
-    // {
-      typst-author = "${typstSkillsSrc}/typst-author";
-      touying-author = "${typstSkillsSrc}/touying-author";
-    };
 
   # Fixed port of the long-lived shared server. Local TUIs attach to it via the
   # `oc` fish function instead of spawning throwaway servers, so TUI and web UI
@@ -69,24 +55,24 @@ in {
       taplo
     ];
 
-    context = combinedRules;
+    context = shared.combinedRules;
 
-    skills = sharedSkills;
+    skills = shared.sharedSkills;
 
     settings = {
-      model = "github-copilot/gpt-5-mini";
-      small_model = "github-copilot/gpt-5-mini";
+      inherit model;
+      small_model = model;
       # Hide unused providers from the model list. Zen's gateway id is
       # "opencode" (distinct from the "opencode-go" subscription provider);
       # ollama-cloud is auto-detected from the OLLAMA_API_KEY environment,
       # hidden here as a guard alongside the removed export below.
       disabled_providers = ["opencode" "ollama-cloud"];
       agent = {
-        explore.model = "github-copilot/gpt-5-mini";
-        general.model = "github-copilot/gpt-5-mini";
-        title.model = "github-copilot/gpt-5-mini";
-        summary.model = "github-copilot/gpt-5-mini";
-        compaction.model = "github-copilot/gpt-5-mini";
+        explore.model = model;
+        general.model = model;
+        title.model = model;
+        summary.model = model;
+        compaction.model = model;
       };
       # tokenscope is server-side only (debugging tool, no TUI pane).
       # Quota stays in tui.plugin for the compact status line.
@@ -101,30 +87,8 @@ in {
         "./plugins/zellij-indicator-felix"
         "@mohak34/opencode-notifier"
       ];
-      permission = {
-        bash = {
-          "git reset*" = "deny";
-          "git push --force*" = "deny";
-          "git push -f *" = "deny";
-          "git rebase*" = "deny";
-          "git commit*" = "deny";
-          "git stash*" = "deny";
-          "git checkout * -- *" = "deny";
-        };
-      };
-      formatter = {
-        nixfmt = {};
-        rustfmt = {};
-        typstyle = {};
-        taplo = {
-          command = [
-            "taplo"
-            "fmt"
-            "$FILE"
-          ];
-          extensions = [".toml"];
-        };
-      };
+      permission.bash = v1BashPermissions;
+      formatter = shared.formatters;
     };
 
     web = {
@@ -168,38 +132,7 @@ in {
   xdg.configFile."opencode/plugins/zellij-indicator-felix".source =
     ./zellij-indicator-felix;
 
-  xdg.configFile."opencode/agents/code-simplifier.md".text = ''
-    ---
-    description: Simplifies recently modified code while preserving exact behavior
-    mode: subagent
-    model: github-copilot/gpt-5-mini
-    permission:
-      edit: allow
-      bash: deny
-    ---
-
-    You are a code simplification specialist.
-
-    Simplify recently modified code for clarity, consistency, and maintainability while preserving exact functionality.
-
-    Rules:
-    - Never change behavior, side effects, or outputs.
-    - Prefer explicit readable code over compact clever code.
-    - Reduce avoidable nesting and duplicated logic.
-    - Remove obvious comments and stale debug artifacts.
-    - Prefer if/else or switch over nested ternaries.
-    - Keep useful abstractions; do not collapse structure just to reduce line count.
-
-    Scope:
-    - Focus on files touched in the current change unless the user asks for broader refactoring.
-
-    Workflow:
-    1. Identify touched code paths.
-    2. Apply small, behavior-preserving simplifications.
-    3. Keep naming consistent with repository conventions.
-    4. Validate that semantics are unchanged.
-    5. Report meaningful simplifications only.
-  '';
+  xdg.configFile."opencode/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
 
   # TokenScope slash command: invokes the plugin tool and prints the report verbatim.
   # Required by @ramtinj95/opencode-tokenscope; plugin alone does not register /tokenscope.
