@@ -155,7 +155,7 @@ jobs:
           echo "decision=build" >> "$GITHUB_OUTPUT"
       - name: Upload candidate tree
         if: steps.classify.outputs.decision == 'fast' || steps.classify.outputs.decision == 'build'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lock-candidate
           path: |
@@ -189,7 +189,7 @@ jobs:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
       - name: Restore candidate tree
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: lock-candidate
       - name: Apply candidate lock
@@ -219,7 +219,7 @@ jobs:
           ref: ${{ needs.update-flake.outputs.base_sha }}
           fetch-depth: 0
       - name: Restore candidate tree
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: lock-candidate
       - name: Apply candidate lock
