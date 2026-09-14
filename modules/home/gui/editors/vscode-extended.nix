@@ -3,7 +3,7 @@
   lib,
   ...
 }: {
-  config = lib.mkIf (config.features.development.enable or config.hostConfig.isGui) {
+  config = lib.mkIf (config.features.development.enable or config.hostConfig.guiApps) {
     programs.vscodium.profiles.default.userSettings = {
       # Nix-specific settings
       "[nix]" = {

@@ -4,7 +4,7 @@
   pkgs,
   ...
 }: {
-  config = lib.mkIf (config.features.development.enable or config.hostConfig.isGui) {
+  config = lib.mkIf (config.features.development.enable or config.hostConfig.guiApps) {
     programs.zed-editor = {
       # Additional packages available to Zed's environment
       extraPackages = with pkgs; [

@@ -57,6 +57,18 @@ in {
           '';
         };
 
+        guiApps = lib.mkOption {
+          type = lib.types.bool;
+          default = config.hostConfig.isGui && config.hostConfig.autoStartSession;
+          description = ''
+            Whether to configure GUI applications and their integrations
+            (extended editor and language packs, extended icon sets). Defaults
+            to a managed desktop: a GUI host whose session starts automatically.
+            A host that keeps the GUI stack but starts it on demand should not
+            carry a desktop application set.
+          '';
+        };
+
         isWsl = lib.mkOption {
           type = lib.types.bool;
           default = false;

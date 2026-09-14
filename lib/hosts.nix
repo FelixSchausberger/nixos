@@ -1,7 +1,8 @@
 # hostConfig is the single source of truth for per-host behaviour.
 # Modules guard themselves with lib.mkIf to avoid evaluating inactive features.
 # wms controls which window manager modules activate; isGui skips the entire
-# GUI stack on TUI-only hosts.
+# GUI stack on TUI-only hosts; guiApps selects the desktop application set (a
+# managed desktop: isGui with an auto-started session).
 {
   desktop = {
     wms = ["niri"]; # Default WM; COSMIC/Hyprland available via specialisation
