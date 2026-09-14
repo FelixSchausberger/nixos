@@ -141,8 +141,8 @@ in {
     autoStartSession = false;
   };
 
-  # Single-compositor guarantee: the on-demand service runs niri-session
-  # directly, so UWSM must not also launch niri.
+  # Single-compositor guarantee: the on-demand session starts niri.service
+  # itself, so UWSM must not also manage a Wayland session.
   programs.uwsm.enable = lib.mkForce false;
 
   modules.system.sessionOnDemand.enable = true;
