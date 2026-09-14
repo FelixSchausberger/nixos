@@ -68,5 +68,17 @@ in {
     environment.persistence."/per".directories = [
       "/var/lib/jellyfin"
     ];
+
+    # The upstream module's tmpfiles rules write to /var/lib/jellyfin, but the
+    # impermanence bind mount is applied after systemd-tmpfiles-resetup during a
+    # live switch, which shadows those subdirectories and leaves the persisted
+    # dataset empty; jellyfin-pre-start then fails to write encoding.xml. Create
+    # the directories under the mount source directly so the ordering does not
+    # matter (the same workaround as modules/system/persistence-postgresql.nix).
+    systemd.tmpfiles.rules = [
+      "d /per/var/lib/jellyfin 0700 jellyfin jellyfin -"
+      "d /per/var/lib/jellyfin/config 0700 jellyfin jellyfin -"
+      "d /per/var/lib/jellyfin/log 0700 jellyfin jellyfin -"
+    ];
   };
 }
