@@ -3,9 +3,9 @@
 # For hosts that keep the GUI stack in the base closure (so no NixOS
 # specialisation switch is needed) but do not want a display manager running
 # the session at boot — e.g. a homelab server that only needs a desktop when a
-# projector is hotplugged. The session is a normal systemd user service, started
-# and stopped by a DRM-hotplug udev rule. Seat access comes from seatd because
-# there is no logind login session.
+# projector is hotplugged. The compositor runs as its standard niri systemd
+# unit, started and stopped by a DRM-hotplug udev rule. Seat access comes from
+# seatd because there is no logind login session.
 {
   config,
   lib,
@@ -16,13 +16,6 @@
   cfg = config.modules.system.sessionOnDemand;
   inherit (hostConfig) user;
   hasNiri = builtins.elem "niri" (hostConfig.wms or []);
-
-  # Same wrapper the display manager would run (niri-session starts niri.service
-  # and brings up niri-session.target, which the home modules bind to).
-  sessionCommand =
-    if hasNiri
-    then "${config.programs.niri.package}/bin/niri-session"
-    else null;
 in {
   options.modules.system.sessionOnDemand = {
     enable = lib.mkEnableOption "start the graphical session on demand when a display is hotplugged";
@@ -31,25 +24,29 @@ in {
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = sessionCommand != null;
+        assertion = hasNiri;
         message = "modules.system.sessionOnDemand currently supports niri in hostConfig.wms";
       }
     ];
 
     # No login session exists, so the compositor gets DRM access from seatd.
     services.seatd.enable = true;
-    users.users.${user}.extraGroups = [config.services.seatd.group "video" "render" "input"];
+    users.users.${user} = {
+      extraGroups = [config.services.seatd.group "video" "render" "input"];
+      # The hotplug handlers reach the user manager with `systemctl --user -M`,
+      # which requires it to be running outside a login session.
+      linger = true;
+    };
 
-    # Long-running session. No [Install]/WantedBy: it is only ever started by the
-    # hotplug handler below, never at boot.
-    systemd.user.services.niri-on-demand = {
-      description = "Niri session (on demand)";
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = sessionCommand;
-        Restart = "on-failure";
-        RestartSec = 2;
-      };
+    # Start niri.service, not a bespoke wrapper around niri-session.
+    # niri.service is the unit that pulls in graphical-session.target
+    # (BindsTo) and, through it, niri-session.target, which the home modules
+    # bind to. Running niri-session as a systemd user service takes its
+    # direct-execution path and never activates that target chain. Scoped to
+    # hosts that enable this module.
+    systemd.user.services.niri.serviceConfig = {
+      Restart = "on-failure";
+      RestartSec = 2;
     };
 
     systemd.services.display-hotplug = {
@@ -59,8 +56,10 @@ in {
         # Must outlive the debounce sleep in the stop path.
         TimeoutStartSec = "120s";
         ExecStart = pkgs.writeShellScript "display-hotplug" ''
+          # HDMI-A is matched deliberately: the vkms virtual connector is
+          # permanently "connected" and would otherwise keep the session up.
           if grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-            exec ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start niri-on-demand.service
+            exec ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start niri.service
           fi
           # Projector warm-up bounces HPD (~68s on m920q), which would kill a
           # healthy session if acted on from a single read. Re-read the CURRENT
@@ -70,7 +69,9 @@ in {
           # read "disconnected", so a positive "connected" match keeps it alive.
           sleep 45
           if ! grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-            exec ${pkgs.systemd}/bin/systemctl --user -M ${user}@ stop niri-on-demand.service
+            # Stopping graphical-session.target tears down niri.service, the
+            # session target, and every unit bound to them.
+            exec ${pkgs.systemd}/bin/systemctl --user -M ${user}@ stop graphical-session.target
           fi
         '';
       };
@@ -87,7 +88,7 @@ in {
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "session-on-demand-boot" ''
           if grep -qsx connected /sys/class/drm/*-HDMI-A-*/status; then
-            ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start niri-on-demand.service
+            ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start niri.service
           fi
         '';
       };
