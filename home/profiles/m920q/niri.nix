@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{...}: {
   imports = [
     # Only the pieces this session needs; the full GUI app suite is reserved
     # for managed desktop hosts (see home/profiles/shared.nix).
@@ -37,8 +37,4 @@
       }
     ];
   };
-
-  home.packages = with pkgs; [
-    moonlight-qt
-  ];
 }
