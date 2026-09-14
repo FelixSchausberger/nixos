@@ -163,8 +163,7 @@
       # against the new parent, and undescribed work becoming unreferenced
       # after a later `jj new`/abandon. Forcing describe-or-override first
       # keeps every change anchored. Automation carrying WIP intentionally
-      # sets JJWORK_ALLOW_WIP=1 (comin-autopush never reaches jjwork with
-      # undescribed WIP; see the ordering invariant in modules/system/comin.nix).
+      # sets JJWORK_ALLOW_WIP=1.
       if [ "''${JJWORK_ALLOW_WIP:-0}" != "1" ] && [ -n "$(jj diff --name-only 2>/dev/null)" ]; then
         wip_desc="$(jj log --no-graph -r '@' -T 'description.first_line()' 2>/dev/null || true)"
         if [ -z "$wip_desc" ] || [ "$wip_desc" = "(no description set)" ]; then
@@ -379,8 +378,43 @@
       echo ""
     '';
   };
+
+  # Point comin's per-host testing branch at a change so a development host
+  # running the local remote applies it with switch-to-configuration test (no
+  # bootloader change). The branch must sit on top of main@origin: comin
+  # rejects a testing branch that is not a descendant of the selected main.
+  jjtestCmd = pkgs.writeShellApplication {
+    name = "jjtest";
+    runtimeInputs = [
+      pkgs.jujutsu
+      pkgs.coreutils
+    ];
+    text = ''
+      set -euo pipefail
+
+      rev="''${1:-@}"
+
+      if [ -z "$(jj log --no-graph -r "ancestors($rev) & main@origin" -T 'change_id' 2>/dev/null | tr -d '[:space:]')" ]; then
+        echo "Error: $rev is not based on main@origin." >&2
+        echo "comin requires the testing branch to sit on top of origin/main." >&2
+        echo "Run 'jjwork' first, then retry." >&2
+        exit 1
+      fi
+
+      host="$(hostname -s)"
+      bookmark="testing-$host"
+
+      # The testing branch is deliberately resettable: comin applies it with
+      # `test`, never `switch`, so moving it backwards is safe.
+      jj bookmark set "$bookmark" -r "$rev" -B
+
+      echo "Set $bookmark -> $(jj log --no-graph -r "$rev" -T 'commit_id.short()')"
+      echo "comin applies it with switch-to-configuration test within one poll"
+      echo "(no bootloader change). Watch progress with: comin status"
+    '';
+  };
 in {
-  home.packages = [jjworkCmd jjpushCmd jjtidyCmd];
+  home.packages = [jjworkCmd jjpushCmd jjtidyCmd jjtestCmd];
 
   programs.fish.functions = {
     # Jujutsu management commands
@@ -397,6 +431,14 @@ in {
       body = ''
         # Run the shell-agnostic wrapper so automation and non-fish shells behave the same.
         command jjpush $argv
+      '';
+    };
+
+    jjtest = {
+      description = "Deploy current change to comin's testing branch (test, no bootloader)";
+      body = ''
+        # Run the shell-agnostic wrapper so automation and non-fish shells behave the same.
+        command jjtest $argv
       '';
     };
 
@@ -520,6 +562,7 @@ in {
   programs.fish.interactiveShellInit = ''
     # Completions for workflow commands (jj itself uses its vendored dynamic completions)
     complete -c jjpush -d "Push and create PR with auto-merge"
+    complete -c jjtest -d "Deploy current change to comin's testing branch"
     complete -c jjdescribe -d "Update description with AI suggestion"
 
     # PR status completions

@@ -23,7 +23,7 @@
       # SSH connection manager
       dssh = pkgs.callPackage ../pkgs/dssh {};
 
-      # Bookmark slug derivation shared by jjpush and comin-autopush
+      # Bookmark slug derivation used by jjpush
       jj-slug = pkgs.callPackage ../pkgs/jj-slug {};
 
       inherit

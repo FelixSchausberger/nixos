@@ -2,15 +2,6 @@
 {flake, ...}: let
   configs = flake.nixosConfigurations;
 
-  # Strip the volatile store hash (changes on every lock update) while keeping
-  # the derivation name and path tail, so semantic changes stay visible.
-  stripStoreHash = v: let
-    m = builtins.match "^/nix/store/[a-z0-9]+-(.*)" (toString v);
-  in
-    if m != null
-    then "/nix/store/<hash>/" + builtins.head m
-    else v;
-
   # Common comin assertions for a host config
   testComin = hostName: config: {
     inherit hostName;
@@ -33,18 +24,25 @@
     state_persisted =
       builtins.any (d: (d.directory or "") == "/var/lib/comin")
       ((config.environment.persistence."/per" or {}).directories or []);
-
-    # Auto-push reconciler: only enabled on the development host
-    autopush_enabled = config.modules.system.comin.autoPush.enable;
   };
 in {
   desktop = testComin "desktop" configs.desktop.config;
   hp-probook-wsl = testComin "hp-probook-wsl" configs.hp-probook-wsl.config;
   m920q = testComin "m920q" configs.m920q.config;
 
-  # m920q-specific reconciler wiring
-  m920q_autopush_service =
-    stripStoreHash configs.m920q.config.systemd.user.services.comin-autopush.serviceConfig.ExecStart;
-  m920q_autopush_interval =
-    configs.m920q.config.systemd.user.timers.comin-autopush.timerConfig.OnUnitActiveSec;
+  # m920q runs the local testing remote instead of the removed auto-push timer.
+  m920q_local_remote = let
+    remotes = configs.m920q.config.services.comin.remotes;
+    byName = name: builtins.head (builtins.filter (r: r.name == name) remotes);
+    origin = byName "origin";
+    local = byName "local";
+  in {
+    local_url = local.url;
+    local_poll_period = local.poller.period;
+    local_main_branch = local.branches.main.name;
+    local_testing_branch = local.branches.testing.name;
+    local_testing_operation = local.branches.testing.operation;
+    origin_main_operation = origin.branches.main.operation;
+    origin_testing_disabled = origin.branches.testing.name;
+  };
 }

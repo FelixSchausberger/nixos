@@ -110,8 +110,10 @@ single commit, so one PR must carry exactly one concern.
 - **Rebase only with jj.** In this colocated repo `git rebase`,
   `git commit --amend`, and `gh stack` rebase/sync verbs run a second rebase
   engine and produce divergent change-ids. Use `jj rebase -d main@origin`.
-- **One writer per clone.** `comin-autopush` rewrites and pushes on a timer; do
-  not run interactive jj mutations against the same clone while it fires.
+- **Iterate with the testing branch.** No background job rewrites the clone.
+  `jjtest` points `testing-<hostname>` at a change for the local comin remote,
+  which applies it with `switch-to-configuration test` (no bootloader change);
+  `jjpush` lands the change on `main` through a PR.
 - **Describe every change.** `jjpush` refuses undescribed commits between
   `main@origin` and `@`.
 
@@ -226,6 +228,10 @@ and deploys `nixosConfigurations.<hostname>`.
   convergence. Timeout is `UPDATE_TIMEOUT_SECS` (default 1200); a timeout is
   non-fatal because automation converges later.
 - `deploy` builds the committed config locally and switches after the guard.
+- `jjtest [rev]` moves the per-host `testing-<hostname>` bookmark to `rev`
+  (default `@`) for the comin local remote on the development host. comin
+  applies it with `switch-to-configuration test` within one poll - no
+  bootloader change - so WIP can be evaluated without landing it on `main`.
 
 Deploys are protected by `tools/scripts/guard-downgrades.sh`, which compares
 the currently active system against the freshly built toplevel and blocks the

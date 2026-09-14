@@ -1,7 +1,6 @@
 #pretty
 {
   desktop = {
-    autopush_enabled = false;
     comin_enabled = true;
     comin_service_enabled = true;
     hostName = "desktop";
@@ -11,7 +10,6 @@
     state_persisted = true;
   };
   hp-probook-wsl = {
-    autopush_enabled = false;
     comin_enabled = true;
     comin_service_enabled = true;
     hostName = "hp-probook-wsl";
@@ -21,7 +19,6 @@
     state_persisted = false;
   };
   m920q = {
-    autopush_enabled = true;
     comin_enabled = true;
     comin_service_enabled = true;
     hostName = "m920q";
@@ -30,6 +27,13 @@
     remote_url = "https://github.com/FelixSchausberger/nixos.git";
     state_persisted = true;
   };
-  m920q_autopush_interval = "600s";
-  m920q_autopush_service = "/nix/store/<hash>/comin-autopush/bin/comin-autopush";
+  m920q_local_remote = {
+    local_main_branch = "";
+    local_poll_period = 5;
+    local_testing_branch = "testing-m920q";
+    local_testing_operation = "test";
+    local_url = "/per/etc/nixos";
+    origin_main_operation = "switch";
+    origin_testing_disabled = "";
+  };
 }

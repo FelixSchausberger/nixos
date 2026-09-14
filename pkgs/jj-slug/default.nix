@@ -1,7 +1,5 @@
 # Single source of truth for deriving jj bookmark slugs from conventional
-# commit descriptions. Shared by jjpush (modules/home/shells/fish/functions/jj.nix)
-# and the comin-autopush reconciler (modules/system/comin.nix) so the naming
-# rule cannot drift between them.
+# commit descriptions. Used by jjpush (modules/home/shells/fish/functions/jj.nix).
 {
   writeShellApplication,
   gnused,
