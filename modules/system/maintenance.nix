@@ -155,6 +155,16 @@
               rt_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecRealtime --value)
               mono_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecMonotonic --value)
               if [[ -z "$rt_elapse" && ( -z "$mono_elapse" || "$mono_elapse" == "infinity" ) ]]; then
+                # A timer that fired moments ago legitimately reports no next
+                # elapse under systemd 261 until the triggered unit settles,
+                # and this check runs on the hour - the same second several
+                # timers fire. Skip recent triggers so a healthy timer is not
+                # stopped and re-stamped as though it were disarmed.
+                last_trigger=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=LastTriggerUSec --value --timestamp=unix)
+                last_trigger="''${last_trigger#@}"
+                if [[ "$last_trigger" =~ ^[0-9]+$ ]] && (( $(date +%s) - last_trigger < 300 )); then
+                  continue
+                fi
                 # Skip only while the triggered service is busy: oneshot
                 # starts read SubState "start", Type=simple runs read
                 # "running". A finished RemainAfterExit service settles at
@@ -181,10 +191,14 @@
                     rearmed=1
                   fi
                 fi
+                # A successful rearm is remediation, not an incident: log it.
+                # Only a failed rearm - a timer that will not fire again - is
+                # worth paging for.
+                if [[ $rearmed -eq 1 ]]; then
+                  echo "Timer $unit rearmed automatically"
+                fi
                 ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              if [[ $rearmed -eq 1 ]]; then
-                ntfy_send "Timer Rearmed on $host" "default" "warning" "$unit reported active but had no scheduled elapse; purged stamp and rearmed automatically"
-              else
+              if [[ $rearmed -eq 0 ]]; then
                 ntfy_send "Timer Disarmed on $host" "high" "warning" "$unit has no scheduled elapse and automatic rearm failed. Run: sudo systemctl restart $unit"
               fi
             ''}
