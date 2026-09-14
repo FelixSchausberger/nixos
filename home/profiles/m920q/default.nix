@@ -9,6 +9,12 @@
   # the on-demand niri projector session (see ./niri.nix). The full desktop app
   # suite is deliberately not imported here.
 
+  # OpenCode 2 beta (opencode2). Enabled here because the shared `homelab`
+  # Zellij session and the remote (phone) attach path live on m920q, so the
+  # V2 parallel-agent workflow must run on this host. See
+  # modules/home/tui/ai-assistants/opencode/v2.nix.
+  ai-assistants.opencodeV2.enable = true;
+
   features = {
     development = {
       enable = true;
