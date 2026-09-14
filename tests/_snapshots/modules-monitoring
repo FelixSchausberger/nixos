@@ -14,6 +14,7 @@
     "postgres-down"
     "nextcloud-down"
     "immich-down"
+    "jellyfin-down"
     "adguard-down"
     "backup-failed"
   ];

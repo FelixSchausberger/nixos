@@ -69,6 +69,10 @@
           type = lib.types.bool;
           default = false;
         };
+        jellyfin.enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
       };
     };
 
