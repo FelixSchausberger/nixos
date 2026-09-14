@@ -1,0 +1,13 @@
+{
+  "name": "zellij-indicator-v2-fork",
+  "version": "2.0.0+compact.1",
+  "description": "Vendored fork of opencode-zellij-indicator@2.0.0 for OpenCode 2. Patches: compact tabs by default (status icon only), optional OPENCODE_ZELLIJ_TITLE_MAX title with truncation (upstream 2.0.0 does neither); hand-rolled default export so the plugin needs no node_modules; server/rpc stub entrypoints so V2's loader resolves the directory without throwing.",
+  "type": "module",
+  "exports": {
+    "./server": "./server.ts",
+    "./tui": "./src/index.ts",
+    "./rpc": "./rpc.ts",
+    ".": "./src/index.ts"
+  },
+  "license": "MIT"
+}

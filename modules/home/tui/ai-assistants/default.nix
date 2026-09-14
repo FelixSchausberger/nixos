@@ -8,5 +8,6 @@
     ./obsidian-skills.nix
     # ./claude-code
     ./opencode
+    ./opencode/v2.nix
   ];
 }

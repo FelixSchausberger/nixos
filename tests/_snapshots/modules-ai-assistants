@@ -5,11 +5,12 @@
   avoid_agreement_enabled = true;
   avoid_agreement_exists = true;
   avoid_agreement_has_content = true;
-  behavior_count = 6;
+  behavior_count = 7;
   behavior_names = [
     "additional-context"
     "avoid-agreement"
     "jjwork-first"
+    "parallel-agents"
     "prefer-gh-cli-for-github"
     "prevent-rebuild"
     "safe-deletion"

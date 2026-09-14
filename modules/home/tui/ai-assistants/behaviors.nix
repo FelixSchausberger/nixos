@@ -37,7 +37,7 @@
         ```bash
         jjwork
         ```
-        This fetches from remote, rebases onto main, and creates a clean empty commit.
+        This fetches from remote and rebases the working-copy commit onto main@origin. It does not create a new commit.
 
         This prevents the working copy from diverging into orphan branches that create messy merge histories and lost files. Every session MUST start with `jjwork`.
 
@@ -46,6 +46,25 @@
       enabled = true;
       description = "Rebase onto main with jjwork before starting any work";
       priority = 5; # Above prevent-rebuild: ordering invariant for all sessions
+    };
+
+    parallel-agents = {
+      content = ''
+        Isolate concurrent work in jj workspaces — never share one working copy between simultaneous agent sessions. The primary checkout (/per/etc/nixos) is reserved for the user and the comin reconciler.
+
+        Before editing files, check for active claims:
+        ```bash
+        ocws ls
+        ```
+        An undescribed or unfinished `@` in another workspace means: do not touch that workspace; report the conflict and halt.
+
+        For isolated work, create a workspace with `ocws <task>` (or `ocws tab <task>`). It creates `<base>/nixos-ws-<task>`, claims it with a change description, and starts opencode rooted there. The base is `$OCWS_BASE`, else the parent of the current workspace, else `/tmp/opencode` when that parent is not writable.
+
+        Integration runs from the workspace itself: `jjwork`, then `jjpush`. Nothing pushes background work: the primary checkout and secondary workspaces are pushed only by an explicit `jjpush`. See the jj-workspaces skill for the full workflow and concurrency hazards.
+      '';
+      enabled = true;
+      description = "Isolate parallel agents in jj workspaces via the ocws launcher";
+      priority = 6; # Just after jjwork-first, before starting edits
     };
 
     avoid-agreement = {

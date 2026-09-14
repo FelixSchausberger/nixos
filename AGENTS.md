@@ -75,3 +75,13 @@ When a change needs a rebuild, test with
 Load the matching skill instead of guessing: `nix-expert` (flake, derivations,
 modules, packaging), `nix-testing` (namaka and VM tests), `jj-commit-workflow`
 (commit, describe, push), and `jj-workspaces` (parallel-agent isolation).
+
+## AI Assistant Configuration
+
+Configuration lives in `modules/home/tui/ai-assistants/opencode/`: `shared.nix`
+holds the values both harnesses need (model, permissions, formatters, skills,
+behavior context, agent text), `default.nix` renders the V1 config, and `v2.nix`
+renders the opt-in OpenCode 2 beta config (`ai-assistants.opencodeV2.enable`)
+into `~/.config/opencode-v2/opencode/`. V2 is isolated because it loads the V1
+plugin list by union and V1-only plugins have no V2 entrypoint; its credentials
+are database-backed, so `opencode2 auth login <provider>` is needed once.
