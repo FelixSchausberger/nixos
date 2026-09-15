@@ -133,11 +133,21 @@
     # nix/opencode.nix installs `dist/cli-*/bin/opencode2`, but the build
     # produces `bin/opencode`, so it fails. This commit (the first v2 state
     # with the corrected installPhase and the Wayland LD_LIBRARY_PATH needed
-    # for OpenTUI clipboard images) builds. Bump deliberately; the daily
-    # lock-update workflow must not float it.
+    # for OpenTUI clipboard images) builds. Bump deliberately.
+    #
+    # nix/opencode.nix records a fixed-output hash for a node_modules tree
+    # produced by `bun install` (nix/hashes.json). That output tracks the bun
+    # version, so the build must not inherit the floating `nixpkgs` input: a
+    # nixpkgs bump carrying a new bun (1.4.2 restructures node_modules/.bun)
+    # fails with a fixed-output hash mismatch and stalls the daily lock
+    # refresh. Use a rev-pinned nixpkgs, which the daily update cannot move,
+    # and bump it only alongside an upstream hash that matches its bun.
+    nixpkgs-opencode2 = {
+      url = "github:NixOS/nixpkgs/8ce4ef6cb6f871616146b9fe26d2a5ae594e94fe";
+    };
     opencode-v2 = {
       url = "github:anomalyco/opencode/f1149efee7ce08f7d819c48d8b69482441bd0592";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-opencode2";
     };
 
     # Yazi plugins
