@@ -72,8 +72,16 @@ in
   # State values must be from the sets Grafana actually accepts.
   assert builtins.all (r: builtins.elem r.noDataState validNoDataStates) rules;
   assert builtins.all (r: builtins.elem r.execErrState validExecErrStates) rules;
-  # Down-detection relies on firing when data disappears entirely.
-  assert builtins.all (r: r.noDataState == "Alerting") rules; {
+  # Down-detection rules fire when data disappears entirely; the one
+  # decision-data metric (nixd-gc-storm) legitimately has no series until
+  # the first post-deploy health-check run, so it opts into noDataState OK.
+  assert builtins.all (
+    r:
+      r.noDataState
+      == "Alerting"
+      || (r.uid == "nixd-gc-storm" && r.noDataState == "OK")
+  )
+  rules; {
     rule_count = builtins.length rules;
     expected_rules = enabledServices;
     rules =

@@ -321,10 +321,13 @@
             # strategy decision (2026-09-16 audit): count managed-GC runs in
             # the last 90 min so the review can pair trim cadence with pool
             # free space (which the zfs/diskstats collectors do not expose
-            # per pool). Written atomically; node_exporter scans the
+            # per pool). Scoped via SYSLOG_IDENTIFIER: the process's _COMM is
+            # `nix`, so an unfiltered grep also matches interactive `nh` runs
+            # (13:47, same string) and inflates the cadence. Written
+            # atomically; node_exporter scans the
             # --collector.textfile.directory.
             if [[ -d /var/lib/node-exporter/textfile ]]; then
-              gc_runs=$(${pkgs.systemd}/bin/journalctl --since "-90 minutes" --no-pager 2>/dev/null | ${pkgs.gnugrep}/bin/grep -c "finding garbage collector roots" || true)
+              gc_runs=$(${pkgs.systemd}/bin/journalctl --since "-90 minutes" --no-pager SYSLOG_IDENTIFIER=determinate-nixd 2>/dev/null | ${pkgs.gnugrep}/bin/grep -cE "finding garbage collector roots" || true)
               gc_file="$(mktemp /var/lib/node-exporter/textfile/.nixd-gc.XXXXXX)"
               {
                 echo "# TYPE nixd_gc_runs_last_90min gauge"
