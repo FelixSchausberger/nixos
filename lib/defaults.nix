@@ -7,9 +7,6 @@ rec {
     # NixOS state version - determines compatibility with Home Manager releases
     version = "26.05";
 
-    # Default system architecture for all hosts
-    architecture = "x86_64-linux";
-
     # Default primary user for all hosts
     user = "schausberger";
 

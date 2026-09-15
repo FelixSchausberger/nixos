@@ -9,18 +9,6 @@
   options.system.emergency = {
     enable = lib.mkEnableOption "emergency shell and recovery features";
 
-    enableSystemdEmergencyMode = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Enable systemd emergency mode for filesystem mount failures";
-    };
-
-    enableInitrdEmergencyAccess = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Enable emergency access during initrd stage";
-    };
-
     deadmanAutoRecover = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -39,9 +27,9 @@
     isWsl = config ? wsl && (config.wsl.enable or false);
   in
     lib.mkIf config.system.emergency.enable {
-      systemd.enableEmergencyMode = lib.mkDefault config.system.emergency.enableSystemdEmergencyMode;
-
-      boot.initrd.systemd.emergencyAccess = config.system.emergency.enableInitrdEmergencyAccess;
+      # `systemd.enableEmergencyMode` and `boot.initrd.systemd.emergencyAccess`
+      # keep their upstream defaults (both true); the deadman below is the
+      # only piece without an upstream primitive.
 
       environment.systemPackages =
         [

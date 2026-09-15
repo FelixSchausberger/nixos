@@ -273,17 +273,6 @@ in {
           new_window_takes_over_fullscreen = 2;
         };
 
-        # Gesture configuration (replaces deprecated workspace_swipe options)
-        # gestures = {
-        #   workspace_swipe = true;
-        #   workspace_swipe_fingers = 3;
-        #   workspace_swipe_distance = 300;
-        #   workspace_swipe_invert = true;
-        #   workspace_swipe_min_speed_to_force = 30;
-        #   workspace_swipe_cancel_ratio = 0.5;
-        #   workspace_swipe_create_new = false;
-        # };
-
         render = {
           # Direct scanout bypasses the compositor for fullscreen apps,
           # reducing latency for game streaming via Sunshine/Moonlight

@@ -12,7 +12,6 @@
     ./emergency-shell.nix
     ./firmware.nix
     ./fonts.nix
-    ./hardware/battery.nix
     ./home-manager.nix
     ./maintenance.nix
     ./persistence-postgresql.nix
