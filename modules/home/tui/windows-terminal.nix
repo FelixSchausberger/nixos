@@ -53,6 +53,17 @@ in {
           };
           keys = "ctrl+alt+d";
         }
+        # Open the mosh session to m920q directly (Ctrl+Alt+M). Prefer this over
+        # plain ssh for interactive zellij work: mosh survives IP changes and
+        # suspend, and it preserves SSH_CONNECTION on the server, so the fish
+        # zellij auto-attach still fires on m920q.
+        {
+          command = {
+            action = "newTab";
+            profile = moshHomelabGuid;
+          };
+          keys = "ctrl+alt+m";
+        }
       ];
       newTabMenu = [
         {type = "remainingProfiles";}
