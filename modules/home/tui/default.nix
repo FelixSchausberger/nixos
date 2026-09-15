@@ -30,7 +30,7 @@ in {
     ./zellij.nix # Terminal multiplexer with modern features
     ./zellij-quota-bridge.nix # Push OpenCode Go quota into the zjstatus bar
     ./zellij-remote.nix # Remote attach helper for the homelab Zellij web server
-    ./cachix.nix # Binary cache daemon for automatic cache population
+    ./cachix.nix # Cachix CLI for on-demand cache pushes
     ./vitals.nix # Vitals health monitoring daemon + CLI
   ];
 
