@@ -140,6 +140,12 @@ in {
           "hwmon"
           "thermal_zone"
         ];
+        # zfs/diskstats collectors do not expose per-pool free space or
+        # determinate-nixd GC activity; the health-check (maintenance.nix)
+        # writes those as Prometheus textfile metrics into this directory.
+        extraFlags = [
+          "--collector.textfile.directory=/var/lib/node-exporter/textfile"
+        ];
       };
       exporters.fritz = mkIf cfg.fritzbox.enable {
         enable = true;
@@ -553,6 +559,17 @@ in {
                     "Node exporter is unreachable (system metrics unavailable)"
                     ''up{job="node"} == bool 0'')
                 ]
+                ++ lib.optionals config.modules.system.maintenance.enable [
+                  # Feedstock for the managed-GC strategy decision
+                  # (2026-09-16 audit): determinate-nixd trims the store
+                  # whenever pool free space is inside its 5-20 % band, and
+                  # under rpool pressure it ran every ~2 h overnight. A
+                  # sustained storm means the strategy (or the storage
+                  # layout) must be decided; this rule measures the cadence.
+                  (mkAlert "nixd-gc-storm" "high" "NixdGcStorm"
+                    "determinate-nixd managed GC ran more than 3 times in 90 minutes"
+                    ''nixd_gc_runs_last_90min > bool 3'')
+                ]
                 ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
                   (mkAlert "postgres-down" "high" "PostgresDown"
                     "PostgreSQL exporter is unreachable"
@@ -601,7 +618,15 @@ in {
 
     users.groups.netdev = {};
 
+    # Textfile metrics (written by the maintenance health-check) live on /per
+    # so GC-cadence history survives reboots.
     environment.persistence."/per".directories = [
+      {
+        directory = "/var/lib/node-exporter/textfile";
+        user = "node-exporter";
+        group = "node-exporter";
+        mode = "0755";
+      }
       {
         directory = "/var/lib/grafana";
         user = "grafana";
