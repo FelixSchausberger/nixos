@@ -10,12 +10,15 @@
   };
   expected_rules = [
     "fritzbox-wan-down"
+    "wan-unreachable"
+    "wan-high-latency"
     "node-exporter-down"
     "postgres-down"
     "nextcloud-down"
     "immich-down"
     "jellyfin-down"
     "adguard-down"
+    "dns-resolution-failed"
     "backup-failed"
   ];
   folder = "Homelab";
@@ -26,7 +29,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 8;
+  rule_count = 11;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -81,6 +84,33 @@
       severity = "urgent";
       title = "FritzboxWanDown";
       uid = "fritzbox-wan-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox-dns\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "DnsResolutionFailed";
+      uid = "dns-resolution-failed";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox-icmp\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "WanUnreachable";
+      uid = "wan-unreachable";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_duration_seconds{job=\"blackbox-icmp\"} > bool 0.5";
+      noDataState = "Alerting";
+      severity = "high";
+      title = "WanHighLatency";
+      uid = "wan-high-latency";
     }
     {
       datasource_uid = "prometheus";
