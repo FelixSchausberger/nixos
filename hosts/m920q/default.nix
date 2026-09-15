@@ -500,7 +500,8 @@ in {
       enable = true;
       host = "0.0.0.0";
       openFirewall = true;
-      dataPath = "/per/mnt/data/Media/Pictures";
+      # mediaLocation keeps the module default (/per/mnt/data/immich), so the
+      # Media tree stays free for user-curated, externally indexed photos.
       # thumbs and encoded-video are latency-sensitive (served on every timeline scroll).
       # Placing them on NVMe (rpool/eyd/per) avoids random-read stalls on the SMR SATA dpool.
       # Originals stay on dpool where sequential read performance is acceptable.

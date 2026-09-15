@@ -78,14 +78,15 @@ in {
 
     # Thumbnail serving is CPU-bound; 3 cores prevents request queuing under load.
     # Memory limits sized for 16GB host leaving headroom for ZFS ARC and other services.
-    # BindReadOnlyPaths exposes the external photo library at a path outside
-    # IMMICH_MEDIA_LOCATION so Immich's isImmichPath() check passes, allowing it
-    # to be configured as an external library import path.
+    # BindReadOnlyPaths exposes the curated photo library read-only. Immich
+    # refuses import paths inside IMMICH_MEDIA_LOCATION, so the library lives
+    # outside it; read-only keeps Immich from moving or deleting files it does
+    # not own.
     systemd.services.immich-server.serviceConfig = {
       MemoryMax = "4G";
       MemoryHigh = "3G";
       CPUQuota = "300%";
-      BindReadOnlyPaths = ["/per/mnt/data/immich-library"];
+      BindReadOnlyPaths = ["/per/mnt/data/Media/Imports"];
     };
 
     # ML inference runs during photo analysis, not during normal browsing.
@@ -154,10 +155,9 @@ in {
         "f ${cfg.dataPath}/library/.immich 0600 immich immich - immich"
         "f ${cfg.dataPath}/profile/.immich 0600 immich immich - immich"
         "f ${cfg.dataPath}/upload/.immich 0600 immich immich - immich"
-        # Symlink outside IMMICH_MEDIA_LOCATION so Immich's isImmichPath() check passes,
-        # allowing this path to be configured as an external library import path.
-        "d /per/mnt/data/immich-library 0755 root root -"
-        "L /per/mnt/data/immich-library/admin - - - - ${cfg.dataPath}/library/admin"
+        # User-curated media: a real directory outside IMMICH_MEDIA_LOCATION,
+        # exposed read-only, referenced as an external library import path.
+        "d /per/mnt/data/Media/Imports 0755 schausberger users -"
       ]
       ++ subdir "thumbs" cfg.thumbsPath
       ++ subdir "encoded-video" cfg.encodedVideoPath;
