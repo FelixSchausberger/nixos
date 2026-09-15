@@ -1,85 +1,31 @@
-{
-  lib,
-  pkgs,
-  inputs,
-  modulesPath,
-  ...
-}: let
-  hostName = "installer";
-  repoPath = inputs.self;
-  authorizedKeysFile = ./authorized_keys;
-  hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
-in {
+{pkgs, ...}: {
   imports = [
-    (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
-    ../default/10-sops.nix
-    ../../system/core
-    ../../system/hardware
-    ../../system/network.nix
-    ../shared-tui.nix
+    ../installer-shared.nix
     ../../modules/system/recovery-tools.nix
   ];
 
   hostConfig = {
-    inherit hostName;
+    hostName = "installer";
     isGui = false;
     wms = [];
   };
 
-  nixpkgs.overlays = [
-    # Prevent stale nixfmt-classic/nixfmt-rfc-style aliases from throwing.
-    # These were removed from nixpkgs and converted to throwing aliases in
-    # version 0.1.1031299. Something in the ISO evaluation chain still
-    # accesses them transitively.
-    (final: _prev: {
-      nixfmt-classic = final.nixfmt;
-      nixfmt-rfc-style = final.nixfmt;
-    })
-    # ceph uses python311, which in current nixpkgs triggers sphinx-9.1.0 evaluation.
-    # sphinx-9.1.0 dropped Python 3.11 support, causing evaluation failure during CI.
-    # The installer does not need ceph-enabled qemu.
-    (_final: prev: {
-      qemu = prev.qemu.override {ceph = null;};
-    })
-  ];
+  isoShared = {
+    hostName = "installer";
+    isoName = "nixos-installer-full.iso";
+    volumeID = "NIXOS_FULL";
+    extraPackages = with pkgs; [
+      # Network diagnostics
+      dnsutils
+      inetutils
+      whois
 
-  # Disable persistence for live ISO (no persistent filesystem)
-  environment.persistence = lib.mkForce {};
-
-  boot = {
-    supportedFilesystems = [
-      "zfs"
-      "ext4"
-      "btrfs"
-      "xfs"
-      "ntfs"
-    ];
-    kernelModules = [
-      "zfs"
+      # Installation tools
+      nh
+      screen
     ];
   };
 
-  networking.hostName = hostName;
-
-  users.users.root = {
-    hashedPassword = lib.mkForce null; # Clear inherited hashedPassword from system/core/users.nix
-    password = "nixos"; # Default password for installer convenience
-    openssh.authorizedKeys.keyFiles =
-      lib.optionals hasAuthorizedKeys [authorizedKeysFile];
-  };
-
-  systemd.tmpfiles.rules = [
-    "d /per 0755 root root -"
-    "d /per/etc 0755 root root -"
-    "d /per/system 0755 root root -"
-  ];
-
-  system.activationScripts.installRepo = ''
-    mkdir -p /per/etc
-    ln -sfn ${repoPath} /per/etc/nixos
-  '';
-
-  # Pre-configure installation environment
   system.activationScripts.installerWelcome = ''
     cat > /etc/issue << 'EOF'
 
@@ -131,73 +77,4 @@ in {
 
     EOF
   '';
-
-  # Ensure the portable scripts know where the configuration lives
-  environment.sessionVariables = {
-    NIXOS_CONFIG_ROOT = "/per/etc/nixos";
-    # Pre-configure git for potential operations
-    GIT_AUTHOR_NAME = "NixOS Installer";
-    GIT_AUTHOR_EMAIL = "installer@nixos.local";
-    GIT_COMMITTER_NAME = "NixOS Installer";
-    GIT_COMMITTER_EMAIL = "installer@nixos.local";
-  };
-
-  # FlakeHub disabled during installation via config-installer.nix
-  # User symlinks config.nix -> config-installer.nix temporarily
-  # Deployed system uses FlakeHub normally (config.nix is in /nix/store, not affected by symlink)
-
-  # Additional packages for installation convenience
-  environment.systemPackages = with pkgs; [
-    # Network diagnostics
-    dnsutils
-    inetutils
-    whois
-
-    # Text editors (in case user needs to edit configs)
-    vim
-    nano
-
-    # Installation tools
-    git
-    nh
-
-    # Disk utilities beyond basic recovery tools
-    parted
-    gptfdisk
-
-    # Convenience
-    tmux
-    screen
-  ];
-
-  # Enable SSH for remote installation
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "yes";
-      PasswordAuthentication = lib.mkForce true; # Allow password auth for installer convenience
-    };
-  };
-
-  # Enable NetworkManager for easier network setup
-  networking.networkmanager.enable = true;
-  networking.wireless.enable = lib.mkForce false; # Disable wpa_supplicant in favor of NetworkManager
-  networking.wireless.iwd.enable = lib.mkForce false; # Disable IWD on installer (wired-only)
-
-  # Fix sudo conflict between installation-device.nix and sudo-rs.nix
-  # Keep security.sudo (from installation-device) and disable sudo-rs
-  security.sudo-rs.enable = lib.mkForce false;
-
-  # Fix stateVersion conflict - use installer version
-  system.stateVersion = lib.mkForce "26.05";
-
-  # ISO customization
-  image.fileName = "nixos-installer-full.iso";
-  isoImage = {
-    volumeID = "NIXOS_FULL";
-
-    # Make ISO bootable in UEFI and BIOS modes
-    makeEfiBootable = true;
-    makeUsbBootable = true;
-  };
 }
