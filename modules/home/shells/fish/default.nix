@@ -219,7 +219,10 @@ in {
             # Interactive mode: use safe rip with message
             string pad --center --width 60 "Using safe delete (rip)"
             echo "   Files moved to graveyard - use 'rm -f' for permanent deletion"
-            rip --graveyard "/per/home/"(whoami)"/.local/share/graveyard" $filtered_args
+            # Graveyard comes from RIP_GRAVEYARD (safe-rm.nix); an explicit
+            # --graveyard here overrode it with a stale /per/home path (98G
+            # graveyard fill, 2026-09 disk-full incident).
+            rip $filtered_args
           else
             # Script mode: use real rm silently to avoid breaking automation
             command rm $argv
