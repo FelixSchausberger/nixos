@@ -60,6 +60,13 @@
             "https://dns.cloudflare.com/dns-query"
             "https://dns.quad9.net/dns-query"
           ];
+          # Plain-DNS fallback, only consulted when both DoH upstreams fail.
+          # Without it a stalled DoH provider or uplink turns into a hard DNS
+          # outage for every LAN client (observed 2026-09-15).
+          fallback_dns = [
+            "9.9.9.9"
+            "1.1.1.1"
+          ];
           bootstrap_dns = [
             "9.9.9.9"
             "1.1.1.1"
@@ -68,17 +75,18 @@
           # as the tailnet DNS server with public resolvers as fallback.
           bind_hosts = ["127.0.0.1" "192.168.178.2" "100.105.37.12"];
           port = 53;
+          # AdGuard schema v34 reads cache settings as flat cache_* keys under
+          # dns; a nested "caching:" block is ignored, which is why defaults
+          # (cache_optimistic=false) were in force. Optimistic caching answers
+          # from stale entries while upstreams are unreachable instead of
+          # failing every lookup.
+          cache_enabled = true;
+          cache_optimistic = true;
         };
         querylog.enabled = true;
         querylog.interval = "7d";
         querylog.size_memory = 1000;
         filtering.response_ttl_secs = 86400;
-        caching = {
-          enabled = true;
-          ttl_min_secs = 300;
-          ttl_max_secs = 86400;
-          size = 524288;
-        };
         user_rules = [
           # Windows NCSI — prevents "No Internet" indicator on Windows clients
           "@@||msftconnecttest.com^"
