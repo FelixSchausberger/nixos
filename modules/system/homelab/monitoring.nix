@@ -17,7 +17,44 @@
             - 302
             - 401
           follow_redirects: true
+      # Resolves through AdGuard, the LAN resolver, over plain UDP. A SERVFAIL
+      # or timeout here is what LAN clients experience.
+      dns_udp:
+        prober: dns
+        timeout: 5s
+        dns:
+          query_name: example.com
+          query_type: A
+          preferred_ip_protocol: ip4
+          valid_rcodes:
+            - NOERROR
+      # Raw WAN reachability and RTT, catching link loss and bufferbloat that
+      # starve DNS before any service starts failing.
+      icmp_wan:
+        prober: icmp
+        timeout: 5s
+        icmp:
+          preferred_ip_protocol: ip4
   '';
+
+  # Blackbox probes carry the probed endpoint as the scrape target; these
+  # relabels move it to __param_target, record it as instance, and point the
+  # actual scrape at the local blackbox exporter. Shared by the HTTP, DNS and
+  # ICMP jobs.
+  blackboxRelabel = [
+    {
+      source_labels = ["__address__"];
+      target_label = "__param_target";
+    }
+    {
+      source_labels = ["__param_target"];
+      target_label = "instance";
+    }
+    {
+      target_label = "__address__";
+      replacement = "127.0.0.1:9115";
+    }
+  ];
 in {
   options.modules.system.homelab.monitoring = {
     enable = lib.mkEnableOption "Prometheus + node_exporter + Grafana monitoring stack";
@@ -217,20 +254,37 @@ in {
             metrics_path = "/probe";
             params.module = ["http_2xx"];
             static_configs = blackboxProbes;
-            relabel_configs = [
+            relabel_configs = blackboxRelabel;
+          }
+        ]
+        ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
+          {
+            job_name = "blackbox-dns";
+            scrape_interval = "30s";
+            metrics_path = "/probe";
+            params.module = ["dns_udp"];
+            static_configs = [
               {
-                source_labels = ["__address__"];
-                target_label = "__param_target";
-              }
-              {
-                source_labels = ["__param_target"];
-                target_label = "instance";
-              }
-              {
-                target_label = "__address__";
-                replacement = "127.0.0.1:9115";
+                targets = ["127.0.0.1:53"];
+                labels.probe = "adguard-dns";
               }
             ];
+            relabel_configs = blackboxRelabel;
+          }
+        ]
+        ++ lib.optionals cfg.fritzbox.enable [
+          {
+            job_name = "blackbox-icmp";
+            scrape_interval = "30s";
+            metrics_path = "/probe";
+            params.module = ["icmp_wan"];
+            static_configs = [
+              {
+                targets = ["1.1.1.1"];
+                labels.probe = "wan";
+              }
+            ];
+            relabel_configs = blackboxRelabel;
           }
         ];
     };
@@ -472,6 +526,19 @@ in {
                   (mkAlert "fritzbox-wan-down" "urgent" "FritzboxWanDown"
                     "Fritz!Box WAN physical link is down"
                     "fritz_wan_phys_link_status == bool 0")
+                ])
+                ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
+                  (mkAlert "dns-resolution-failed" "urgent" "DnsResolutionFailed"
+                    "AdGuard Home is not resolving queries; LAN name resolution is failing"
+                    ''probe_success{job="blackbox-dns"} == bool 0'')
+                ])
+                ++ (lib.optionals cfg.fritzbox.enable [
+                  (mkAlert "wan-unreachable" "urgent" "WanUnreachable"
+                    "Public internet is unreachable over ICMP (uplink down or dropping packets)"
+                    ''probe_success{job="blackbox-icmp"} == bool 0'')
+                  (mkAlert "wan-high-latency" "high" "WanHighLatency"
+                    "ICMP round-trip to the public internet exceeds 500 ms (bufferbloat starving DNS)"
+                    ''probe_duration_seconds{job="blackbox-icmp"} > bool 0.5'')
                 ])
                 ++ [
                   (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
