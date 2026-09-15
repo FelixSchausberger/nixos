@@ -153,9 +153,6 @@
         "Music"
         "Pictures"
         "Videos"
-
-        # Code repositories (GitHub clones, Rust projects, etc.)
-        "repos"
       ];
     };
   };

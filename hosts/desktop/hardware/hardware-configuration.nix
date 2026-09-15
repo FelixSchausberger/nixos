@@ -70,13 +70,6 @@
       ];
       neededForBoot = true;
     };
-
-    "/home/schausberger/repos" = {
-      device = "/per/repos";
-      fsType = "none";
-      options = ["bind"];
-      depends = ["/per/repos"];
-    };
   };
 
   # Swap disabled - ZFS ZVOL swap can cause deadlocks and performance issues
