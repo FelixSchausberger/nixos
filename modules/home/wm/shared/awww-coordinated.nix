@@ -80,16 +80,29 @@ in {
           blurredWallpaper = config.wallpapers.availableBlurred.${wallpaperName};
           regularPath = "${config.wallpapers.wallpaperPath}/${regularWallpaper}";
           blurredPath = "${config.wallpapers.wallpaperPath}/${blurredWallpaper}";
-          initScript = pkgs.writeShellScript "awww-init" ''
-                          # Wait for default-namespace daemon socket to be ready
-                          until ${pkgs.awww}/bin/awww query 2>/dev/null; do
-                            ${pkgs.coreutils}/bin/sleep 0.1
-                          done
 
-                          # Wait for backdrop-namespace daemon socket to be ready
-            until ${pkgs.awww}/bin/awww query --namespace backdrop 2>/dev/null; do
-                          ${pkgs.coreutils}/bin/sleep 0.1
-                        done
+          initScript = pkgs.writeShellScript "awww-init" ''
+            up() { ${pkgs.awww}/bin/awww query -n "$1" >/dev/null 2>&1; }
+
+            # Wait (bounded) for both daemon sockets so a crashed daemon fails
+            # the unit visibly instead of spinning forever in `activating`.
+            for i in $(seq 1 100); do
+              if up; then break; fi
+              ${pkgs.coreutils}/bin/sleep 0.1
+            done
+            if ! up; then
+              echo "awww daemon (default namespace) unreachable after 10s" >&2
+              exit 1
+            fi
+
+            for i in $(seq 1 100); do
+              if up backdrop; then break; fi
+              ${pkgs.coreutils}/bin/sleep 0.1
+            done
+            if ! up backdrop; then
+              echo "awww daemon (backdrop namespace) unreachable after 10s" >&2
+              exit 1
+            fi
 
                           # Skip initialization when the daemon has no active outputs
                           # yet (for example, virtual/headless-only startup).
