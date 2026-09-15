@@ -1665,6 +1665,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-opencode2": {
+      "locked": {
+        "lastModified": 1789006805,
+        "narHash": "sha256-xB8mKMOx1IA9vTDNLmJZ6n4wCMq/cuWBBOzGCRnqxrU=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "8ce4ef6cb6f871616146b9fe26d2a5ae594e94fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "8ce4ef6cb6f871616146b9fe26d2a5ae594e94fe",
+        "type": "github"
+      }
+    },
     "nixpkgs-regression": {
       "locked": {
         "lastModified": 1643052045,
@@ -1996,7 +2012,7 @@
     "opencode-v2": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-opencode2"
         ]
       },
       "locked": {
@@ -2090,6 +2106,7 @@
         "nixos-wizard": "nixos-wizard",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs_10",
+        "nixpkgs-opencode2": "nixpkgs-opencode2",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
         "nur": "nur",
