@@ -14,6 +14,7 @@
     "wan-high-latency"
     "node-exporter-down"
     "postgres-down"
+    "filesystem-full"
     "nextcloud-down"
     "immich-down"
     "jellyfin-down"
@@ -29,7 +30,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 11;
+  rule_count = 12;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -129,6 +130,15 @@
       severity = "high";
       title = "PostgresDown";
       uid = "postgres-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < bool 0.1";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "FilesystemFull";
+      uid = "filesystem-full";
     }
   ];
 }
