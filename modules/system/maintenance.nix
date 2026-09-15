@@ -339,12 +339,10 @@
             # Garbage collect with automatic confirmation
             ${pkgs.nix}/bin/nix store gc
 
-            # Optimize store
-            ${pkgs.nix}/bin/nix store optimise
-
-            # Clean temporary files while ignoring ephemeral roots that may not be
-            # attached in impermanence configurations.
-            ${pkgs.systemd}/bin/systemd-tmpfiles --clean --exclude-prefix=/tmp --exclude-prefix=/var/tmp --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd
+            # No `nix store optimise`: nix.settings.auto-optimise-store already
+            # keeps new paths hardlinked, and the built-in
+            # systemd-tmpfiles-clean.timer (already configured with the same
+            # excludes) covers the tmpfiles sweep.
 
             echo "Cleanup completed at $(date)"
           '';
@@ -527,20 +525,25 @@
             # A healthy run does not mean the lock is current: cache coverage
             # can keep every run in its wait path. Compare the locked nixpkgs
             # revision against the published channel and alert once a newer
-            # channel rev has gone unadopted past the threshold.
-            flake_lock=$(${pkgs.curl}/bin/curl -sfL \
-              "https://raw.githubusercontent.com/${cfgWatch.repository}/main/flake.lock") \
-              || { echo "WARN: flake.lock unreachable; staleness check skipped" >&2; exit 0; }
+            # channel rev has gone unadopted past the threshold. Read both
+            # through `nix flake metadata`, which also proves the lock is
+            # fetchable (stronger than parsing the raw file).
+            if ! locked_json=$(${pkgs.nix}/bin/nix flake metadata --json \
+                 "github:${cfgWatch.repository}/main" 2>&1); then
+              echo "WARN: flake unreachable; staleness check skipped" >&2
+              exit 0
+            fi
 
-            locked_node=$(printf '%s' "$flake_lock" | ${pkgs.jq}/bin/jq -r '.nodes.root.inputs.nixpkgs')
-            locked_rev=$(printf '%s' "$flake_lock" | ${pkgs.jq}/bin/jq -r --arg n "$locked_node" '.nodes[$n].locked.rev')
-            locked_ts=$(printf '%s' "$flake_lock" | ${pkgs.jq}/bin/jq -r --arg n "$locked_node" '.nodes[$n].locked.lastModified')
+            locked_rev=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r '.locks.nodes.nixpkgs.locked.rev')
+            locked_ts=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r '.locks.nodes.nixpkgs.locked.lastModified')
             if [[ ! "$locked_ts" =~ ^[0-9]+$ ]]; then
               echo "WARN: could not read locked nixpkgs timestamp; staleness check skipped" >&2
               exit 0
             fi
 
-            channel_rev=$(${pkgs.curl}/bin/curl -sfL "https://channels.nixos.org/nixos-unstable/git-revision") \
+            channel_rev=$(${pkgs.nix}/bin/nix flake metadata --json \
+              "tarball+https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz" 2>/dev/null \
+              | ${pkgs.jq}/bin/jq -r '.revision // empty') \
               || { echo "WARN: channel revision unreachable; staleness check skipped" >&2; exit 0; }
 
             lock_age_hours=$(( ($(date +%s) - locked_ts) / 3600 ))

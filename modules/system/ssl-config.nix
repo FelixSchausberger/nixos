@@ -31,7 +31,7 @@ in {
   };
 
   config = let
-    bundlePath = cfg.bundle.standard;
+    bundlePath = config.security.pki.caBundle;
 
     # Common SSL environment variables
     sslEnvVars = {
@@ -55,10 +55,10 @@ in {
       };
   in
     lib.mkIf cfg.enable {
-      # System-wide SSL certificate configuration
-      security.pki.certificateFiles = [cfg.bundle.standard];
-
-      # System-wide SSL/TLS certificate environment variables
+      # System-wide SSL/TLS certificate environment variables. Point at the
+      # system bundle, not plain cacert: security.pki merges
+      # blacklist/extra certs into a bundle that can diverge from
+      # ${pkgs.cacert}.
       environment.variables = lib.mapAttrs (_: lib.mkDefault) sslEnvVars;
 
       # Global session variables for all user sessions

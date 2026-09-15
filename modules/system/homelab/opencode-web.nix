@@ -60,13 +60,20 @@ in {
         Type = "oneshot";
         RemainAfterExit = true;
         TimeoutStartSec = 30;
+        Restart = "on-failure";
+        RestartSec = 30;
         ExecStart = "${pkgs.writeShellScript "tailscale-serve-opencode-setup" ''
           ${pkgs.tailscale}/bin/tailscale serve --bg \
             --https ${toString cfg.httpsPort} \
-            http://127.0.0.1:${toString cfg.port} \
-            || echo "Warning: tailscale serve setup failed (non-fatal)"
+            http://127.0.0.1:${toString cfg.port}
         ''}";
       };
+      # Fail loudly and retry when tailscaled is not yet connected; never
+      # swallow the error into a green "active (exited)" state. Re-serve
+      # whenever tailscaled comes back up.
+      upholds = ["tailscale.service"];
+      unitConfig.StartLimitBurst = 5;
+      unitConfig.StartLimitIntervalSec = 300;
     };
   };
 }
