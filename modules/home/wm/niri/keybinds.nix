@@ -21,29 +21,10 @@
     then pkgs.wezterm
     else pkgs.ghostty;
 
-  # Directional key mappings for programmatic keybind generation
-  directions = {
-    left = {
-      colemak = "N";
-      vim = "H";
-      arrow = "Left";
-    };
-    down = {
-      colemak = "E";
-      vim = "J";
-      arrow = "Down";
-    };
-    up = {
-      colemak = "I";
-      vim = "K";
-      arrow = "Up";
-    };
-    right = {
-      colemak = "O";
-      vim = "L";
-      arrow = "Right";
-    };
-  };
+  # Directional key mappings for programmatic keybind generation.
+  # Shared with wlr-which-key (modules/home/wm/shared/keybind-definitions.nix)
+  # so keybinds and the which-key menu cannot silently diverge.
+  inherit ((import ../shared/keybind-definitions.nix {})) directions;
 
   # Generate keybinds for a single direction with all 3 input schemes
   mkDirBind = modifier: dir: actionName: let

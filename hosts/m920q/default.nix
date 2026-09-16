@@ -53,8 +53,8 @@
     name = "desktop-power";
     runtimeInputs = with pkgs; [wakeonlan iputils openssh curl coreutils];
     text = ''
-      host=192.168.178.3
-      mac=10:ff:e0:e1:53:55
+      host=${inputs.self.lib.hosts.desktop.ip}
+      mac=${inputs.self.lib.hosts.desktop.lanMac}
       broadcast=192.168.178.255
 
       up() { ping -c 1 -W 1 "$host" >/dev/null 2>&1; }
@@ -286,6 +286,19 @@ in {
     {
       assertion = builtins.elem "192.168.178.1" (config.systemd.network.networks."10-eno1".gateway or []);
       message = "m920q: 10-eno1 must keep gateway 192.168.178.1 (network-maintenance sanity gate depends on it)";
+    }
+    {
+      # Production runs the AirPlay receiver in gui mode; nothing in the VM
+      # tests exercises that layer (tests-vm runs headless), so pin the
+      # niri-session.target bindings at eval time.
+      assertion = let
+        ux = config.systemd.user.services.uxplay or null;
+      in
+        ux
+        != null
+        && builtins.elem "niri-session.target" (ux.after or [])
+        && builtins.elem "niri-session.target" (ux.wantedBy or []);
+      message = "m920q: uxplay gui service must stay bound to niri-session.target (wayland socket availability)";
     }
   ];
 

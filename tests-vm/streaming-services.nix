@@ -5,9 +5,11 @@
 # - AirPlay receiver pipeline (Avahi, firewall ports, mDNS discovery, TCP connectivity)
 #
 # airplay-receiver.nix is imported directly in headless mode: its uxplay user
-# service has no WantedBy (started only by HDMI-hotplug udev), so it stays
-# inert in a VM while Avahi, firewall, and package configuration are tested
-# against the real module.
+# service is bound to niri-session.target (started only when the compositor
+# session is up), so it stays inert in a VM while Avahi, firewall, and package
+# configuration are tested against the real module. Production (m920q) runs
+# mode = "gui"; the gui unit's niri-session.target bindings are asserted by
+# hosts/m920q eval, not by this VM test.
 {pkgs, ...}: let
   # Evaluating system for the test package set below. Must come from the
   # outer pkgs: the node-level pkgs would recurse (nixpkgs.pkgs is defined

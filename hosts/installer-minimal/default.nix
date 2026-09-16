@@ -2,14 +2,8 @@
   lib,
   pkgs,
   inputs,
-  modulesPath,
   ...
 }: let
-  hostName = "installer-minimal";
-  repoPath = inputs.self;
-  authorizedKeysFile = ../installer/authorized_keys;
-  hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
-
   # nixos-wizard references pkgs.nixfmt-classic in its postInstall, which was
   # removed from nixpkgs and now throws. Patch the derivation to skip that.
   nixos-wizard-patched = let
@@ -33,90 +27,30 @@
     });
 in {
   imports = [
-    (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
-    ../default/10-sops.nix
-    ../../system/core
-    ../../system/hardware
-    ../../system/network.nix
-    ../shared-tui.nix
+    ../installer-shared.nix
   ];
 
   hostConfig = {
-    inherit hostName;
+    hostName = "installer-minimal";
     isGui = false;
     wms = [];
   };
 
-  # Disable aliases to prevent transitive access to throwing aliases
-  # (nixfmt-classic) during ISO evaluation. Provide redirects via overlays
-  # for any packages/scripts that still reference the old names.
-  # Disable aliases to isolate from removed alias evaluation that would
-  # break CI (nixfmt-classic was removed in current nixpkgs).
-  nixpkgs.config = {
-    allowAliases = false;
-  };
-
-  # Provide redirects for deprecated package names that downstream code
-  # may still reference directly from this pkgs set.
-  nixpkgs.overlays = [
-    (final: _prev: {
-      nixfmt-classic = final.nixfmt;
-      nixfmt-rfc-style = final.nixfmt;
-    })
-    # ceph uses python311, which in current nixpkgs triggers sphinx-9.1.0 evaluation.
-    # sphinx-9.1.0 dropped Python 3.11 support, causing evaluation failure during CI.
-    # The installer does not need ceph-enabled qemu.
-    (_final: prev: {
-      qemu = prev.qemu.override {ceph = null;};
-    })
-  ];
-
-  # Disable persistence for live ISO (no persistent filesystem)
-  environment.persistence = lib.mkForce {};
-
-  boot = {
-    supportedFilesystems = [
-      "zfs"
-      "ext4"
-      "btrfs"
-      "xfs"
-      "ntfs"
-    ];
-    kernelModules = [
-      "zfs"
+  isoShared = {
+    hostName = "installer-minimal";
+    isoName = "nixos-installer-minimal.iso";
+    volumeID = "NIXOS_MIN";
+    autoLoginUser = true;
+    extraPackages = [
+      nixos-wizard-patched
     ];
   };
 
-  networking.hostName = hostName;
-
-  users.users = {
-    root = {
-      hashedPassword = lib.mkForce null; # Clear inherited hashedPassword from system/core/users.nix
-      password = "nixos"; # Default password for installer convenience
-      openssh.authorizedKeys.keyFiles =
-        lib.optionals hasAuthorizedKeys [authorizedKeysFile];
-    };
-
-    # Override schausberger user for ISO (empty password, no sops)
-    schausberger = {
-      hashedPasswordFile = lib.mkForce null;
-      password = ""; # Empty password for easy ISO login
-    };
+  # Override schausberger user for ISO (empty password, no sops)
+  users.users.schausberger = {
+    hashedPasswordFile = lib.mkForce null;
+    password = ""; # Empty password for easy ISO login
   };
-
-  # Auto-login as schausberger on TTY1
-  services.getty.autologinUser = lib.mkForce "schausberger";
-
-  systemd.tmpfiles.rules = [
-    "d /per 0755 root root -"
-    "d /per/etc 0755 root root -"
-    "d /per/system 0755 root root -"
-  ];
-
-  system.activationScripts.installRepo = ''
-    mkdir -p /per/etc
-    ln -sfn ${repoPath} /per/etc/nixos
-  '';
 
   system.activationScripts.installerWelcome = ''
     cat > /etc/issue << 'EOF'
@@ -169,64 +103,4 @@ in {
 
     EOF
   '';
-
-  # Minimal package set - ONLY installation essentials
-  environment.systemPackages =
-    (with pkgs; [
-      # Essential editors
-      vim
-      nano
-
-      # Disk tools
-      parted
-      gptfdisk
-
-      # Network tools
-      curl
-      wget
-
-      # Installation tools
-      git
-      nh
-
-      # Terminal multiplexers
-      tmux
-    ])
-    ++ [
-      nixos-wizard-patched
-    ];
-
-  environment.sessionVariables = {
-    NIXOS_CONFIG_ROOT = "/per/etc/nixos";
-    GIT_AUTHOR_NAME = "NixOS Installer";
-    GIT_AUTHOR_EMAIL = "installer@nixos.local";
-    GIT_COMMITTER_NAME = "NixOS Installer";
-    GIT_COMMITTER_EMAIL = "installer@nixos.local";
-  };
-
-  # FlakeHub disabled during installation via config-installer.nix
-  # User symlinks config.nix -> config-installer.nix temporarily
-  # Deployed system uses FlakeHub normally (config.nix is in /nix/store, not affected by symlink)
-
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "yes";
-      PasswordAuthentication = true; # Allow password auth for installer convenience
-    };
-  };
-
-  networking.networkmanager.enable = true;
-  networking.wireless.enable = lib.mkForce false;
-  networking.wireless.iwd.enable = lib.mkForce false; # Disable IWD on installer (wired-only)
-
-  security.sudo-rs.enable = lib.mkForce false;
-  system.stateVersion = lib.mkForce "26.05";
-
-  image.fileName = "nixos-installer-minimal.iso";
-  isoImage = {
-    volumeID = "NIXOS_MIN";
-    makeEfiBootable = true;
-    makeUsbBootable = true;
-  };
 }
