@@ -32,7 +32,7 @@
   samba_enabled = true;
   session_on_demand_enabled = true;
   smartd_enabled = true;
-  smartd_schedule = "-a -s (S/../.././14|L/../../7/14) -m <nomailer> -M exec /nix/store/db62x951kmyc8w1ca9731fyxbdi986dv-ntfy-smart-notify";
+  smartd_schedule = "-a -s (S/../.././14|L/../../7/14) -m <nomailer> -M exec /nix/store/zrgl8qifr1s04z9s9k7sdsy8c72falv3-ntfy-smart-notify";
   smartd_schedule_quiet_safe = true;
   ssh_enabled = true;
   tailscale_enabled = true;
