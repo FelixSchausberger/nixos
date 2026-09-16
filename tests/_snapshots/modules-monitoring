@@ -127,7 +127,7 @@
       datasource_uid = "prometheus";
       execErrState = "KeepLast";
       expr = "nixd_gc_runs_last_90min > bool 3";
-      noDataState = "Alerting";
+      noDataState = "OK";
       severity = "high";
       title = "NixdGcStorm";
       uid = "nixd-gc-storm";
