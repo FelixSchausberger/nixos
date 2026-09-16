@@ -95,6 +95,24 @@ in {
       interval = cfg.syncoidInterval;
       group = "root";
       commands = cfg.syncoidCommands;
+      # Upstream default target permissions lack destroy/hold, so syncoid
+      # cannot prune old syncoid_* snapshots on the replica: it logs
+      # "cannot destroy snapshots: permission denied" every run and the
+      # backup dataset accretes stale nightlies (observed: 1331 snapshots,
+      # ~96 GiB pinned on bpool/backup/data). destroy + hold add the
+      # prune privileges the noop-retain option expects; the remaining
+      # entries mirror the upstream default.
+      localTargetAllow = [
+        "change-key"
+        "compression"
+        "create"
+        "destroy"
+        "hold"
+        "mount"
+        "mountpoint"
+        "receive"
+        "rollback"
+      ];
     };
 
     systemd.services =
