@@ -484,6 +484,21 @@ in {
     adguardhome.enable = true;
     backup = {
       enable = true;
+      # rpool/eyd/per is sanoid-only on this host: zfstools opted out via
+      # com.sun:auto-snapshot=false (persistent dataset property, one-time
+      # `zfs set` at property level - its 15-min frequent layer moved here
+      # via frequently=8). Retention cut 2026-09-16: monthly 12->3, yearlies
+      # dropped; two overlapping engines pinned 144G of snapshot-unique
+      # data on rpool (2026-09-15 incident).
+      sanoidDatasets."rpool/eyd/per" = {
+        frequently = 8;
+        hourly = 24;
+        daily = 7;
+        weekly = 2;
+        monthly = 3;
+        yearly = 0;
+        recursive = true;
+      };
       sanoidDatasets."dpool/data" = {
         hourly = 24;
         daily = 7;
