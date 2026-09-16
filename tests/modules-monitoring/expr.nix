@@ -49,6 +49,7 @@
       "wan-unreachable"
       "wan-high-latency"
       "node-exporter-down"
+      "nixd-gc-storm"
       "postgres-down"
       "filesystem-full"
     ]

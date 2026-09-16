@@ -56,6 +56,19 @@ in {
 
   # Test: Smartd monitoring
   smartd_enabled = config.services.smartd.enable;
+  # Test: Quiet hours (00:00-09:00 bedroom window). smartd slots have the
+  # (S|L)/../.././HH shape; guard that no slot starts inside the window.
+  smartd_schedule = config.services.smartd.defaults.autodetected;
+  smartd_schedule_quiet_safe =
+    builtins.match
+    ".*(S/../../\\./0[0-8]|L/../../\\./0[0-8]).*"
+    config.services.smartd.defaults.autodetected
+    == null;
+  # Test: nightly determinate-nixd GC cadence exposes a metric to Grafana so
+  # the automatic-vs-scheduled strategy can be decided from data.
+  nixd_gc_metric =
+    builtins.elem "--collector.textfile.directory=/var/lib/node-exporter/textfile"
+    config.services.prometheus.exporters.node.extraFlags;
 
   # Test: Backup configured
   backup_enabled = config.modules.system.homelab.backup.enable;

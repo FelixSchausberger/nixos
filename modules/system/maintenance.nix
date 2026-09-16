@@ -317,6 +317,23 @@
               fi
             fi
 
+            # Prometheus textfile metrics feeding the determinate-nixd GC
+            # strategy decision (2026-09-16 audit): count managed-GC runs in
+            # the last 90 min so the review can pair trim cadence with pool
+            # free space (which the zfs/diskstats collectors do not expose
+            # per pool). Written atomically; node_exporter scans the
+            # --collector.textfile.directory.
+            if [[ -d /var/lib/node-exporter/textfile ]]; then
+              gc_runs=$(${pkgs.systemd}/bin/journalctl --since "-90 minutes" --no-pager 2>/dev/null | ${pkgs.gnugrep}/bin/grep -c "finding garbage collector roots" || true)
+              gc_file="$(mktemp /var/lib/node-exporter/textfile/.nixd-gc.XXXXXX)"
+              {
+                echo "# TYPE nixd_gc_runs_last_90min gauge"
+                echo "nixd_gc_runs_last_90min $gc_runs"
+              } > "$gc_file"
+              chmod 644 "$gc_file"
+              mv "$gc_file" /var/lib/node-exporter/textfile/nixd-gc.prom
+            fi
+
             echo "Health check completed at $(date)"
           '';
           serviceConfig = {
