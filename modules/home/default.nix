@@ -1,6 +1,7 @@
 {
   lib,
   inputs,
+  config,
   ...
 }: let
   inherit (inputs.self.lib) defaults;
@@ -27,6 +28,19 @@ in {
   home = {
     username = lib.mkDefault defaults.system.user;
     homeDirectory = lib.mkDefault defaults.paths.homeDir;
+
+    # Keep the Go module/bin tree out of $HOME: the GOPATH default (~/go,
+    # written by gopls and `go get`) moves to an XDG data directory. less
+    # history/lesskey and nix-index's auto-run follow the same XDG-cleanliness
+    # pattern (NIX_AUTO_RUN: nix-index's command-not-found handler runs
+    # missing commands via nix-shell without installing them).
+    sessionVariables = {
+      GOPATH = "${config.xdg.dataHome}/go";
+      LESSHISTFILE = "${config.xdg.dataHome}/less/history";
+      LESSKEY = "${config.xdg.dataHome}/less/lesskey";
+      DIRENV_LOG_FORMAT = "";
+      NIX_AUTO_RUN = "1";
+    };
 
     # This value determines the Home Manager release that your
     # configuration is compatible with. This helps avoid breakage
