@@ -328,8 +328,7 @@
     "elephant": {
       "inputs": {
         "nixpkgs": [
-          "walker",
-          "nixpkgs"
+          "nixpkgs-elephant"
         ],
         "systems": [
           "walker",
@@ -1575,6 +1574,18 @@
         "type": "github"
       }
     },
+    "nixpkgs-elephant": {
+      "locked": {
+        "lastModified": 315532800,
+        "narHash": "sha256-eQUZVehWLDBbpBR2rq6DnuRee1ULT6Y675RhsYDSjYI=",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst"
+      }
+    },
     "nixpkgs-lib": {
       "locked": {
         "lastModified": 1789266065,
@@ -2106,6 +2117,7 @@
         "nixos-wizard": "nixos-wizard",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs_10",
+        "nixpkgs-elephant": "nixpkgs-elephant",
         "nixpkgs-opencode2": "nixpkgs-opencode2",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
