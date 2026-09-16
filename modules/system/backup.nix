@@ -40,6 +40,21 @@ in {
             type = types.bool;
             default = false;
           };
+          # 15-min snapshot layer (sanoid's frequent/frequent_period from
+          # sanoid.defaults.conf). Carries the zfs-auto-snapshot frequent
+          # coverage after zfstools opts out of a dataset via
+          # com.sun:auto-snapshot=false, which this module implies by
+          # declaring the dataset here.
+          frequently = lib.mkOption {
+            type = types.int;
+            default = 0;
+            description = "Number of 15-min snapshots to keep (0 disables).";
+          };
+          frequentPeriod = lib.mkOption {
+            type = types.int;
+            default = 15;
+            description = "Minutes between frequent snapshots.";
+          };
         };
       });
       default = {
@@ -87,7 +102,25 @@ in {
   config = lib.mkIf cfg.enable {
     services.sanoid = {
       enable = true;
-      datasets = cfg.sanoidDatasets;
+      # Map the module's frequency keys onto sanoid's own dataset config:
+      # frequently -> frequently, frequentPeriod -> frequent_period
+      # (verified keys in sanoid 2.3.0 sanoid.defaults.conf). recursive
+      # is a nixpkgs sanoid module option, not a sanoid config key.
+      datasets =
+        lib.mapAttrs (
+          _: ds: (lib.filterAttrs (_: v: v != null) {
+            inherit (ds) hourly daily weekly monthly yearly recursive;
+            frequently =
+              if ds.frequently == 0
+              then null
+              else ds.frequently;
+            frequent_period =
+              if ds.frequently == 0
+              then null
+              else ds.frequentPeriod;
+          })
+        )
+        cfg.sanoidDatasets;
     };
 
     services.syncoid = {

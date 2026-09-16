@@ -199,6 +199,19 @@ in {
   modules.system.homelab.backup = {
     enable = true;
     syncoidInterval = "weekly";
+    # rpool/eyd/per is sanoid-only here too: the persistent
+    # com.sun:auto-snapshot=false dataset property opts zfstools out
+    # (one-time `zfs set`; retained history destroyed once manually).
+    # Retention follows the m920q pattern agreed 2026-09-16.
+    sanoidDatasets."rpool/eyd/per" = {
+      frequently = 8;
+      hourly = 24;
+      daily = 7;
+      weekly = 2;
+      monthly = 3;
+      yearly = 0;
+      recursive = true;
+    };
     syncoidCommands = {
       "desktop-home-to-bpool" = {
         source = "rpool/eyd/home";
