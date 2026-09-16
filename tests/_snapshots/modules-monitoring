@@ -13,6 +13,7 @@
     "wan-unreachable"
     "wan-high-latency"
     "node-exporter-down"
+    "nixd-gc-storm"
     "postgres-down"
     "filesystem-full"
     "nextcloud-down"
@@ -30,7 +31,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 12;
+  rule_count = 13;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -121,6 +122,15 @@
       severity = "urgent";
       title = "NodeExporterDown";
       uid = "node-exporter-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "nixd_gc_runs_last_90min > bool 3";
+      noDataState = "Alerting";
+      severity = "high";
+      title = "NixdGcStorm";
+      uid = "nixd-gc-storm";
     }
     {
       datasource_uid = "prometheus";

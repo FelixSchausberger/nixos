@@ -300,6 +300,17 @@ in {
         && builtins.elem "niri-session.target" (ux.wantedBy or []);
       message = "m920q: uxplay gui service must stay bound to niri-session.target (wayland socket availability)";
     }
+    {
+      # Bedroom deployment: nothing scheduled may wake the disks between
+      # 00:00 and 09:00. smartd slots are (S/../.././HH) per man 5 smartd.conf;
+      # the rendered self-test schedule must not start inside that window.
+      assertion =
+        builtins.match
+        ".*(S/../../\\./0[0-8]|L/../../\\./0[0-8]).*"
+        config.services.smartd.defaults.autodetected
+        == null;
+      message = "smartd schedule must not fire inside the 00:00-09:00 quiet window";
+    }
   ];
 
   boot.kernelModules = ["vkms"];
@@ -384,8 +395,11 @@ in {
 
   services.smartd = {
     enable = true;
-    # Runs short self-tests daily at 2am, long tests weekly on Sunday at 4am
-    defaults.autodetected = "-a -s (S/../.././02|L/../../7/04) -m <nomailer> -M exec ${ntfySmartNotify}";
+    # Self-tests run in the awake window (14:00), not at night: a short test
+    # on a 2.5" HDD is ~30 min of constant seeking, audible in the bedroom
+    # (observed 02:18-02:48, 2026-09-16). Quiet window is 00:00-09:00; the
+    # assertions entry keeps any future schedule edit inside it.
+    defaults.autodetected = "-a -s (S/../.././14|L/../../7/14) -m <nomailer> -M exec ${ntfySmartNotify}";
     notifications.wall.enable = false;
     notifications.mail.enable = false;
   };
