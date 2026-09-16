@@ -206,7 +206,9 @@ in {
             scrape_interval = "30s";
             static_configs = [
               {
-                targets = ["127.0.0.1:9187"];
+                targets = [
+                  "127.0.0.1:${toString config.services.prometheus.exporters.postgres.port}"
+                ];
               }
             ];
           }
@@ -219,7 +221,9 @@ in {
             scrape_timeout = "45s";
             static_configs = [
               {
-                targets = ["127.0.0.1:9787"];
+                targets = [
+                  "127.0.0.1:${toString config.services.prometheus.exporters.fritz.port}"
+                ];
               }
             ];
           }
@@ -230,7 +234,9 @@ in {
             scrape_interval = "60s";
             static_configs = [
               {
-                targets = ["127.0.0.1:9205"];
+                targets = [
+                  "127.0.0.1:${toString config.services.prometheus.exporters.nextcloud.port}"
+                ];
               }
             ];
           }
@@ -304,7 +310,9 @@ in {
       configFile = blackboxConfig;
     };
 
-    services.prometheus.exporters.postgres = {
+    # Postgres is only deployed as Nextcloud's database backend; scrape the
+    # exporter (and alert on it) only when that stack exists.
+    services.prometheus.exporters.postgres = mkIf config.modules.system.homelab.nextcloud.enable {
       enable = true;
       runAsLocalSuperUser = true;
     };
@@ -544,6 +552,8 @@ in {
                   (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
                     "Node exporter is unreachable (system metrics unavailable)"
                     ''up{job="node"} == bool 0'')
+                ]
+                ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
                   (mkAlert "postgres-down" "high" "PostgresDown"
                     "PostgreSQL exporter is unreachable"
                     ''up{job="postgres"} == bool 0'')
@@ -580,12 +590,12 @@ in {
         StartLimitBurst = 10;
         StartLimitIntervalSec = 60;
       };
+      # No readiness gate on Prometheus: upstream Grafana provisions
+      # datasources lazily (on first query), so a Prometheus outage must not
+      # hold Grafana down in a boot restart loop.
       serviceConfig = {
         EnvironmentFile = config.sops.templates."grafana-env".path;
         RestartSec = "5s";
-        ExecStartPre = [
-          "+${pkgs.bash}/bin/bash -c 'until ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString cfg.prometheusPort}/-/healthy > /dev/null 2>&1; do sleep 2; done'"
-        ];
       };
     };
 

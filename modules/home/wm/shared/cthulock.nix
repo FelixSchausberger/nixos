@@ -2,7 +2,7 @@
 # Parameterized by session target so systemd ordering matches the active compositor.
 # Kept for the custom and wayle shells (wayle ships no lock screen).
 # Noctalia locks via its own lockscreen service.
-sessionTarget: {
+_sessionTarget: {
   inputs,
   lib,
   config,
@@ -66,18 +66,7 @@ sessionTarget: {
       }
     '';
 
-    # Ensure the program is available in the session
-    systemd.user.services.cthulock-ready = {
-      Unit = {
-        Description = "Make cthulock available for session";
-        After = [sessionTarget];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.coreutils}/bin/true";
-        RemainAfterExit = true;
-      };
-      Install.WantedBy = [sessionTarget];
-    };
+    # The package line above already puts cthulock in the profile; a
+    # placeholder "ready" unit that runs `true` would only fake readiness.
   };
 }

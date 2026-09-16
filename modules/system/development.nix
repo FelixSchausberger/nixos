@@ -12,9 +12,6 @@
     jq
     python3
 
-    # GitHub Actions local runner
-    act
-
     # Language Servers
     bash-language-server # Bash
     clang-tools # C/C++

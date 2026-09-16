@@ -135,7 +135,14 @@ in {
               "UPDATE \"user\" SET \"shouldChangePassword\"=false WHERE email='fel.schausberger@gmail.com';"
             ;;
           400|409)
-            exit 0
+            # Admin already exists. Re-run the flag correction anyway: if a
+            # previous run created the user but failed before clearing
+            # shouldChangePassword, later 409s must self-heal the flag
+            # instead of exiting 0 silently forever.
+            ${lib.getExe' pkgs.postgresql "psql"} -h /run/postgresql -d immich -c \
+              "UPDATE \"user\" SET \"shouldChangePassword\"=false WHERE email='fel.schausberger@gmail.com' AND \"shouldChangePassword\"=true;" \
+              | ${lib.getExe pkgs.gnugrep} -q "UPDATE 0" || \
+              echo "Corrected shouldChangePassword for existing admin"
             ;;
           *)
             echo "Unexpected HTTP response from admin-sign-up: $HTTP_CODE"

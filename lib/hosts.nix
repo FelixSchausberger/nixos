@@ -9,6 +9,9 @@
     isGui = true;
     description = "Desktop workstation/gaming host with Niri WM; streams headless via Moonshine";
     ip = "192.168.178.3";
+    # MAC pinned in networkd (see hosts/desktop) and used for Wake-on-LAN
+    # from hosts/m920q (desktopPower) — change both together via this value.
+    lanMac = "10:ff:e0:e1:53:55";
   };
 
   surface = {
@@ -35,5 +38,6 @@
     isGui = true;
     description = "Lenovo ThinkCentre M920q homelab server (headless base; niri session starts on projector hotplug)";
     ip = "192.168.178.2";
+    # Replays Wake-on-LAN to the desktop (hosts/m920q desktopPower).
   };
 }

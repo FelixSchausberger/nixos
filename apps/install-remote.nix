@@ -139,9 +139,11 @@ in {
             --exclude='.direnv' \
             ./ "root@$TARGET_IP:/tmp/nixos-config/"
 
-          # Run disko partitioning (use file directly to avoid flake input fetching)
+          # Partition with the disko binary shipped in the ISO (pinned by the
+          # flake input, present in the live image's systemPackages) instead of
+          # a live git fetch on the target.
           echo "Running disko partitioning..."
-          ssh "''${ssh_opts[@]}" "root@$TARGET_IP" "cd /tmp/nixos-config && nix --extra-experimental-features 'nix-command flakes' run --no-update-lock-file git+ssh://git@github.com/nix-community/disko -- --mode disko ./hosts/$HOSTNAME/disko.nix"
+          ssh "''${ssh_opts[@]}" "root@$TARGET_IP" "cd /tmp/nixos-config && disko --mode disko ./hosts/$HOSTNAME/disko.nix"
 
           ssh "''${ssh_opts[@]}" "root@$TARGET_IP" "git config --global --add safe.directory /tmp/nixos-config"
 

@@ -13,7 +13,7 @@ in {
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    backupFileExtension = "backup-$(date +%Y%m%d-%H%M%S)";
+    backupFileExtension = "backup";
     verbose = false;
     # Disable release check — HM tracks nixos-unstable, not a fixed release
     extraSpecialArgs = {

@@ -8,7 +8,7 @@
   ...
 }: {
   options.modules.system.containers = {
-    enable = lib.mkEnableOption "container tools (Docker and act)";
+    enable = lib.mkEnableOption "container tools (Docker)";
   };
 
   config = lib.mkIf config.modules.system.containers.enable {
@@ -78,25 +78,6 @@
         "L+ /etc/docker/certs.d/auth.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
         "L+ /etc/docker/certs.d/production.cloudflare.docker.com/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
       ];
-
-      # Prepares act runner environment with NixOS certificates.
-      # Disabled at boot — run manually: systemctl start act-cert-setup
-      services.act-cert-setup = {
-        description = "Prepare act containers with proper certificate configuration";
-        wantedBy = lib.mkForce [];
-        path = with pkgs; [coreutils];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          User = "root";
-        };
-        script = ''
-          mkdir -p /etc/act-certificates /usr/local/share/ca-certificates
-          ln -sf ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/act-certificates/ca-certificates.crt
-          chmod 755 /etc/act-certificates
-          chmod 644 /etc/act-certificates/ca-certificates.crt || true
-        '';
-      };
     };
 
     environment.variables = {
@@ -112,13 +93,6 @@
     ];
 
     home-manager.users.${hostConfig.user} = {
-      home.packages = with pkgs; [act];
-
-      programs.fish.shellAliases = {
-        act-check = "DOCKER_HOST=unix:///var/run/docker.sock DOCKER_TLS_VERIFY=0 act -W .github/workflows/check.yml --pull=false";
-        act-debug = "DOCKER_HOST=unix:///var/run/docker.sock DOCKER_TLS_VERIFY=0 act -W .github/workflows/check.yml --verbose --pull=false";
-      };
-
       home.sessionVariables = {
         DOCKER_HOST = "unix:///var/run/docker.sock";
         GOPROXY = lib.mkDefault "direct";

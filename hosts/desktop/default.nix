@@ -10,7 +10,7 @@
   hostLib = import ../lib.nix;
   hostName = "desktop";
   hostInfo = inputs.self.lib.hosts.${hostName};
-  lanMac = "10:ff:e0:e1:53:55";
+  inherit (hostInfo) lanMac;
 in {
   imports =
     [
@@ -71,7 +71,7 @@ in {
         MACAddress = lanMac;
       };
       networkConfig.DHCP = "no";
-      address = ["192.168.178.3/24"];
+      address = ["${hostInfo.ip}/24"];
       gateway = ["192.168.178.1"];
       dns = [
         "192.168.178.2"

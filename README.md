@@ -474,10 +474,6 @@ flake-checker --check-outdated --check-owner     # Specific checks only
 # VM testing
 nix run .#install-remote desktop <target-ip>
 nix run .#install-remote m920q <target-ip>
-
-# Local CI testing (requires Docker)
-act pull_request                                 # Run full PR workflow
-act pull_request --job security --dryrun        # Dry run specific job
 ```
 
 ### CI/CD Pipeline

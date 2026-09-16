@@ -97,12 +97,6 @@ in {
           };
           description = "Zellij SSH auto-attach configuration";
         };
-        system = lib.mkOption {
-          type = lib.types.str;
-          default = defaults.system.architecture;
-          description = "System architecture";
-        };
-
         autoLogin = lib.mkOption {
           type = lib.types.nullOr (
             lib.types.submodule {

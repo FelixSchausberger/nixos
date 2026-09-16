@@ -25,7 +25,10 @@ sessionTarget: {
             ExecStart = "${pkgs.wl-gammarelay-rs}/bin/wl-gammarelay-rs run";
             Restart = "on-failure";
             RestartSec = 1;
-            Environment = ["WAYLAND_DISPLAY=wayland-0"];
+            # WAYLAND_DISPLAY comes from the systemd activation environment
+            # (UWSM exports it before the session target is reached); pinning
+            # it to wayland-0 breaks whenever the compositor allocates
+            # another socket.
           };
 
           Install.WantedBy = [sessionTarget];
