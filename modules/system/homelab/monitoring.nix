@@ -435,14 +435,21 @@ in {
         alerting.rules.settings = lib.mkIf cfg.alerting.enable {
           apiVersion = 1;
           groups = let
-            mkAlert = uid: severity: title: description: expr: {
+            # Down-style alerts use noDataState "Alerting" (default): missing
+            # data means the monitored thing is unobservable and must page.
+            # Decision-data metrics (e.g. NixdGcStorm) set "OK" instead: their
+            # series legitimately does not exist until the first post-deploy
+            # health-check publishes it, and treating that gap as an incident
+            # paged every evaluation until data arrived (2026-09-16, false
+            # NixdGcStorm right after switch).
+            mkAlert = uid: severity: title: description: expr: noDataState: {
               inherit uid title;
               condition = "C";
               "for" = "2m";
               # Missing data means the monitored thing is unobservable, which
               # for down-detection is itself an alert; evaluation errors keep
               # the last state instead of paging (visible in the Grafana UI).
-              noDataState = "Alerting";
+              inherit noDataState;
               execErrState = "KeepLast";
               labels.severity = severity;
               annotations.description = description;
@@ -514,50 +521,50 @@ in {
                 (lib.optionals config.modules.system.homelab.nextcloud.enable [
                   (mkAlert "nextcloud-down" "urgent" "NextcloudDown"
                     "Nextcloud is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="nextcloud"} == bool 0'')
+                    ''probe_success{job="blackbox",app="nextcloud"} == bool 0'' "Alerting")
                 ])
                 ++ (lib.optionals config.modules.system.homelab.immich.enable [
                   (mkAlert "immich-down" "urgent" "ImmichDown"
                     "Immich is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="immich"} == bool 0'')
+                    ''probe_success{job="blackbox",app="immich"} == bool 0'' "Alerting")
                 ])
                 ++ (lib.optionals config.modules.system.homelab.jellyfin.enable [
                   (mkAlert "jellyfin-down" "urgent" "JellyfinDown"
                     "Jellyfin is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="jellyfin"} == bool 0'')
+                    ''probe_success{job="blackbox",app="jellyfin"} == bool 0'' "Alerting")
                 ])
                 ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
                   (mkAlert "adguard-down" "urgent" "AdGuardDown"
                     "AdGuard Home DNS server is not responding"
-                    ''up{job="adguard"} == bool 0 or adguard_running == bool 0'')
+                    ''up{job="adguard"} == bool 0 or adguard_running == bool 0'' "Alerting")
                 ])
                 ++ (lib.optionals config.modules.system.homelab.backup.enable [
                   (mkAlert "backup-failed" "high" "BackupFailed"
                     "A ZFS snapshot or replication job (sanoid/syncoid) ended in failed state; backups are incomplete until fixed"
-                    ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == bool 1'')
+                    ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == bool 1'' "Alerting")
                 ])
                 ++ (lib.optionals cfg.fritzbox.enable [
                   (mkAlert "fritzbox-wan-down" "urgent" "FritzboxWanDown"
                     "Fritz!Box WAN physical link is down"
-                    "fritz_wan_phys_link_status == bool 0")
+                    "fritz_wan_phys_link_status == bool 0" "Alerting")
                 ])
                 ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
                   (mkAlert "dns-resolution-failed" "urgent" "DnsResolutionFailed"
                     "AdGuard Home is not resolving queries; LAN name resolution is failing"
-                    ''probe_success{job="blackbox-dns"} == bool 0'')
+                    ''probe_success{job="blackbox-dns"} == bool 0'' "Alerting")
                 ])
                 ++ (lib.optionals cfg.fritzbox.enable [
                   (mkAlert "wan-unreachable" "urgent" "WanUnreachable"
                     "Public internet is unreachable over ICMP (uplink down or dropping packets)"
-                    ''probe_success{job="blackbox-icmp"} == bool 0'')
+                    ''probe_success{job="blackbox-icmp"} == bool 0'' "Alerting")
                   (mkAlert "wan-high-latency" "high" "WanHighLatency"
                     "ICMP round-trip to the public internet exceeds 500 ms (bufferbloat starving DNS)"
-                    ''probe_duration_seconds{job="blackbox-icmp"} > bool 0.5'')
+                    ''probe_duration_seconds{job="blackbox-icmp"} > bool 0.5'' "Alerting")
                 ])
                 ++ [
                   (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
                     "Node exporter is unreachable (system metrics unavailable)"
-                    ''up{job="node"} == bool 0'')
+                    ''up{job="node"} == bool 0'' "Alerting")
                 ]
                 ++ lib.optionals config.modules.system.maintenance.enable [
                   # Feedstock for the managed-GC strategy decision
@@ -566,17 +573,19 @@ in {
                   # under rpool pressure it ran every ~2 h overnight. A
                   # sustained storm means the strategy (or the storage
                   # layout) must be decided; this rule measures the cadence.
+                  # Decision metric: absent data (pre-first-run deploy gap) is
+                  # not an incident; only a sustained storm is.
                   (mkAlert "nixd-gc-storm" "high" "NixdGcStorm"
                     "determinate-nixd managed GC ran more than 3 times in 90 minutes"
-                    ''nixd_gc_runs_last_90min > bool 3'')
+                    ''nixd_gc_runs_last_90min > bool 3'' "OK")
                 ]
                 ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
                   (mkAlert "postgres-down" "high" "PostgresDown"
                     "PostgreSQL exporter is unreachable"
-                    ''up{job="postgres"} == bool 0'')
+                    ''up{job="postgres"} == bool 0'' "Alerting")
                   (mkAlert "filesystem-full" "urgent" "FilesystemFull"
                     "A persistent filesystem is under 10% free. On ZFS all datasets of a pool share free space, so any runaway writer can zero all of them (2026-09 m920q incident)"
-                    ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.1'')
+                    ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.1'' "Alerting")
                 ];
             }
           ];
