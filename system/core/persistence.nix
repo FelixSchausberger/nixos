@@ -2,6 +2,7 @@
   inputs,
   lib,
   pkgs,
+  hostConfig,
   ...
 }: {
   imports = [
@@ -119,41 +120,47 @@
 
     # User-specific persistent data
     users.${inputs.self.lib.user} = {
-      directories = [
-        # SSH keys and known hosts
-        {
-          directory = ".ssh";
-          mode = "0700";
-        }
+      directories =
+        [
+          # SSH keys and known hosts
+          {
+            directory = ".ssh";
+            mode = "0700";
+          }
 
-        # SOPS age key for secret decryption
-        {
-          directory = ".config/sops";
-          mode = "0700";
-        }
+          # SOPS age key for secret decryption
+          {
+            directory = ".config/sops";
+            mode = "0700";
+          }
 
-        # GPG keys and trust database
-        {
-          directory = ".gnupg";
-          mode = "0700";
-        }
+          # GPG keys and trust database
+          {
+            directory = ".gnupg";
+            mode = "0700";
+          }
 
-        # Git configuration (includes GitHub SSH rewrite rules)
-        ".config/git"
+          # Git configuration (includes GitHub SSH rewrite rules)
+          ".config/git"
 
-        # Shell history and fish data
-        ".local/share/fish"
+          # Shell history and fish data
+          ".local/share/fish"
 
-        # System keyring
-        ".local/share/keyrings"
+          # System keyring
+          ".local/share/keyrings"
 
-        # User directories
-        "Documents"
-        "Downloads"
-        "Music"
-        "Pictures"
-        "Videos"
-      ];
+          # User directories: Downloads and Pictures stay local on every host.
+          # m920q serves the other three (Documents, Music, Videos) from the data
+          # pool through symlinks in home/profiles/m920q/default.nix, so those
+          # names are bound only there; on every other host they persist below.
+          "Downloads"
+          "Pictures"
+        ]
+        ++ lib.optionals (hostConfig.hostName != "m920q") [
+          "Documents"
+          "Music"
+          "Videos"
+        ];
     };
   };
 }

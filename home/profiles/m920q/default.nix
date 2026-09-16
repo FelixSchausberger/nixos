@@ -91,4 +91,19 @@
   # Required by some shared modules
 
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
+
+  # Convenience links into the data pool (dpool, hosts/m920q/disko.nix) so the
+  # canonical locations (/per/mnt/data/...) are reachable under the XDG names.
+  # This profile is only imported by m920q, so the paths are safe here.
+  # Out-of-store symlinks: HM must not copy the pool into the store.
+  # ~/Downloads and ~/Pictures are deliberately local: Downloads are transient
+  # and ~/Pictures/Screenshots is written by screenshot tooling (satty, grim).
+  home.file = let
+    mkDataLink = name: target: {
+      "${name}".source = config.lib.file.mkOutOfStoreSymlink target;
+    };
+  in
+    mkDataLink "Documents" "/per/mnt/data/Documents"
+    // mkDataLink "Music" "/per/mnt/data/Media/Music"
+    // mkDataLink "Videos" "/per/mnt/data/Media";
 }
