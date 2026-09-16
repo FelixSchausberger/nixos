@@ -50,6 +50,7 @@
       "wan-high-latency"
       "node-exporter-down"
       "postgres-down"
+      "filesystem-full"
     ]
     ++ (lib.optionals config.modules.system.homelab.nextcloud.enable ["nextcloud-down"])
     ++ (lib.optionals config.modules.system.homelab.immich.enable ["immich-down"])
