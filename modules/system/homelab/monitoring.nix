@@ -547,6 +547,9 @@ in {
                   (mkAlert "postgres-down" "high" "PostgresDown"
                     "PostgreSQL exporter is unreachable"
                     ''up{job="postgres"} == bool 0'')
+                  (mkAlert "filesystem-full" "urgent" "FilesystemFull"
+                    "A persistent filesystem is under 10% free. On ZFS all datasets of a pool share free space, so any runaway writer can zero all of them (2026-09 m920q incident)"
+                    ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.1'')
                 ];
             }
           ];

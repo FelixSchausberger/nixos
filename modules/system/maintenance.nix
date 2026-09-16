@@ -20,6 +20,17 @@
         default = "http://127.0.0.1:2586/homelab-alerts";
         description = "ntfy URL for health alert notifications";
       };
+      fallbackNtfyUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Secondary ntfy URL used only when the primary publish fails. The
+          primary channel shares this host's storage (ntfy state lives on a
+          rpool dataset), so when the pool fills the local channel dies with
+          it - exactly when disk alerts matter most. Set an external
+          ntfy server topic for that failure mode; empty disables fallback.
+        '';
+      };
     };
 
     # Deferred restarts of network daemons during a nightly window. Hosts set
@@ -118,13 +129,24 @@
 
             ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
               NTFY_URL="${config.modules.system.maintenance.monitoring.ntfyUrl}"
+              NTFY_FALLBACK="${config.modules.system.maintenance.monitoring.fallbackNtfyUrl}"
+              # -f fails on HTTP >= 400 (a broken ntfy still answering 5xx is
+              # a failed publish, not a success, as observed 2026-09-15 on
+              # m920q when its own sqlite died under a full pool).
               ntfy_send() {
-                ${pkgs.curl}/bin/curl -s -o /dev/null \
-                  -H "Title: $1" \
-                  -H "Priority: $2" \
-                  -H "Tags: $3" \
-                  -d "$4" \
-                  "$NTFY_URL" 2>/dev/null || true
+                local title="$1" prio="$2" tags="$3" body="$4"
+                if curl -sf -o /dev/null \
+                  -H "Title: $title" -H "Priority: $prio" -H "Tags: $tags" \
+                  -d "$body" "$NTFY_URL"; then
+                  return 0
+                fi
+                echo "ERROR: ntfy publish failed for '$title'" >&2
+                if [ -n "$NTFY_FALLBACK" ]; then
+                  curl -sf -o /dev/null \
+                    -H "Title: $title" -H "Priority: $prio" -H "Tags: $tags" \
+                    -d "primary channel down: $body" "$NTFY_FALLBACK" \
+                    || echo "ERROR: fallback ntfy publish failed for '$title'" >&2
+                fi
               }
             ''}
 
@@ -208,23 +230,35 @@
               fi
             done
 
-            # Check disk space
-            root_usage=$(df / | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
-            if [[ $root_usage -gt 90 ]]; then
-              echo "WARNING: Root filesystem is $root_usage% full"
-              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Disk Usage on $host" "high" "warning" "Root filesystem is $root_usage% full"
+            # Disk space: every persistent filesystem, not just / and /nix.
+            # m920q fills datasets /per and /home long before / or /nix, and
+            # on ZFS pool exhaustion zeroed avail shows up on all datasets
+            # at once (2026-09-15). >=95% is urgent every run; 90% warns.
+            filesystems="$(df -B1 -l --output=fstype,pcent,avail,target | grep -E '^(zfs|ext[234]|btrfs|xfs|f2fs|vfat)[[:space:]]+')"
+            while IFS= read -r line; do
+              read -r pcent avail mount < <(${pkgs.gawk}/bin/awk '{print $2,$3,$4}' <<< "$line")
+              # ZFS exposes old snapshots as mountable dfs (read-only views
+              # at <dataset>/.zfs/snapshot); they share the same pool and
+              # must not double-alert the live filesystem.
+              if [[ "$mount" == *".zfs/"* ]]; then continue; fi
+              if [[ $pcent -ge 90 ]]; then
+                avail_gib=$((avail / (1024 * 1024 * 1024)))
+                msg="$mount is $pcent% full ($avail_gib GiB free)"
+                if [[ $pcent -ge 95 ]]; then
+                  echo "ERROR: $msg"
+                  prio="urgent"; tags="warning,rotating_light"
+                else
+                  echo "WARNING: $msg"
+                  prio="high"; tags="warning"
+                fi
+                if [[ "$mount" == /nix ]]; then
+                  msg="$msg. Consider running: clean"
+                fi
+                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "High Disk Usage on $host" "$prio" "$tags" "$msg"
             ''}
-            fi
-
-            nix_usage=$(df /nix | tail -1 | ${pkgs.gawk}/bin/awk '{print $5}' | sed 's/%//')
-            if [[ $nix_usage -gt 85 ]]; then
-              echo "WARNING: Nix store is $nix_usage% full"
-              echo "Consider running: clean"
-              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Nix Store Usage on $host" "high" "warning" "Nix store is $nix_usage% full"
-            ''}
-            fi
+              fi
+            done <<< "$filesystems"
 
             # Check for old generations
             generation_count=$(${pkgs.nix}/bin/nix-env -p /nix/var/nix/profiles/system --list-generations | wc -l)
