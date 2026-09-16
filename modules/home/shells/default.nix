@@ -40,7 +40,6 @@ in {
     nixinfo = "nix-shell -p nix-info --run 'nix-info -m'";
     pls = "sudo";
     repair = "nix-store --verify --check-contents --repair";
-    rip = "rip --graveyard /per/home/${config.home.username}/.local/share/graveyard";
     rsync = "rsync -avhP --no-inc-recursive";
   };
 

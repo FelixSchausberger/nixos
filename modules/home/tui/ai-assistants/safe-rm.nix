@@ -106,6 +106,26 @@ in {
       readOnly = true;
       description = "Function wrapping an assistant package so its spawned shells use the rm shim";
     };
+
+    graveyard = {
+      maxAgeDays = lib.mkOption {
+        type = lib.types.int;
+        default = 30;
+        description = ''
+          Days a grave (restorable deletion) survives before the nightly
+          prune timer deletes it permanently.
+        '';
+      };
+      maxSizeGib = lib.mkOption {
+        type = lib.types.int;
+        default = 10;
+        description = ''
+          Logical size ceiling in GiB for the graveyard. Once exceeded, the
+          prune timer deletes the oldest graves regardless of age, so large
+          cross-dataset deletions (the 2026-09 rpool fill) can never repeat.
+        '';
+      };
+    };
   };
 
   config = {
@@ -116,5 +136,57 @@ in {
 
     home.packages = [pkgs.rip2];
     home.sessionVariables.RIP_GRAVEYARD = graveyard;
+
+    # Unbounded graveyard safety valve. rip 0.9.6 has no retention support
+    # (verified: only -d whole-graveyard decompose), and the 2026-09-15
+    # m920q disk-full incident was a 98G graveyard that grew silently on
+    # rpool. This timer deletes restorable entries older than maxAgeDays
+    # and, if the graveyard still exceeds maxSizeGib, the oldest entries
+    # regardless of age, keeping the record consistent.
+    systemd.user.services.graveyard-prune = let
+      cfgGraveyard = config.ai-assistants.safeRm.graveyard;
+    in {
+      Unit.Description = "Prune old and oversize rip graveyard entries";
+      Service = {
+        Type = "oneshot";
+        ExecStart = toString (pkgs.writeShellScript "graveyard-prune" ''
+          set -euo pipefail
+          graveyard="${graveyard}"
+          record="$graveyard/.record"
+          [ -f "$record" ] || exit 0
+          cutoff=$(date -u -d "${toString cfgGraveyard.maxAgeDays} days ago" +%s)
+          tmp="$(mktemp "$graveyard/.record.pruned.XXXXXX")"
+          trap 'rm -f "$tmp"' EXIT
+          printf 'Time\tOriginal\tDestination\n' > "$tmp"
+          # Oldest-first iteration makes the size cap a simple loop.
+          while IFS=$'\t' read -r stamp orig dest; do
+            case $stamp in Time) continue ;; esac
+            epoch=$(date -u -d "$stamp" +%s)
+            if [ "$epoch" -lt "$cutoff" ]; then
+              rm -rf -- "$dest"
+              continue
+            fi
+            printf '%s\t%s\t%s\n' "$stamp" "$orig" "$dest" >> "$tmp"
+          done < "$record"
+          while [ "$(du -sb "$graveyard" | cut -f1)" -gt "${toString (cfgGraveyard.maxSizeGib * 1073741824)}" ]; do
+            oldest=$(tail -n+2 "$tmp" | head -1 | cut -f3)
+            [ -n "$oldest" ] || break
+            rm -rf -- "$oldest"
+            sed -i '2d' "$tmp"
+          done
+          mv "$tmp" "$record"
+          trap - EXIT
+          # Entries emptied above leave empty directory shells behind.
+          find "$graveyard" -mindepth 1 -type d -empty -delete 2>/dev/null || true
+        '');
+      };
+    };
+    systemd.user.timers.graveyard-prune = {
+      Install.WantedBy = ["timers.target"];
+      Timer = {
+        OnCalendar = "*-*-* 03:45:00";
+        Persistent = true;
+      };
+    };
   };
 }
