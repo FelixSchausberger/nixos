@@ -68,6 +68,13 @@
       (_final: prev: {
         qemu = prev.qemu.override {ceph = null;};
       })
+      # sops-nix requests the removed buildGo125Module alias; `allowAliases =
+      # false` above strips out even the alias stub, so the ISO evaluation
+      # dies with a missing-argument error. Map it onto the current Go
+      # builder like the fleet overlay does.
+      (_final: prev: {
+        buildGo125Module = prev.buildGoModule;
+      })
     ];
 
     # Live ISO: no persistent filesystem.

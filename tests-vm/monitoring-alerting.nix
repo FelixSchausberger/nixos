@@ -73,6 +73,13 @@
           type = lib.types.bool;
           default = false;
         };
+        # monitoring.nix feeds determinate-nixd GC data through
+        # modules.system.maintenance, which the test node does not import (see
+        # the modules.system.maintenance stub below).
+      };
+      modules.system.maintenance.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
       };
     };
 
