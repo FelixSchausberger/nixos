@@ -256,6 +256,16 @@
     noctalia = {
       url = "github:noctalia-dev/noctalia/cachix";
     };
+    # Dank Material Shell (QML/quickshell shell + Go daemon). The stable
+    # branch carries the reviewed module output set; nixpkgs follows the
+    # fleet channel so the HM module evaluates against the same pkgs set.
+    # flake-compat and dank-qml-common come from the registry as transitive
+    # inputs of the DMS flake itself. First build compiles the Go daemon
+    # (~vendor-deps only; quickshell ships from the nixpkgs cache).
+    dms = {
+      url = "github:AvengeMedia/DankMaterialShell/stable";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # GUI Applications
     firefox-nightly = {

@@ -1,7 +1,7 @@
 # Shared lock-screen integration for Wayland sessions using cthulock.
 # Parameterized by session target so systemd ordering matches the active compositor.
 # Kept for the custom and wayle shells (wayle ships no lock screen).
-# Noctalia locks via its own lockscreen service.
+# Noctalia and dms lock via their own lockscreen services.
 _sessionTarget: {
   inputs,
   lib,
@@ -9,7 +9,7 @@ _sessionTarget: {
   pkgs,
   ...
 }: {
-  config = lib.mkIf ((config.wm.shell or "custom") != "noctalia") {
+  config = lib.mkIf (!(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"])) {
     # Add cthulock package to user environment
     home.packages = [inputs.cthulock.packages.${pkgs.stdenv.hostPlatform.system}.default];
 

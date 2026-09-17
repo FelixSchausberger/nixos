@@ -33,9 +33,11 @@
     }
   ];
   # Note: Niri doesn't have a walker module yet, so no niri-specific modules
-  # Walker serves the custom and wayle shells. Noctalia ships its own
-  # launcher, so walker stays disabled there to keep one launcher owner.
-  shellKeepsWalker = (config.wm.shell or "custom") != "noctalia";
+  # Walker serves the custom and wayle shells. Noctalia and dms ship
+  # their own launchers, so walker stays disabled there to keep one
+  # launcher owner.
+  shellKeepsWalker =
+    !(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"]);
 in {
   imports = [
     inputs.walker.homeManagerModules.default
