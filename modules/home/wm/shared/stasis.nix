@@ -20,9 +20,11 @@ sessionTarget: {
   # Only enable if at least one WM is enabled
   shouldEnable = niriEnabled || hyprlandEnabled || cosmicEnabled;
 
-  # Stasis serves the custom and wayle shells. Noctalia manages idle,
-  # lock, and suspend through its own [idle] service.
-  shellKeepsStasis = (config.wm.shell or "custom") != "noctalia";
+  # Stasis serves the custom and wayle shells. Noctalia and dms manage
+  # idle through their own services (DMS exposes an idle inhibitor via
+  # its bar instead of a toggle script).
+  shellKeepsStasis =
+    !(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"]);
 
   # RUNE configuration content
   runeConfig = let

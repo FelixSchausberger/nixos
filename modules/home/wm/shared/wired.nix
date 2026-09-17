@@ -1,8 +1,8 @@
 # Shared Wired notification daemon integration for Wayland sessions.
 # Binds service startup to the provided session target to avoid early-launch races.
-# Active only for the "custom" shell: wayle and noctalia own notifications
-# themselves, and two daemons on the notification bus means exactly one of
-# them silently eats every toast.
+# Active only for the "custom" shell: wayle, noctalia, and dms own
+# notifications themselves, and two daemons on the notification bus
+# means exactly one of them silently eats every toast.
 sessionTarget: {
   lib,
   config,
