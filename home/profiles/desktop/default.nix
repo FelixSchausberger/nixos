@@ -3,7 +3,15 @@
   pkgs,
   ...
 }: {
-  imports = [];
+  imports = [
+    # GUI/TUI app-state persistence (/per/home bind-mounts). m920q already
+    # imports this chain from its on-demand projector session profile
+    # (home/profiles/m920q/niri.nix); desktop evaluated home.persistence as {}
+    # because nothing imported it, leaving application data outside the /per
+    # layout. WSL never imports this profile, matching its host config that
+    # force-disables persistence entirely (ext4, no /per).
+    ../../persistence.nix
+  ];
 
   # OpenCode 2 beta spike (opencode2), isolated from the V1 config. Opt-in;
   # see modules/home/tui/ai-assistants/opencode/v2.nix.
