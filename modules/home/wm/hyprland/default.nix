@@ -58,6 +58,7 @@ in {
     # wm.shell selects which one activates; custom keeps the modules below.
     (import ../shared/wayle.nix "hyprland-session.target") # Rust/GTK4 shell: bar, notifications, OSD
     (import ../shared/noctalia.nix "hyprland-session.target") # Native C++ shell: full layer replacement
+    (import ../shared/dms.nix "hyprland-session.target") # quickshell/Go shell: full layer replacement
     ./keybinds.nix
     ./scratchpads.nix
     ./workspaces.nix
@@ -156,11 +157,12 @@ in {
 
         # Screenshot tools provided by shared/satty.nix
       ]
-      # Noctalia replaces the launcher (walker) and the OSD (avizo) with its
-      # own. Wayle has no launcher, so walker stays for custom and wayle.
-      ++ lib.optionals ((config.wm.shell or "custom") != "noctalia") [
+      # Full-layer shells (noctalia, dms) replace the launcher (walker)
+      # and the OSD (avizo) with their own. Wayle has no launcher, so
+      # walker stays for custom and wayle.
+      ++ lib.optionals (!(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"])) [
         inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
-        avizo # OSD for volume/brightness (noctalia renders its own OSD)
+        avizo # OSD for volume/brightness (noctalia and dms render their own OSD)
       ];
 
     # Directory MIME default follows the fileManager option. Without an

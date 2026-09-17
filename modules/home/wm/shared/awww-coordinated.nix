@@ -25,7 +25,9 @@ in {
     };
   };
 
-  config = lib.mkIf (cfg.enable && (config.wm.shell or "custom") != "noctalia") {
+  # awww serves the custom and wayle shells. Noctalia and dms render
+  # their own wallpaper and overview backdrop surfaces.
+  config = lib.mkIf (cfg.enable && !(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"])) {
     home.packages = [pkgs.awww];
 
     # awww daemon for workspace wallpapers (default namespace)

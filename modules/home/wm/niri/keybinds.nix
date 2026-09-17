@@ -7,9 +7,14 @@
   cfg = config.wm.niri;
 
   # Launcher key follows the active shell: walker for custom/wayle,
-  # noctalia's built-in launcher for noctalia.
-  shellIsNoctalia = (config.wm.shell or "custom") == "noctalia";
-  shellIsCustom = (config.wm.shell or "custom") == "custom";
+  # noctalia's / dms's built-in launcher for the full-layer shells.
+  shell = config.wm.shell or "custom";
+  shellIsNoctalia = shell == "noctalia";
+  shellIsDms = shell == "dms";
+  shellIsCustom = shell == "custom";
+  # Full-layer shells own their idle management; the stasis toggle
+  # belongs to custom/wayle.
+  fullShell = builtins.elem shell ["noctalia" "dms"];
   # Package mappings for applications
 
   terminalPkg =
@@ -50,9 +55,13 @@ in {
         # Open terminal with herdr for AI agent sessions
         "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.herdr}/bin/herdr"];
 
+        # Launcher follows the shell: walker for custom/wayle, noctalia's
+        # `noctalia msg` IPC or dms's `dms ipc` spotlight for the others.
         "Mod+D".action.spawn =
           if shellIsNoctalia
           then ["sh" "-c" "noctalia msg panel-toggle launcher"]
+          else if shellIsDms
+          then ["sh" "-c" "dms ipc call spotlight toggle"]
           else "walker";
 
         # ===== WINDOW MANAGEMENT =====
@@ -208,7 +217,7 @@ in {
       # stasis-toggle only exists when stasis runs (custom/wayle shells).
       # optionalAttrs at merge level: lib.mkIf must not nest inside binds
       # values because niri-flake renders them as literal KDL.
-      (lib.optionalAttrs (!shellIsNoctalia) {
+      (lib.optionalAttrs (!fullShell) {
         "Mod+Z".action.spawn = ["stasis-toggle"];
       })
 
