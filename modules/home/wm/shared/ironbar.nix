@@ -7,9 +7,9 @@
 }: let
   niri = config.wm.niri.enable or false;
   hyprland = config.wm.hyprland.enable or false;
-  # Ironbar is the bar of the hand-assembled "custom" shell. Wayle and
-  # noctalia bring their own bars; keeping ironbar active alongside them
-  # would duplicate layer-shell surfaces and tray ownership.
+  # Ironbar is the bar of the hand-assembled "custom" shell. Wayle,
+  # noctalia, and dms bring their own bars; keeping ironbar active
+  # alongside them would duplicate layer-shell surfaces and tray ownership.
   customShell = (config.wm.shell or "custom") == "custom";
   enabled = (niri || hyprland) && customShell;
   c = config.lib.stylix.colors;
