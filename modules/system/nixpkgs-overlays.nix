@@ -93,6 +93,15 @@ _: {
       # elephant is fixed at flake-level via a nested input follow instead
       # (its package set bypasses this overlay entirely).
       buildGo125Module = prev.buildGoModule;
+
+      # udiskie 2.7.0's pytest cache test (`test_cache.py`
+      # `TestPasswordCache::test_is_valid`) throws
+      # "ValueError: bytes length not a multiple of item size" on this
+      # channel and blocks every desktop build in CI. Disable checks until
+      # upstream fixes it - the binary itself works.
+      udiskie = prev.udiskie.overridePythonAttrs (_: {
+        doCheck = false;
+      });
     })
   ];
 }
