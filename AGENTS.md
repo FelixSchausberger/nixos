@@ -39,6 +39,10 @@ Documentation, comments, and committed artifacts contain no emojis.
 
 The global rules cover `jjwork` and workspace isolation. Repository specifics:
 
+- Close-out check: before wrapping up a session, re-run any task list the
+  session started with and verify every item was addressed - committed,
+  pushed, or explicitly deferred with a note. Sessions have repeatedly left
+  half-staged work reported as done; this check is the remedy.
 - `jjpush` only pushes changes descended from `main`. If it refuses, run
   `jjwork` first.
 - One long-lived branch: `main`. Every other branch is ephemeral and
