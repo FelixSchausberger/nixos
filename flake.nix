@@ -231,6 +231,18 @@
     walker = {
       url = "github:abenz1267/walker";
       inputs.nixpkgs.follows = "nixpkgs";
+      # elephant (walker dependency) hardcodes buildGo125Module, which the
+      # nixos-unstable channel removed after Go 1.25 EOL, and elephant's
+      # package set does not see host overlays. Pin its nixpkgs to the
+      # previous channel snapshot so it keeps the Go 1.25 builder.
+      inputs.elephant.inputs.nixpkgs.follows = "nixpkgs-elephant";
+    };
+    # Channel snapshot with the Go 1.25 builder still present; every consumer
+    # that cannot migrate off buildGo125Module (elephant, sops-nix at
+    # lock level) evaluates from here. Bump deliberately when upstream
+    # switches to a current builder.
+    nixpkgs-elephant = {
+      url = "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst";
     };
     wired = {
       url = "github:Toqozz/wired-notify";
