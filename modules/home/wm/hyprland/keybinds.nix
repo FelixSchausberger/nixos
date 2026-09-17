@@ -9,14 +9,21 @@
   safeNotifySend = import ../../../../home/lib/safe-notify-send.nix {inherit pkgs config lib;};
   safeNotifyBin = "${safeNotifySend}/bin/safe-notify-send";
 
-  # Launcher follows the active shell: walker for custom/wayle, noctalia's
-  # built-in launcher for noctalia. Wired test/restart binds only make
-  # sense while wired runs (custom shell).
-  shellIsNoctalia = (config.wm.shell or "custom") == "noctalia";
+  # Launcher follows the active shell: walker for custom/wayle, the
+  # full-layer shells' IPC launchers for noctalia/dms. Wired
+  # test/restart binds only make sense while wired runs (custom shell).
+  shell = config.wm.shell or "custom";
+  shellIsNoctalia = shell == "noctalia";
+  shellIsDms = shell == "dms";
+  # Full-layer shells own OSD and media/launcher calls; avizo and
+  # walker belong to custom/wayle.
+  fullShell = builtins.elem shell ["noctalia" "dms"];
   walkerBin = "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker";
   launcherExec =
     if shellIsNoctalia
     then "noctalia msg panel-toggle launcher"
+    else if shellIsDms
+    then "dms ipc call spotlight toggle"
     else walkerBin;
 
   # Directional key mappings for programmatic keybind generation
@@ -71,7 +78,7 @@ in {
           "$mod, e, exec, $fileManager"
           "$mod, c, exec, ${pkgs.helix}/bin/hx"
 
-          # Application launcher (walker, or noctalia IPC on the noctalia shell)
+          # Application launcher (walker, or shell IPC on full-layer shells)
           "$mod, D, exec, ${launcherExec}"
           # "$mod, R, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules runner"
           # "$mod SHIFT, D, exec, ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules hyprland"
@@ -260,7 +267,7 @@ in {
           ", XF86Suspend, exec, ${pkgs.systemd}/bin/systemctl suspend"
         ]
         # Walker clipboard/emoji pickers and search key (custom/wayle shells)
-        ++ lib.optionals (!shellIsNoctalia) [
+        ++ lib.optionals (!fullShell) [
           "$mod, V, exec, ${walkerBin} --modules clipboard"
           "$mod, period, exec, ${walkerBin} --modules emoji" # Emoji picker
           ", XF86Search, exec, ${walkerBin}"
@@ -279,12 +286,25 @@ in {
           ", XF86AudioMute, exec, noctalia msg volume-mute"
           ", XF86MonBrightnessUp, exec, noctalia msg brightness-up"
           ", XF86MonBrightnessDown, exec, noctalia msg brightness-down"
+        ]
+        # DMS IPC binds (dms shell). Appended last so the DMS entries
+        # override the avizo/walker entries above for the same keys.
+        ++ lib.optionals shellIsDms [
+          ", XF86Search, exec, dms ipc call spotlight toggle"
+          "$mod, S, exec, dms ipc call control-center toggle"
+          "$mod, comma, exec, dms ipc call settings focusOrToggle"
+          ", XF86AudioRaiseVolume, exec, dms ipc call audio increment 3"
+          ", XF86AudioLowerVolume, exec, dms ipc call audio decrement 3"
+          ", XF86AudioMute, exec, dms ipc call audio mute"
+          ", XF86MonBrightnessUp, exec, dms ipc call brightness increment 5"
+          ", XF86MonBrightnessDown, exec, dms ipc call brightness decrement 5"
         ];
 
       # Global keybinds (work even when apps have focus)
-      # avizo volume keys belong to the custom/wayle shells; noctalia
-      # handles media keys via its own IPC binds appended above.
-      bindel = lib.optionals (!shellIsNoctalia) [
+      # avizo volume keys belong to the custom/wayle shells; the
+      # full-layer shells handle media keys via their own IPC binds
+      # appended to bindl above.
+      bindel = lib.optionals (!fullShell) [
         # Global media controls
         ", XF86AudioRaiseVolume, exec, ${pkgs.avizo}/bin/volumectl -u up"
         ", XF86AudioLowerVolume, exec, ${pkgs.avizo}/bin/volumectl -u down"
