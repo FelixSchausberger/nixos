@@ -28,6 +28,12 @@ in {
       };
     };
 
+    users.users.ntfy-sh = {
+      isSystemUser = true;
+      group = "ntfy-sh";
+    };
+    users.groups.ntfy-sh = {};
+
     systemd.services.ntfy-sh = {
       # Override default service settings that conflict with impermanence
       # DynamicUser + StateDirectory tries to migrate /var/lib/ntfy-sh to
