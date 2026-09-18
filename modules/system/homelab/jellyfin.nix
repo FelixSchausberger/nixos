@@ -54,7 +54,10 @@ in {
     };
 
     # The render node is root-owned; the service user needs it for Quick Sync.
-    users.users.jellyfin.extraGroups = ["render" "video"];
+    # group schausberger is the fallback for library files that are only
+    # group-readable (the historical import mode); the media-root ACL below
+    # grants read directly. See navidrome.nix for the full permission model.
+    users.users.jellyfin.extraGroups = ["render" "video" "schausberger"];
 
     systemd.services.jellyfin.serviceConfig = {
       MemoryMax = "3G";
@@ -79,6 +82,10 @@ in {
       "d /per/var/lib/jellyfin 0700 jellyfin jellyfin -"
       "d /per/var/lib/jellyfin/config 0700 jellyfin jellyfin -"
       "d /per/var/lib/jellyfin/log 0700 jellyfin jellyfin -"
+      # Library read access. No libraries are configured yet; this is applied
+      # now so the first library added does not hit the "permission denied"
+      # failure the service user otherwise gets on restrictively-imported media.
+      "a+ /per/mnt/data/Media - - - - u:jellyfin:rX,d:u:jellyfin:rX"
     ];
   };
 }
