@@ -102,5 +102,14 @@ in {
       "kernel.hung_task_panic" = 1;
       "kernel.hung_task_timeout_secs" = cfg.hungTaskTimeoutSecs;
     };
+
+    # powertop --auto-tune disables the NMI watchdog as one of its tunables (to
+    # free a hw-PMU counter) and runs after systemd-sysctl, so the sysctl above
+    # silently ends up at 0 and hard lockups go undetected. Re-assert it inside
+    # the powertop unit so hard-lockup coverage survives powertop activations.
+    systemd.services.powertop.serviceConfig.ExecStartPost =
+      lib.mkIf
+      config.powerManagement.powertop.enable
+      "/bin/sh -c 'echo 1 > /proc/sys/kernel/nmi_watchdog'";
   };
 }

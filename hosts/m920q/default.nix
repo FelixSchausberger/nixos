@@ -417,6 +417,13 @@ in {
 
   hardware.steam-hardware.enable = true;
 
+  # udev autoloads the BIOS OC watchdog (P2SB sideband) alongside the
+  # initrd-forced iTCO_wdt, and whichever registers first wins /dev/watchdog0 —
+  # systemd was petting intel_oc_wdt while iTCO_wdt sat unpets on watchdog1.
+  # Blacklist it so the standard PCH TCO timer deterministically owns
+  # /dev/watchdog0. Needs a reboot to take effect.
+  boot.blacklistedKernelModules = ["intel_oc_wdt"];
+
   modules.system = {
     # Unattended hang recovery. The hardware watchdog resets a wedged kernel;
     # detectable lockups become panics that reboot (panic=30); and if systemd
