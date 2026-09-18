@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  config,
   ...
 }: {
   # Legacy: Keep ai-assistants.mcpServers.definitions for Claude Code compatibility
@@ -55,8 +56,18 @@
       servers = {
         github = {
           command = "${pkgs.github-mcp-server}/bin/github-mcp-server";
-          args = [];
-          env.GITHUB_TOKEN = "{env:GITHUB_TOKEN}";
+          # stdio is mandatory from v0.22 on: a bare invocation prints the
+          # usage text and exits, which opencode reports as "Connection
+          # closed" for the whole server.
+          args = ["stdio"];
+          # File reference: opencode substitutes {file:...} at config load
+          # (variable substitution in packages/core/src/config/variable.ts), so
+          # the token reaches the server regardless of the spawning shell's
+          # environment - the systemd web service and SSH-spawned opencode2
+          # included, which never inherit the fish login-shell export.
+          # GITHUB_PERSONAL_ACCESS_TOKEN: upstream renamed GITHUB_TOKEN away
+          # in v1.x and only reads the new name for stdio auth.
+          env.GITHUB_PERSONAL_ACCESS_TOKEN.file = config.sops.secrets."github/token".path;
         };
 
         nix-language-server = {
@@ -88,10 +99,14 @@
       github = {
         package = pkgs.github-mcp-server;
         command = "github-mcp-server";
-        args = [];
+        # stdio is mandatory from v0.22 on; see programs.mcp.servers.github.
+        args = ["stdio"];
         enabled = true;
         description = "GitHub repository operations and API access";
-        env.GITHUB_TOKEN = "{env:GITHUB_TOKEN}";
+        # Upstream renamed GITHUB_TOKEN away in v1.x; stdio only reads the
+        # new name. Claude Code expands ${VAR} in mcp.json env values and
+        # always runs from a fish login shell, where GITHUB_TOKEN is set.
+        env.GITHUB_PERSONAL_ACCESS_TOKEN = "${"$"}{GITHUB_TOKEN}";
       };
 
       nix-language-server = {

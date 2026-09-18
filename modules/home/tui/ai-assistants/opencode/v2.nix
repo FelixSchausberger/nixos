@@ -19,12 +19,21 @@
   v2ConfigDir = "opencode-v2/opencode";
 
   # Reuse the single programs.mcp.servers source, reshaped into V2's
-  # mcp.servers form (command array + environment).
+  # mcp.servers form (command array + environment). File-backed env values
+  # become the {file:path} token V2 substitutes at config load, mirroring the
+  # V1 integration's renderEnv behavior.
+  v2McpEnv = lib.mapAttrs (
+    _: value:
+      if lib.isAttrs value && value ? file
+      then "{file:${value.file}}"
+      else value
+  );
+
   v2McpServers =
     lib.mapAttrs (_name: server: {
       type = "local";
       command = [server.command] ++ (server.args or []);
-      environment = server.env or {};
+      environment = v2McpEnv (server.env or {});
     })
     config.programs.mcp.servers;
 
