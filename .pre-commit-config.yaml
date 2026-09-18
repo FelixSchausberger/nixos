@@ -8,11 +8,17 @@ exclude: |
   )$
 repos:
   # File format validation and formatting
-  - repo: https://github.com/google/yamlfmt
-    rev: v0.13.0
+  # yamlfmt comes from the devshell (flake-parts/dev.nix) instead of prek's
+  # golang hook: that hook builds against a store glibc which the next
+  # garbage collection removes, leaving the binary dead with "No such file
+  # or directory" on every run until the toolchain cache is rebuilt.
+  - repo: local
     hooks:
       - id: yamlfmt
+        name: yamlfmt
         entry: yamlfmt
+        language: system
+        types: [yaml]
   # Re-enable once prek updates to use native-tls or updated webpki-roots
   # - repo: https://github.com/pre-commit/pre-commit-hooks
   #   rev: v5.0.0
