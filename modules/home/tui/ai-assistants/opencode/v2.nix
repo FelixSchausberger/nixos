@@ -9,10 +9,11 @@
   system = pkgs.stdenv.hostPlatform.system;
 
   # Render the V2 config from the same source as V1, so the two harnesses cannot
-  # drift (see shared.nix). The isolated config directory exists because V2
-  # loads the V1 `plugin` list by union, and the V1-only plugins (the vendored
-  # indicator especially) have no V2 entrypoint: their load failure aborts
-  # plugin generation and blocks agent registration, leaving `build` missing.
+  # drift (see shared.nix). The isolated config directory + the shim's
+  # OPENCODE_CONFIG_DIR exist because V2 otherwise loads the V1 `plugin` list
+  # by union, and the V1-only plugins (the vendored indicator especially) have
+  # no V2 entrypoint: their load failure aborts plugin generation and blocks
+  # agent registration, leaving `build` missing.
   shared = import ./shared.nix {inherit config lib pkgs;};
 
   v2ConfigDir = "opencode-v2/opencode";
@@ -49,10 +50,21 @@
 
   # The V2 terminal client owns a global cli.json. The patched indicator fork is
   # referenced by absolute path and deliberately sits outside the
-  # auto-discovered plugins/ directory so the server role never loads it.
+  # auto-discovered plugins/ directory so the server role never loads it. The
+  # theme/session/diff settings mirror the stray V2 cli.json that an
+  # unisolated opencode2 run wrote into the V1 config directory; V1 itself
+  # never reads cli.json, so they exist only for the V2 TUI.
   indicatorV2Dir = "${config.xdg.configHome}/${v2ConfigDir}/indicator-v2";
   cliConfig = {
+    theme.name = "stylix";
     plugins = [indicatorV2Dir];
+    diffs.wrap = "word";
+    session = {
+      sidebar = "auto";
+      scrollbar = false;
+      thinking = "show";
+    };
+    animations = true;
   };
 
   # The upstream V2 flake installs both bin/opencode and bin/opencode2 plus a
@@ -62,8 +74,17 @@
   # entry point through a thin exec shim; the C launcher resolves its
   # `.opencode-wrapped` payload from its own store directory, so exec by
   # absolute path is required.
+  #
+  # OPENCODE_CONFIG_DIR is the only config-root override upstream V2 honors
+  # (packages/util/src/global.ts falls back to $XDG_CONFIG_HOME/opencode).
+  # Without it opencode2 reads the V1 ~/.config/opencode, whose `plugin` list
+  # is V1-only: those plugins ship no ./server entrypoint, their load failure
+  # aborts plugin generation and blocks agent registration, leaving the TUI
+  # without modes or a working model picker. XDG_CONFIG_HOME is deliberately
+  # not used: it would leak into every child process (bash tool calls, LSPs)
+  # spawned from opencode2 sessions.
   opencode2 = pkgs.writeShellScriptBin "opencode2" ''
-    exec ${inputs.opencode-v2.packages.${system}.opencode}/bin/opencode2 "$@"
+    exec env OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${inputs.opencode-v2.packages.${system}.opencode}/bin/opencode2 "$@"
   '';
 in {
   options.ai-assistants.opencodeV2 = {
