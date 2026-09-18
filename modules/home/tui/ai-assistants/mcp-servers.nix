@@ -69,15 +69,15 @@ in {
       enable = true;
 
       # Define MCP servers globally
+      # NOTE: no github server here on purpose. opencode V1.18.30 throws
+      # "TypeError: undefined is not an object (evaluating 'a.name')"
+      # in SystemPrompt.environment while mapping github-mcp-server 1.12.1's
+      # tool list (any V1 session dies before the model call). The regression
+      # was hidden while the server failed to start (missing stdio arg) and
+      # surfaced once #245 made it start correctly. V2 and Claude keep the
+      # server: V2 via the github entry added in v2.nix, Claude via the
+      # legacy definition below.
       servers = {
-        github = {
-          command = "${github-mcp-server-wrapped}/bin/github-mcp-server";
-          # stdio is mandatory from v0.22 on: a bare invocation prints the
-          # usage text and exits, which opencode reports as "Connection
-          # closed" for the whole server.
-          args = ["stdio"];
-        };
-
         nix-language-server = {
           command = "${pkgs.mcp-language-server}/bin/mcp-language-server";
           args = [
