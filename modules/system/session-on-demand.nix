@@ -45,9 +45,21 @@ in {
     # bind to. Running niri-session as a systemd user service takes its
     # direct-execution path and never activates that target chain. Scoped to
     # hosts that enable this module.
-    systemd.user.services.niri.serviceConfig = {
-      Restart = "on-failure";
-      RestartSec = 2;
+    #
+    # The complete compositor unit ships in the niri package
+    # (lib/systemd/user/niri.service) and hosts without a graphical HM
+    # session have no other source for it, so wire the package here. The
+    # restart policy must layer on as a drop-in: with asPath rendering the
+    # option-derived settings become a standalone unit file without
+    # ExecStart that shadows the package unit, and systemd then refuses
+    # every start attempt with "bad unit file setting".
+    systemd.packages = [config.programs.niri.package];
+    systemd.user.services.niri = {
+      overrideStrategy = "asDropin";
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = 2;
+      };
     };
 
     systemd.services.display-hotplug = {
@@ -75,6 +87,10 @@ in {
       after = ["systemd-user-sessions.service"];
       serviceConfig = {
         Type = "oneshot";
+        # Once-per-boot semantics: without RemainAfterExit the finished
+        # oneshot stays inactive, and switch-to-configuration re-runs every
+        # wanted unit that is inactive on each activation.
+        RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "session-on-demand-boot" (hotplug.startScript {
           inherit user;
           startUnit = "niri.service";

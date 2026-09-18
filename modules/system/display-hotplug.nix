@@ -27,13 +27,18 @@
   '';
 
   # A connector already present at boot may not emit a HOTPLUG change event,
-  # so start once at boot when a display is connected.
+  # so start once at boot when a display is connected. Best effort by design:
+  # the boot unit is a wanted oneshot that switch-to-configuration re-runs, so
+  # a failed start must not fail the unit — a failed unit aborts every
+  # subsequent activation with exit 4.
   startScript = {
     user,
     startUnit,
   }: ''
     if ${displayConnected}; then
-      ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start ${startUnit}
+      if ! ${pkgs.systemd}/bin/systemctl --user -M ${user}@ start ${startUnit}; then
+        echo "session-on-demand: failed to start ${startUnit}, retrying on next hotplug" >&2
+      fi
     fi
   '';
 }
