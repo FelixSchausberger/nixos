@@ -144,6 +144,23 @@
           ]
       ))
 
+      # Dolphin emulator analytics opt-out: the "send information to
+      # developers" consent dialog re-appears on every launch whenever it is
+      # dismissed without choosing, so write the decision keys idempotently.
+      # Dolphin.ini stays the emulator's own file (its GUI rewrites it), so
+      # only these two keys are touched and no symlink fights the app.
+      (lib.mkIf (config.features.gaming.enable
+        && lib.elem "emulation" config.features.gaming.platforms) {
+        home.activation.dolphinAnalyticsOptOut = lib.hm.dag.entryAfter ["writeBoundary"] ''
+          ini="$HOME/.config/dolphin-emu/Dolphin.ini"
+          if [ -f "$ini" ]; then
+            analytics="$(sed -n '/^\[Analytics\]/,/^\[/p' "$ini" | grep -v '^\[')"
+            grep -q '^Enabled' <<<"$analytics" || sed -i '/^\[Analytics\]/a Enabled = False' "$ini"
+            grep -q '^PermissionAsked' <<<"$analytics" || sed -i '/^\[Analytics\]/a PermissionAsked = True' "$ini"
+          fi
+        '';
+      })
+
       # Media packages
       (lib.mkIf config.features.media.enable (
         with pkgs;
