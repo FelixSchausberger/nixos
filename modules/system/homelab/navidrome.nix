@@ -51,8 +51,24 @@ in {
       };
     };
 
-    # Navidrome runs as its own system user; must be able to read the music library
-    users.users.navidrome.extraGroups = ["users"];
+    # Navidrome reads the library as its own system user, which is neither the
+    # file owner nor (historically) in the owner's group, so a track imported
+    # with restrictive modes (0740 schausberger:schausberger) fails every play
+    # with "permission denied". Two layers keep the library readable:
+    #   - group schausberger covers files that arrive group-readable (the
+    #     historical import mode) and moved-in files, which keep their own
+    #     modes and do not inherit the ACL below;
+    #   - the tmpfiles ACL grants navidrome read on the library root and, via
+    #     the default ACL, on everything created under it (same pattern as the
+    #     samba module). Import new music with group/other-readable modes (plain
+    #     `cp`, or chmod -R g+rX after rsync -a); if the library is recreated,
+    #     `setfacl -R -m u:navidrome:rX,d:u:navidrome:rX <library>` restores
+    #     access without a rebuild.
+    users.users.navidrome.extraGroups = ["users" "schausberger"];
+
+    systemd.tmpfiles.rules = [
+      "a+ ${cfg.musicFolder} - - - - u:navidrome:rX,d:u:navidrome:rX"
+    ];
 
     environment.persistence."/per".directories = [
       "/var/lib/navidrome"
