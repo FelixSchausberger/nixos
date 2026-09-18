@@ -224,8 +224,9 @@ and deploys `nixosConfigurations.<hostname>`.
 
 - `update` runs `tools/scripts/update-system.sh`: it dispatches the workflow,
   blocks until the PR auto-merges (handles "nothing new" gracefully), syncs
-  the working copy onto main via `jjwork`, and restarts comin for immediate
-  convergence. Timeout is `UPDATE_TIMEOUT_SECS` (default 1200); a timeout is
+  the working copy onto main via `jjwork`, and triggers a comin fetch for
+  immediate convergence (a restart remains as fallback if the daemon is
+  wedged). Timeout is `UPDATE_TIMEOUT_SECS` (default 1200); a timeout is
   non-fatal because automation converges later.
 - `deploy` builds the committed config locally and switches after the guard.
 - `jjtest [rev]` moves the per-host `testing-<hostname>` bookmark to `rev`
