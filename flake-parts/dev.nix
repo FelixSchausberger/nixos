@@ -64,7 +64,6 @@
           fish
           flake-checker # Flake input health monitoring
           git
-          go # Required by yamlfmt pre-commit hook
           inotify-tools # File system watching for niri-watch
           jq # JSON processing for profiling and build scripts
           just # Task runner for development workflows
@@ -77,6 +76,7 @@
           statix
           taplo
           treefmt
+          yamlfmt # YAML formatting for the pre-commit hook
           inputs.namaka.packages.${pkgs.stdenv.hostPlatform.system}.default # Snapshot testing
         ]
         ++ [prekJj];
