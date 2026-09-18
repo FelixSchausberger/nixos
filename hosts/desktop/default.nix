@@ -24,6 +24,7 @@ in {
       ../../modules/system/moonshine.nix
       ../../modules/system/ssh.nix
       ../../modules/system/nixpkgs-overlays.nix
+      ../../modules/system/boot-fallback.nix
       ../../modules/vitals.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
@@ -195,6 +196,12 @@ in {
     enable = true;
     alertNtfyUrl = "http://m920q:2586/homelab-alerts";
   };
+
+  # Same bless-driven cleanup as m920q (systemd-boot boot counting + reactivation
+  # tolerance): activations restart the runner on this long-lived boot, and the
+  # running generation's entry is not on the ESP, so the stock unit aborted the
+  # whole activation before module import (#237 wrapper requires the module).
+  modules.system.bootFallback.enable = true;
 
   modules.system.homelab.backup = {
     enable = true;
