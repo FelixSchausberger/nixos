@@ -129,6 +129,16 @@
     };
   };
 
+  # Switch titles launched via eden-cli (the Qt-stripped frontend; the full
+  # eden window is only needed for one-time setup: keys, firmware, settings).
+  # Keys and user dumps live outside this repo; no libretro-thumbnails boxart
+  # is wired up yet, so tiles fall back to title-based icon resolution.
+  switchGames = {
+    "Mario Kart 8 Deluxe" = "Switch/mario-kart-8-deluxe.nsp";
+    "Zelda Breath of the Wild" = "Switch/zelda-breath-of-the-wild.nsp";
+    "Zelda Tears of the Kingdom" = "Switch/zelda-tears-of-the-kingdom.nsp";
+  };
+
   # Wine games launched through Lutris rungame URIs. The slugs must match the
   # seeded Lutris entries in home/profiles/desktop/lutris-games/. Cyberpunk
   # 2077 is deliberately absent: it streams via the Steam application scanner
@@ -163,6 +173,7 @@ in {
       dolphin-emu
       rmg
       snes9x
+      eden # Switch (GUI for one-time key/firmware/setup; tiles use eden-cli)
 
       # Game frontends/clients
       lutris
@@ -220,6 +231,18 @@ in {
             ];
           })
         snesGames)
+      ++ (lib.mapAttrsToList
+        (title: rom:
+          appTile {
+            inherit title;
+            args = [
+              "${pkgs.eden}/bin/eden-cli"
+              "-g"
+              "${romDir}/${rom}"
+              "-f"
+            ];
+          })
+        switchGames)
       ++ (lib.mapAttrsToList
         (title: slug:
           appTile {
