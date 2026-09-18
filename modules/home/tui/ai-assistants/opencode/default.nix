@@ -41,9 +41,16 @@ in {
         # config dir makes V1 refuse to start ("V2 permissions are not
         # supported by OpenCode V1"). The V2 wrapper scopes that variable to
         # its own process tree; V1 always reads its own config dir.
+        #
+        # --unset GITHUB_TOKEN: a shell-exported GitHub PAT would shadow the
+        # device-flow credential in auth.json, and the Copilot API rejects
+        # PATs outright ("Personal Access Tokens are not supported for this
+        # endpoint"). The MCP github server reads its token from the sops
+        # file itself and needs nothing from the environment.
         wrapProgram $out/bin/opencode \
           --set OPENCODE_DB "opencode-stable.db" \
           --unset OPENCODE_CONFIG_DIR \
+          --unset GITHUB_TOKEN \
           --set NODE_EXTRA_CA_CERTS "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
           --set NODE_TLS_REJECT_UNAUTHORIZED "0"
       '';

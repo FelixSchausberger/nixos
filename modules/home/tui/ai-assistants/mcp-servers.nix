@@ -3,7 +3,23 @@
   lib,
   config,
   ...
-}: {
+}: let
+  # github-mcp-server reads the token at runtime from the sops-rendered
+  # file. Passing it through MCP config env is not portable: opencode V1's
+  # variable resolver throws on the {file:...} reference while building the
+  # system prompt (killing every CLI run), and a plain env var ties the
+  # server to the spawning shell. The wrapper serves every harness
+  # (opencode V1/V2, Claude Code, the systemd web service) identically.
+  github-mcp-server-wrapped = pkgs.writeShellApplication {
+    name = "github-mcp-server";
+    runtimeInputs = [pkgs.coreutils];
+    text = ''
+      GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.sops.secrets."github/token".path})"
+      export GITHUB_PERSONAL_ACCESS_TOKEN
+      exec ${pkgs.github-mcp-server}/bin/github-mcp-server "$@"
+    '';
+  };
+in {
   # Legacy: Keep ai-assistants.mcpServers.definitions for Claude Code compatibility
   # Claude Code doesn't integrate with programs.mcp, so it needs its own format
   options.ai-assistants.mcpServers = {
@@ -55,19 +71,11 @@
       # Define MCP servers globally
       servers = {
         github = {
-          command = "${pkgs.github-mcp-server}/bin/github-mcp-server";
+          command = "${github-mcp-server-wrapped}/bin/github-mcp-server";
           # stdio is mandatory from v0.22 on: a bare invocation prints the
           # usage text and exits, which opencode reports as "Connection
           # closed" for the whole server.
           args = ["stdio"];
-          # File reference: opencode substitutes {file:...} at config load
-          # (variable substitution in packages/core/src/config/variable.ts), so
-          # the token reaches the server regardless of the spawning shell's
-          # environment - the systemd web service and SSH-spawned opencode2
-          # included, which never inherit the fish login-shell export.
-          # GITHUB_PERSONAL_ACCESS_TOKEN: upstream renamed GITHUB_TOKEN away
-          # in v1.x and only reads the new name for stdio auth.
-          env.GITHUB_PERSONAL_ACCESS_TOKEN.file = config.sops.secrets."github/token".path;
         };
 
         nix-language-server = {
@@ -89,7 +97,7 @@
 
     # Provide MCP packages globally for all AI assistants
     home.packages = [
-      pkgs.github-mcp-server
+      github-mcp-server-wrapped
       pkgs.mcp-nixos
       pkgs.mcp-language-server
     ];
@@ -97,16 +105,12 @@
     # Legacy definitions for Claude Code (which doesn't use programs.mcp)
     ai-assistants.mcpServers.definitions = {
       github = {
-        package = pkgs.github-mcp-server;
+        package = github-mcp-server-wrapped;
         command = "github-mcp-server";
         # stdio is mandatory from v0.22 on; see programs.mcp.servers.github.
         args = ["stdio"];
         enabled = true;
         description = "GitHub repository operations and API access";
-        # Upstream renamed GITHUB_TOKEN away in v1.x; stdio only reads the
-        # new name. Claude Code expands ${VAR} in mcp.json env values and
-        # always runs from a fish login shell, where GITHUB_TOKEN is set.
-        env.GITHUB_PERSONAL_ACCESS_TOKEN = "${"$"}{GITHUB_TOKEN}";
       };
 
       nix-language-server = {
