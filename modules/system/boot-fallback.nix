@@ -34,6 +34,27 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    # Blessing is a once-per-boot operation (run from boot-complete.target).
+    # On a long-lived boot the running generation may have aged out of the
+    # profile, so switch-to-configuration reactivations of this unit re-run
+    # bless against an ESP that no longer holds its entry or boot counter
+    # file; bless then exits with an error that drags the whole activation
+    # down. The wrapper keeps genuine boot-complete blessings and continues
+    # logging missing-entry states as warnings instead of failures (the
+    # running generation is good by construction even if its entry was GC'd).
+    systemd.services."systemd-bless-boot" = {
+      restartIfChanged = false;
+      serviceConfig.ExecStart = let
+        bless-good = pkgs.writeShellScript "bless-boot-good" ''
+          out=$(${pkgs.systemd}/lib/systemd/systemd-bless-boot good 2>&1) ||
+            echo "$out: entry on the ESP is gone; nothing to bless (harmless on long-lived boots)" >&2
+        '';
+      in [
+        ""
+        bless-good
+      ];
+    };
+
     systemd.services.boot-fallback-cleanup = {
       description = "Delete generations whose boot entries exhausted boot-count tries";
       wantedBy = ["multi-user.target"];
