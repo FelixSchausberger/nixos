@@ -36,8 +36,14 @@ in {
         # wrapper's only-if-absent workaround; setting OPENCODE_DB here keeps v1
         # on the file holding all sessions regardless of what else writes into
         # the shared ~/.local/share/opencode directory.
+        #
+        # --unset OPENCODE_CONFIG_DIR: a leaked export pointing at the V2
+        # config dir makes V1 refuse to start ("V2 permissions are not
+        # supported by OpenCode V1"). The V2 wrapper scopes that variable to
+        # its own process tree; V1 always reads its own config dir.
         wrapProgram $out/bin/opencode \
           --set OPENCODE_DB "opencode-stable.db" \
+          --unset OPENCODE_CONFIG_DIR \
           --set NODE_EXTRA_CA_CERTS "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
           --set NODE_TLS_REJECT_UNAUTHORIZED "0"
       '';
