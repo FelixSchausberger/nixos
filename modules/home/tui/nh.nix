@@ -46,7 +46,7 @@ _: {
     deploy-verbose = "jj --repository $NH_FLAKE status; and $NH_FLAKE/tools/scripts/check-freshness.sh; and NH_LOG=nh=debug nh os build -S -o /tmp/nh-result; and $NH_FLAKE/tools/scripts/guard-downgrades.sh /tmp/nh-result; and nh os switch -d never (readlink -f /tmp/nh-result); and validate-system";
 
     # Immediate update: dispatch the lock-refresh workflow, wait for the PR
-    # to auto-merge, sync onto main, restart comin for instant convergence.
+    # to auto-merge, sync onto main, nudge comin's fetch RPC for instant convergence.
     update = "$NH_FLAKE/tools/scripts/update-system.sh";
 
     # Utility aliases

@@ -4,8 +4,8 @@
 # flake.lock has a single writer: the daily-updates GitHub Actions workflow
 # (daily cron). This script dispatches the same workflow on demand, streams
 # the run's live job/step progress (gh run watch), waits for the resulting PR
-# to auto-merge, syncs the local working copy onto main, and restarts comin so
-# the host converges immediately instead of waiting for its next poll.
+# to auto-merge, syncs the local working copy onto main, and triggers a comin
+# fetch so the host converges immediately instead of waiting for its next poll.
 # Deployment itself is comin's job; the downgrade guard remains in the
 # interactive deploy path (nh.nix aliases), while comin reports regressions
 # through detect-downgrades.sh after automated deployments.
@@ -197,10 +197,17 @@ if [[ "$new_head" != "$old_head" ]]; then
 fi
 
 if systemctl is-active --quiet comin; then
-	if sudo systemctl restart comin; then
-		echo "update: comin restarted; deploying now instead of next poll"
+	# Provide the nudge with comin's fetch RPC instead of a daemon restart:
+	# fetch leaves any in-flight eval/build untouched, while a restart would
+	# kill it and the internal build would start over from scratch. The RPC
+	# has no client timeout and blocks on a busy fetcher, hence the timeout
+	# guard; restart remains as the fallback that recovers a wedged daemon.
+	if timeout 30 sudo comin fetch; then
+		echo "update: comin fetch triggered; deploying now instead of next poll"
+	elif sudo systemctl restart comin; then
+		echo "update: comin restarted (wedged daemon recovered); deploying now"
 	else
-		echo "warn: could not restart comin; it converges within its poll period" >&2
+		echo "warn: could not trigger fetch or restart; it converges within its poll period" >&2
 	fi
 else
 	echo "update: comin is not active on this host; nothing to converge"
