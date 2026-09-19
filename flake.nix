@@ -124,16 +124,20 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # OpenCode 2 beta, pinned to a commit for reproducibility. The flake
-    # builds packages/cli as the `opencode2` binary (distinct from V1's
-    # `opencode`). Beta: server and plugin APIs may change, and its data store
+    # OpenCode 2 beta, pinned to a tag for reproducibility. The flake builds
+    # packages/cli as the `opencode2` binary (distinct from V1's `opencode`).
+    # Beta: server and plugin APIs may change, and its data store
     # (`opencode.db`) is separate from V1's (`opencode-stable.db`).
     #
-    # Pinned to a v2 commit rather than the v2.0.3 tag: the tag's
-    # nix/opencode.nix installs `dist/cli-*/bin/opencode2`, but the build
-    # produces `bin/opencode`, so it fails. This commit (the first v2 state
-    # with the corrected installPhase and the Wayland LD_LIBRARY_PATH needed
-    # for OpenTUI clipboard images) builds. Bump deliberately.
+    # Tag, not a floating rev: only the v2 lineage ships the `packages/cli`
+    # build the shim depends on (V1's nix track builds `packages/opencode`).
+    # The v2.0.3 tag is known broken (its installPhase mismatches the build
+    # layout); from v2.0.4 on the installPhase produces bin/opencode plus the
+    # `opencode2` symlink, so tags build again. The shim
+    # (`OPENCODE_CONFIG_DIR`) requires 2.0.9: earlier v2 builds compute the
+    # global config root purely from XDG_CONFIG_HOME and always union the V1
+    # config dir, whose V1-only `plugin` list aborts V2 plugin generation and
+    # leaves the TUI without agents or a model picker.
     #
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
@@ -141,12 +145,13 @@
     # nixpkgs bump carrying a new bun (1.4.2 restructures node_modules/.bun)
     # fails with a fixed-output hash mismatch and stalls the daily lock
     # refresh. Use a rev-pinned nixpkgs, which the daily update cannot move,
-    # and bump it only alongside an upstream hash that matches its bun.
+    # and bump it only alongside an upstream hash that matches its bun (the
+    # rev below is the nixpkgs pinned inside the upstream tag's flake.lock).
     nixpkgs-opencode2 = {
-      url = "github:NixOS/nixpkgs/8ce4ef6cb6f871616146b9fe26d2a5ae594e94fe";
+      url = "github:NixOS/nixpkgs/9dd5558b06dbdacbf635a3dd36dce1b1a7ee3a89";
     };
     opencode-v2 = {
-      url = "github:anomalyco/opencode/f1149efee7ce08f7d819c48d8b69482441bd0592";
+      url = "github:anomalyco/opencode/v2.0.9";
       inputs.nixpkgs.follows = "nixpkgs-opencode2";
     };
 
