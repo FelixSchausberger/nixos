@@ -25,8 +25,15 @@ behavior in inline comments.
 Do not create new Markdown files beyond these exceptions:
 
 - `README.md` — project entry point and quick reference
-- `AGENTS.md` and `CLAUDE.md` — AI guidance
-- `hosts/installer/README.md` — installation procedure
+- `AGENTS.md` — AI guidance
+- `hosts/installer/README.md` and `hosts/installer/ssh_keys/README.md` —
+  installation procedure
+
+Tool-owned Markdown is out of scope of this policy: skill files
+(`SKILL.md`), Claude Code commands/agents, `tools/templates/` documentation,
+and `docs/site/` content. Long-form material does not belong in the repo as
+new Markdown files: architectural decisions stay as inline comments;
+procedures live in the GitHub Wiki.
 
 Architectural decisions, design rationale, and "why" choices belong as inline
 comments at the site they describe, never in separate overview files.
@@ -78,7 +85,9 @@ When a change needs a rebuild, test with
 
 Load the matching skill instead of guessing: `nix-expert` (flake, derivations,
 modules, packaging), `nix-testing` (namaka and VM tests), `jj-commit-workflow`
-(commit, describe, push), and `jj-workspaces` (parallel-agent isolation).
+(commit, describe, push), `jj-workspaces` (parallel-agent isolation). Defined
+in this repository: `repo-audit` (flake audit, `.opencode/skills/`) and
+`vitals-triage` (systemd/vitals issues).
 
 ## AI Assistant Configuration
 
