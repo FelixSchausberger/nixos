@@ -80,7 +80,6 @@ in {
       docker-compose
       nodejs
       python3
-      rustup
       go
 
       # Terminal utilities

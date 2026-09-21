@@ -108,9 +108,8 @@
         args = ["start"];
       };
 
-      # Extended — rust-analyzer uses the Nix store path directly to
-      # bypass the rustup proxy (which creates an infinite recursion
-      # loop when rust-analyzer is not installed as a rustup component).
+      # Extended — rust-analyzer uses the Nix store path directly so it does
+      # not depend on any toolchain's rust-analyzer component.
       rust-analyzer = {
         command = "${pkgs.rust-analyzer}/bin/rust-analyzer";
         config = {
