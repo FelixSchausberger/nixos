@@ -83,12 +83,12 @@ jj-hygiene:
     # --- section 1: loose heads ---
     mapfile -t heads < <(jj log --no-graph -r 'heads(all() ~ (::main@origin | ancestors(@)))' -T 'commit_id ++ "\n"' 2>/dev/null)
     abandoned=0
-    if [ "''${#heads[@]}" -eq 0 ]; then
+    if [ "${#heads[@]}" -eq 0 ]; then
         echo "No loose local heads outside main@origin."
     else
-        echo "Loose local heads outside main@origin: ''${#heads[@]}"
+        echo "Loose local heads outside main@origin: ${#heads[@]}"
         echo ""
-        for cid in "''${heads[@]}"; do
+        for cid in "${heads[@]}"; do
             desc=$(jj log --no-graph -r "$cid" -T 'description.first_line()' 2>/dev/null)
             when=$(jj log --no-graph -r "$cid" -T 'committer.timestamp().format("%Y-%m-%d")' 2>/dev/null)
 
@@ -144,7 +144,7 @@ jj-hygiene:
             echo ""
         else
             mapfile -t divs < <(jj log --no-graph -r 'divergent() & ~::main@origin' -T 'change_id ++ "\n"' 2>/dev/null | sort -u)
-            for c in "''${divs[@]}"; do
+            for c in "${divs[@]}"; do
                 echo "=== ${c:0:12}"
                 for i in 0 1 2 3 4 5 6 7; do
                     cid=$(jj log --no-graph -r "$c/$i" -T 'commit_id' 2>/dev/null) || continue
@@ -181,7 +181,7 @@ jj-hygiene:
             done
         fi
     fi
-    echo "Done. ''${abandoned} revision(s) abandoned."
+    echo "Done. ${abandoned} revision(s) abandoned."
 
 # === CODE QUALITY ===
 
