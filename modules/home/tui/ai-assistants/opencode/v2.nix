@@ -55,24 +55,31 @@
   );
 
   v2Config = {
+    "$schema" = "https://opencode.ai/config.json";
     inherit (shared) model;
     permissions = shared.permissionRules;
     formatter = shared.formatters;
     skills = [combinedSkills];
     mcp.servers = v2McpServers // {github = v2McpServersGithub;};
-    # No server-side plugins yet: the V1 plugin set does not run under V2. The
-    # Zellij indicator is a CLI plugin and lives in cli.json instead.
+    # No server-side plugins yet: the V1 plugin set does not run under V2.
+    # The Zellij indicator is a CLI plugin and lives in cli.json instead.
+    # The quota TUI stays out too: @slkiser/opencode-quota 4.10.0 targets the
+    # older V2 beta plugin API ({id, tui} default export, api.* names,
+    # no ./rpc export, undeclared node_modules deps), which this V2 build
+    # silently refuses to load. Revisit when upstream ports to {id, setup}
+    # with @opencode/plugin.
     plugins = [];
   };
 
-  # The V2 terminal client owns a global cli.json. The patched indicator fork is
-  # referenced by absolute path and deliberately sits outside the
-  # auto-discovered plugins/ directory so the server role never loads it. The
-  # theme/session/diff settings mirror the stray V2 cli.json that an
+  # The V2 terminal client owns a global cli.json. The patched indicator fork
+  # is referenced by absolute path and deliberately sits outside the
+  # auto-discovered plugins/ directory so the server role never loads it.
+  # The theme/session/diff settings mirror the stray V2 cli.json that an
   # unisolated opencode2 run wrote into the V1 config directory; V1 itself
   # never reads cli.json, so they exist only for the V2 TUI.
   indicatorV2Dir = "${config.xdg.configHome}/${v2ConfigDir}/indicator-v2";
   cliConfig = {
+    "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
     plugins = [indicatorV2Dir];
     diffs.wrap = "word";
@@ -80,6 +87,14 @@
       sidebar = "auto";
       scrollbar = false;
       thinking = "show";
+    };
+    # Native V2 attention replaces the V1 notifier plugin: system
+    # notifications plus sound for permission/question/error/done events.
+    # Per-event enablement is not configurable; V2 notifies when the
+    # terminal is unfocused, with no suppressWhenFocused equivalent.
+    attention = {
+      notifications = true;
+      sound = true;
     };
     animations = true;
   };
