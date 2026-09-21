@@ -406,6 +406,18 @@ in {
 
   modules.system.mediaClient.enable = true;
 
+  # Bedroom quiet window (00:00-09:00): EPP drop + no turbo keeps the single
+  # chassis blower on its slowest curve overnight. Timers below move every
+  # non-by-the-second job cluster into the awake window; the same rule used
+  # for smartd self-tests (14:00) applies here.
+  modules.system.nightQuiet.enable = true;
+  systemd.timers."zfs-snapshot-weekly".timerConfig.OnCalendar = lib.mkForce "Sun 13:15:00";
+  systemd.timers."zfs-snapshot-monthly".timerConfig.OnCalendar = lib.mkForce "Sun *-*-01..07 13:15:00";
+  systemd.timers."zpool-trim".timerConfig.OnCalendar = lib.mkForce "Sun 13:20:00";
+  systemd.timers.fstrim.timerConfig.OnCalendar = lib.mkForce "Sun 13:25:00";
+  systemd.timers."nextcloud-cleanup".timerConfig.OnCalendar = lib.mkForce "Sun 13:30:00";
+  systemd.timers."nixos-cleanup".timerConfig.OnCalendar = lib.mkForce "Sun 12:45:00";
+
   # AirPlay receiver renders into the on-demand niri session (waylandsink), so a
   # MacBook mirror appears as a fullscreen window over the desktop and
   # disappears when mirroring stops. It starts and stops with the session

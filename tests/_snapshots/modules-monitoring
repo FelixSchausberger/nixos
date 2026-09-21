@@ -31,7 +31,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 13;
+  rule_count = 14;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -149,6 +149,15 @@
       severity = "urgent";
       title = "FilesystemFull";
       uid = "filesystem-full";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < bool 0.2";
+      noDataState = "Alerting";
+      severity = "high";
+      title = "FilesystemWarn";
+      uid = "filesystem-warning";
     }
   ];
 }
