@@ -50,7 +50,9 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   checkout directly is only for user-directed sessions, and only after
   `ocws ls` shows no other active claim. If another session's unpushed commit
   sits at `@`, halt and report: jj snapshots the working copy into `@`, so
-  parallel edits merge silently into someone else's described commit.
+  parallel edits merge silently into someone else's described commit. The V2
+  config asks before primary-checkout edits, but location-relative paths
+  bypass that gate - `ocws` remains the real boundary.
 - Agents run as the owning user and never need `sudo`: deploys happen through
   comin (origin `main`, `switch`) or `jjtest` (testing bookmark,
   `switch-to-configuration test`); rebuild validation commands stay with the
