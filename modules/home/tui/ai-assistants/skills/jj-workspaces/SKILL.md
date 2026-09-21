@@ -51,12 +51,14 @@ benefit for single quick changes.
    ```
 
    The base directory is chosen in this order: `$OCWS_BASE`, the parent of the
-   current workspace (the sibling-directory convention), then `/tmp/opencode`
-   when that parent is not writable. On this host `/per/etc` is root-owned, so
-   the default base is `/tmp/opencode`; a workspace lives at
+   current workspace (the sibling-directory convention) when writable, then
+   `$XDG_DATA_HOME/ocws` (default `~/.local/share/ocws`, created on demand), then
+   `/tmp/opencode`. On this host `/per/etc` is root-owned, so the default base is
+   `~/.local/share/ocws` — persistent and user-owned; a workspace lives at
    `<base>/nixos-ws-<task>`. Set `OCWS_BASE` to a persistent path for long-lived
    work. jj commits are stored in the shared repo regardless of where the
-   working directory lives, so a wiped `/tmp` never loses the revision.
+   working directory lives, so even the `/tmp/opencode` fallback never loses a
+   revision.
 
    By hand (when `ocws` is unavailable):
 
