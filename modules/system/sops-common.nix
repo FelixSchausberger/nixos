@@ -65,14 +65,30 @@ in {
 
   # Determinate Nixd owns nix.settings.netrc-file and expects /nix/var/determinate/netrc.
   # Merge our sops-managed credentials into Determinate's effective netrc.
+  # Managed garbage collection is disabled explicitly: the daemon knows only
+  # `automatic` and `disabled` (no interval/schedule knob exists per
+  # https://docs.determinate.systems/determinate-nix/determinate-nixd). Under
+  # the default automatic strategy it woke the store every ~2 h overnight
+  # (01:21, 02:18, 04:18, 06:18 on m920q, 2026-09-16) since it cannot be
+  # confined to awake hours; freeing space is handled by the weekly daytime
+  # nixos-cleanup (nix store gc), the build-time min-free/max-free pressure
+  # checks, and the FilesystemWarn (20%) / FilesystemFull (10%) alerts.
   environment.etc."determinate/config.json" = lib.mkIf repoConfig.useDeterminateNix {
     text = builtins.toJSON {
       authentication.additionalNetrcSources = [
         config.sops.templates."nix/netrc".path
       ];
+      garbageCollector.strategy = "disabled";
     };
     mode = "0644";
   };
+
+  # The daemon orchestrator runs inside nix-daemon.service and reads
+  # /etc/determinate/config.json at startup, so a strategy edit must
+  # restart the unit on switch.
+  systemd.services.nix-daemon.restartTriggers = [
+    config.environment.etc."determinate/config.json".source
+  ];
 
   # WiFi environment file for NM ensureProfiles (envsubst substitution)
   sops.templates."wifi/env" = {

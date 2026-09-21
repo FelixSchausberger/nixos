@@ -586,6 +586,14 @@ in {
                   (mkAlert "filesystem-full" "urgent" "FilesystemFull"
                     "A persistent filesystem is under 10% free. On ZFS all datasets of a pool share free space, so any runaway writer can zero all of them (2026-09 m920q incident)"
                     ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.1'' "Alerting")
+                  # Early warning ahead of the urgent FilesystemFull rule: a
+                  # pool approaching 20% free (the upper bound of the
+                  # managed-GC steady band) pages high-severity before a
+                  # writer has already made the filesystem slow and
+                  # GC-heavy at 10%.
+                  (mkAlert "filesystem-warning" "high" "FilesystemWarn"
+                    "A persistent filesystem is under 20% free; runaway writes head toward FilesystemFull"
+                    ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.2'' "Alerting")
                 ];
             }
           ];
