@@ -14,6 +14,7 @@
     ./fonts.nix
     ./home-manager.nix
     ./maintenance.nix
+    ./night-quiet.nix
     ./persistence-postgresql.nix
     ./nix.nix
     ./security-hardening.nix
