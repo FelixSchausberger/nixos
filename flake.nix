@@ -140,9 +140,12 @@
     # the V1 config dir, whose V1-only `plugin` list aborts V2 plugin
     # generation and leaves the TUI without agents or a model picker.
     # Bumps stay tag-only, and each candidate tag must build: upstream
-    # dropped the `completion` subcommand its installPhase still calls, so
-    # v2.0.12 fails installShellCompletion and v2.0.9 remains the newest
-    # buildable pin.
+    # replaced the `completion` subcommand its installPhase still calls
+    # with a `--completions <shell>` flag, so v2.0.11's installPhase
+    # captures an error message into the completion files and v2.0.12
+    # fails outright (its error output moved to stderr, leaving empty
+    # files); v2.0.9 is the newest tag with working completions. Check
+    # nix/opencode.nix against the tag's CLI before bumping.
     #
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
