@@ -47,12 +47,16 @@ in {
         # PATs outright ("Personal Access Tokens are not supported for this
         # endpoint"). The MCP github server reads its token from the sops
         # file itself and needs nothing from the environment.
+        #
+        # NODE_EXTRA_CA_CERTS points Bun at the system bundle; TLS verification
+        # stays on. An earlier NODE_TLS_REJECT_UNAUTHORIZED=0 here was a
+        # workaround for TLS interception by an ESET SSL filter whose custom CA
+        # has since been retired from this fleet.
         wrapProgram $out/bin/opencode \
           --set OPENCODE_DB "opencode-stable.db" \
           --unset OPENCODE_CONFIG_DIR \
           --unset GITHUB_TOKEN \
-          --set NODE_EXTRA_CA_CERTS "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
-          --set NODE_TLS_REJECT_UNAUTHORIZED "0"
+          --set NODE_EXTRA_CA_CERTS "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
       '';
       meta.mainProgram = "opencode";
     });
