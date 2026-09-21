@@ -130,14 +130,19 @@
     # (`opencode.db`) is separate from V1's (`opencode-stable.db`).
     #
     # Tag, not a floating rev: only the v2 lineage ships the `packages/cli`
-    # build the shim depends on (V1's nix track builds `packages/opencode`).
-    # The v2.0.3 tag is known broken (its installPhase mismatches the build
-    # layout); from v2.0.4 on the installPhase produces bin/opencode plus the
-    # `opencode2` symlink, so tags build again. The shim
-    # (`OPENCODE_CONFIG_DIR`) requires 2.0.9: earlier v2 builds compute the
-    # global config root purely from XDG_CONFIG_HOME and always union the V1
-    # config dir, whose V1-only `plugin` list aborts V2 plugin generation and
-    # leaves the TUI without agents or a model picker.
+    # build the shim depends on (V1's nix track builds `packages/opencode`,
+    # and the `2.0` branch is a stale exploration snapshot without the
+    # opencode2 symlink). The v2.0.3 tag is known broken (its installPhase
+    # mismatches the build layout); from v2.0.4 on the installPhase produces
+    # bin/opencode plus the `opencode2` symlink, so tags build again. The
+    # shim (`OPENCODE_CONFIG_DIR`) requires 2.0.9: earlier v2 builds compute
+    # the global config root purely from XDG_CONFIG_HOME and always union
+    # the V1 config dir, whose V1-only `plugin` list aborts V2 plugin
+    # generation and leaves the TUI without agents or a model picker.
+    # Bumps stay tag-only, and each candidate tag must build: upstream
+    # dropped the `completion` subcommand its installPhase still calls, so
+    # v2.0.12 fails installShellCompletion and v2.0.9 remains the newest
+    # buildable pin.
     #
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
