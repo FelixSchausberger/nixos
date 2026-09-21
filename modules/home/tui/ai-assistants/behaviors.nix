@@ -58,7 +58,9 @@
         ```
         An undescribed or unfinished `@` in another workspace means: do not touch that workspace; report the conflict and halt.
 
-        For isolated work, create a workspace with `ocws <task>` (or `ocws tab <task>`). It creates `<base>/nixos-ws-<task>`, claims it with a change description, and starts opencode rooted there. The base is `$OCWS_BASE`, else the parent of the current workspace, else `/tmp/opencode` when that parent is not writable.
+        For isolated work, create a workspace with `ocws <task>` (or `ocws tab <task>`). It creates `<base>/nixos-ws-<task>`, claims it with a change description, and starts opencode rooted there. The base is `$OCWS_BASE`, else the parent of the current workspace when writable, else `$XDG_DATA_HOME/ocws` (default `~/.local/share/ocws`), else `/tmp/opencode`.
+
+        Claim discipline: start work with `jj new main@origin`, describe immediately, then edit — a described commit at `@` silently absorbs every edit made in its working copy, and the description is the ownership claim. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk from a parallel session.
 
         Integration runs from the workspace itself: `jjwork`, then `jjpush`. Nothing pushes background work: the primary checkout and secondary workspaces are pushed only by an explicit `jjpush`. See the jj-workspaces skill for the full workflow and concurrency hazards.
       '';
