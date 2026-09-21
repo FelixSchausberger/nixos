@@ -144,8 +144,10 @@
     # with a `--completions <shell>` flag, so v2.0.11's installPhase
     # captures an error message into the completion files and v2.0.12
     # fails outright (its error output moved to stderr, leaving empty
-    # files); v2.0.9 is the newest tag with working completions. Check
-    # nix/opencode.nix against the tag's CLI before bumping.
+    # files). The broken completion files are inert here: the module
+    # installs only a bin/opencode2 shim and never links upstream's
+    # share files. Check nix/opencode.nix against the tag's CLI before
+    # bumping.
     #
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
@@ -159,7 +161,7 @@
       url = "github:NixOS/nixpkgs/9dd5558b06dbdacbf635a3dd36dce1b1a7ee3a89";
     };
     opencode-v2 = {
-      url = "github:anomalyco/opencode/v2.0.9";
+      url = "github:anomalyco/opencode/v2.0.11";
       inputs.nixpkgs.follows = "nixpkgs-opencode2";
     };
 
