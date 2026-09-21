@@ -19,7 +19,11 @@
 }: {
   name = "monitoring-alerting";
 
-  nodes.machine = {lib, ...}: {
+  nodes.machine = {
+    config,
+    lib,
+    ...
+  }: {
     imports = [
       ../modules/system/homelab/monitoring.nix
       ../modules/system/homelab/ntfy.nix
@@ -92,6 +96,11 @@
       modules.system.homelab.ntfy.enable = true;
 
       services.postgresql.enable = true;
+      # The postgres exporter (and its PostgresDown alert rule) is gated on
+      # nextcloud.enable in monitoring.nix since 53e6db1. Enable the stub
+      # options so the exporter starts and the PostgresDown rule is
+      # provisioned; the secret it reads is in the fixture file.
+      modules.system.homelab.nextcloud.enable = true;
 
       # Throwaway identity decrypting the fixture secrets; never used outside
       # this test.
@@ -99,6 +108,16 @@
         defaultSopsFile = ./fixtures/monitoring/secrets.yaml;
         age.keyFile = "/etc/monitoring-test-age-key";
         age.generateKey = false;
+      };
+      # The nextcloud exporter stub (enabled below) reads the admin password
+      # through monitoring.nix; the fixture has no 'nextcloud' section, so
+      # point its secret at an existing fixture key (values are throwaway;
+      # the exporter only needs a readable file to start).
+      users.users.nextcloud-exporter = {};
+      sops.secrets."nextcloud/admin-password" = {
+        key = "grafana/secret-key";
+        owner = "nextcloud-exporter";
+        mode = "0440";
       };
       environment.etc."monitoring-test-age-key".source =
         ./fixtures/monitoring/test-age-key.txt;
@@ -108,6 +127,22 @@
       systemd.tmpfiles.rules = [
         "d /per/var/lib/ntfy-sh 0700 ntfy-sh ntfy-sh -"
       ];
+
+      # Static answer for the Nextcloud blackbox probe. Nextcloud itself is
+      # absent in this VM, and provisioned alert rules cannot be deleted
+      # through the API at runtime (provenance mismatch, HTTP 409), so the
+      # probe must be satisfied instead: from boot, before the alert rule's
+      # first evaluation, a plain 200 on status.php keeps NextcloudDown
+      # from firing during the healthy-quiet window.
+      systemd.services.monitoring-test-status = {
+        description = "Static status.php stub for the Nextcloud blackbox probe";
+        wantedBy = ["multi-user.target"];
+        serviceConfig.ExecStart = "${pkgs.python3}/bin/python3 -m http.server ${toString config.modules.system.homelab.nextcloud.port} --directory /var/lib/monitoring-test-status";
+        preStart = ''
+          mkdir -p /var/lib/monitoring-test-status
+          echo '{"status":"ok"}' > /var/lib/monitoring-test-status/status.php
+        '';
+      };
 
       environment.systemPackages = with pkgs; [
         curl
@@ -160,14 +195,19 @@
         )
     )
     uids = sorted(r["uid"] for r in rules)
+    # nextcloud.enable is on (postgres-exporter dependency) so the Nextcloud
+    # blackbox probe and rules provision too. The status.php stub service
+    # answers that probe, so NextcloudDown stays quiet like every other rule.
     assert uids == [
+        "filesystem-full",
+        "filesystem-warning",
+        "nextcloud-down",
         "node-exporter-down",
         "postgres-down",
     ], f"unexpected provisioned rules: {uids}"
 
-    # One full evaluation window must stay quiet while everything is up.
-    print("subtest: healthy system sends no notifications")
     machine.sleep(150)
+    print("subtest: healthy system sends no notifications")
     count = len(ntfy_messages())
     assert count == 0, f"expected no notifications on healthy system, got {count}"
 
