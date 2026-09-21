@@ -4,7 +4,7 @@ This directory contains templates for creating new tools in the NixOS configurat
 
 ## Available Templates
 
-### Rust Tool Template (`rust/`)
+### Rust Tool Template (`rust-cli/`)
 
 For CLI tools, system utilities, and performance-critical applications.
 
@@ -18,7 +18,7 @@ For configuration generators, deployment scripts, and Nix-specific utilities.
 
 ```bash
 # Copy the template
-cp -r tools/templates/rust tools/my-new-tool
+cp -r tools/templates/rust-cli tools/my-new-tool
 
 # Update the tool
 cd tools/my-new-tool
@@ -70,6 +70,20 @@ Both templates include:
 - Pre-commit hooks support
 - Consistent structure and conventions
 - Documentation templates
+
+### Rust Exercise Template (`rust-exercise/`)
+
+For throwaway Rust code: learning exercises, small experiments, scratch programs.
+Dev shell only (cargo, rustc, clippy, rustfmt, rust-analyzer); no package build
+or treefmt — graduate real tools to the `rust` template instead.
+
+```bash
+cp -r tools/templates/rust-exercise ~/my-exercise
+cd ~/my-exercise
+sed -i 's/my-exercise/your-name/' Cargo.toml
+nix develop  # or let direnv (use flake in .envrc) handle it
+cargo run
+```
 
 ## Guidelines
 
