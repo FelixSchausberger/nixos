@@ -428,8 +428,9 @@
   # supported way to run parallel agents against one repository.
   #
   # Base directory precedence: $OCWS_BASE, then the parent directory of the
-  # current workspace (the sibling convention), then /tmp/opencode when that
-  # parent is not writable (e.g. /per/etc is root-owned). The workspace
+  # current workspace (the sibling convention) when writable, then
+  # $XDG_DATA_HOME/ocws (default ~/.local/share/ocws) so workspaces survive
+  # reboots without ever needing root, then /tmp/opencode. The workspace
   # directory is "<base>/nixos-ws-<task>".
   #
   # OCWS_V2=1 starts opencode 2 (opencode2) with the isolated V2 config
@@ -455,8 +456,8 @@
         ocws rm <task>                        forget the workspace and send its directory to the graveyard
 
       Environment:
-        OCWS_BASE   directory holding workspace directories (default: beside the repo,
-                    falling back to /tmp/opencode when that parent is unwritable)
+        OCWS_BASE   directory holding workspace directories (default: beside the repo
+                    when writable, else ~/.local/share/ocws, else /tmp/opencode)
         OCWS_V2=1   run opencode 2 (opencode2) with the isolated V2 config
       USAGE
         exit 2
@@ -467,7 +468,16 @@
         exit 1
       }
 
-      base="''${OCWS_BASE:-$(dirname "$root")}"
+      base="''${OCWS_BASE:-}"
+      if [ -z "$base" ]; then
+        candidate="$(dirname "$root")"
+        if [ -w "$candidate" ]; then
+          base="$candidate"
+        else
+          base="''${XDG_DATA_HOME:-$HOME/.local/share}/ocws"
+          mkdir -p "$base"
+        fi
+      fi
       if [ ! -w "$base" ]; then
         base=/tmp/opencode
       fi

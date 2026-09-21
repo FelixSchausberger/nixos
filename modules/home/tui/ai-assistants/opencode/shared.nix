@@ -52,6 +52,14 @@
 
   # Canonical ordered permission rules in the native V2 shape. V1 derives its
   # grouped `permission` map from the shell rules; V2 consumes the array as-is.
+  # The trailing edit ask guards the primary checkout: rules resolve by last
+  # match, so this overrides the wildcard allow only for /per/etc/nixos paths.
+  # Empirically (scratch-config probes, 2026-09-21) the edit resource is the
+  # literal path string the model supplies: absolute paths match this rule,
+  # location-relative paths bypass it and stay allowed. The gate is therefore
+  # best-effort; the ocws workspace rules in AGENTS.md are the real boundary.
+  # V1 cannot express path-scoped edit rules (its permission schema is a
+  # per-tool map), so the guard is V2-only there.
   permissionRules = [
     {
       action = "shell";
@@ -93,18 +101,19 @@
       resource = "*";
       effect = "allow";
     }
+    {
+      action = "edit";
+      resource = "/per/etc/nixos/*";
+      effect = "ask";
+    }
   ];
 
-  codeSimplifierAgent = ''
-    ---
-    description: Simplifies recently modified code while preserving exact behavior
-    mode: subagent
-    model: ${model}
-    permission:
-      edit: allow
-      bash: deny
-    ---
-
+  # The V2 array appends the primary-checkout edit ask after this agent's own
+  # edit allow: agent rules are appended after global rules and the last match
+  # wins, so without it the subagent's allow would bypass the global guard.
+  # V1 reads the legacy permission map, which cannot express path-scoped edit
+  # rules; the guard is V2-only (see permissionRules above).
+  codeSimplifierBody = ''
     You are a code simplification specialist.
 
     Simplify recently modified code for clarity, consistency, and maintainability while preserving exact functionality.
@@ -127,6 +136,39 @@
     4. Validate that semantics are unchanged.
     5. Report meaningful simplifications only.
   '';
+
+  codeSimplifierAgent = ''
+    ---
+    description: Simplifies recently modified code while preserving exact behavior
+    mode: subagent
+    model: ${model}
+    permission:
+      edit: allow
+      bash: deny
+    ---
+
+    ${codeSimplifierBody}
+  '';
+
+  codeSimplifierAgentV2 = ''
+    ---
+    description: Simplifies recently modified code while preserving exact behavior
+    mode: subagent
+    model: ${model}
+    permissions:
+      - action: edit
+        resource: "*"
+        effect: allow
+      - action: shell
+        resource: "*"
+        effect: deny
+      - action: edit
+        resource: "/per/etc/nixos/*"
+        effect: ask
+    ---
+
+    ${codeSimplifierBody}
+  '';
 in {
   inherit
     combinedRules
@@ -135,5 +177,6 @@ in {
     formatters
     permissionRules
     codeSimplifierAgent
+    codeSimplifierAgentV2
     ;
 }

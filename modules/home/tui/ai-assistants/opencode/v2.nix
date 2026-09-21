@@ -130,7 +130,7 @@ in {
       "${v2ConfigDir}/opencode.jsonc".text = builtins.toJSON v2Config;
       "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
       "${v2ConfigDir}/AGENTS.md".text = shared.combinedRules;
-      "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
+      "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgentV2;
       "${v2ConfigDir}/indicator-v2".source = ./zellij-indicator-v2;
     };
   };
