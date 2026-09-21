@@ -56,6 +56,14 @@ in {
           name = "Books";
           path = "/per/mnt/data/Books";
         }
+        {
+          name = "CAD";
+          path = "/per/mnt/data/CAD";
+        }
+        {
+          name = "Inbox";
+          path = "/per/mnt/data/Inbox";
+        }
       ];
       description = "Local directories exposed as Nextcloud external storage via files_external";
     };

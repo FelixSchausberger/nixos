@@ -95,6 +95,11 @@ in {
       # Same ACLs on the Obsidian vault and Documents (Nextcloud-exposed dirs)
       "a+ ${dataPath}/Obsidian - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       "a+ ${dataPath}/Documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      # CAD/Inbox are Nextcloud external-storage mounts: default ACL keeps
+      # nextcloud-created files group-accessible over SMB
+      "d ${dataPath}/Inbox 0775 schausberger users -"
+      "a+ ${dataPath}/CAD - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${dataPath}/Inbox - - - - g:sambashare:rwx,d:g:sambashare:rwx"
     ];
 
     environment.persistence."/per".directories = [
