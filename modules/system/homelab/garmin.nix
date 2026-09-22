@@ -74,9 +74,9 @@ in {
 
     # InfluxDB 1.x (not v2/v3): the garmin-grafana fetcher and its ready-made
     # dashboard query InfluxQL (upstream targets 1.11; v3 OSS caps query
-    # windows at 72 hours, defeating the long-term-trend purpose). The
-    # module's postStart hook provisions the GarminStats database and a
-    # read/write user; auth is enabled and bound to loopback only.
+    # windows at 72 hours, defeating the long-term-trend purpose). A marker-
+    # gated oneshot provisions the GarminStats database and its user once
+    # InfluxDB is up; auth is enabled and bound to loopback only.
     services.influxdb = {
       enable = true;
       settings.http = {
@@ -100,19 +100,31 @@ in {
       };
       script = ''
         set -euo pipefail
+        marker="${config.services.influxdb.dataDir}/.garmin-provisioned"
+        if [ -e "$marker" ]; then
+          exit 0
+        fi
+        password="$(cat "$CREDENTIALS_DIRECTORY/influx-user-password")"
         until ${pkgs.curl}/bin/curl -sf -o /dev/null "${influxUrl}/ping"; do
           sleep 1
         done
-        # Auth is enabled, so initial setup goes through the admin path:
-        # v1 auth has no bootstrapping exception, but the admin user only
-        # exists after first CREATE USER. Run with auth temporarily handled
-        # by ordering: this unit runs BEFORE any client, and InfluxDB v1
-        # treats the very first CREATE USER (from any connection) as the
-        # admin bootstrap regardless of auth-enabled.
+        # InfluxDB v1 permits exactly one statement while no user exists:
+        # the first CREATE USER, which becomes the admin. CREATE DATABASE is
+        # rejected before that ("create admin user first"), and IF NOT EXISTS
+        # is not valid influxql, so the user comes first and the database is
+        # created authenticated as that user. A failed CREATE USER means the
+        # user already exists (partial earlier run); the SHOW probe verifies
+        # it authenticates rather than masking the error.
+        if ! ${pkgs.influxdb}/bin/influx -host 127.0.0.1 -port ${toString cfg.influxPort} \
+          -execute "CREATE USER \"garmin\" WITH PASSWORD '$password' WITH ALL PRIVILEGES"; then
+          ${pkgs.influxdb}/bin/influx -host 127.0.0.1 -port ${toString cfg.influxPort} \
+            -username garmin -password "$password" \
+            -execute "SHOW DATABASES" > /dev/null
+        fi
         ${pkgs.influxdb}/bin/influx -host 127.0.0.1 -port ${toString cfg.influxPort} \
-          -execute "CREATE DATABASE IF NOT EXISTS \"GarminStats\""
-        ${pkgs.influxdb}/bin/influx -host 127.0.0.1 -port ${toString cfg.influxPort} \
-          -execute "CREATE USER \"garmin\" WITH PASSWORD '$(cat "$CREDENTIALS_DIRECTORY/influx-user-password")' WITH ALL PRIVILEGES"
+          -username garmin -password "$password" \
+          -execute "CREATE DATABASE \"GarminStats\""
+        touch "$marker"
       '';
     };
 
@@ -171,10 +183,16 @@ in {
       after = ["influxdb-garmin-setup.service" "sops-nix.service"];
       requires = ["influxdb.service"];
       wants = ["sops-nix.service"];
+      wantedBy = ["multi-user.target"];
       # Garmin rate-limits aggressively; a slow restart loop is deliberate.
       unitConfig = {
         StartLimitBurst = 5;
         StartLimitIntervalSec = 600;
+        # The OAuth token store only exists after the one-time MFA login
+        # (garmin-login helper below); without it the fetcher cannot
+        # authenticate, so the unit stays dormant instead of burning its
+        # restart limit on every boot.
+        ConditionPathExists = "/var/lib/garmin-fetch/garminconnect-tokens";
       };
       serviceConfig = {
         Type = "exec";
@@ -212,7 +230,9 @@ in {
         text = ''
           # Re-creates the Garmin OAuth token store interactively (MFA code
           # prompt). Must run on m920q; tokens land in /var/lib/garmin-fetch
-          # and are picked up by the garmin-fetch-data service on next start.
+          # and unblock garmin-fetch-data, which stays dormant
+          # (ConditionPathExists) until they exist: start it explicitly
+          # after login, or let the next boot pick it up.
           exec systemd-run --pty \
             --unit=garmin-login \
             -p User=garmin-fetch -p Group=garmin-fetch \
