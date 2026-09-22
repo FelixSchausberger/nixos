@@ -58,7 +58,7 @@ in {
         }
         {
           name = "CAD";
-          path = "/per/mnt/data/CAD";
+          path = "/per/mnt/data/Projects/CAD";
         }
         {
           name = "Inbox";
