@@ -27,8 +27,6 @@ in {
         owner = defaults.system.user;
       };
 
-      "bitwarden/master-password" = {};
-
       "private/email" = {};
       "private/password-hash" = {
         neededForUsers = true;
