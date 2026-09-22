@@ -16,6 +16,12 @@
         inherit pkgs;
         hosts = installableHosts;
       };
+      # Unlike installableHosts, WSL hosts can own a sops recipient too; only
+      # the ISO-driven disko path excludes them.
+      new-host-keys = import ../apps/new-host-keys.nix {
+        inherit pkgs;
+        hosts = builtins.attrNames inputs.self.nixosConfigurations;
+      };
     };
   };
 }
