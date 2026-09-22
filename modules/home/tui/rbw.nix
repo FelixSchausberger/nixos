@@ -25,9 +25,6 @@
 
   # Secrets for Bitwarden - stored in main secrets.yaml
   sops.secrets = {
-    "bitwarden/master-password" = {
-      mode = "0400";
-    };
     "private/email" = {
       mode = "0400";
     };
