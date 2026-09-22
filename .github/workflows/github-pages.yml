@@ -28,11 +28,15 @@ jobs:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
       - name: Cache Nix store
-        # Pinned to the pre-v3.22.4 action commit: v3.22.4 (2026-09-16)
-        # downloads a new magic-nix-cache build whose FlakeHub OIDC login
-        # fails with 401 "not authorized", aborting every run of this
-        # workflow. Re-pin to v3 once the 401 is resolved upstream.
-        uses: DeterminateSystems/flakehub-cache-action@e80fccc9c4e3a885ad51721c8b92ba3f839d2f6f
+        # Pull-only from this repo's public Cachix cache, replacing the
+        # DeterminateSystems action that needed a SHA pin to survive its
+        # FlakeHub 401 failures. The topology closure is small and rebuilt
+        # here anyway, so no push is needed. Best-effort by design.
+        uses: cachix/cachix-action@v17
+        continue-on-error: true
+        with:
+          name: felixschausberger
+          skipPush: true
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Build homelab topology

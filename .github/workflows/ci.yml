@@ -85,7 +85,15 @@ jobs:
           extra_nix_config: |
             ${{ env.NIX_CONFIG }}
       - name: Cache Nix store
-        uses: DeterminateSystems/flakehub-cache-action@v3
+        # Pull-only from this repo's public Cachix cache; the store paths that
+        # matter (devshell, custom packages) are pushed by daily-updates and
+        # cachix-push, which are the only jobs that carry CACHIX_AUTH_TOKEN.
+        # Best-effort: a cache outage must not fail validation.
+        uses: cachix/cachix-action@v17
+        continue-on-error: true
+        with:
+          name: felixschausberger
+          skipPush: true
       - name: Run prek hooks
         run: |
           # First pass: let formatters (alejandra, etc.) modify files in-place.
