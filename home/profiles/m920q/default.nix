@@ -92,6 +92,73 @@
 
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 
+  # The Obsidian vault syncs to Windows clients through Nextcloud, so the
+  # running app rewrites its config constantly: managed as home.file store
+  # symlinks, every rewrite would hit a read-only store path. Copy declared
+  # content on activation instead, where the declared values win at the next
+  # switch. Only the root vault's initialized .obsidian is managed:
+  # sub-vaults, an unconfigured (empty) .obsidian, and the rest of .obsidian
+  # (plugins, hotkeys, graph) stay under Obsidian's own control.
+  home.activation.obsidianVaultConfig = let
+    declared = {
+      "appearance.json" = builtins.toJSON {
+        accentColor = "";
+        theme = "system";
+        cssTheme = "Minimal";
+        textFontFamily = "";
+        baseFontSize = 16;
+        showViewHeader = true;
+        showRibbon = false;
+      };
+      "app.json" = builtins.toJSON {};
+      "core-plugins.json" = builtins.toJSON {
+        file-explorer = true;
+        global-search = true;
+        switcher = false;
+        graph = false;
+        backlink = false;
+        canvas = false;
+        outgoing-link = false;
+        tag-pane = false;
+        properties = false;
+        page-preview = false;
+        daily-notes = false;
+        templates = false;
+        note-composer = false;
+        command-palette = false;
+        slash-command = false;
+        editor-status = true;
+        bookmarks = false;
+        markdown-importer = false;
+        zk-prefixer = false;
+        random-note = false;
+        outline = false;
+        word-count = false;
+        slides = false;
+        audio-recorder = false;
+        workspaces = false;
+        file-recovery = true;
+        publish = false;
+        sync = false;
+        webviewer = false;
+        footnotes = false;
+        bases = false;
+      };
+    };
+    files =
+      lib.mapAttrsToList (name: content: {
+        inherit name;
+        src = pkgs.writeText name content;
+      })
+      declared;
+  in
+    lib.hm.dag.entryAfter ["writeBoundary"] ''
+      vault=/per/mnt/data/Obsidian/.obsidian
+      if [ -d "$vault" ] && [ -n "$(ls -A "$vault")" ]; then
+        ${lib.concatMapStringsSep "\n" (f: ''cmp -s ${f.src} "$vault/${f.name}" || install -m 0644 ${f.src} "$vault/${f.name}"'') files}
+      fi
+    '';
+
   # Convenience links into the data pool (dpool, hosts/m920q/disko.nix) so the
   # canonical locations (/per/mnt/data/...) are reachable under the XDG names.
   # This profile is only imported by m920q, so the paths are safe here.
