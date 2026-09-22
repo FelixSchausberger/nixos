@@ -339,24 +339,50 @@ in {
       };
       provision = {
         enable = true;
-        datasources.settings.datasources = [
-          {
-            name = "Prometheus";
-            type = "prometheus";
-            uid = "prometheus";
-            url = "http://127.0.0.1:${toString cfg.prometheusPort}";
-            isDefault = true;
-          }
-        ];
+        datasources.settings.datasources =
+          [
+            {
+              name = "Prometheus";
+              type = "prometheus";
+              uid = "prometheus";
+              url = "http://127.0.0.1:${toString cfg.prometheusPort}";
+              isDefault = true;
+            }
+            # Garmin health metrics (InfluxDB 1.x, InfluxQL). Only present when
+            # the garmin module is enabled; uid matches the dashboard JSON.
+          ]
+          ++ lib.optionals config.modules.system.homelab.garmin.enable [
+            {
+              name = "Garmin-InfluxDB";
+              type = "influxdb";
+              uid = "garmin_influxdb";
+              url = "http://127.0.0.1:${toString config.modules.system.homelab.garmin.influxPort}";
+              isDefault = false;
+              jsonData = {
+                dbName = "GarminStats";
+                httpMode = "GET";
+              };
+              secureJsonData.password = "$__file{${config.sops.secrets."garmin/influx-user-password".path}}";
+            }
+          ];
 
-        dashboards.settings.providers = [
-          {
-            name = "fritz";
-            type = "file";
-            disableDeletion = true;
-            options.path = ./fritz-dashboard.json;
-          }
-        ];
+        dashboards.settings.providers =
+          [
+            {
+              name = "fritz";
+              type = "file";
+              disableDeletion = true;
+              options.path = ./fritz-dashboard.json;
+            }
+          ]
+          ++ lib.optionals config.modules.system.homelab.garmin.enable [
+            {
+              name = "garmin";
+              type = "file";
+              disableDeletion = true;
+              options.path = ./garmin-dashboard.json;
+            }
+          ];
 
         # Grafana alerting contact point and notification policy
         #
@@ -608,6 +634,14 @@ in {
       }
       // lib.optionalAttrs cfg.fritzbox.enable {
         "fritzbox/password".owner = "fritz-exporter";
+      }
+      // lib.optionalAttrs config.modules.system.homelab.garmin.enable {
+        # Grafana reads the InfluxDB user password via $__file{}.
+        "garmin/influx-user-password".owner = "grafana";
+      }
+      // lib.optionalAttrs config.modules.system.homelab.garmin.calendar.enable {
+        # Bearer token the calendar-sync script uses against the annotation API.
+        "grafana/calendar-annotation-token".owner = "garmin-fetch";
       };
     sops.templates."grafana-env" = {
       content = "GF_SECURITY_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}";

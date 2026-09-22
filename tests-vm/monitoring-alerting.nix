@@ -77,6 +77,32 @@
           type = lib.types.bool;
           default = false;
         };
+        # garmin.nix reads these sibling options; the VM test does not import
+        # the garmin module itself (no live Garmin credentials in CI).
+        garmin = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+          };
+          influxPort = lib.mkOption {
+            type = lib.types.port;
+            default = 8087;
+          };
+          calendar = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            user = lib.mkOption {
+              type = lib.types.str;
+              default = "admin";
+            };
+            interval = lib.mkOption {
+              type = lib.types.str;
+              default = "15min";
+            };
+          };
+        };
         # monitoring.nix feeds determinate-nixd GC data through
         # modules.system.maintenance, which the test node does not import (see
         # the modules.system.maintenance stub below).

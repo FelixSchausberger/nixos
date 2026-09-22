@@ -36,6 +36,9 @@
       # Prometheus exporter for AdGuard Home
       adguard-exporter = pkgs.callPackage ../pkgs/adguard-exporter {};
 
+      # Nextcloud calendar to Grafana annotation syncer (garmin.nix)
+      garmin-calendar-sync = pkgs.callPackage ../pkgs/garmin-calendar-sync {};
+
       # Homelab topology diagram generator (D2 → SVG + HTML)
       homelab-topology = pkgs.callPackage ../pkgs/topology {
         m920qConfig = inputs.self.nixosConfigurations.m920q.config;
