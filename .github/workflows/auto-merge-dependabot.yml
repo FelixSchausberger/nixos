@@ -12,6 +12,12 @@ jobs:
     steps:
       - run: gh pr merge --auto --squash "$PR" --repo "$REPO"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Merges performed with GITHUB_TOKEN emit no push event, so
+          # ci.yml, cachix-push and github-pages silently skip the merge commit
+          # (observed on #279). Prefer the PAT when this run has access to
+          # Actions secrets; Dependabot-triggered runs may not expose them, in
+          # which case the read-write GITHUB_TOKEN from pull_request_target
+          # still merges the PR as before.
+          GH_TOKEN: ${{ secrets.LOCKS_UPDATE_PAT || secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
