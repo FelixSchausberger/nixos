@@ -103,12 +103,28 @@ in {
 
       # $1 item name, $2 private key, $3 public key, $4 fingerprint
       store_item() {
+          # CipherExport payload: CipherType is numeric (5 = SSH key) and the
+          # key material nests under sshKey; bw get item reads back the same
+          # shape, which reconcile_existing_item relies on.
           ITEM="$1" PRIV="$2" PUB="$3" FP="$4" yq -o=json -n \
-              '{type: "sshkey", name: strenv(ITEM), privateKey: strenv(PRIV), publicKey: strenv(PUB), fingerprint: strenv(FP)}' \
+              '.type = 5
+              | .name = strenv(ITEM)
+              | .sshKey.privateKey = strenv(PRIV)
+              | .sshKey.publicKey = strenv(PUB)
+              | .sshKey.keyFingerprint = strenv(FP)' \
               > "$WORKDIR/item.json"
-          if ! bw create item --session "$BW_SESSION" --file "$WORKDIR/item.json" > /dev/null; then
+          # bw create item's --file option is attachment-only: item payloads
+          # must arrive as base64-encoded JSON via argument or stdin.
+          if ! bw encode < "$WORKDIR/item.json" | bw create item --session "$BW_SESSION" > /dev/null; then
               echo "Error: failed to store 'host/$HOSTNAME' in the Bitwarden vault." >&2
               echo "The repository was not modified; fix vault access and rerun." >&2
+              exit 1
+          fi
+          # bw exit codes are unreliable in both directions, so success is a
+          # read-back that returns an actual JSON object, not exit status.
+          if ! stored=$(bw get item --session "$BW_SESSION" "host/$HOSTNAME" 2> /dev/null) || [[ "$stored" != \{* ]]; then
+              echo "Error: 'host/$HOSTNAME' is not retrievable after creation." >&2
+              echo "The repository was not modified; check the vault and rerun." >&2
               exit 1
           fi
           echo "Vault item 'host/$HOSTNAME' stored."
