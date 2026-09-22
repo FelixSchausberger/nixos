@@ -225,12 +225,30 @@ jobs:
       - name: Apply candidate lock
         run: git apply --verbose lock.patch
       - name: Create or update PR
+        id: create-pr
+        # The branch push behind this step has failed with a transient
+        # GitHub 500 (observed 2026-09-21); continue so the retry below runs.
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v8
         with:
           # A PAT is mandatory here: PRs created with GITHUB_TOKEN do not
           # trigger pull_request workflows (GitHub anti-recursion rule), so
           # neither ci.yml's required "Quick Validation" check nor the
           # auto-merge workflow would ever run and the PR would stall open.
+          token: ${{ secrets.LOCKS_UPDATE_PAT }}
+          branch: daily-updates
+          base: main
+          title: "chore: daily dependency update"
+          labels: auto-merge
+          commit-message: "chore: daily dependency update"
+          body-path: pr-body.md
+      - name: Create or update PR (retry)
+        # The action recomputes the candidate tree and only pushes when it
+        # differs from the branch tip, so a retry after a failed push cannot
+        # duplicate commits or PRs.
+        if: steps.create-pr.outcome == 'failure'
+        uses: peter-evans/create-pull-request@v8
+        with:
           token: ${{ secrets.LOCKS_UPDATE_PAT }}
           branch: daily-updates
           base: main
