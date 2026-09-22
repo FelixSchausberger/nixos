@@ -10,7 +10,7 @@ in {
     enable = lib.mkEnableOption "Nextcloud file sync and share server";
     dataPath = lib.mkOption {
       type = lib.types.str;
-      default = "/per/mnt/data/nextcloud";
+      default = "/per/mnt/data/services/nextcloud";
       description = "Path for Nextcloud data directory";
     };
     port = lib.mkOption {
