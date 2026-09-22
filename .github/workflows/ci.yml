@@ -132,6 +132,16 @@ jobs:
           nix flake metadata
           nix flake show
           echo "✅ Flake structure is valid"
+      - name: Evaluate package derivations
+        # nix flake show and nix flake check only force each package to WHNF:
+        # a package with wrong callPackage arguments still reports as a valid
+        # package there, and the breakage only surfaced later when the deploy
+        # workflow built it. Forcing every drvPath instantiates each
+        # derivation, which is where argument and eval errors appear.
+        run: |
+          nix eval --json .#packages.x86_64-linux \
+            --apply 'ps: builtins.mapAttrs (_: v: v.drvPath) ps' > /dev/null
+          echo "✅ All package derivations evaluated"
   # Flake input health monitoring
   flake-health:
     name: Flake Input Health Check
