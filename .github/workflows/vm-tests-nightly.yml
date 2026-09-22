@@ -60,7 +60,15 @@ jobs:
         with:
           extra_nix_config: ${{ env.NIX_CONFIG }}
       - name: Cache Nix store
-        uses: DeterminateSystems/flakehub-cache-action@v3
+        # Pull-only from this repo's public Cachix cache. The previous
+        # DeterminateSystems action logged a permanent FlakeHub 401 on every
+        # run; store paths are warmed by daily-updates and cachix-push, the
+        # only jobs carrying CACHIX_AUTH_TOKEN. Best-effort by design.
+        uses: cachix/cachix-action@v17
+        continue-on-error: true
+        with:
+          name: felixschausberger
+          skipPush: true
       # A cached success from an identical lock means the test already ran
       # for this exact input; nothing changed, so skipping is correct.
       - name: Build and run VM test (${{ matrix.test }})
