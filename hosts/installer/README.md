@@ -273,18 +273,20 @@ Full documentation available:
 
 ## Adding SSH Keys
 
-To enable SSH access in the installer, create an authorized_keys file:
+To enable SSH access in the installer, add a public key to the
+authorized_keys file:
 
 ```bash
 # On your development machine
 cat ~/.ssh/id_ed25519.pub > /per/etc/nixos/hosts/installer/authorized_keys
 
 # Rebuild the ISO
-nix build .#installer-iso
+nix build .#installer-iso-minimal
 ```
 
-**Note**: The `authorized_keys` file is gitignored for security. Each user
-must create their own before building the ISO.
+**Note**: Only public keys belong here; the file is tracked in the
+repository. Private key material never enters the repository or the ISO:
+the key flows behind an installation are described in `ssh_keys/README.md`.
 
 ## Customization
 

@@ -10,7 +10,10 @@
 in {
   sops = {
     defaultSopsFile = ../../secrets/secrets.yaml;
-    age.sshKeyPaths = ["/per/home/${defaults.system.user}/.ssh/id_ed25519"];
+    # Each host decrypts with its SSH host key, whose ssh-to-age derivation is
+    # registered as that host's recipient in .sops.yaml. The path matches the
+    # hostKeys location enforced by modules/system/ssh.nix.
+    age.sshKeyPaths = ["/per/etc/ssh/ssh_host_ed25519_key"];
     gnupg.sshKeyPaths = [];
 
     secrets = {
@@ -30,6 +33,13 @@ in {
       "private/email" = {};
       "private/password-hash" = {
         neededForUsers = true;
+      };
+      # Home Manager's sops module decrypts with this key, so the host-key
+      # capable system instance plants it before any user session starts.
+      "private/id_ed25519" = {
+        owner = defaults.system.user;
+        path = "/home/${defaults.system.user}/.ssh/id_ed25519";
+        mode = "0600";
       };
 
       "wifi/pretty-fly-for-a-wifi" = {};
@@ -99,5 +109,8 @@ in {
   # Create system mount directories for rclone
   systemd.tmpfiles.rules = [
     "d ${defaults.paths.mountDirs.base} 0755 root root -"
+    # Parent of the sops-planted Home Manager key, owned by the secret's
+    # owner so the user can keep using the directory.
+    "d /home/${defaults.system.user}/.ssh 0700 ${defaults.system.user} ${defaults.system.user} -"
   ];
 }
