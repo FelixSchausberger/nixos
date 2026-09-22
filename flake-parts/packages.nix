@@ -39,16 +39,6 @@
       # Homelab topology diagram generator (D2 → SVG + HTML)
       homelab-topology = pkgs.callPackage ../pkgs/topology {
         m920qConfig = inputs.self.nixosConfigurations.m920q.config;
-        # playwright 1.63.0's webkit build fails at auto-patchelf on channel
-        # b1b875982b17 (missing libmanette for WPEWebKit), and d2 0.8.1 drops
-        # the whole browser tree (webkit included) into its closure. The
-        # dagre rendering of this package never uses image support, so supply
-        # d2 with a chromium-only browser set instead of patching webkit.
-        d2 = pkgs.d2.override {
-          playwright-driver = {
-            browsers = pkgs.playwright-driver.passthru.browsers-chromium;
-          };
-        };
       };
 
       # Applications
