@@ -573,6 +573,10 @@ in {
       enable = true;
       alerting.enable = true;
     };
+    # Garmin health-data pipeline: InfluxDB store + fetcher + Grafana
+    # dashboard. Calendar overlay rides on Nextcloud (calendar.enable
+    # defaults to nextcloud.enable).
+    garmin.enable = true;
     navidrome = {
       enable = true;
       openFirewall = true;

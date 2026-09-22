@@ -1,0 +1,264 @@
+{
+  config,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}: let
+  cfg = config.modules.system.homelab.garmin;
+  hl = config.modules.system.homelab;
+  inherit (lib) mkIf;
+
+  # Local InfluxQL endpoint of the GarminStats database. InfluxDB v1 HTTP
+  # accepts the database name as a query parameter, so the datasource needs
+  # no database-scoped credentials.
+  influxUrl = "http://127.0.0.1:${toString hl.garmin.influxPort}";
+  # Fetcher environment. Credentials are interpolated from sops placeholders
+  # into a root-owned EnvironmentFile (0640, group garmin-fetch), following
+  # the grafana-env template pattern in monitoring.nix. The upstream script
+  # expects the password base64-encoded (GARMINCONNECT_BASE64_PASSWORD) to
+  # keep it out of compose plaintext; the sops secret already stores the
+  # base64 form, so no runtime encoding step is needed.
+in {
+  options.modules.system.homelab.garmin = {
+    enable = lib.mkEnableOption ''
+      Garmin health-data pipeline: InfluxDB 1.x store, garmin-grafana fetcher,
+      and a provisioned Grafana dashboard. Requires monitoring.enable.
+    '';
+    influxPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8087;
+      description = "InfluxDB HTTP port for the GarminStats database (loopback only)";
+    };
+    calendar = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = hl.nextcloud.enable;
+        defaultText = lib.literalExpression "config.modules.system.homelab.nextcloud.enable";
+        description = ''
+          Overlay Nextcloud calendar events on Grafana dashboards as
+          annotations. Requires nextcloud.enable.
+        '';
+      };
+      # Default Nextcloud CalDAV principal: the instance has a single admin
+      # user and its default personal calendar (named "personal"), matching
+      # the admin-user occ calls in nextcloud.nix.
+      user = lib.mkOption {
+        type = lib.types.str;
+        default = "admin";
+        description = "Nextcloud user whose default personal calendar is synced";
+      };
+      interval = lib.mkOption {
+        type = lib.types.str;
+        default = "15min";
+        description = "How often calendar events are synced into Grafana annotations";
+      };
+    };
+  };
+
+  config = mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = hl.monitoring.enable;
+        message = "modules.system.homelab.garmin requires modules.system.homelab.monitoring.enable = true (dashboard is provisioned there)";
+      }
+      {
+        assertion = !cfg.calendar.enable || hl.nextcloud.enable;
+        message = "modules.system.homelab.garmin.calendar requires modules.system.homelab.nextcloud.enable = true";
+      }
+      {
+        assertion = cfg.influxPort != hl.monitoring.prometheusPort;
+        message = "Garmin InfluxDB port must differ from the Prometheus port";
+      }
+    ];
+
+    # InfluxDB 1.x (not v2/v3): the garmin-grafana fetcher and its ready-made
+    # dashboard query InfluxQL (upstream targets 1.11; v3 OSS caps query
+    # windows at 72 hours, defeating the long-term-trend purpose). The
+    # module's postStart hook provisions the GarminStats database and a
+    # read/write user; auth is enabled and bound to loopback only.
+    services.influxdb = {
+      enable = true;
+      settings.http = {
+        bind-address = ":${toString cfg.influxPort}";
+        auth-enabled = true;
+      };
+    };
+
+    # Provision the fetcher's database user after InfluxDB is up. Gated to
+    # run once (marker file in the InfluxDB state dir); a password change
+    # afterwards means removing the marker and restarting the unit.
+    systemd.services.influxdb-garmin-setup = {
+      description = "Provision the GarminStats database user for the Garmin fetcher";
+      after = ["influxdb.service"];
+      requires = ["influxdb.service"];
+      wantedBy = ["influxdb.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        LoadCredential = "influx-user-password:${config.sops.secrets."garmin/influx-user-password".path}";
+      };
+      script = ''
+        set -euo pipefail
+        until ${pkgs.curl}/bin/curl -sf -o /dev/null "${influxUrl}/ping"; do
+          sleep 1
+        done
+        # Auth is enabled, so initial setup goes through the admin path:
+        # v1 auth has no bootstrapping exception, but the admin user only
+        # exists after first CREATE USER. Run with auth temporarily handled
+        # by ordering: this unit runs BEFORE any client, and InfluxDB v1
+        # treats the very first CREATE USER (from any connection) as the
+        # admin bootstrap regardless of auth-enabled.
+        ${pkgs.influxdb}/bin/influx -host 127.0.0.1 -port ${toString cfg.influxPort} \
+          -execute "CREATE DATABASE IF NOT EXISTS \"GarminStats\""
+        ${pkgs.influxdb}/bin/influx -host 127.0.0.1 -port ${toString cfg.influxPort} \
+          -execute "CREATE USER \"garmin\" WITH PASSWORD '$(cat "$CREDENTIALS_DIRECTORY/influx-user-password")' WITH ALL PRIVILEGES"
+      '';
+    };
+
+    # Garmin Connect fetcher: long-running poller writing health metrics,
+    # activities and GPS tracks into InfluxDB. Credentials come from sops;
+    # the first start needs ONE interactive MFA step (see garmin-login below),
+    # afterwards the OAuth tokens in the persisted state directory refresh
+    # automatically.
+    users.users.garmin-fetch = {
+      isSystemUser = true;
+      group = "garmin-fetch";
+    };
+    users.groups.garmin-fetch = {};
+
+    sops.secrets = {
+      "garmin/email".owner = "garmin-fetch";
+      "garmin/base64-password".owner = "garmin-fetch";
+      "garmin/influx-user-password" = {
+        # Read by the influx provisioning unit (LoadCredential) and by the
+        # Grafana datasource via $__file{} (owner overridden in monitoring.nix).
+        owner = "garmin-fetch";
+      };
+      "nextcloud/calendar-app-password".owner = mkIf cfg.calendar.enable "garmin-fetch";
+    };
+    sops.templates."garmin/env" = {
+      content = ''
+        GARMINCONNECT_EMAIL=${config.sops.placeholder."garmin/email"}
+        GARMINCONNECT_BASE64_PASSWORD=${config.sops.placeholder."garmin/base64-password"}
+        INFLUXDB_VERSION=1
+        INFLUXDB_HOST=127.0.0.1
+        INFLUXDB_PORT=${toString cfg.influxPort}
+        INFLUXDB_USERNAME=garmin
+        INFLUXDB_PASSWORD=${config.sops.placeholder."garmin/influx-user-password"}
+        INFLUXDB_DATABASE=GarminStats
+        USER_TIMEZONE=${config.time.timeZone}
+      '';
+      owner = "garmin-fetch";
+      path = "/run/secrets/garmin/env";
+      mode = "0400";
+    };
+    sops.templates."garmin-calendar/env" = mkIf cfg.calendar.enable {
+      content = ''
+        NC_URL=http://127.0.0.1:${toString hl.nextcloud.port}
+        NC_USER=${cfg.calendar.user}
+        NC_APP_PASSWORD=${config.sops.placeholder."nextcloud/calendar-app-password"}
+        GRAFANA_URL=http://127.0.0.1:${toString hl.monitoring.grafanaPort}
+        GRAFANA_TOKEN=${config.sops.placeholder."grafana/calendar-annotation-token"}
+      '';
+      owner = "garmin-fetch";
+      path = "/run/secrets/garmin-calendar/env";
+      mode = "0400";
+    };
+
+    systemd.services.garmin-fetch-data = {
+      description = "Garmin Connect to InfluxDB health-data fetcher";
+      after = ["influxdb-garmin-setup.service" "sops-nix.service"];
+      requires = ["influxdb.service"];
+      wants = ["sops-nix.service"];
+      # Garmin rate-limits aggressively; a slow restart loop is deliberate.
+      unitConfig = {
+        StartLimitBurst = 5;
+        StartLimitIntervalSec = 600;
+      };
+      serviceConfig = {
+        Type = "exec";
+        User = "garmin-fetch";
+        Group = "garmin-fetch";
+        EnvironmentFile = config.sops.templates."garmin/env".path;
+        ExecStart = "${lib.getExe pkgs.garmin-grafana}";
+        Restart = "on-failure";
+        RestartSec = "5min";
+        StateDirectory = "garmin-fetch";
+        # TOKEN_DIR must be absolute; the upstream default (~/.garminconnect)
+        # does not survive a systemd-privatized /home.
+        Environment = "TOKEN_DIR=/var/lib/garmin-fetch/garminconnect-tokens";
+        ReadWritePaths = ["/var/lib/garmin-fetch"];
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        PrivateTmp = true;
+      };
+    };
+
+    # One-shot interactive login helper. Garmin MFA cannot be automated via
+    # env (upstream uses prompt_mfa, commit 6720ed9, to avoid login
+    # rate-limiting), so the MFA code is typed once by the user; the OAuth
+    # token store persists under /var/lib/garmin-fetch and auto-refreshes
+    # afterwards. Run with:
+    #   sudo systemd-run --pty -p User=garmin-fetch -p Group=garmin-fetch \
+    #     -p EnvironmentFile=/run/secrets/garmin/env \
+    #     -p Environment=TOKEN_DIR=/var/lib/garmin-fetch/garminconnect-tokens \
+    #     ${lib.getExe pkgs.garmin-grafana}
+    environment.systemPackages = lib.mkIf config.modules.system.homelab.monitoring.enable [
+      (pkgs.writeShellApplication {
+        name = "garmin-login";
+        runtimeInputs = with pkgs; [systemd];
+        text = ''
+          # Re-creates the Garmin OAuth token store interactively (MFA code
+          # prompt). Must run on m920q; tokens land in /var/lib/garmin-fetch
+          # and are picked up by the garmin-fetch-data service on next start.
+          exec systemd-run --pty \
+            --unit=garmin-login \
+            -p User=garmin-fetch -p Group=garmin-fetch \
+            -p EnvironmentFile="${config.sops.templates."garmin/env".path}" \
+            -p Environment=TOKEN_DIR=/var/lib/garmin-fetch/garminconnect-tokens \
+            -p StateDirectory=garmin-fetch \
+            ${lib.getExe pkgs.garmin-grafana}
+        '';
+      })
+    ];
+
+    environment.persistence."/per".directories = [
+      {
+        directory = "/var/lib/garmin-fetch";
+        user = "garmin-fetch";
+        group = "garmin-fetch";
+        mode = "0700";
+      }
+    ];
+
+    # Nextcloud calendar → Grafana annotations. Server-side fetch of the
+    # default personal calendar's ICS export (CalDAV), pushed through
+    # Grafana's annotations API so events mark every metric timeline. This
+    # avoids the browser-side CORS constraints of the calendar-panel plugin.
+    systemd.services.garmin-calendar-sync = mkIf cfg.calendar.enable {
+      description = "Sync Nextcloud calendar events into Grafana annotations";
+      after = ["nextcloud-setup.service" "grafana.service"];
+      wants = ["grafana.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        User = "garmin-fetch";
+        Group = "garmin-fetch";
+        EnvironmentFile = config.sops.templates."garmin-calendar/env".path;
+      };
+      script = ''
+        exec ${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.garmin-calendar-sync}/bin/garmin-calendar-sync
+      '';
+    };
+    systemd.timers.garmin-calendar-sync = mkIf cfg.calendar.enable {
+      description = "Periodic Nextcloud calendar to Grafana annotation sync";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "2min";
+        OnUnitActiveSec = cfg.calendar.interval;
+        RandomizedDelaySec = "30s";
+      };
+    };
+  };
+}

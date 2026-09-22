@@ -5,6 +5,7 @@
   imports = [
     ./adguardhome.nix
     ./caddy-proxy.nix
+    ./garmin.nix
     ./homepage.nix
     ./immich.nix
     ./jellyfin.nix
