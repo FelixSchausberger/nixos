@@ -45,6 +45,10 @@ in {
           "fruit:posix_rename" = "yes";
           "fruit:veto_appledouble" = "no";
           "fruit:delete_empty_adfiles" = "yes";
+          # Service data (immich, nextcloud) and lost+found are 0700 and not
+          # sambashare-owned: hide them from listings rather than surfacing
+          # dirs the session user cannot read.
+          "hide unreadable" = "yes";
         };
         data = {
           "path" = config.modules.system.homelab.samba.dataPath;

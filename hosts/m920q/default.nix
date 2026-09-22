@@ -526,6 +526,26 @@ in {
     };
   };
 
+  # Service data predates the services/ domain split. The move ships with the
+  # dataPath changes in the same commit: nixpkgs' nextcloud setup runs
+  # maintenance:install when config.php is missing (against the existing
+  # non-empty DB -> failure -> restart loop), and comin switches automatically
+  # on merge, so the move can only happen inside activation, before units
+  # restart. /per/mnt/data is automounted: the condition tests trigger the
+  # mount, and an absent pool makes them false, so this no-ops when dpool is
+  # unavailable. A pre-existing target aborts nothing - the old dir stays put
+  # for manual reconciliation rather than a blind merge.
+  system.activationScripts.migrateServiceData = ''
+    if [ -d /per/mnt/data/nextcloud ] && [ ! -e /per/mnt/data/services/nextcloud ]; then
+      mkdir -p /per/mnt/data/services
+      mv /per/mnt/data/nextcloud /per/mnt/data/services/nextcloud
+    fi
+    if [ -d /per/mnt/data/immich ] && [ ! -e /per/mnt/data/services/immich ]; then
+      mkdir -p /per/mnt/data/services
+      mv /per/mnt/data/immich /per/mnt/data/services/immich
+    fi
+  '';
+
   modules.system.homelab = {
     adguardhome.enable = true;
     backup = {
@@ -561,7 +581,7 @@ in {
       enable = true;
       host = "0.0.0.0";
       openFirewall = true;
-      # mediaLocation keeps the module default (/per/mnt/data/immich), so the
+      # mediaLocation keeps the module default (/per/mnt/data/services/immich), so the
       # Media tree stays free for user-curated, externally indexed photos.
       # thumbs and encoded-video are latency-sensitive (served on every timeline scroll).
       # Placing them on NVMe (rpool/eyd/per) avoids random-read stalls on the SMR SATA dpool.
@@ -589,7 +609,7 @@ in {
       enable = true;
       host = "0.0.0.0";
       openFirewall = true;
-      dataPath = "/per/mnt/data/nextcloud";
+      dataPath = "/per/mnt/data/services/nextcloud";
     };
     caddyProxy = {
       enable = true;

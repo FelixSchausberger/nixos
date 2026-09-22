@@ -29,7 +29,7 @@ in {
     enable = lib.mkEnableOption "Immich photo backup server";
     dataPath = lib.mkOption {
       type = lib.types.str;
-      default = "/per/mnt/data/immich";
+      default = "/per/mnt/data/services/immich";
       description = "Path for Immich media library (library/, upload/, profile/, backups/)";
     };
     thumbsPath = lib.mkOption {
