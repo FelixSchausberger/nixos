@@ -1,7 +1,13 @@
 keys:
   - &user age1njfl602md7qt36zg957elj8y2xjhcvr0s2pwyxegw64ut6cjzulqs9azj8 # ssh-to-age -i ~/.ssh/id_ed25519.pub
+  - &host-desktop age1fk8ml0rwz7fh8sacsc0yvzhkya6yd96s36yt7l32kwd0mc0p4a3setezxx # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (desktop)
+  - &host-m920q age1zvajmg9yf00mnzelp4e9wgp3qcmrwmmvfrd4pl0xn3qlr43rwvysvg0rjz # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (m920q)
+  - &host-hp-probook-wsl age1um74mktayfnw8m4gsalzxghm2qggguzj3v8742fykxsckd52x3cqlkp07t # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (hp-probook-wsl)
 creation_rules:
   - path_regex: secrets/[^/]+\.(json|yaml|yml)$
     key_groups:
       - age:
           - *user
+          - *host-desktop
+          - *host-m920q
+          - *host-hp-probook-wsl
