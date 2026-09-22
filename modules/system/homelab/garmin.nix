@@ -130,11 +130,11 @@ in {
     sops.secrets = {
       "garmin/email".owner = "garmin-fetch";
       "garmin/base64-password".owner = "garmin-fetch";
-      "garmin/influx-user-password" = {
-        # Read by the influx provisioning unit (LoadCredential) and by the
-        # Grafana datasource via $__file{} (owner overridden in monitoring.nix).
-        owner = "garmin-fetch";
-      };
+      # garmin/influx-user-password is declared only by monitoring.nix, which
+      # sets owner grafana: Grafana reads the file via $__file{} at query
+      # time. The consumers here need no file ownership — the fetcher gets
+      # the value through the rendered template (activated as root) and
+      # influxdb-garmin-setup reads it via LoadCredential (root).
       "nextcloud/calendar-app-password".owner = mkIf cfg.calendar.enable "garmin-fetch";
     };
     sops.templates."garmin/env" = {
