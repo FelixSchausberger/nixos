@@ -134,6 +134,12 @@ repos:
         entry: pre-commit-hook-ensure-sops
         language: system
         files: ^secrets/secrets\.yaml$
+      - id: sops-user-key
+        name: Validate sops-stored user SSH key
+        entry: tools/scripts/check-sops-user-key.sh
+        language: system
+        files: ^secrets/secrets\.yaml$
+        pass_filenames: false
       - id: ai-simplify
         name: AI code simplifier review
         entry: 'bash -c ''git diff origin/main...HEAD | claude -p "Briefly flag any code that should be simplified: nesting, debug artifacts, nested ternaries, obvious comments. Be concise." --output-format text'''
