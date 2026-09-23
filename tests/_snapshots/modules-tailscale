@@ -21,7 +21,9 @@
     has_peer_monitor_timer = true;
     has_tailscale_trusted_interface = true;
     hostName = "m920q";
+    peer_monitor_fallback = "";
     peer_monitor_peer = "pixel-9a";
+    peer_monitor_subscriber_metrics = "http://127.0.0.1:2586/metrics";
     tailscale_enabled = true;
     tailscale_open_firewall = true;
     tailscale_service_enabled = true;

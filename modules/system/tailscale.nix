@@ -6,6 +6,60 @@
 }: let
   cfg = config.modules.system.homelab.tailscale;
 
+  ntfySend = import ../../lib/ntfy-send.nix {inherit pkgs lib;};
+
+  # Deliverability probe: ntfy's subscriber gauge says whether anyone still
+  # listens. A peer can answer pings while its MagicDNS stub and push
+  # subscriptions are wedged (observed 2026-09-23: the phone's WireGuard
+  # socket kept answering with no tun interface, and the monitor reported
+  # "reachable" while nothing could be delivered), so reachability alone is a
+  # false all-clear. Anomalies alert on a cooldown; a later healthy reading
+  # closes the incident. Empty when subscriberMetricsUrl is unset.
+  deliveryProbe = lib.optionalString (cfg.peerMonitor.subscriberMetricsUrl != null) ''
+    if metrics=$(${pkgs.curl}/bin/curl -sf --max-time 5 ${lib.escapeShellArg cfg.peerMonitor.subscriberMetricsUrl}); then
+      subs=$(${pkgs.gawk}/bin/awk '$1 ~ /^ntfy_subscribers/ { sum += $2; found = 1 } END { if (found) print sum + 0; else print "missing" }' <<< "$metrics")
+      delivery_suffix=" ntfy_subscribers=''${subs}"
+      if [ "$subs" = "missing" ]; then
+        delivery_zero_streak=0
+        if [ $((now - delivery_alert_at)) -ge 600 ]; then
+          msg="subscriber gauge missing from ${cfg.peerMonitor.subscriberMetricsUrl} - deliverability probe is blind"
+          echo "$ts $msg" >&2
+          notify "deliverability probe blind" "high" "$msg"
+          delivery_alert_at=$now
+          delivery_alerted=1
+        fi
+      elif [ "$subs" -eq 0 ]; then
+        # Two consecutive zero-reads (~2 min at the default interval) before
+        # alerting: an ntfy restart reconnects its subscribers within ~90s,
+        # and a lone zero-read is also what a deploy looks like (both
+        # observed 2026-09-23); a wedged peer stays at zero indefinitely.
+        # Deliberately no automatic force-stop/relaunch: killing the app
+        # takes the tunnel down and no shell uid verb brings the VPN service
+        # back unattended (it is not exported), so recovery needs a human
+        # with the phone.
+        delivery_zero_streak=$((delivery_zero_streak + 1))
+        if [ "$delivery_zero_streak" -ge 2 ] && [ $((now - delivery_alert_at)) -ge 600 ]; then
+          msg="peer $peer reachable but ntfy subscribers=0 for ''${delivery_zero_streak} probes - nothing is being delivered. Recovery: unlock the phone, open Tailscale and let it connect"
+          echo "$ts $msg" >&2
+          notify "deliverability broken" "urgent" "$msg"
+          delivery_alert_at=$now
+          delivery_alerted=1
+        fi
+      else
+        delivery_zero_streak=0
+        if [ "$delivery_alerted" -ne 0 ]; then
+          msg="peer $peer reachable, ntfy subscribers=$subs - delivery restored"
+          echo "$ts $msg"
+          notify "deliverability restored" "default" "$msg"
+          delivery_alerted=0
+        fi
+      fi
+    else
+      delivery_suffix=" ntfy_subscribers=?"
+      echo "$ts ntfy metrics unreachable (${cfg.peerMonitor.subscriberMetricsUrl})" >&2
+    fi
+  '';
+
   # Probes a peer and records reachability transitions in the journal, so an
   # outage can be timestamped after the fact (e.g. a phone that vanishes while
   # commuting). State lives in /run (tmpfs) because only transitions matter;
@@ -23,6 +77,10 @@
 
     down_since=0
     fail_count=0
+    delivery_alerted=0
+    delivery_alert_at=0
+    delivery_zero_streak=0
+    delivery_suffix=""
     if [ -f "$state_file" ]; then
       # shellcheck disable=SC1090
       . "$state_file" || true
@@ -32,13 +90,12 @@
     ts=$(${pkgs.coreutils}/bin/date -Is)
 
     ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl != null) ''
-      ntfy_url=${lib.escapeShellArg cfg.peerMonitor.alertNtfyUrl}
+      ${ntfySend {
+        primary = cfg.peerMonitor.alertNtfyUrl;
+        fallback = cfg.peerMonitor.alertNtfyFallbackUrl;
+      }}
       notify() {
-        ${pkgs.curl}/bin/curl -s -o /dev/null \
-          -H "Title: Tailscale peer $1" \
-          -H "Priority: $2" \
-          -H "Tags: tailscale,warning" \
-          -d "$3" "$ntfy_url" || true
+        ntfy_send "Tailscale peer $1" "$2" "tailscale,warning" "$3"
       }
     ''}
     ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl == null) ''
@@ -54,7 +111,8 @@
         notify "recovered" "default" "$msg"
         down_since=0
       else
-        echo "$ts peer $peer reachable ($path)"
+        ${deliveryProbe}
+        echo "$ts peer $peer reachable ($path)$delivery_suffix"
       fi
       fail_count=0
     else
@@ -69,7 +127,8 @@
       fi
     fi
 
-    printf 'down_since=%s\nfail_count=%s\n' "$down_since" "$fail_count" > "$state_file"
+    printf 'down_since=%s\nfail_count=%s\ndelivery_alerted=%s\ndelivery_alert_at=%s\ndelivery_zero_streak=%s\n' \
+      "$down_since" "$fail_count" "$delivery_alerted" "$delivery_alert_at" "$delivery_zero_streak" > "$state_file"
   '';
 in {
   options.modules.system.homelab.tailscale = {
@@ -135,6 +194,27 @@ in {
         default = null;
         description = "Optional ntfy topic URL notified on reachability transitions.";
       };
+      alertNtfyFallbackUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Secondary ntfy topic URL used only when the primary publish fails,
+          same failure model as maintenance.monitoring.fallbackNtfyUrl (the
+          local ntfy instance shares this host's storage). Empty disables it.
+        '';
+      };
+      subscriberMetricsUrl = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "http://127.0.0.1:2586/metrics";
+        description = ''
+          ntfy /metrics endpoint probed after each successful peer ping. When
+          the peer answers but the subscriber count is 0 (or the gauge is
+          missing), alert that nothing is being delivered: a wedged peer can
+          stay reachable at the WireGuard level while DNS and push
+          subscriptions are dead. null disables the deliverability probe.
+        '';
+      };
     };
   };
 
@@ -147,6 +227,10 @@ in {
       {
         assertion = !cfg.peerMonitor.enable || cfg.peerMonitor.peer != "";
         message = "modules.system.homelab.tailscale.peerMonitor.peer must be set when peerMonitor.enable is true";
+      }
+      {
+        assertion = cfg.peerMonitor.subscriberMetricsUrl == null || cfg.peerMonitor.subscriberMetricsUrl != "";
+        message = "modules.system.homelab.tailscale.peerMonitor.subscriberMetricsUrl must be null or a non-empty URL";
       }
     ];
 
