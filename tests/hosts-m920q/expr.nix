@@ -34,6 +34,9 @@ in {
   caddy_proxy_enabled = config.modules.system.homelab.caddyProxy.enable;
   homepage_enabled = config.modules.system.homelab.homepage.enable;
   ntfy_enabled = config.modules.system.homelab.ntfy.enable;
+  # Subscriber gauge on the main listener: feeds the tailscale peer monitor's
+  # deliverability check (tunnel up is not the same as messages delivered).
+  ntfy_metrics_enabled = config.services.ntfy-sh.settings.enable-metrics or false;
   samba_enabled = config.modules.system.homelab.samba.enable;
   ssh_enabled = config.modules.system.homelab.ssh.enable;
   zellij_web_enabled = config.modules.system.homelab.zellijWeb.enable;

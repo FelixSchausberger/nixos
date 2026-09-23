@@ -633,6 +633,13 @@ in {
         enable = true;
         peer = "pixel-9a";
         alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+        # Single-source the secondary channel with the maintenance alerts:
+        # both must still deliver when this host's own ntfy storage dies.
+        alertNtfyFallbackUrl = config.modules.system.maintenance.monitoring.fallbackNtfyUrl;
+        # Deliverability watch: the phone has answered pings while its DNS
+        # and ntfy subscription were wedged, so pair reachability with the
+        # subscriber gauge (both live on this host's ntfy instance).
+        subscriberMetricsUrl = "http://127.0.0.1:2586/metrics";
       };
     };
     ssh.enable = true;
