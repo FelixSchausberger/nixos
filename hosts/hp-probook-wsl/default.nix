@@ -175,9 +175,6 @@ in {
     # WSL uses ext4, not ZFS - disable persistence from system/core
     environment.persistence = lib.mkForce {};
 
-    # WSL has no /per dataset — sops reads SSH key from real home path
-    sops.age.sshKeyPaths = lib.mkForce ["/home/schausberger/.ssh/id_ed25519"];
-
     # XDG not needed — headless TUI environment
 
     # Emergency recovery user - minimal shell, no customization
