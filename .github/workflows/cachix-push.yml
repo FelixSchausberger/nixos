@@ -27,6 +27,8 @@ env:
     narinfo-cache-positive-ttl = 3600
     connect-timeout = 5
     stalled-download-timeout = 30
+    # A cache outage must not fail the job: substitute errors degrade to source builds.
+    fallback = true
     # Limit build parallelism so heavy closures cannot starve the hosted
     # runner (default auto detects vCPUs and can exhaust memory/disk).
     max-jobs = 2
