@@ -20,6 +20,12 @@ in {
         base-url = "http://m920q:2586";
         listen-http = "0.0.0.0:2586";
 
+        # Prometheus gauge with the current subscriber count, served on the
+        # main listener under /metrics. The tailscale peer monitor uses it to
+        # tell "tunnel up" from "messages actually delivered": peers answer
+        # pings while the phone's DNS/notification path is wedged.
+        enable-metrics = true;
+
         auth-file = "/per/var/lib/ntfy-sh/user.db";
         cache-file = "/per/var/lib/ntfy-sh/cache-file.db";
         attachment-cache-dir = "/per/var/lib/ntfy-sh/attachments";

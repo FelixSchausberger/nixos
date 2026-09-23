@@ -127,28 +127,11 @@
             # up front; alert titles must always identify the source host.
             host=$(${pkgs.nettools}/bin/hostname)
 
-            ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              NTFY_URL="${config.modules.system.maintenance.monitoring.ntfyUrl}"
-              NTFY_FALLBACK="${config.modules.system.maintenance.monitoring.fallbackNtfyUrl}"
-              # -f fails on HTTP >= 400 (a broken ntfy still answering 5xx is
-              # a failed publish, not a success, as observed 2026-09-15 on
-              # m920q when its own sqlite died under a full pool).
-              ntfy_send() {
-                local title="$1" prio="$2" tags="$3" body="$4"
-                if curl -sf -o /dev/null \
-                  -H "Title: $title" -H "Priority: $prio" -H "Tags: $tags" \
-                  -d "$body" "$NTFY_URL"; then
-                  return 0
-                fi
-                echo "ERROR: ntfy publish failed for '$title'" >&2
-                if [ -n "$NTFY_FALLBACK" ]; then
-                  curl -sf -o /dev/null \
-                    -H "Title: $title" -H "Priority: $prio" -H "Tags: $tags" \
-                    -d "primary channel down: $body" "$NTFY_FALLBACK" \
-                    || echo "ERROR: fallback ntfy publish failed for '$title'" >&2
-                fi
-              }
-            ''}
+            ${lib.optionalString config.modules.system.maintenance.monitoring.alerts
+              ((import ../../lib/ntfy-send.nix {inherit pkgs lib;}) {
+                primary = config.modules.system.maintenance.monitoring.ntfyUrl;
+                fallback = config.modules.system.maintenance.monitoring.fallbackNtfyUrl;
+              })}
 
             # Check for failed services
             failed_services=$(${pkgs.systemd}/bin/systemctl --failed --no-legend | wc -l)
