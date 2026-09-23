@@ -326,11 +326,19 @@ in {
     services.grafana = {
       enable = true;
       settings = {
-        server = {
-          http_addr = "0.0.0.0";
-          http_port = cfg.grafanaPort;
-          domain = "m920q";
-        };
+        server =
+          {
+            http_addr = "0.0.0.0";
+            http_port = cfg.grafanaPort;
+            domain = "m920q";
+          }
+          # Sub-path serving mirrors the Caddy route: Grafana mounts its app at
+          # /grafana and the tailnet URL is canonical for redirects and assets.
+          # Without the proxy route Grafana keeps serving from the root path.
+          // lib.optionalAttrs (config.modules.system.homelab.caddyProxy.enable && config.modules.system.homelab.caddyProxy.grafana) {
+            root_url = "https://${config.modules.system.homelab.caddyProxy.tailnetDomain}/grafana";
+            serve_from_sub_path = true;
+          };
         security = {
           admin_user = "admin";
           admin_password = "$__env{GF_SECURITY_ADMIN_PASSWORD}";

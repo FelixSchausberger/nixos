@@ -103,6 +103,19 @@
             };
           };
         };
+        # monitoring.nix gates Grafana sub-path serving on the Caddy proxy
+        # route; caddy-proxy.nix is not imported here (no proxy in the test
+        # VM), so the route toggles stay off.
+        caddyProxy = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+          };
+          grafana = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+          };
+        };
         # monitoring.nix feeds determinate-nixd GC data through
         # modules.system.maintenance, which the test node does not import (see
         # the modules.system.maintenance stub below).
