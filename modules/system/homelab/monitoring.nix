@@ -358,6 +358,11 @@ in {
               uid = "garmin_influxdb";
               url = "http://127.0.0.1:${toString config.modules.system.homelab.garmin.influxPort}";
               isDefault = false;
+              # Top-level user (v1 datasource model), same account garmin.nix
+              # creates with CREATE USER. Without it Grafana sends only the
+              # password and InfluxDB rejects every query with
+              # "unable to parse authentication credentials".
+              user = "garmin";
               jsonData = {
                 dbName = "GarminStats";
                 httpMode = "GET";
