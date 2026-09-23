@@ -130,17 +130,32 @@ in {
           echo "Vault item 'host/$HOSTNAME' stored."
       }
 
+      # .sops.yaml stores the fleet's recipients as YAML anchors in `keys`
+      # and aliases in the creation rule, so indentation-anchored text
+      # patterns cannot find them; explode(.) resolves both forms to the
+      # plain recipient for an exact-line membership test.
+      # $1 "keys" or "rule", $2 age recipient
+      recipient_listed() {
+          local entries
+          if [[ "$1" == keys ]]; then
+              entries=$(yq -r 'explode(.) | .keys[]' .sops.yaml)
+          else
+              entries=$(yq -r 'explode(.) | .creation_rules[].key_groups[].age[]' .sops.yaml)
+          fi
+          grep -qxF "$2" <<< "$entries"
+      }
+
       # Append the age recipient to .sops.yaml if either list lacks it. The
       # keys entry gets the derivation comment that the anchor style of the
       # hand-written entries carries.
       # $1 age recipient, $2 host label
       register_recipient() {
-          if ! grep -q "^  - $1" .sops.yaml; then
+          if ! recipient_listed keys "$1"; then
               RECIP="$1" yq -i '.keys += [strenv(RECIP)]' .sops.yaml
               sed -i "s|^  - $1\$|  - $1 # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (host-$2)|" .sops.yaml
               echo "Recipient for $2 added to .sops.yaml keys."
           fi
-          if ! grep -q "^          - $1" .sops.yaml; then
+          if ! recipient_listed rule "$1"; then
               RECIP="$1" yq -i '.creation_rules[0].key_groups[0].age += [strenv(RECIP)]' .sops.yaml
               echo "Recipient for $2 added to the creation rule."
           fi
@@ -171,7 +186,7 @@ in {
               echo "the stale vault item, then rerun." >&2
               exit 1
           fi
-          if grep -q "^  - $item_recip" .sops.yaml && grep -q "^          - $item_recip" .sops.yaml; then
+          if recipient_listed keys "$item_recip" && recipient_listed rule "$item_recip"; then
               echo "host/$HOSTNAME is already stored and registered; nothing to do."
               exit 0
           fi
@@ -220,10 +235,19 @@ in {
               exit 1
           fi
 
+          # The marker echo puts its newline at the head of the private
+          # half, and ssh-keygen refuses a PEM preceded by a blank line;
+          # the public half carries the .pub file's own trailing newline.
+          # Trim both halves back to the exact shape of their source files.
+          HOST_PUB=''${HOST_PUB%%$'\n'*}
+          HOST_PRIV=''${HOST_PRIV#$'\n'}
+
           printf '%s\n' "$HOST_PRIV" > "$WORKDIR/key"
           chmod 600 "$WORKDIR/key"
           if ! derived=$(ssh-keygen -y -f "$WORKDIR/key" 2> /dev/null); then
-              echo "Error: host private key from $TARGET_HOST does not parse" >&2
+              # ssh-keygen stderr carries only the file path and the error,
+              # never key bytes, so rerunning with 2>&1 is safe to surface.
+              echo "Error: host private key from $TARGET_HOST does not parse: $(ssh-keygen -y -f "$WORKDIR/key" 2>&1)" >&2
               exit 1
           fi
           read -r pub_alg pub_body _ <<< "$HOST_PUB"
