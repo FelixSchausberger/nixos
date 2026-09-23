@@ -19,6 +19,25 @@
   # expects the password base64-encoded (GARMINCONNECT_BASE64_PASSWORD) to
   # keep it out of compose plaintext; the sops secret already stores the
   # base64 form, so no runtime encoding step is needed.
+
+  # The pip console script (lib.getExe's target) calls main(), but upstream's
+  # main() only does `from . import garmin_fetch` while the whole engine
+  # (login, MFA prompt, fetch loop) sits behind `if __name__ == "__main__":`
+  # in garmin_fetch.py. On import that gate is false, so the script printed
+  # its banner and exited 0 without ever authenticating. Upstream's Docker
+  # image works around this by running the .py file as a script; executing
+  # the module as __main__ through runpy reproduces that from the console
+  # script. --replace-fail makes the build fail loudly if upstream rewrites
+  # the line, instead of silently regressing to the no-op entry point.
+  garmin-grafana = pkgs.garmin-grafana.overrideAttrs (old: {
+    postPatch =
+      (old.postPatch or "")
+      + ''
+        substituteInPlace src/garmin_grafana/__init__.py \
+          --replace-fail 'from . import garmin_fetch' \
+          'import runpy; runpy.run_module("garmin_grafana.garmin_fetch", run_name="__main__")'
+      '';
+  });
 in {
   options.modules.system.homelab.garmin = {
     enable = lib.mkEnableOption ''
@@ -199,7 +218,7 @@ in {
         User = "garmin-fetch";
         Group = "garmin-fetch";
         EnvironmentFile = config.sops.templates."garmin/env".path;
-        ExecStart = "${lib.getExe pkgs.garmin-grafana}";
+        ExecStart = "${lib.getExe garmin-grafana}";
         Restart = "on-failure";
         RestartSec = "5min";
         StateDirectory = "garmin-fetch";
@@ -217,29 +236,36 @@ in {
     # One-shot interactive login helper. Garmin MFA cannot be automated via
     # env (upstream uses prompt_mfa, commit 6720ed9, to avoid login
     # rate-limiting), so the MFA code is typed once by the user; the OAuth
-    # token store persists under /var/lib/garmin-fetch and auto-refreshes
-    # afterwards. Run with:
+    # token store persists under /var/lib/garmin-fetch before any fetch runs
+    # and auto-refreshes afterwards. MANUAL_START_DATE selects upstream's
+    # bulk-then-exit path: after MFA the helper fetches today's data once
+    # and exits 0 instead of entering the endless poll loop, so a later run
+    # never collides with a still-running unit. Manual invocation is:
     #   sudo systemd-run --pty -p User=garmin-fetch -p Group=garmin-fetch \
     #     -p EnvironmentFile=/run/secrets/garmin/env \
     #     -p Environment=TOKEN_DIR=/var/lib/garmin-fetch/garminconnect-tokens \
-    #     ${lib.getExe pkgs.garmin-grafana}
+    #     -p Environment=MANUAL_START_DATE=$(date +%F) \
+    #     ${lib.getExe garmin-grafana}
     environment.systemPackages = lib.mkIf config.modules.system.homelab.monitoring.enable [
       (pkgs.writeShellApplication {
         name = "garmin-login";
-        runtimeInputs = with pkgs; [systemd];
+        runtimeInputs = with pkgs; [coreutils systemd];
         text = ''
           # Re-creates the Garmin OAuth token store interactively (MFA code
           # prompt). Must run on m920q; tokens land in /var/lib/garmin-fetch
           # and unblock garmin-fetch-data, which stays dormant
           # (ConditionPathExists) until they exist: start it explicitly
-          # after login, or let the next boot pick it up.
+          # after login, or let the next boot pick it up. MANUAL_START_DATE
+          # makes the engine bulk-fetch today's data and exit instead of
+          # polling forever.
           exec systemd-run --pty \
             --unit=garmin-login \
             -p User=garmin-fetch -p Group=garmin-fetch \
             -p EnvironmentFile="${config.sops.templates."garmin/env".path}" \
             -p Environment=TOKEN_DIR=/var/lib/garmin-fetch/garminconnect-tokens \
+            -p "Environment=MANUAL_START_DATE=$(date +%F)" \
             -p StateDirectory=garmin-fetch \
-            ${lib.getExe pkgs.garmin-grafana}
+            ${lib.getExe garmin-grafana}
         '';
       })
     ];
