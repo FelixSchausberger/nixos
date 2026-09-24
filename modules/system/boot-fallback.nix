@@ -69,7 +69,9 @@ in {
         PROFILE=/nix/var/nix/profiles/system
         NTFY_URL=${lib.escapeShellArg cfg.ntfyUrl}
         MIN_GOOD=${toString cfg.minGoodGenerations}
-        NIX_ENV=${pkgs.nix}/bin/nix-env
+        # config.nix.package, not pkgs.nix: nix.conf is Determinate Nix's file
+        # and nixpkgs' nix warns about its settings on every startup.
+        NIX_ENV=${config.nix.package}/bin/nix-env
         CURL=${pkgs.curl}/bin/curl
         TAG=boot-fallback-cleanup
 

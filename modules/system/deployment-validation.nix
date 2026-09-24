@@ -224,7 +224,9 @@ in {
         if generation=$(generation_from_symlinks "$current_path" 2>/dev/null); then
           status_line ok "Generation" "$generation"
         elif [[ -r "$profile" ]]; then
-          current_line="$(${pkgs.nix}/bin/nix-env -p "$profile" --list-generations 2>/dev/null | grep '(current)' || true)"
+          # config.nix.package, not pkgs.nix: nix.conf is Determinate Nix's
+          # file and nixpkgs' nix warns about its settings on every startup.
+          current_line="$(${config.nix.package}/bin/nix-env -p "$profile" --list-generations 2>/dev/null | grep '(current)' || true)"
           if [[ -n "''${current_line:-}" ]]; then
             generation=$(echo "$current_line" | ${pkgs.gawk}/bin/awk '{print $1}')
             status_line ok "Generation" "$generation"
