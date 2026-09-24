@@ -485,6 +485,14 @@
               -H "Accept: application/vnd.github+json" "$api") \
               || { echo "WARN: GitHub API unreachable; watchdog check skipped" >&2; exit 0; }
 
+            # Name the input and show its head instead of letting jq die with a
+            # bare parse error. Exit non-zero so the unit fails and the hourly
+            # health check keeps reporting it until someone looks.
+            if ! printf '%s' "$response" | ${pkgs.jq}/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
+              echo "ERROR: GitHub API response is not JSON: $(printf '%s' "$response" | head -c 200)" >&2
+              exit 1
+            fi
+
             run=$(printf '%s' "$response" | ${pkgs.jq}/bin/jq -r \
               '[.workflow_runs[] | select(.status == "completed")][0] // empty')
             if [[ -z "$run" ]]; then
@@ -531,14 +539,34 @@
             # channel rev has gone unadopted past the threshold. Read both
             # through `nix flake metadata`, which also proves the lock is
             # fetchable (stronger than parsing the raw file).
+            #
+            # Capture stdout only: nix reports progress and configuration
+            # warnings ("unknown setting 'eval-cores'/'lazy-trees'" from the
+            # Determinate-managed nix.conf) on stderr, and merging the two feeds
+            # non-JSON to jq. Unmerged they reach the journal, where a fetch
+            # failure stays readable.
             if ! locked_json=$(${pkgs.nix}/bin/nix flake metadata --json \
-                 "github:${cfgWatch.repository}/main" 2>&1); then
+                 "github:${cfgWatch.repository}/main"); then
               echo "WARN: flake unreachable; staleness check skipped" >&2
               exit 0
             fi
 
-            locked_rev=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r '.locks.nodes.nixpkgs.locked.rev')
-            locked_ts=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r '.locks.nodes.nixpkgs.locked.lastModified')
+            # Same contract as the API response above: a parse failure names its
+            # input and quotes the offending bytes rather than surfacing as a
+            # bare jq error.
+            if ! printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
+              echo "ERROR: nix flake metadata output is not JSON: $(printf '%s' "$locked_json" | head -c 200)" >&2
+              exit 1
+            fi
+
+            # Node ids are de-duplicated with numeric suffixes, so the nixpkgs
+            # this flake evaluates with is whichever id the root node maps to;
+            # the bare .locks.nodes.nixpkgs entry can belong to a transitive
+            # input and would measure an unrelated pin's age instead.
+            locked_rev=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r \
+              '.locks.nodes[.locks.nodes.root.inputs.nixpkgs].locked.rev')
+            locked_ts=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r \
+              '.locks.nodes[.locks.nodes.root.inputs.nixpkgs].locked.lastModified')
             if [[ ! "$locked_ts" =~ ^[0-9]+$ ]]; then
               echo "WARN: could not read locked nixpkgs timestamp; staleness check skipped" >&2
               exit 0
