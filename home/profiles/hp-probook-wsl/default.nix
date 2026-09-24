@@ -9,6 +9,10 @@
     ../../../modules/home/work/git.nix # Add work Git config
   ];
 
+  # OpenCode 2 beta spike (opencode2), isolated from the V1 config. Opt-in;
+  # see modules/home/tui/ai-assistants/opencode/v2.nix.
+  ai-assistants.opencodeV2.enable = true;
+
   # Feature-based configuration for WSL development environment
   features = {
     development = {
