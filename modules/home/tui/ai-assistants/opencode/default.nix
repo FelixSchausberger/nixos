@@ -85,11 +85,12 @@ in {
     settings = {
       inherit model;
       small_model = model;
-      # Hide unused providers from the model list. Zen's gateway id is
-      # "opencode" (distinct from the "opencode-go" subscription provider);
-      # ollama-cloud is auto-detected from the OLLAMA_API_KEY environment,
-      # hidden here as a guard alongside the removed export below.
-      disabled_providers = ["opencode" "ollama-cloud"];
+      # Hide unused providers from the model list. ollama-cloud is
+      # auto-detected from the OLLAMA_API_KEY environment, hidden here as a
+      # guard alongside the removed export below. Zen's gateway id is
+      # "opencode" (distinct from the "opencode-go" subscription provider)
+      # and stays listed so its *-free models remain selectable.
+      disabled_providers = ["ollama-cloud"];
       agent = {
         explore.model = model;
         general.model = model;
