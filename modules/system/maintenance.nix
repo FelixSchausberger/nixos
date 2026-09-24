@@ -243,8 +243,12 @@
               fi
             done <<< "$filesystems"
 
-            # Check for old generations
-            generation_count=$(${pkgs.nix}/bin/nix-env -p /nix/var/nix/profiles/system --list-generations | wc -l)
+            # Check for old generations. The nix calls in this script run
+            # config.nix.package, not pkgs.nix: /etc/nix/nix.conf is written by
+            # Determinate Nix and holds settings only its own nix knows, so
+            # nixpkgs' nix logs two "unknown setting" warnings on every
+            # invocation — noise on each check, cleanup, and metadata fetch.
+            generation_count=$(${config.nix.package}/bin/nix-env -p /nix/var/nix/profiles/system --list-generations | wc -l)
             if [[ $generation_count -gt 10 ]]; then
               echo "INFO: $generation_count system generations present (consider cleanup)"
             fi
@@ -337,10 +341,10 @@
             echo "Starting automated cleanup..."
 
             # Clean old generations (keep last 5)
-            ${pkgs.nix}/bin/nix-env -p /nix/var/nix/profiles/system --delete-generations +5
+            ${config.nix.package}/bin/nix-env -p /nix/var/nix/profiles/system --delete-generations +5
 
             # Garbage collect with automatic confirmation
-            ${pkgs.nix}/bin/nix store gc
+            ${config.nix.package}/bin/nix store gc
 
             # No `nix store optimise`: nix.settings.auto-optimise-store already
             # keeps new paths hardlinked, and the built-in
@@ -540,12 +544,11 @@
             # through `nix flake metadata`, which also proves the lock is
             # fetchable (stronger than parsing the raw file).
             #
-            # Capture stdout only: nix reports progress and configuration
-            # warnings ("unknown setting 'eval-cores'/'lazy-trees'" from the
-            # Determinate-managed nix.conf) on stderr, and merging the two feeds
-            # non-JSON to jq. Unmerged they reach the journal, where a fetch
-            # failure stays readable.
-            if ! locked_json=$(${pkgs.nix}/bin/nix flake metadata --json \
+            # Capture stdout only: nix reports progress and any configuration
+            # warnings on stderr, and merging the two feeds non-JSON to jq.
+            # Unmerged they reach the journal, where a fetch failure stays
+            # readable.
+            if ! locked_json=$(${config.nix.package}/bin/nix flake metadata --json \
                  "github:${cfgWatch.repository}/main"); then
               echo "WARN: flake unreachable; staleness check skipped" >&2
               exit 0
@@ -572,7 +575,7 @@
               exit 0
             fi
 
-            channel_rev=$(${pkgs.nix}/bin/nix flake metadata --json \
+            channel_rev=$(${config.nix.package}/bin/nix flake metadata --json \
               "tarball+https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz" 2>/dev/null \
               | ${pkgs.jq}/bin/jq -r '.revision // empty') \
               || { echo "WARN: channel revision unreachable; staleness check skipped" >&2; exit 0; }
