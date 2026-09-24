@@ -117,6 +117,15 @@ expect_silent \
 	$'pkg: 1.2.3 → 0abcdef, +10 KiB\n' \
 	"version-to-rev change stays silent"
 
+expect_silent \
+	$'tree-sitter-fish: 0.0.0+rev=f435b0b → 0.0.0+rev=b7f1d68, -110.4 KiB\n' \
+	"rev-suffixed ref bump stays silent"
+
+expect_report \
+	$'pkg: 1.2.3+rev=abcdef1 → 1.2.2+rev=0abcdef, -10 KiB\n' \
+	"pkg: 1.2.3+rev=abcdef1 → 1.2.2+rev=0abcdef" \
+	"rev-suffixed base regression still reported"
+
 expect_report \
 	$'openssl: 20250101 → 20240101, -5 KiB\n' \
 	"openssl: 20250101 → 20240101" \

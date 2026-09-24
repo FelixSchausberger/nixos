@@ -6,6 +6,9 @@
 # Usage: is_downgrade OLD_VERSION NEW_VERSION  (exit 0 = genuine regression)
 #
 # Rules, in order:
+#   git-ref suffixes      -> stripped before comparing ("0.0.0+rev=<ref>":
+#                            nixpkgs tree-sitter grammars; the ref is opaque
+#                            while the numeric base still regresses normally)
 #   equal versions            -> not a downgrade
 #   non-version sentinels     -> never a downgrade (diff-closures marks package
 #                                additions as "∅ → v" and removals as "v → ε";
@@ -22,6 +25,11 @@
 
 is_downgrade() {
 	local old_v=$1 new_v=$2
+	# sort -V ranks ref suffixes lexically (b7f1d68 < f435b0b), which would
+	# flag an ordinary grammar bump as a regression; compare the numeric
+	# base instead so 1.2.3+rev=x -> 1.2.2+rev=y still reports.
+	old_v="${old_v%%+rev=*}"
+	new_v="${new_v%%+rev=*}"
 	[[ "$new_v" == "$old_v" ]] && return 1
 	[[ "$old_v" =~ ^[0-9] && "$new_v" =~ ^[0-9] ]] || return 1
 	if [[ "$old_v" =~ ^[0-9a-f]{7,40}$ && "$old_v" =~ [a-f] ]] ||
