@@ -15,6 +15,16 @@
     }
   '';
 
+  # For services that mount their own sub-path (Grafana with
+  # serve_from_sub_path), the prefix must reach the upstream intact because
+  # the service generates redirects and asset URLs under it; handle_path
+  # would strip it and break those.
+  mkKeepRoute = path: upstreamPort: ''
+    handle /${path}* {
+      reverse_proxy http://127.0.0.1:${toString upstreamPort}
+    }
+  '';
+
   # CalDAV/CardDAV clients and Nextcloud's service discovery probe the
   # .well-known endpoints at the site root; with Nextcloud served under a
   # sub-path these must redirect into it.
@@ -130,7 +140,7 @@ in {
             }
           ''
           + lib.optionalString cfg.navidrome (mkRoute "navidrome" hl.navidrome.port)
-          + lib.optionalString cfg.grafana (mkRoute "grafana" hl.monitoring.grafanaPort)
+          + lib.optionalString cfg.grafana (mkKeepRoute "grafana" hl.monitoring.grafanaPort)
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
           + lib.optionalString cfg.homepage (mkRoute "homepage" hl.homepage.port)
