@@ -9,6 +9,7 @@
   openssh_enabled = true;
   password_auth_disabled = true;
   permit_root_login_no = true;
+  pq_kex_enabled = true;
   ssh_module_enabled = true;
   x11_forwarding_disabled = true;
 }

@@ -39,6 +39,7 @@ in {
   ntfy_metrics_enabled = config.services.ntfy-sh.settings.enable-metrics or false;
   samba_enabled = config.modules.system.homelab.samba.enable;
   ssh_enabled = config.modules.system.homelab.ssh.enable;
+  pq_kex_enabled = builtins.elem "mlkem768x25519-sha256" config.services.openssh.settings.KexAlgorithms;
   zellij_web_enabled = config.modules.system.homelab.zellijWeb.enable;
   opencode_web_enabled = config.modules.system.homelab.opencodeWeb.enable;
   tailscale_openssh_enabled = config.modules.system.homelab.tailscale.openSSH;
