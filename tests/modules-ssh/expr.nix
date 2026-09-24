@@ -16,6 +16,7 @@ in {
   x11_forwarding_disabled = config.services.openssh.settings.X11Forwarding == false;
   max_auth_tries = config.services.openssh.settings.MaxAuthTries;
   login_grace_time = config.services.openssh.settings.LoginGraceTime;
+  pq_kex_enabled = builtins.elem "mlkem768x25519-sha256" config.services.openssh.settings.KexAlgorithms;
 
   # Host keys configured at hardened paths
   has_rsa_key = builtins.any (k: k.path or "" == "/per/etc/ssh/ssh_host_rsa_key") config.services.openssh.hostKeys;

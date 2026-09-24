@@ -39,7 +39,12 @@
           "aes256-gcm@openssh.com"
           "aes128-gcm@openssh.com"
         ];
+        # mlkem768x25519-sha256 is the OpenSSH >= 10.0 default hybrid: it can
+        # only be stronger than X25519, never weaker, and without it every
+        # OpenSSH >= 10.1 client prints the store-now-decrypt-later warning.
+        # The classical entries remain for clients that predate it.
         KexAlgorithms = [
+          "mlkem768x25519-sha256"
           "curve25519-sha256"
           "curve25519-sha256@libssh.org"
           "diffie-hellman-group14-sha256"
