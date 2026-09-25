@@ -31,8 +31,10 @@ rec {
     # NixOS configuration repository
     nixosConfig = "/per/etc/nixos";
 
-    # Obsidian vault location
-    obsidianVault = "/per/mnt/data/gdrive/Obsidian";
+    # Obsidian vault on the data pool. The directory is also a Nextcloud
+    # external-storage mount (modules/system/homelab/nextcloud.nix), so a
+    # write here becomes a change on every synced client.
+    obsidianVault = "/per/mnt/data/Obsidian";
 
     # Repositories directory
     repos = "/per/repos";
@@ -40,7 +42,6 @@ rec {
     # System mount directories
     mountDirs = {
       base = "/per/mnt";
-      gdrive = "/per/mnt/data/gdrive";
     };
   };
 }
