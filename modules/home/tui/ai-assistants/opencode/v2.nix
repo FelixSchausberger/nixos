@@ -114,7 +114,10 @@
   # aborts plugin generation and blocks agent registration, leaving the TUI
   # without modes or a working model picker. XDG_CONFIG_HOME is deliberately
   # not used: it would leak into every child process (bash tool calls, LSPs)
-  # spawned from opencode2 sessions.
+  # spawned from opencode2 sessions. Launch opencode2 only through this PATH
+  # shim: `nix shell`, an absolute store path, or anything else that skips it
+  # starts opencode2 without the variable and silently falls back to the V1
+  # config above.
   opencode2 = pkgs.writeShellScriptBin "opencode2" ''
     exec env OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${inputs.opencode-v2.packages.${system}.opencode}/bin/opencode2 "$@"
   '';

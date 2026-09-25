@@ -1,9 +1,15 @@
 {
   "name": "zellij-indicator-felix",
   "version": "0.7.0+truncate.4",
-  "description": "Vendored fork of opencode-zellij-indicator@0.7.0 (v0.7.0, aidan-gallagher, MIT). Patches: compact tabs by default (status icon only, so the Zellij tab shows just its index + icon); set OPENCODE_ZELLIJ_TITLE_MAX > 0 to show titles, adaptively budgeted to the status bar (format.ts adaptiveTitleMax). Drop this vendored copy when upstream ships truncation.",
+  "description": "Vendored fork of opencode-zellij-indicator@0.7.0 (v0.7.0, aidan-gallagher, MIT). Patches: compact tabs by default (status icon only, so the Zellij tab shows just its index + icon); set OPENCODE_ZELLIJ_TITLE_MAX > 0 to show titles, adaptively budgeted to the status bar (format.ts adaptiveTitleMax). Drop this vendored copy when upstream ships truncation. Inert ./server, ./tui and ./rpc entrypoints exist so an unisolated V2 resolves the directory without aborting plugin generation; V1 keeps loading src/index.ts through main.",
   "type": "module",
   "main": "src/index.ts",
+  "exports": {
+    "./server": "./server.ts",
+    "./tui": "./tui.ts",
+    "./rpc": "./rpc.ts",
+    ".": "./src/index.ts"
+  },
   "files": [
     "src",
     "sounds",

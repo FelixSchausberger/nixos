@@ -109,3 +109,8 @@ renders the opt-in OpenCode 2 beta config (`ai-assistants.opencodeV2.enable`)
 into `~/.config/opencode-v2/opencode/`. V2 is isolated because it loads the V1
 plugin list by union and V1-only plugins have no V2 entrypoint; its credentials
 are database-backed, so `opencode2 auth login <provider>` is needed once.
+
+Launch `opencode2` through the PATH shim only: `nix shell` or an absolute store
+path skips `OPENCODE_CONFIG_DIR`, and the process silently falls back to the V1
+config, whose V1-only plugins abort V2's plugin generation and leave every
+registry (model picker included) empty.
