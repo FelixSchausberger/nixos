@@ -34,7 +34,10 @@
       touying-author = "${typstSkillsSrc}/touying-author";
     };
 
-  model = "github-copilot/gpt-5-mini";
+  # Free OpenCode Zen tier (keyless, no paid dependency): drives the session
+  # default plus the title/summary/compaction and explore/general agents in
+  # both harnesses. Paid opencode-go models stay one /model switch away.
+  model = "opencode/mimo-v2.6-flash-free";
 
   formatters = {
     nixfmt = {};
