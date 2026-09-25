@@ -12,6 +12,23 @@
 }: let
   dsshGuid = "{e0b0a5b5-4f2a-4a1d-9d88-3c5d9d1b7b01}";
   moshHomelabGuid = "{ddea1859-4521-504c-81d0-0196754902b0}";
+
+  # wsl.exe sometimes fails before fish starts: it reports "Error code:
+  # Wsl/Service/0x8007274c" (timeout on the WSL service socket) and exits -1,
+  # which closed the tab without any mosh output. Process exits from Linux are
+  # always 0-255, so a negative $LASTEXITCODE can only be the Windows-side
+  # session creation failing; that gets exactly one retry, while mosh and ssh
+  # failures (>= 0) keep their own exit code. The explicit title keeps the tab
+  # labelled like the profile instead of the powershell.exe path until mosh
+  # sends its own.
+  moshHomelabCommandline =
+    "powershell.exe -NoProfile -Command \""
+    + "$Host.UI.RawUI.WindowTitle = 'm920q mosh'; "
+    + "& wsl.exe -d NixOS -- fish -c m920q; "
+    + "if ($LASTEXITCODE -lt 0) "
+    + "{ Write-Host '[wsl] session start failed, retrying'; "
+    + "& wsl.exe -d NixOS -- fish -c m920q }; "
+    + "exit $LASTEXITCODE\"";
 in {
   options.tui.windows-terminal = {
     enable =
@@ -131,7 +148,8 @@ in {
           # (ssh-only launcher), so this profile wraps the fish function that
           # picks the tailscale/LAN path. Routed through the WSL default-shell
           # wrapper (no -e): a direct exec would skip /etc/set-environment and
-          # miss PATH/LANG. Tab closes when the session ends.
+          # miss PATH/LANG. Tab closes when the session ends. The command line
+          # is the retry wrapper declared above; wsl.exe itself is unchanged.
           #
           # Icon: Segoe Fluent Icons "Wifi" glyph (U+E701), same value the WT
           # settings UI writes when picking the wifi icon - distinguishes mosh
@@ -139,7 +157,7 @@ in {
           # escape (a bare backslash is dropped silently), so the glyph is
           # parsed out of a JSON string literal via fromJSON.
           {
-            commandline = "wsl.exe -d NixOS -- fish -c m920q";
+            commandline = moshHomelabCommandline;
             guid = moshHomelabGuid;
             hidden = false;
             icon = builtins.fromJSON ''"\ue701"'';
