@@ -220,6 +220,9 @@
             filesystems="$(df -B1 -l --output=fstype,pcent,avail,target | grep -E '^(zfs|ext[234]|btrfs|xfs|f2fs|vfat)[[:space:]]+')"
             while IFS= read -r line; do
               read -r pcent avail mount < <(${pkgs.gawk}/bin/awk '{print $2,$3,$4}' <<< "$line")
+              # df's pcent field carries the sign ("67%"); strip it so the -ge
+              # comparisons below are arithmetic, not a bash syntax error.
+              pcent="''${pcent%\%}"
               # ZFS exposes old snapshots as mountable dfs (read-only views
               # at <dataset>/.zfs/snapshot); they share the same pool and
               # must not double-alert the live filesystem.
