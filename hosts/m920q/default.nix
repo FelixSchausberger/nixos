@@ -342,10 +342,27 @@ in {
     script = ''
       set -eu
       docker=${config.virtualisation.docker.package}/bin/docker
+      nft=${pkgs.nftables}/bin/nft
       if ! "$docker" info >/dev/null 2>&1; then
         systemctl start docker.service
       fi
-      if ! "$docker" inspect intel-lms >/dev/null 2>&1; then
+      # Docker's forward gate drops forwarded traffic destined to container
+      # addresses before its per-published-port accepts can match, and the
+      # amt_dnat target port 26992 is not a published port - tailnet SYNs would
+      # die in that drop even though the DNAT worked. DOCKER-USER is docker's
+      # sanctioned extension point, jumped ahead of the drop within the same
+      # base chain, so an accept verdict there wins. Re-checked on every run:
+      # the rule must exist whenever the relay stack is up, not only after a
+      # deploy, and a chain that something flushed heals within one timer tick.
+      rules=$("$nft" list chain ip filter DOCKER-USER 2>/dev/null || true)
+      case "$rules" in
+        *"daddr 172.17.0.2"*"dport 26992"*) ;;
+        *) "$nft" add rule ip filter DOCKER-USER ip daddr 172.17.0.2 tcp dport 26992 accept ;;
+      esac
+      # container inspect, not inspect: a bare inspect also matches the
+      # intel-lms image, so a deleted container would pass the check and the
+      # relay would crash-loop on the image instead of reporting cleanly.
+      if ! "$docker" container inspect intel-lms >/dev/null 2>&1; then
         echo "intel-lms container missing - leaving the relay down" >&2
         systemctl stop amt-relay.service
         exit 0
