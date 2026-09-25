@@ -265,8 +265,8 @@ in {
         # the wire.
         neighbors = [
           {
-            Destination = "192.168.178.10";
-            MACAddress = "e8:6a:64:9f:a0:50";
+            Address = "192.168.178.10";
+            LinkLayerAddress = "e8:6a:64:9f:a0:50";
           }
         ];
       };
