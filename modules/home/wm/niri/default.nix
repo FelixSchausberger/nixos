@@ -585,7 +585,26 @@ in {
     # niri-flake ships a KDE polkit agent whose portal registration spams
     # journald ("Failed to register with host portal"). Swap in polkit-gnome,
     # the platform-agnostic Wayland-compatible agent.
-    systemd.user.services."niri-flake-polkit".serviceConfig.ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+    # HM's unit submodule is freeform and has no serviceConfig option: a bare
+    # serviceConfig attr renders as a literal [serviceConfig] section, which
+    # systemd rejects ("Service has no ExecStart") - and because user units
+    # shadow /etc/systemd/user, that broken unit also hid niri-flake's working
+    # NixOS-side definition. Write real sections, mirroring niri-flake's own
+    # wiring (wantedBy/after/partOf) so the agent runs with the niri session.
+    systemd.user.services."niri-flake-polkit" = {
+      Unit = {
+        Description = "PolicyKit Authentication Agent (polkit-gnome)";
+        After = ["graphical-session.target"];
+        PartOf = ["graphical-session.target"];
+      };
+      Service = {
+        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStopSec = 10;
+      };
+      Install.WantedBy = ["niri.service"];
+    };
 
     # Enable xwayland-satellite for X11 app compatibility
     systemd.user.services.xwayland-satellite = {
