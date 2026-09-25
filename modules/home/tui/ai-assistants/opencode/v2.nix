@@ -118,8 +118,15 @@
   # shim: `nix shell`, an absolute store path, or anything else that skips it
   # starts opencode2 without the variable and silently falls back to the V1
   # config above.
+  #
+  # GITHUB_TOKEN is unset for the reason documented on the V1 wrapper
+  # (default.nix): the login shell exports a GitHub PAT and opencode
+  # synthesizes a github-copilot provider from it that the Copilot API
+  # rejects; the company tool is reserved for IntelliJ/CLI. MCP github reads
+  # its token from the sops file and gh authenticates through hosts.yml, so
+  # no part of the V2 tree needs the variable.
   opencode2 = pkgs.writeShellScriptBin "opencode2" ''
-    exec env OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${inputs.opencode-v2.packages.${system}.opencode}/bin/opencode2 "$@"
+    exec env -u GITHUB_TOKEN OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${inputs.opencode-v2.packages.${system}.opencode}/bin/opencode2 "$@"
   '';
 in {
   options.ai-assistants.opencodeV2 = {

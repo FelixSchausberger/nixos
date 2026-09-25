@@ -87,10 +87,14 @@ in {
       small_model = model;
       # Hide unused providers from the model list. ollama-cloud is
       # auto-detected from the OLLAMA_API_KEY environment, hidden here as a
-      # guard alongside the removed export below. Zen's gateway id is
-      # "opencode" (distinct from the "opencode-go" subscription provider)
-      # and stays listed so its *-free models remain selectable.
-      disabled_providers = ["ollama-cloud"];
+      # guard alongside the removed export below. github-copilot is guarded
+      # because the login shell exports GITHUB_TOKEN and opencode
+      # synthesizes the provider from that PAT on launches that bypass the
+      # wrappers; the company tool is reserved for IntelliJ/CLI. Zen's
+      # gateway id is "opencode" (distinct from the "opencode-go"
+      # subscription provider) and stays listed so its *-free models remain
+      # selectable.
+      disabled_providers = ["ollama-cloud" "github-copilot"];
       agent = {
         explore.model = model;
         general.model = model;
