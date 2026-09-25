@@ -170,19 +170,17 @@ in {
     ];
 
   # Mosh for roaming interactive sessions; survives network changes and
-  # suspend. UDP range below covers mosh-server ports (11 concurrent sessions).
+  # suspend. mosh-server picks its UDP port by scanning 60001-60999 upward
+  # (mosh's Network::PORT_RANGE_LOW/HIGH), so the firewall has to cover that
+  # whole scan space: the previous hand-written 60000-60010 window admitted
+  # only the first ten allocations, so a direct-LAN client that landed on a
+  # higher port had its UDP dropped and mosh timed out while ssh kept
+  # working. openFirewall opens nixpkgs' 60000-61000 range for this; the
+  # tailnet path never depended on it because tailscale0 is trusted.
   programs.mosh = {
     enable = true;
-    # Port range is declared manually above to keep it narrow
-    openFirewall = false;
+    openFirewall = true;
   };
-
-  networking.firewall.allowedUDPPortRanges = [
-    {
-      from = 60000;
-      to = 60010;
-    }
-  ];
 
   boot.kernelParams = lib.mkAfter [
     "zfs.zfs_arc_max=8589934592"
