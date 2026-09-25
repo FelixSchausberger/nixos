@@ -92,13 +92,19 @@
 
   accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 
-  # The Obsidian vault syncs to Windows clients through Nextcloud, so the
-  # running app rewrites its config constantly: managed as home.file store
-  # symlinks, every rewrite would hit a read-only store path. Copy declared
-  # content on activation instead, where the declared values win at the next
-  # switch. Only the root vault's initialized .obsidian is managed:
-  # sub-vaults, an unconfigured (empty) .obsidian, and the rest of .obsidian
-  # (plugins, hotkeys, graph) stay under Obsidian's own control.
+  # The root vault's .obsidian is a Nextcloud external-storage folder that
+  # desktop clients two-way sync, and the running app rewrites its config, so
+  # three writers share the same JSON: nix, Obsidian here, and Obsidian on the
+  # synced devices. A copy written here bypasses the Nextcloud API and lands as
+  # a server-side change underneath the client's copy; the client resolves that
+  # by keeping the server version and renaming the local file to a conflicted
+  # copy, which silently drops the declared values and repeats on every switch.
+  # Nix therefore only seeds settings that are absent and never re-applies them:
+  # the declaration is the initial default, Obsidian and the synced devices own
+  # the files afterwards. store symlinks are not an option for a writable vault,
+  # and only the root vault's initialized .obsidian is seeded - sub-vaults, an
+  # unconfigured (empty) .obsidian, and the rest of .obsidian (plugins, hotkeys,
+  # graph) stay under Obsidian's own control.
   home.activation.obsidianVaultConfig = let
     declared = {
       "appearance.json" = builtins.toJSON {
@@ -155,7 +161,7 @@
     lib.hm.dag.entryAfter ["writeBoundary"] ''
       vault=/per/mnt/data/Obsidian/.obsidian
       if [ -d "$vault" ] && [ -n "$(ls -A "$vault")" ]; then
-        ${lib.concatMapStringsSep "\n" (f: ''cmp -s ${f.src} "$vault/${f.name}" || install -m 0644 ${f.src} "$vault/${f.name}"'') files}
+        ${lib.concatMapStringsSep "\n" (f: ''[ -e "$vault/${f.name}" ] || install -m 0644 ${f.src} "$vault/${f.name}"'') files}
       fi
     '';
 
