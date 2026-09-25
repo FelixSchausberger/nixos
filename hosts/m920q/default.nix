@@ -14,7 +14,7 @@
 #  Advanced: CPU: VT-x Enabled, VT-d Enabled, TXT Disabled, Hyper-Threading Enabled,
 #            C-States Enabled, Turbo Enabled, Above 4G Decoding Disabled
 #            Intel Manageability: Enabled, Ctrl-P Enabled, SOL/IDER/KVM Enabled,
-#            VT-UTF8 115200n8, Network DHCP (reserve .10 in Fritz!Box), USB Prov Disabled
+#            VT-UTF8 115200n8, Network Static 192.168.178.10/24 gw .1 (ME config, no DHCP), USB Prov Disabled
 #  Security: TPM Enabled (if present), SGX Software Controlled / State Disabled + nosgx
 #            kernel param (intentional, SGX deprecated, silences "SGX disabled" line),
 #            Secure Boot Disabled, Intel TXT Disabled, Computrace Disabled
@@ -259,10 +259,116 @@ in {
         address = ["192.168.178.2/24"];
         gateway = ["192.168.178.1"];
         domains = ["local"];
+        # The ME never receives frames this host transmits (it sits behind
+        # the same NIC port and only answers inbound probes from other
+        # ports), so neighborless lookups for .10 burn an ARP timeout and
+        # then log an ICMP unreachable. Pin the ME MAC (shared with eno1);
+        # host-to-AMT traffic goes through the DNAT relay below, never over
+        # the wire.
+        neighbors = [
+          {
+            Destination = "192.168.178.10";
+            MACAddress = "e8:6a:64:9f:a0:50";
+          }
+        ];
       };
     };
     wait-online = {
       extraArgs = ["--interface=eno1"];
+    };
+  };
+
+  # Tailnet-to-AMT remote path. The NIC's ME filter steals dst-.10 TCP/16992
+  # frames before host RX (tcpdump and amt_guard never see them), so
+  # tailnet-bound WS-Man/HTTP is DNAT'd into the LMS container, where a socat
+  # relay re-originates the connection from loopback - LMS only serves
+  # loopback peers (PortForwardingService _isLocal), which no on-wire client
+  # can satisfy. ICMP and foreign ports do reach the host and are dropped by
+  # amt_guard instead of being forwarded into a dead end. flushRuleset stays
+  # at its false default: only the amtfix table is replaced on reload,
+  # leaving the firewall and docker tables alone.
+  networking.nftables = {
+    enable = true;
+    tables.amtfix = {
+      family = "inet";
+      content = ''
+        chain amt_guard {
+          type filter hook forward priority filter - 10; policy accept;
+          iifname "eno1" ip daddr 192.168.178.10 counter drop
+        }
+
+        chain amt_dnat {
+          type nat hook prerouting priority dstnat; policy accept;
+          iifname "tailscale0" ip daddr 192.168.178.10 tcp dport 16992 dnat ip to 172.17.0.2:26992
+        }
+
+        chain amt_dnat_out {
+          type nat hook output priority dstnat; policy accept;
+          ip daddr 192.168.178.10 tcp dport 16992 dnat ip to 172.17.0.2:26992
+        }
+      '';
+    };
+  };
+
+  # Docker is deliberately not started at boot (modules.system.containers:
+  # enableOnBoot=false, no boot-time socket) and nothing manages the
+  # intel-lms container (manual docker start/stop, RestartPolicy=no), so
+  # amt-relay wants nothing by itself; the converge timer brings the whole
+  # chain up shortly after boot and keeps it healed. Requires+after on
+  # docker.service means a converge-started relay pulls the daemon up only
+  # when it is actually needed, never during boot. A container restart
+  # recreates its network namespace, which orphans the nsenter'd socat - the
+  # health probe below catches that and forces a rebind.
+  systemd.services.amt-relay = {
+    description = "Tailnet-to-AMT relay (socat into the LMS container)";
+    requires = ["docker.service"];
+    after = ["docker.service"];
+    serviceConfig = {
+      Restart = "on-failure";
+      RestartSec = "10s";
+      ExecStart = pkgs.writeShellScript "amt-relay" ''
+        set -eu
+        cpid=$(${config.virtualisation.docker.package}/bin/docker inspect -f '{{.State.Pid}}' intel-lms)
+        case "$cpid" in
+          "" | 0) exit 1 ;;
+        esac
+        exec ${pkgs.util-linux}/bin/nsenter -t "$cpid" -n -- \
+          ${pkgs.socat}/bin/socat TCP-LISTEN:26992,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:16992
+      '';
+    };
+  };
+
+  systemd.services.amt-relay-converge = {
+    description = "Converge the AMT relay stack (docker + LMS + socat)";
+    serviceConfig.Type = "oneshot";
+    script = ''
+      set -eu
+      docker=${config.virtualisation.docker.package}/bin/docker
+      if ! "$docker" info >/dev/null 2>&1; then
+        systemctl start docker.service
+      fi
+      if ! "$docker" inspect intel-lms >/dev/null 2>&1; then
+        echo "intel-lms container missing - leaving the relay down" >&2
+        systemctl stop amt-relay.service
+        exit 0
+      fi
+      "$docker" start intel-lms >/dev/null 2>&1 || true
+      systemctl start amt-relay.service
+      # End-to-end health through the host output DNAT: a relay whose
+      # container was restarted underneath it still listens (old netns) and
+      # still reports active, but this probe fails and forces a rebind.
+      if ! ${pkgs.curl}/bin/curl -fsS --max-time 3 -o /dev/null http://192.168.178.10:16992/; then
+        systemctl restart amt-relay.service
+      fi
+    '';
+  };
+
+  systemd.timers.amt-relay-converge = {
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnBootSec = "1min";
+      OnUnitActiveSec = "2min";
+      AccuracySec = "5s";
     };
   };
 
