@@ -44,6 +44,10 @@
         m920qConfig = inputs.self.nixosConfigurations.m920q.config;
       };
 
+      # Intel LMS FHS env for the m920q AMT stack (also callPackage'd in
+      # hosts/m920q, this export keeps the derivation under flake eval)
+      intel-lms = pkgs.callPackage ../pkgs/intel-lms {};
+
       # Applications
       quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
 

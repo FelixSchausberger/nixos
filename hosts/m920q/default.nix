@@ -32,6 +32,10 @@
   hostInfo = inputs.self.lib.hosts.${hostName};
   inherit (inputs.self.lib) user;
 
+  # Intel LMS wrapped in an FHS env (Ubuntu deb, see pkgs/intel-lms). The
+  # lms.service below runs it natively, so the AMT path needs no container.
+  lmsEnv = pkgs.callPackage ../../pkgs/intel-lms {};
+
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
     exec ${pkgs.curl}/bin/curl -s -o /dev/null \
       -H "Title: SMART Alert: $SMARTD_DEVICESTRING" \
@@ -276,15 +280,16 @@ in {
     };
   };
 
-  # Tailnet-to-AMT remote path. The NIC's ME filter steals dst-.10 TCP/16992
-  # frames before host RX (tcpdump and amt_guard never see them), so
-  # tailnet-bound WS-Man/HTTP is DNAT'd into the LMS container, where a socat
-  # relay re-originates the connection from loopback - LMS only serves
-  # loopback peers (PortForwardingService _isLocal), which no on-wire client
-  # can satisfy. ICMP and foreign ports do reach the host and are dropped by
-  # amt_guard instead of being forwarded into a dead end. flushRuleset stays
-  # at its false default: only the amtfix table is replaced on reload,
-  # leaving the firewall and docker tables alone.
+  # AMT remote path. The NIC's ME filter steals dst-.10 TCP/16992 frames
+  # before host RX (tcpdump and amt_guard never see them), and the ME never
+  # receives frames this host transmits, so host- and tailnet-originated
+  # WS-Man/HTTP is DNAT'd to the relay below, where a host socat
+  # re-originates the connection from loopback - LMS only serves loopback
+  # peers (PortForwardingService _isLocal), which no on-wire or routed
+  # client can satisfy. ICMP and foreign ports do reach the host and are
+  # dropped by amt_guard instead of being forwarded into a dead end.
+  # flushRuleset stays at its false default: only the amtfix table is
+  # replaced on reload, leaving the firewall and docker tables alone.
   networking.nftables = {
     enable = true;
     tables.amtfix = {
@@ -297,83 +302,63 @@ in {
 
         chain amt_dnat {
           type nat hook prerouting priority dstnat; policy accept;
-          iifname "tailscale0" ip daddr 192.168.178.10 tcp dport 16992 dnat ip to 172.17.0.2:26992
+          iifname "tailscale0" ip daddr 192.168.178.10 tcp dport 16992 dnat ip to 192.168.178.2:26992
         }
 
         chain amt_dnat_out {
           type nat hook output priority dstnat; policy accept;
-          ip daddr 192.168.178.10 tcp dport 16992 dnat ip to 172.17.0.2:26992
+          ip daddr 192.168.178.10 tcp dport 16992 dnat ip to 192.168.178.2:26992
         }
       '';
     };
   };
 
-  # Docker is deliberately not started at boot (modules.system.containers:
-  # enableOnBoot=false, no boot-time socket) and nothing manages the
-  # intel-lms container (manual docker start/stop, RestartPolicy=no), so
-  # amt-relay wants nothing by itself; the converge timer brings the whole
-  # chain up shortly after boot and keeps it healed. Requires+after on
-  # docker.service means a converge-started relay pulls the daemon up only
-  # when it is actually needed, never during boot. A container restart
-  # recreates its network namespace, which orphans the nsenter'd socat - the
-  # health probe below catches that and forces a rebind.
-  systemd.services.amt-relay = {
-    description = "Tailnet-to-AMT relay (socat into the LMS container)";
-    requires = ["docker.service"];
-    after = ["docker.service"];
+  # LMS and the relay are deliberately not started at boot (the AMT path is
+  # only needed when something actually reaches for it); the converge timer
+  # below pulls both units up shortly after boot and keeps them healed.
+  systemd.services.lms = {
+    description = "Intel Local Manageability Service (AMT loopback proxy)";
     serviceConfig = {
       Restart = "on-failure";
       RestartSec = "10s";
-      ExecStart = pkgs.writeShellScript "amt-relay" ''
-        set -eu
-        cpid=$(${config.virtualisation.docker.package}/bin/docker inspect -f '{{.State.Pid}}' intel-lms)
-        case "$cpid" in
-          "" | 0) exit 1 ;;
-        esac
-        exec ${pkgs.util-linux}/bin/nsenter -t "$cpid" -n -- \
-          ${pkgs.socat}/bin/socat TCP-LISTEN:26992,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:16992
-      '';
+      ExecStart = "${lmsEnv}/bin/intel-lms";
+    };
+  };
+
+  # Client-facing side of the AMT path: amt_dnat/amt_dnat_out send tailnet
+  # and host-originated .10:16992 SYNs here, and socat re-originates each
+  # connection from loopback so LMS sees a local peer. Bound to the host's
+  # own address instead of 0.0.0.0: LMS already owns 127.0.0.1:16992 and a
+  # wildcard bind would collide with it (specific-address binds do not).
+  systemd.services.amt-relay = {
+    description = "AMT relay (loopback re-origination for DNAT'd clients)";
+    after = ["lms.service"];
+    requires = ["lms.service"];
+    serviceConfig = {
+      Restart = "on-failure";
+      RestartSec = "10s";
+      ExecStart = "${pkgs.socat}/bin/socat TCP-LISTEN:26992,bind=192.168.178.2,reuseaddr,fork TCP:127.0.0.1:16992";
     };
   };
 
   systemd.services.amt-relay-converge = {
-    description = "Converge the AMT relay stack (docker + LMS + socat)";
+    description = "Converge the AMT relay stack (LMS + socat)";
     serviceConfig.Type = "oneshot";
     script = ''
       set -eu
-      docker=${config.virtualisation.docker.package}/bin/docker
-      nft=${pkgs.nftables}/bin/nft
-      if ! "$docker" info >/dev/null 2>&1; then
-        systemctl start docker.service
-      fi
-      # Docker's forward gate drops forwarded traffic destined to container
-      # addresses before its per-published-port accepts can match, and the
-      # amt_dnat target port 26992 is not a published port - tailnet SYNs would
-      # die in that drop even though the DNAT worked. DOCKER-USER is docker's
-      # sanctioned extension point, jumped ahead of the drop within the same
-      # base chain, so an accept verdict there wins. Re-checked on every run:
-      # the rule must exist whenever the relay stack is up, not only after a
-      # deploy, and a chain that something flushed heals within one timer tick.
-      rules=$("$nft" list chain ip filter DOCKER-USER 2>/dev/null || true)
-      case "$rules" in
-        *"daddr 172.17.0.2"*"dport 26992"*) ;;
-        *) "$nft" add rule ip filter DOCKER-USER ip daddr 172.17.0.2 tcp dport 26992 accept ;;
-      esac
-      # container inspect, not inspect: a bare inspect also matches the
-      # intel-lms image, so a deleted container would pass the check and the
-      # relay would crash-loop on the image instead of reporting cleanly.
-      if ! "$docker" container inspect intel-lms >/dev/null 2>&1; then
-        echo "intel-lms container missing - leaving the relay down" >&2
-        systemctl stop amt-relay.service
-        exit 0
-      fi
-      "$docker" start intel-lms >/dev/null 2>&1 || true
+      # Nothing in this stack is wanted by boot targets, so this timer is its
+      # only activator: bring both units up (idempotent starts) and verify the
+      # full host path end to end.
+      systemctl start lms.service
       systemctl start amt-relay.service
-      # End-to-end health through the host output DNAT: a relay whose
-      # container was restarted underneath it still listens (old netns) and
-      # still reports active, but this probe fails and forces a rebind.
+      # End-to-end health through the host output DNAT: a relay whose LMS
+      # died underneath it still listens (and reports active) while every
+      # probe fails, so a failure restarts the chain instead of only the
+      # listener. Requires= propagation stops the relay together with lms.
       if ! ${pkgs.curl}/bin/curl -fsS --max-time 3 -o /dev/null http://192.168.178.10:16992/; then
-        systemctl restart amt-relay.service
+        echo "amt path probe failed, restarting lms + amt-relay" >&2
+        systemctl restart lms.service
+        systemctl start amt-relay.service
       fi
     '';
   };
