@@ -41,7 +41,7 @@ in {
       # subscriber gauge so a wedged phone cannot pass as healthy.
       peer_monitor_subscriber_metrics =
         configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.subscriberMetricsUrl;
-      peer_monitor_fallback =
-        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.alertNtfyFallbackUrl;
+      peer_monitor_secondary_file =
+        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.alertNtfySecondaryUrlFile;
     };
 }

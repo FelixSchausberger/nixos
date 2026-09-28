@@ -541,6 +541,10 @@ in {
   # /dev/watchdog0. Needs a reboot to take effect.
   boot.blacklistedKernelModules = ["intel_oc_wdt"];
 
+  # Out-of-band alert channel: the topic name is password-equivalent and
+  # the repo is public, so the secondary ntfy URL lives in a sops secret.
+  sops.secrets."ntfy/secondary-url" = {};
+
   modules.system = {
     # Unattended hang recovery. The hardware watchdog resets a wedged kernel;
     # detectable lockups become panics that reboot (panic=30); and if systemd
@@ -574,6 +578,11 @@ in {
       monitoring = {
         enable = true;
         alerts = true;
+        # Out-of-band channel: an external ntfy topic (in a secret, the
+        # topic name is password-equivalent) that receives every alert
+        # alongside the local one, so delivery survives a full local pool
+        # and a wedged peer still hears it over plain FCM push.
+        secondaryNtfyUrlFile = config.sops.secrets."ntfy/secondary-url".path;
       };
       # Network daemon restarts are deferred to a nightly window (04:00) so
       # daytime deploys never drop the link; see restartIfChanged = false above.
@@ -739,8 +748,9 @@ in {
         peer = "pixel-9a";
         alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
         # Single-source the secondary channel with the maintenance alerts:
-        # both must still deliver when this host's own ntfy storage dies.
-        alertNtfyFallbackUrl = config.modules.system.maintenance.monitoring.fallbackNtfyUrl;
+        # both publish unconditionally, so both must still deliver when this
+        # host's own ntfy storage dies or the peer's tailnet path is wedged.
+        alertNtfySecondaryUrlFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
         # Deliverability watch: the phone has answered pings while its DNS
         # and ntfy subscription were wedged, so pair reachability with the
         # subscriber gauge (both live on this host's ntfy instance).

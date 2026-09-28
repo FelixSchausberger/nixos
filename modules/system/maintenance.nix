@@ -20,15 +20,17 @@
         default = "http://127.0.0.1:2586/homelab-alerts";
         description = "ntfy URL for health alert notifications";
       };
-      fallbackNtfyUrl = lib.mkOption {
+      secondaryNtfyUrlFile = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = ''
-          Secondary ntfy URL used only when the primary publish fails. The
+          Path to a file containing a secondary ntfy URL that receives every
+          alert in addition to the primary topic (never instead of it). The
           primary channel shares this host's storage (ntfy state lives on a
           rpool dataset), so when the pool fills the local channel dies with
-          it - exactly when disk alerts matter most. Set an external
-          ntfy server topic for that failure mode; empty disables fallback.
+          it - exactly when disk alerts matter most. Keep the URL in a
+          secret file: the topic name is password-equivalent. Empty
+          disables the secondary publish.
         '';
       };
     };
@@ -130,7 +132,7 @@
             ${lib.optionalString config.modules.system.maintenance.monitoring.alerts
               ((import ../../lib/ntfy-send.nix {inherit pkgs lib;}) {
                 primary = config.modules.system.maintenance.monitoring.ntfyUrl;
-                fallback = config.modules.system.maintenance.monitoring.fallbackNtfyUrl;
+                secondaryFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
               })}
 
             # Check for failed services
