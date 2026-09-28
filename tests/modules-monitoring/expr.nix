@@ -73,7 +73,7 @@ in
   assert builtins.all (r: builtins.elem r.noDataState validNoDataStates) rules;
   assert builtins.all (r: builtins.elem r.execErrState validExecErrStates) rules;
   # Down-detection rules fire when data disappears entirely; the one
-  # decision-data metric (nixd-gc-storm) legitimately has no series until
+  # tripwire metric (nixd-gc-storm) legitimately has no series until
   # the first post-deploy health-check run, so it opts into noDataState OK.
   assert builtins.all (
     r:

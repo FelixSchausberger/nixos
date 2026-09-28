@@ -606,14 +606,13 @@ in {
                     ''up{job="node"} == bool 0'' "Alerting")
                 ]
                 ++ lib.optionals config.modules.system.maintenance.enable [
-                  # Feedstock for the managed-GC strategy decision
-                  # (2026-09-16 audit): determinate-nixd trims the store
-                  # whenever pool free space is inside its 5-20 % band, and
-                  # under rpool pressure it ran every ~2 h overnight. A
-                  # sustained storm means the strategy (or the storage
-                  # layout) must be decided; this rule measures the cadence.
-                  # Decision metric: absent data (pre-first-run deploy gap) is
-                  # not an incident; only a sustained storm is.
+                  # Tripwire for the disabled managed collector:
+                  # garbageCollector.strategy is "disabled" (sops-common), so
+                  # determinate-nixd must never trim the store on its own. A
+                  # sustained storm means a deploy or an upstream default put
+                  # it back in charge of the store, waking the disks during
+                  # quiet hours again. Absent data (pre-first-run deploy gap)
+                  # is not an incident; only a sustained storm is.
                   (mkAlert "nixd-gc-storm" "high" "NixdGcStorm"
                     "determinate-nixd managed GC ran more than 3 times in 90 minutes"
                     ''nixd_gc_runs_last_90min > bool 3'' "OK")
@@ -625,11 +624,12 @@ in {
                   (mkAlert "filesystem-full" "urgent" "FilesystemFull"
                     "A persistent filesystem is under 10% free. On ZFS all datasets of a pool share free space, so any runaway writer can zero all of them (2026-09 m920q incident)"
                     ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.1'' "Alerting")
-                  # Early warning ahead of the urgent FilesystemFull rule: a
-                  # pool approaching 20% free (the upper bound of the
-                  # managed-GC steady band) pages high-severity before a
-                  # writer has already made the filesystem slow and
-                  # GC-heavy at 10%.
+                  # Early warning ahead of the urgent FilesystemFull rule: no
+                  # automatic collector trims the store on pressure, so these
+                  # two rules are the only signal a runaway writer is filling
+                  # a pool. At 20% the filesystem is still fast; ZFS already
+                  # degrades as a pool approaches capacity, which is what the
+                  # 10% rule pages about.
                   (mkAlert "filesystem-warning" "high" "FilesystemWarn"
                     "A persistent filesystem is under 20% free; runaway writes head toward FilesystemFull"
                     ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.2'' "Alerting")

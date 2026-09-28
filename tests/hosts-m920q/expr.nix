@@ -68,8 +68,8 @@ in {
     ".*(S/../../\\./0[0-8]|L/../../\\./0[0-8]).*"
     config.services.smartd.defaults.autodetected
     == null;
-  # Test: nightly determinate-nixd GC cadence exposes a metric to Grafana so
-  # the automatic-vs-scheduled strategy can be decided from data.
+  # Test: determinate-nixd GC activity reaches Grafana as a textfile
+  # metric, so a managed collector that comes back on is visible.
   nixd_gc_metric =
     builtins.elem "--collector.textfile.directory=/var/lib/node-exporter/textfile"
     config.services.prometheus.exporters.node.extraFlags;
