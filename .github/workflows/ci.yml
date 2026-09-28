@@ -57,12 +57,12 @@ jobs:
           format: "sarif"
           output: "trivy-results.sarif"
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4.38.1
+        uses: github/codeql-action/upload-sarif@v4.38.2
         if: always() && github.event_name != 'pull_request' && github.token != ''
         with:
           sarif_file: "trivy-results.sarif"
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@f714bf454f350590f4a24c3ddb1aef02c35bf5b6 # v3.97.5
+        uses: trufflesecurity/trufflehog@4dd8831c5f12599465d4d45c3c447b4018a34c85 # v3.97.9
         if: github.token != ''
         with:
           path: ./
