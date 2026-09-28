@@ -63,10 +63,11 @@
     # System utilities (shared by TUI and GUI)
     # Determinate Nix modules (only used when useDeterminateNix = true)
     # See: https://github.com/DeterminateSystems/determinate?tab=readme-ov-file#installing-using-our-nix-flake
-    # Pinned to 3.22.0: FlakeHub's `*` semver channel currently resolves to the
-    # older 3.21.9, which would downgrade the deployed determinate-nix. Use the
-    # pinned artifact URL so `update` cannot regress it. Bump intentionally.
-    determinate.url = "https://api.flakehub.com/f/pinned/DeterminateSystems/determinate/3.22.0/019fdd2b-320e-7cf1-8321-a350e90231d9/source.tar.gz";
+    # Concrete FlakeHub artifact URL: `nix flake update` never moves it, and
+    # the `*` semver channel is avoided because it can resolve to a release
+    # older than the deployed determinate-nix. Bump version and UUID
+    # together, by hand.
+    determinate.url = "https://api.flakehub.com/f/pinned/DeterminateSystems/determinate/3.22.5/01a0b15b-1d43-7be1-beb0-8aa22a4d3d93/source.tar.gz";
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
