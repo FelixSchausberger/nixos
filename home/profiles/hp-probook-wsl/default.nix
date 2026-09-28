@@ -39,6 +39,13 @@
       nix-direnv.enable = true;
     };
 
+    # Link handler: the GUI module that declares the text/html default is not
+    # imported here, so xdg-open has no handler to fall back to. Windows interop
+    # is available on this host, and Explorer routes a URL argument to the
+    # Windows default browser. newsboat appends the URL when the value carries
+    # no %u placeholder.
+    newsboat.browser = "/mnt/c/Windows/explorer.exe";
+
     # Enhanced shell experience
     fish.enable = true;
     starship.enable = true;

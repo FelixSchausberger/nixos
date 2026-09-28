@@ -19,6 +19,7 @@ in {
     ./markdown-oxide.nix # Markdown LSP server inspired by Obsidian
     ./monitoring.nix # Modern system monitoring and performance tools
     ./nh.nix # Yet another Nix CLI helper - Modern replacement for nixos-rebuild
+    ./newsboat.nix # Terminal feed reader used as the Hacker News reading queue
     ./ollama.nix # Get up and running with large language models locally
     ./rbw.nix # Unofficial Bitwarden CLI for password management
     ./rclone.nix # Sync files and directories to and from major cloud storage
@@ -57,6 +58,7 @@ in {
     basalt # Modern shell written in Rust with a focus on portability and performance
     cacert # CA certificates for TLS connections
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
+    circumflex # Terminal Hacker News browser (clx), reads article and comment threads in place
     dssh # Dead-simple SSH connection manager CLI and TUI
     fclones # Efficient Duplicate File Finder and Remover
     gh # GitHub CLI - pull requests, issues, releases, and more
