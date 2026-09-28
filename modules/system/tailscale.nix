@@ -92,7 +92,7 @@
     ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl != null) ''
       ${ntfySend {
         primary = cfg.peerMonitor.alertNtfyUrl;
-        fallback = cfg.peerMonitor.alertNtfyFallbackUrl;
+        secondaryFile = cfg.peerMonitor.alertNtfySecondaryUrlFile;
       }}
       notify() {
         ntfy_send "Tailscale peer $1" "$2" "tailscale,warning" "$3"
@@ -194,13 +194,17 @@ in {
         default = null;
         description = "Optional ntfy topic URL notified on reachability transitions.";
       };
-      alertNtfyFallbackUrl = lib.mkOption {
+      alertNtfySecondaryUrlFile = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = ''
-          Secondary ntfy topic URL used only when the primary publish fails,
-          same failure model as maintenance.monitoring.fallbackNtfyUrl (the
-          local ntfy instance shares this host's storage). Empty disables it.
+          Path to a file containing a secondary ntfy URL that receives every
+          peer monitor alert in addition to the primary topic, mirroring
+          maintenance.monitoring.secondaryNtfyUrlFile (both publish
+          unconditionally: this host's ntfy shares its storage, and a
+          wedged peer loses the local channel while publishes still
+          succeed). Keep the URL in a secret file: the topic name is
+          password-equivalent. Empty disables the secondary publish.
         '';
       };
       subscriberMetricsUrl = lib.mkOption {
