@@ -618,11 +618,17 @@
           wantedBy = ["timers.target"];
           after = ["multi-user.target"];
           timerConfig = {
-            OnCalendar = "weekly";
-            # Non-persistent: skip missed runs instead of bursting at boot.
-            # Cleanup is best-effort, so a missed week is safe.
+            # Daily, in awake hours: managed GC is disabled (sops-common), so
+            # this service is the scheduled reclaim path for the store and for
+            # stale generations. One weekly slot is easy to lose - a reboot
+            # six minutes after the Sunday trigger skipped the entire week
+            # (m920q, 2026-09-27) - while a missed daily slot costs a day of
+            # debris. 11:00 stays clear of m920q's 00:00-09:00 quiet window.
+            OnCalendar = "*-*-* 11:00:00";
+            # Non-persistent: a missed slot stays missed instead of bursting
+            # at boot into the nightly quiet window.
             Persistent = false;
-            RandomizedDelaySec = "2h";
+            RandomizedDelaySec = "30min";
           };
         };
 

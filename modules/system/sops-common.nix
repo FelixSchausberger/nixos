@@ -78,7 +78,7 @@ in {
   # https://docs.determinate.systems/determinate-nix/determinate-nixd). Under
   # the default automatic strategy it woke the store every ~2 h overnight
   # (01:21, 02:18, 04:18, 06:18 on m920q, 2026-09-16) since it cannot be
-  # confined to awake hours; freeing space is handled by the weekly daytime
+  # confined to awake hours; freeing space is handled by the daily daytime
   # nixos-cleanup (nix store gc), the build-time min-free/max-free pressure
   # checks, and the FilesystemWarn (20%) / FilesystemFull (10%) alerts.
   environment.etc."determinate/config.json" = lib.mkIf repoConfig.useDeterminateNix {
