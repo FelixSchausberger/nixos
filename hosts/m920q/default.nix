@@ -522,7 +522,6 @@ in {
   systemd.timers."zpool-trim".timerConfig.OnCalendar = lib.mkForce "Sun 13:20:00";
   systemd.timers.fstrim.timerConfig.OnCalendar = lib.mkForce "Sun 13:25:00";
   systemd.timers."nextcloud-cleanup".timerConfig.OnCalendar = lib.mkForce "Sun 13:30:00";
-  systemd.timers."nixos-cleanup".timerConfig.OnCalendar = lib.mkForce "Sun 12:45:00";
 
   # AirPlay receiver renders into the on-demand niri session (waylandsink), so a
   # MacBook mirror appears as a fullscreen window over the desktop and
