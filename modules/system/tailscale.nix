@@ -89,16 +89,23 @@
     now=$(${pkgs.coreutils}/bin/date +%s)
     ts=$(${pkgs.coreutils}/bin/date -Is)
 
-    ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl != null) ''
+    # Routing: the external topic leads (primaryFile) because an alert about
+    # the tailnet must not need the tailnet to leave this host; the local
+    # topic is published to only when that fails, so one message normally
+    # travels on exactly one channel.
+    ${lib.optionalString (cfg.peerMonitor.alertNtfyPrimaryUrlFile != "" || cfg.peerMonitor.alertNtfyUrl != null) ''
       ${ntfySend {
-        primary = cfg.peerMonitor.alertNtfyUrl;
-        secondaryFile = cfg.peerMonitor.alertNtfySecondaryUrlFile;
+        primaryFile = cfg.peerMonitor.alertNtfyPrimaryUrlFile;
+        secondary =
+          if cfg.peerMonitor.alertNtfyUrl == null
+          then ""
+          else cfg.peerMonitor.alertNtfyUrl;
       }}
       notify() {
         ntfy_send "Tailscale peer $1" "$2" "tailscale,warning" "$3"
       }
     ''}
-    ${lib.optionalString (cfg.peerMonitor.alertNtfyUrl == null) ''
+    ${lib.optionalString (cfg.peerMonitor.alertNtfyPrimaryUrlFile == "" && cfg.peerMonitor.alertNtfyUrl == null) ''
       notify() { :; }
     ''}
 
@@ -192,19 +199,26 @@ in {
       alertNtfyUrl = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Optional ntfy topic URL notified on reachability transitions.";
+        description = ''
+          Local ntfy topic URL. Carries peer monitor alerts on its own while
+          alertNtfyPrimaryUrlFile is empty, and becomes the fallback once
+          that option leads; null drops the local channel, and with the
+          out-of-band topic unset too, notifications are disabled entirely.
+        '';
       };
-      alertNtfySecondaryUrlFile = lib.mkOption {
+      alertNtfyPrimaryUrlFile = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = ''
-          Path to a file containing a secondary ntfy URL that receives every
-          peer monitor alert in addition to the primary topic, mirroring
-          maintenance.monitoring.secondaryNtfyUrlFile (both publish
-          unconditionally: this host's ntfy shares its storage, and a
-          wedged peer loses the local channel while publishes still
-          succeed). Keep the URL in a secret file: the topic name is
-          password-equivalent. Empty disables the secondary publish.
+          Path to a file containing the ntfy URL that receives peer monitor
+          alerts first - an alert about the tailnet must not depend on the
+          tailnet being up to leave this host, so the external topic is the
+          primary channel here while maintenance alerts keep the local one
+          as theirs. The same file backs
+          maintenance.monitoring.secondaryNtfyUrlFile, which publishes to
+          it only as a fallback for the reasons documented there. Keep the
+          URL in a secret file: the topic name is password-equivalent.
+          Empty makes the local topic (alertNtfyUrl) the only channel.
         '';
       };
       subscriberMetricsUrl = lib.mkOption {

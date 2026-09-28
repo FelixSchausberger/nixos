@@ -41,7 +41,11 @@ in {
       # subscriber gauge so a wedged phone cannot pass as healthy.
       peer_monitor_subscriber_metrics =
         configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.subscriberMetricsUrl;
-      peer_monitor_secondary_file =
-        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.alertNtfySecondaryUrlFile;
+      # Routing: external topic leads, local topic is the publish-failure
+      # fallback.
+      peer_monitor_primary_file =
+        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.alertNtfyPrimaryUrlFile;
+      peer_monitor_local_fallback =
+        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.alertNtfyUrl;
     };
 }

@@ -24,13 +24,15 @@
         type = lib.types.str;
         default = "";
         description = ''
-          Path to a file containing a secondary ntfy URL that receives every
-          alert in addition to the primary topic (never instead of it). The
-          primary channel shares this host's storage (ntfy state lives on a
-          rpool dataset), so when the pool fills the local channel dies with
-          it - exactly when disk alerts matter most. Keep the URL in a
-          secret file: the topic name is password-equivalent. Empty
-          disables the secondary publish.
+          Path to a file containing a secondary ntfy URL, published to only
+          when the publish to ntfyUrl fails: the primary channel shares this
+          host's storage (ntfy state lives on a rpool dataset), so when the
+          pool fills the local channel dies with it - exactly when disk
+          alerts matter most. Failover covers a dead publisher only: a
+          publish that succeeds still says nothing about delivery, so no
+          number of channels helps a subscriber that never receives it.
+          Keep the URL in a secret file: the topic name is
+          password-equivalent. Empty disables the secondary publish.
         '';
       };
     };
@@ -129,6 +131,11 @@
             # up front; alert titles must always identify the source host.
             host=$(${pkgs.nettools}/bin/hostname)
 
+            # Routing: the local topic leads because these alerts are only
+            # actionable while this host is up; the external topic (a file,
+            # because the topic name is password-equivalent) is published to
+            # only when the local publish fails - a full pool kills the local
+            # ntfy exactly when disk alerts matter most.
             ${lib.optionalString config.modules.system.maintenance.monitoring.alerts
               ((import ../../lib/ntfy-send.nix {inherit pkgs lib;}) {
                 primary = config.modules.system.maintenance.monitoring.ntfyUrl;

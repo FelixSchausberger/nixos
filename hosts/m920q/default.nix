@@ -578,10 +578,11 @@ in {
       monitoring = {
         enable = true;
         alerts = true;
-        # Out-of-band channel: an external ntfy topic (in a secret, the
-        # topic name is password-equivalent) that receives every alert
-        # alongside the local one, so delivery survives a full local pool
-        # and a wedged peer still hears it over plain FCM push.
+        # Out-of-band safety net: an external ntfy topic (in a secret, the
+        # topic name is password-equivalent) that receives a health alert
+        # only when publishing to the local topic fails, because ntfy state
+        # lives on this pool and a full pool kills it exactly when disk
+        # alerts matter most.
         secondaryNtfyUrlFile = config.sops.secrets."ntfy/secondary-url".path;
       };
       # Network daemon restarts are deferred to a nightly window (04:00) so
@@ -741,16 +742,16 @@ in {
       udpGROInterface = "eno1";
       # The phone has dropped off the tailnet for unexplained multi-minute
       # stretches (on the move and, once, on home WiFi). This host is always
-      # on, so it probes the phone and timestamps transitions, alerting via
-      # the local ntfy instance.
+      # on, so it probes the phone and timestamps transitions.
       peerMonitor = {
         enable = true;
         peer = "pixel-9a";
+        # Local topic is only the fallback: an alert about the tailnet must
+        # not depend on the tailnet to reach the phone.
         alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
-        # Single-source the secondary channel with the maintenance alerts:
-        # both publish unconditionally, so both must still deliver when this
-        # host's own ntfy storage dies or the peer's tailnet path is wedged.
-        alertNtfySecondaryUrlFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
+        # Same secret file as the maintenance fallback, but inverted order:
+        # here the external topic leads (see the option description).
+        alertNtfyPrimaryUrlFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
         # Deliverability watch: the phone has answered pings while its DNS
         # and ntfy subscription were wedged, so pair reachability with the
         # subscriber gauge (both live on this host's ntfy instance).
