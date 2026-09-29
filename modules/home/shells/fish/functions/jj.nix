@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   pkgs,
   ...
@@ -656,7 +657,7 @@ in {
             # Edit suggestion - write to temp file and open in editor
             set -l temp_file (mktemp)
             echo "$suggestion" > $temp_file
-            ${pkgs.helix}/bin/hx $temp_file
+            ${config.home.homeDirectory}/.local/bin/nvedit $temp_file
             set -l edited_msg (cat $temp_file)
             rm $temp_file
 

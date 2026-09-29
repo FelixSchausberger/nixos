@@ -76,7 +76,7 @@ in {
           # Application shortcuts
           "$mod, w, exec, $browser"
           "$mod, e, exec, $fileManager"
-          "$mod, c, exec, ${pkgs.helix}/bin/hx"
+          "$mod, c, exec, ${config.programs.nixvim.build.package}/bin/nvim"
 
           # Application launcher (walker, or shell IPC on full-layer shells)
           "$mod, D, exec, ${launcherExec}"

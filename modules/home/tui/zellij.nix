@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   inputs,
   lib,
@@ -59,7 +60,7 @@
       pane split_direction="vertical" {
         // Editor on top, cargo watch terminal on the bottom.
         // Launch with `zellij --layout rust` from a Rust project directory.
-        pane command="hx"
+        pane command="nvim"
         pane command="cargo" {
           args "watch"
         }
@@ -141,7 +142,7 @@ in {
       session_serialization = true;
       disable_session_metadata = false;
 
-      scrollback_editor = "${pkgs.helix}/bin/hx";
+      scrollback_editor = "${config.home.homeDirectory}/.local/bin/nvedit";
       auto_layout = true;
 
       # Home Manager aliases every plugin, but only headless pipe consumers
@@ -206,7 +207,7 @@ in {
           bind "Alt y" { NewPane "Down"; Run "yazi"; }
           bind "Alt g" { NewPane "Right"; Run "lazygit"; }
           bind "Alt z" { NewPane "Right"; Run "lazyjj"; }
-          bind "Alt e" { NewPane "Down"; Run "hx"; }
+          bind "Alt e" { NewPane "Down"; Run "nvim"; }
         }
 
         // Normal mode: Gateway to other modes
@@ -229,7 +230,7 @@ in {
           bind "Alt y" { NewPane "Down"; Run "yazi"; }
           bind "Alt g" { NewPane "Right"; Run "lazygit"; }
           bind "Alt z" { NewPane "Right"; Run "lazyjj"; }
-          bind "Alt e" { NewPane "Down"; Run "hx"; }
+          bind "Alt e" { NewPane "Down"; Run "nvim"; }
         }
 
         // Tab mode: Manage tabs
