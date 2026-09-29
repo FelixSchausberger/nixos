@@ -12,6 +12,15 @@ in {
     ./shells
     ./tui
     ./themes # Contains both TUI and GUI themes with separation
+
+    # Prebuilt nix-index database for the user profile. The NixOS module
+    # (modules/system/nix.nix) already installs a DB-wrapped nix-locate
+    # system-wide, but Home Manager's own programs.nix-index puts a plain
+    # nix-locate first in PATH, which reads ~/.cache/nix-index/files and fails
+    # when that file is absent (pay-respects and the fish command-not-found
+    # handler both shell out to nix-locate). This module swaps in the wrapped
+    # package and symlinks the prebuilt DB into the cache location.
+    inputs.nix-index-database.homeModules.nix-index
   ];
 
   # Default to TUI-only theming (GUI hosts can enable theme.gui.enable)
