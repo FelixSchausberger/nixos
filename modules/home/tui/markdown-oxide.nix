@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: {
   # Install markdown-oxide package
   home.packages = with pkgs; [
     markdown-oxide
@@ -6,7 +10,7 @@
 
   # Shell alias for daily notes
   home.shellAliases = {
-    daily = "fish -c 'set -l today (date +%Y-%m-%d); set -l file /per/mnt/data/Obsidian/work/magazino/daily/$today.md; mkdir -p (dirname $file); touch $file; hx $file'";
+    daily = "fish -c 'set -l today (date +%Y-%m-%d); set -l file /per/mnt/data/Obsidian/work/magazino/daily/$today.md; mkdir -p (dirname $file); touch $file; ${config.home.homeDirectory}/.local/bin/nvedit $file'";
   };
 
   # Create configuration directory and file

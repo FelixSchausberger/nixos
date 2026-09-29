@@ -1,59 +1,50 @@
 {
   imports = [
-    # ./claude-code.nix
+    ./completion.nix
+    ./conform.nix
     ./lsp.nix
-    ./telescope.nix
-    # ./treesitter.nix
-    ./vimwiki.nix
-    ./obsidian.nix
+    ./opencode.nix
+    ./rust.nix
+    ./treesitter.nix
   ];
 
-  programs.nixvim.plugins = {
-    # https://github.com/lewis6991/gitsigns.nvim
-    gitsigns = {
-      # Git integration for buffers
+  programs.nixvim = {
+    # Match Helix's catppuccin_mocha theme
+    colorschemes.catppuccin = {
       enable = true;
-      settings.signs = {
-        add.text = "+";
-        change.text = "~";
-      };
+      settings.flavour = "mocha";
     };
 
-    # https://github.com/ggandor/leap.nvim
-    leap.enable = true; # Neovim's answer to the mouse
+    plugins = {
+      # https://github.com/lewis6991/gitsigns.nvim
+      gitsigns.enable = true; # Git signs in the sign column
 
-    # https://github.com/windwp/nvim-autopairs
-    nvim-autopairs.enable = true;
+      # https://github.com/stevearc/oil.nvim
+      oil.enable = true; # File explorer
 
-    # https://github.com/norcalli/nvim-colorizer.lua
-    colorizer = {
-      enable = true;
-      # userDefaultOptions.names = false;
+      # https://github.com/ibhagwan/fzf-lua
+      fzf-lua.enable = true; # Pickers (files, grep, buffers, ...)
+
+      # https://github.com/mikavilpas/yazi.nvim
+      yazi.enable = true; # Yazi inside Neovim
+
+      # https://github.com/MeanderingProgrammer/render-markdown.nvim
+      render-markdown.enable = true; # Improve viewing Markdown
+
+      # https://github.com/tpope/vim-commentary
+      commentary.enable = true; # gc to comment (same as the previous setup)
+
+      # https://github.com/tpope/vim-surround
+      vim-surround.enable = true; # cs/yss/ds surround operations
+
+      # https://github.com/nvim-tree/nvim-web-devicons
+      web-devicons.enable = true; # Provides Nerd Font icons (glyphs)
+
+      # https://github.com/stevearc/overseer.nvim
+      # Task runner for the cargo keymaps. Its builtin cargo template is
+      # discovered from the runtimepath and offers check/build/run/test for
+      # every directory containing a Cargo.toml.
+      overseer.enable = true;
     };
-
-    # https://github.com/stevearc/oil.nvim
-    oil.enable = true; # Neovim file explorer
-
-    # https://github.com/MeanderingProgrammer/render-markdown.nvim
-    render-markdown.enable = true; # Improve viewing Markdown
-
-    # https://github.com/cappyzawa/trim.nvim
-    trim = {
-      # This plugin trims trailing whitespace and lines.
-      enable = true;
-      settings = {
-        highlight = true;
-        ft_blocklist = [
-          "checkhealth"
-          "floaterm"
-          "lspinfo"
-          "neo-tree"
-          "TelescopePrompt"
-        ];
-      };
-    };
-
-    # https://github.com/nvim-tree/nvim-web-devicons
-    web-devicons.enable = true; # Provides Nerd Font icons (glyphs)
   };
 }

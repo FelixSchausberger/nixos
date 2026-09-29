@@ -1,30 +1,15 @@
-{pkgs, ...}: {
-  programs.nixvim = {
-    plugins = {};
+{config, ...}: let
+  # Curated parser list (see lib/treesitter-grammars.nix); allGrammars would
+  # rebuild every grammar for languages this config never opens.
+  grammarNames = import ../../../../../lib/treesitter-grammars.nix;
+  grammars = config.programs.nixvim.plugins.treesitter.package.builtGrammars;
+in {
+  programs.nixvim.plugins.treesitter = {
+    enable = true;
+    grammarPackages = map (name: grammars.${name}) grammarNames;
 
-    extraPlugins =
-      [
-        pkgs.vimPlugins.nvim-treesitter
-      ]
-      ++ (
-        let
-          grammarFile = import ../../../../../lib/treesitter-grammars.nix;
-        in
-          map (name: pkgs.vimPlugins.nvim-treesitter-parsers.${name}) grammarFile
-      );
-
-    extraConfigLua = ''
-      require'nvim-treesitter.configs'.setup {
-        auto_install = false,
-        ensure_installed = {},
-        highlight = {
-          enable = true,
-        },
-        indent = {
-          enable = true,
-        },
-        parser_install_dir = nil,
-      }
-    '';
+    highlight.enable = true; # Tree-sitter based syntax highlighting
+    indent.enable = true; # Tree-sitter based indentation
+    folding.enable = true; # foldexpr from vim.treesitter (foldlevel lives in options.nix)
   };
 }

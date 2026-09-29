@@ -5,21 +5,18 @@
 }: {
   imports = [
     inputs.nhx.homeManagerModules.nhx # Declarative Helix config with Steel plugin support
-    ./dprint.nix # Code formatting platform written in Rust
-    ./languages.nix # Combined core + extended language configs (single program.nhx.languages definition)
+    ./languages.nix # Renders the shared editors.* language data for Helix
   ];
 
   home.shellAliases = {
     hn = "hx /per/etc/nixos";
   };
 
-  # nhx does not provide programs.helix.defaultEditor; replicate its effect.
-  # STEEL_HOME must match nhx's cog link target (~/.local/share/steel): steel
-  # would otherwise prefer an existing ~/.steel directory and never find the
-  # declaratively installed cogs.
+  # nhx does not provide programs.helix.defaultEditor; the editors module owns
+  # EDITOR/VISUAL (nvedit -> Neovim). STEEL_HOME must match nhx's cog link
+  # target (~/.local/share/steel): steel would otherwise prefer an existing
+  # ~/.steel directory and never find the declaratively installed cogs.
   home.sessionVariables = {
-    EDITOR = "hx";
-    VISUAL = "hx";
     STEEL_HOME = "${config.home.homeDirectory}/.local/share/steel";
   };
 
