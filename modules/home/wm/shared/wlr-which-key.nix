@@ -171,7 +171,7 @@
               else if name == "file-manager"
               then wmCfg.fileManager
               else if name == "editor"
-              then "${pkgs.helix}/bin/hx"
+              then "${config.programs.nixvim.build.package}/bin/nvim"
               else if name == "close"
               then "hyprctl dispatch killactive"
               else if name == "float"

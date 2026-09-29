@@ -112,7 +112,9 @@ in {
       };
       init.defaultBranch = "main";
       pull.rebase = true;
-      core.editor = "${pkgs.helix}/bin/hx";
+      # nvedit blocks until the message buffer closes (git waits for the edit)
+      # and reuses the owning Neovim instance when git runs from a :terminal.
+      core.editor = "${config.home.homeDirectory}/.local/bin/nvedit";
       safe.directory = "*";
       # Colocated jj repos (e.g. /per/etc/nixos) share this object database.
       # jj's commit visibility lives outside git refs, so auto-GC can prune

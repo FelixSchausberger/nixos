@@ -78,7 +78,6 @@
     ];
 
     sessionVariables = {
-      EDITOR = "hx";
       # Link handlers for TUI tools: `gh browse` and other BROWSER consumers
       # would fall back to xdg-open, which has no handler on this host (see
       # the newsboat.browser override above for the same reason), and
