@@ -131,8 +131,38 @@
       }
     ];
 
+  # Emergency access to Intel AMT. Convenience links only: the dashboard
+  # runs on the m920q itself, so with the host down these vanish and the
+  # phone's pinned browser bookmarks (AMT over IPv4 and IPv6) are the
+  # authoritative path. Power control is deliberately not a card - the HTTP
+  # relay was removed on purpose and the phone issues
+  # "ssh m920q desktop-power on|off|status" from a termux widget instead.
+  rescueServices = [
+    {
+      "AMT (IPv4)" = {
+        icon = "mdi-chip";
+        href = "https://116.204.198.109:16993";
+        description = "Intel AMT via FRITZ!Box, works from any vantage";
+        # The light covers the host-side AMT chain (DNAT -> socat -> LMS ->
+        # ME), the only part a local dashboard can probe: the ME demands
+        # unsafe TLS renegotiation that Node's TLS stack refuses, so the WAN
+        # WS-Man endpoint is unmonitorable from here. The Fritz rule plus
+        # ME TLS end to end is verified from outside (check-host) instead.
+        siteMonitor = "http://192.168.178.10:16992/";
+      };
+    }
+    {
+      "AMT (IPv6)" = {
+        icon = "mdi-chip";
+        href = "https://[2a02:1748:dd4d:9990::10]:16993";
+        description = "Intel AMT direct, outside the home LAN only";
+      };
+    }
+  ];
+
   allServices =
-    lib.optionals (infraServices != []) [{"Infrastructure" = infraServices;}]
+    lib.optionals (rescueServices != []) [{"Rescue" = rescueServices;}]
+    ++ lib.optionals (infraServices != []) [{"Infrastructure" = infraServices;}]
     ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
     ++ lib.optionals (monitoringServices != []) [{"Monitoring" = monitoringServices;}]
     ++ lib.optionals (networkServices != []) [{"Network" = networkServices;}]
