@@ -360,6 +360,34 @@ in {
         systemctl restart lms.service
         systemctl start amt-relay.service
       fi
+      # Prefix drift: the ISP-delegated /64 rotates roughly every 30 days.
+      # The Fritz v6 shares and the ME's ::10 address follow it (the Fritz
+      # stores only the interface-id), but the AMT leaf cert bakes the old
+      # prefix into its IP SAN and the dashboard's IPv6 href hardcodes it,
+      # so a rotation kills IPv6 TLS while IPv4 keeps working and hides it.
+      # The ME itself cannot be probed from this host (amt_guard and the
+      # shared MAC make host-to-ME a dead end), which is why this watches
+      # the prefix and alarms once per change. The notice is recorded only
+      # after delivery, so a dead ntfy endpoint turns the alarm into a
+      # retry rather than a lost message; a missing state file (first run)
+      # re-baselines silently. Link-local and ULA /64s are ignored in
+      # favour of the global delegated prefix.
+      ${pkgs.coreutils}/bin/mkdir -p /var/lib/amt-relay-converge
+      pfx=$(${pkgs.iproute2}/bin/ip -6 route show dev eno1 \
+        | ${pkgs.gawk}/bin/awk '$1 ~ /::\/64$/ && $1 !~ /^(fe80|f[cd])/ { sub(/\/64$/, "", $1); print $1; exit }')
+      state=/var/lib/amt-relay-converge/prefix
+      old=$(${pkgs.gawk}/bin/awk -F= '/^prefix=/ { print $2 }' "$state" 2>/dev/null || true)
+      if [ -n "$pfx" ] && [ "$pfx" != "$old" ]; then
+        if [ -z "$old" ]; then
+          printf 'prefix=%s\n' "$pfx" > "$state"
+        elif ${pkgs.curl}/bin/curl -s -o /dev/null \
+          -H "Title: AMT IPv6 prefix rotated" \
+          -H "Priority: high" -H "Tags: warning,globe" \
+          -d "LAN /64 changed $old -> $pfx. Reissue the AMT certificate (its IP SAN carries the old prefix) and update the IPv6 bookmark and dashboard link; IPv4 is unaffected." \
+          http://127.0.0.1:2586/homelab-alerts; then
+          printf 'prefix=%s\n' "$pfx" > "$state"
+        fi
+      fi
     '';
   };
 
@@ -371,6 +399,13 @@ in {
       AccuracySec = "5s";
     };
   };
+
+  # The prefix-drift alarm state must survive reboots: a /64 rotation that
+  # lands across one would otherwise re-baseline silently and the cert
+  # reissue notice would never fire.
+  environment.persistence."/per".directories = [
+    "/var/lib/amt-relay-converge"
+  ];
 
   # Network daemons must not be restarted mid-deploy: networkd owns the LAN link
   # (static IP, MTU), resolved handles DNS, tailscaled the tailnet, and AdGuard
