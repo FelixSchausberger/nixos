@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   sudoAbbrExclusions = [
@@ -42,6 +43,11 @@ in {
     repair = "nix-store --verify --check-contents --repair";
     rsync = "rsync -avhP --no-inc-recursive";
   };
+
+  # Binary behind the merge/rsync aliases above. Aliases only expand the
+  # command line; without this package the wrappers fail with "command not
+  # found" (and pay-respects' completion for rsync errors the same way).
+  home.packages = [pkgs.rsync];
 
   programs.fish.shellAbbrs = shellAbbrs;
 }
