@@ -214,7 +214,13 @@ in {
       };
       # Pull-based GitOps: converge to main automatically. Alerts stay off,
       # matching the WSL monitoring policy; detections land in the journal.
-      comin.enable = true;
+      comin = {
+        enable = true;
+        # Poll the local checkout so jjtest deploys testing-hp-probook-wsl
+        # with switch-to-configuration test (no bootloader change) seconds
+        # after the bookmark moves, instead of requiring a GitHub round trip.
+        localRemote.enable = true;
+      };
     };
 
     # Network configuration optimized for WSL (high level)
