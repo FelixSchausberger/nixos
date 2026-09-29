@@ -9,8 +9,8 @@
 in {
   imports = [
     ./helix # Post-modern modal text editor
-    ./neovim.nix # Neovim with basic configuration (replaces nixvim to avoid tree-sitter-ada issue)
     ./editors # Shared language data + default-editor policy (nvedit -> Neovim)
+    ./nixvim # Neovim configuration (nixvim): LSP, format-on-save, treesitter
     ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
     ./bluetui.nix # Bluetooth TUI management tool (kept separate due to config)
     ./ai-assistants # AI coding assistants (Claude Code, OpenCode) with shared MCP servers and behaviors
