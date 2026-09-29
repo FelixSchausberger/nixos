@@ -6,27 +6,39 @@
 }: let
   attachCfg = hostConfig.zellijAutoAttach or {};
   attachEnabled = attachCfg.enable or true;
+  attachLocal = attachCfg.enableLocal or false;
   attachSession = attachCfg.sessionName or null;
 
-  # SSH auto-attach fish snippet. Emitted only when a session name is
+  # SSH gate for the attach block below. Local terminals have no
+  # SSH_CONNECTION, so this is what keeps them on a plain shell; hosts whose
+  # own terminals should start inside Zellij (WSL, where the local login is a
+  # plain `wsl.exe` shell) opt in with hostConfig.zellijAutoAttach.enableLocal
+  # and drop the gate entirely.
+  sshGate =
+    if attachLocal
+    then ""
+    else "and set -q SSH_CONNECTION\n      ";
+
+  # Auto-attach fish snippet. Emitted only when a session name is
   # configured (hostConfig.zellijAutoAttach.sessionName). The session name is
   # interpolated at build time and passed via a local variable so the invoking
   # shell never needs ZELLIJ_SESSION_NAME exported (which would make zellij's
   # CLI believe we are already inside that session and refuse to attach).
-  sshAttachBlock =
+  autoAttachBlock =
     if attachSession != null
     then ''
-      # === SSH AUTO-ATTACH TO ZELLIJ ===
-      # Interactive SSH logins automatically attach to the host's named Zellij
-      # session. Local terminals are unaffected (no SSH_CONNECTION). Opt out per
-      # host with hostConfig.zellijAutoAttach.
+      # === AUTO-ATTACH TO ZELLIJ ===
+      # Interactive SSH logins attach to the host's named Zellij session; local
+      # terminals only do so when the host sets
+      # hostConfig.zellijAutoAttach.enableLocal. Opt out per host with
+      # hostConfig.zellijAutoAttach.enable.
       #
       # ZELLIJ and ZELLIJ_PANE_ID are exported by Zellij inside its panes, so an
       # unset value here means "not inside zellij" — this prevents nested sessions.
       # (0.45+ also handles nested sessions natively over SSH.)
       #
       # Robustness: `zellij attach --create` is atomic server-side, so concurrent
-      # SSH logins simply share the session instead of racing. No pgrep
+      # logins simply share the session instead of racing. No pgrep
       # heuristics: liveness is decided by the attach exit status itself. A dead
       # session (metadata without live panes, e.g. from an interrupted web
       # attach) makes attach fail; only then we delete, poll until the name
@@ -39,8 +51,7 @@
       if status is-interactive
           and ${lib.boolToString attachEnabled}
           and not __emergency_check
-          and set -q SSH_CONNECTION
-          and not set -q ZELLIJ
+          ${sshGate}and not set -q ZELLIJ
           and not set -q ZELLIJ_PANE_ID
           and command -q zellij
         set -l session_name "${attachSession}"
@@ -50,7 +61,7 @@
           if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*\(current\)"
           else if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
             if not zellij attach "$session_name"
-              echo "ssh-attach: session '$session_name' is dead; recreating" >&2
+              echo "zellij-attach: session '$session_name' is dead; recreating" >&2
               zellij delete-session "$session_name" 2>/dev/null
               for i in (seq 1 50)
                 if not zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
@@ -269,7 +280,7 @@ in {
       end
 
 
-      ${sshAttachBlock}
+      ${autoAttachBlock}
 
     '';
   };

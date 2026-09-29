@@ -152,7 +152,13 @@ in {
       inherit (hostInfo) wms;
       # user and system use defaults from lib/defaults.nix
 
-      zellijAutoAttach.sessionName = "homelab-wsl";
+      # Local WSL terminals (Windows Terminal "NixOS", plain `wsl.exe`, VS Code)
+      # have no SSH_CONNECTION, so the SSH-only gate would leave them on a bare
+      # shell; enableLocal attaches them to the same session.
+      zellijAutoAttach = {
+        sessionName = "homelab-wsl";
+        enableLocal = true;
+      };
     };
 
     modules.system.stylix-catppuccin.enable = true;
