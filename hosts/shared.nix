@@ -81,21 +81,28 @@ in {
               enable = lib.mkOption {
                 type = lib.types.bool;
                 default = true;
-                description = "Auto-attach to Zellij on interactive SSH logins";
+                description = "Auto-attach to Zellij on interactive logins";
+              };
+
+              enableLocal = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Also auto-attach outside SSH, i.e. in every local interactive shell (hosts such as WSL have no SSH_CONNECTION on their own terminals)";
               };
 
               sessionName = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
-                description = "Zellij session name to attach on SSH login (null = disabled)";
+                description = "Zellij session name to attach to (null = disabled)";
               };
             };
           };
           default = {
             enable = true;
+            enableLocal = false;
             sessionName = null;
           };
-          description = "Zellij SSH auto-attach configuration";
+          description = "Zellij interactive-shell auto-attach configuration";
         };
         autoLogin = lib.mkOption {
           type = lib.types.nullOr (
