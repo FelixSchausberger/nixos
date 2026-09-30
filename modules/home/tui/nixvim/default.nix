@@ -19,9 +19,11 @@
     luaLoader.enable = true;
 
     # Bespoke logic stays in real Lua files under lua/, loaded here.
+    extraFiles."lua/config/clipboard.lua".source = ./lua/config/clipboard.lua;
     extraFiles."lua/config/title.lua".source = ./lua/config/title.lua;
 
     extraConfigLua = ''
+      require("config.clipboard")
       require("config.title")
     '';
   };
