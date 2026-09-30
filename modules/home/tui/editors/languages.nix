@@ -198,9 +198,9 @@ in {
       rust-analyzer = {
         cmd = ["${pkgs.rust-analyzer}/bin/rust-analyzer"];
         config = {
-          checkOnSave = {
-            command = "clippy";
-          };
+          # Diagnostics on save run clippy: checkOnSave is the boolean enable
+          # flag, the command lives at check.command.
+          check.command = "clippy";
         };
       };
 
