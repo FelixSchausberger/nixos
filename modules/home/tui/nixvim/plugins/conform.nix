@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   inherit (config.editors) languages;
@@ -34,30 +35,38 @@
 
   filetypeList = lib.concatMapStringsSep ", " (ft: ''"${ft}"'') autoFormatFiletypes;
 in {
-  programs.nixvim.plugins.conform-nvim = {
-    enable = true;
+  programs.nixvim = {
+    # rustfmt is the one formatter of the shared set that home.packages does
+    # not ship (the Rust toolchain normally comes from devShells); on nvim's
+    # PATH it keeps format-on-save and the conform :checkhealth working in
+    # plain shells too.
+    extraPackages = [pkgs.rustfmt];
 
-    settings = {
-      formatters_by_ft =
-        lib.foldl' (
-          acc: lang: acc // lib.genAttrs lang.filetypes (_: [(formatterName lang)])
-        ) {}
-        withFormatter;
+    plugins.conform-nvim = {
+      enable = true;
 
-      formatters = formatterDefs;
+      settings = {
+        formatters_by_ft =
+          lib.foldl' (
+            acc: lang: acc // lib.genAttrs lang.filetypes (_: [(formatterName lang)])
+          ) {}
+          withFormatter;
 
-      # Only the auto-format filetypes save-format; other buffers keep the
-      # save untouched. lsp_format = fallback formats via LSP when a language
-      # has no formatter configured, exactly like Helix. The generous timeout
-      # keeps slow formatters (rustfmt, black) from aborting mid-save.
-      format_on_save = ''
-        function(bufnr)
-          local enabled = { ${filetypeList} }
-          if vim.tbl_contains(enabled, vim.bo[bufnr].filetype) then
-            return { lsp_format = "fallback", timeout_ms = 10000 }
+        formatters = formatterDefs;
+
+        # Only the auto-format filetypes save-format; other buffers keep the
+        # save untouched. lsp_format = fallback formats via LSP when a language
+        # has no formatter configured, exactly like Helix. The generous timeout
+        # keeps slow formatters (rustfmt, black) from aborting mid-save.
+        format_on_save = ''
+          function(bufnr)
+            local enabled = { ${filetypeList} }
+            if vim.tbl_contains(enabled, vim.bo[bufnr].filetype) then
+              return { lsp_format = "fallback", timeout_ms = 10000 }
+            end
           end
-        end
-      '';
+        '';
+      };
     };
   };
 }
