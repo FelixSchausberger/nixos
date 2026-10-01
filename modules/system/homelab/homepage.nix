@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   cfg = config.modules.system.homelab.homepage;
@@ -303,9 +304,21 @@ in {
       default = 3002;
       description = "Homepage dashboard HTTP port";
     };
+    httpsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8445;
+      description = "Tailscale Serve HTTPS port terminating TLS for the Homepage dashboard";
+    };
   };
 
   config = mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.httpsPort != hl.zellijWeb.httpsPort && cfg.httpsPort != hl.opencodeWeb.httpsPort;
+        message = "modules.system.homelab.homepage.httpsPort must differ from the zellij-web and opencode-web Tailscale Serve ports";
+      }
+    ];
+
     # The upstream NixOS module sets DynamicUser=true, which creates a
     # private-namespace bind mount at /var/lib/homepage-dashboard. This
     # conflicts with impermanence's bind mount at that path and the
@@ -331,6 +344,46 @@ in {
       };
     };
 
+    # The dashboard must be served from the origin root: its Next.js build
+    # emits root-absolute /_next and /api URLs (the package carries no
+    # basePath), so a path-stripping Caddy prefix loads a page whose assets
+    # and API calls land on the Immich catch-all instead. Like zellij-web
+    # and opencode-web, it therefore gets its own Tailscale Serve port, which
+    # terminates TLS with the node certificate and reaches any device on the
+    # tailnet: https://<tailnetDomain>:<httpsPort>/. The gate mirrors
+    # allowedHosts below: caddyProxy.tailnetDomain is the only tailnet name
+    # this module knows, so without it there is nothing to serve on.
+    systemd.services.tailscale-serve-homepage = mkIf hl.caddyProxy.enable {
+      description = "Expose Homepage dashboard via Tailscale Serve";
+      after = [
+        "tailscale.service"
+        "homepage-dashboard.service"
+      ];
+      wants = [
+        "tailscale.service"
+        "homepage-dashboard.service"
+      ];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        TimeoutStartSec = 30;
+        Restart = "on-failure";
+        RestartSec = 30;
+        ExecStart = "${pkgs.writeShellScript "tailscale-serve-homepage-setup" ''
+          ${pkgs.tailscale}/bin/tailscale serve --bg \
+            --https ${toString cfg.httpsPort} \
+            http://127.0.0.1:${toString cfg.port}
+        ''}";
+      };
+      # Fail loudly and retry when tailscaled is not yet connected; never
+      # swallow the error into a green "active (exited)" state. Re-serve
+      # whenever tailscaled comes back up.
+      upholds = ["tailscale.service"];
+      unitConfig.StartLimitBurst = 5;
+      unitConfig.StartLimitIntervalSec = 300;
+    };
+
     sops.templates."homepage/env" = {
       content = widgetEnv;
       path = "/run/secrets/homepage/env";
@@ -342,12 +395,16 @@ in {
       enable = true;
       listenPort = cfg.port;
       environmentFiles = [config.sops.templates."homepage/env".path];
-      # Caddy terminates TLS for the tailnet domain and proxies with the
-      # original Host header, so Homepage must allow it. Without this every
-      # tailnet request fails with HTTP 400 "Host validation failed" while
-      # localhost still works. Local entries preserve direct loopback checks.
+      # Tailnet clients arrive through the Tailscale Serve port, which
+      # forwards the original Host header with or without the listener port
+      # depending on version; without an exact match every tailnet request
+      # fails with HTTP 400 "Host validation failed" while localhost still
+      # works. Local entries preserve direct loopback checks.
       allowedHosts = lib.concatStringsSep "," (
-        lib.optionals hl.caddyProxy.enable [hl.caddyProxy.tailnetDomain]
+        lib.optionals hl.caddyProxy.enable [
+          hl.caddyProxy.tailnetDomain
+          "${hl.caddyProxy.tailnetDomain}:${toString cfg.httpsPort}"
+        ]
         ++ [
           "localhost:${toString cfg.port}"
           "127.0.0.1:${toString cfg.port}"
