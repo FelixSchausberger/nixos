@@ -83,6 +83,13 @@
           ++ lib.optionals (lib.elem "rust" config.features.development.languages) [
             cargo-watch # Auto-rebuild on source changes (used by zellij rust layout)
             bugstalker # Modern Rust debugger with async support
+            # Toolchain fallback for shells outside devShells/direnv: cargo
+            # runs the overseer tasks and the layout's cargo-watch, clippy
+            # powers rust-analyzer's check.command, and rustc provides its
+            # sysroot. devShells take precedence via direnv PATH prepending.
+            rustc
+            cargo
+            clippy
           ]
           ++ lib.optionals (lib.elem "python" config.features.development.languages) [
             python3
