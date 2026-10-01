@@ -1,4 +1,4 @@
-{
+{pkgs, ...}: {
   imports = [
     ./completion.nix
     ./conform.nix
@@ -9,6 +9,14 @@
   ];
 
   programs.nixvim = {
+    # mini.icons backs which-key's icon rendering (its first-choice provider,
+    # probed with pcall so it needs an explicit setup()); nixvim ships no mini
+    # module, hence the bare plugin.
+    extraPlugins = [pkgs.vimPlugins.mini-nvim];
+    extraConfigLua = ''
+      require("mini.icons").setup()
+    '';
+
     # Match Helix's catppuccin_mocha theme
     colorschemes.catppuccin = {
       enable = true;
