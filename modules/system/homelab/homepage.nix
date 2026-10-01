@@ -56,6 +56,10 @@
       {
         "Navidrome" = {
           icon = "navidrome.png";
+          # The path route keeps the prefix (mkKeepRoute) and Navidrome
+          # runs with BaseURL=/navidrome; stripping the prefix would make
+          # its root-absolute redirects and API calls land on the Immich
+          # catch-all instead of the music server.
           href = "https://${hl.caddyProxy.tailnetDomain}/navidrome";
           description = "Music Streaming";
           siteMonitor = local hl.navidrome.port;
@@ -117,7 +121,10 @@
       {
         "AdGuard Home" = {
           icon = "adguard-home.png";
-          href = "https://${hl.caddyProxy.tailnetDomain}/adguard";
+          # Trailing slash: the admin UI references its CSS/JS relatively,
+          # and at /adguard (no slash) those resolve against the site root
+          # where the Immich catch-all answers HTML instead of the bundle.
+          href = "https://${hl.caddyProxy.tailnetDomain}/adguard/";
           description = "DNS";
           siteMonitor = local hl.adguardhome.port;
           widget = {
