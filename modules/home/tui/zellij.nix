@@ -200,14 +200,17 @@ in {
           bind "Alt w" { LaunchOrFocusPlugin "forgot" { floating true; }; }
           bind "Alt r" { LaunchOrFocusPlugin "harpoon" { floating true; }; }
 
-          // Floating scratchpad shell for quick commands
-          bind "Alt x" { Run "fish" { floating true; x "12%"; y "12%"; width "75%"; height "75%"; }; }
+          // Floating scratchpad shell for quick commands. close_on_exit
+          // opts out of zellij's hold-on-exit default, which would keep a
+          // dead pane around after the shell quits.
+          bind "Alt x" { Run "fish" { floating true; x "12%"; y "12%"; width "75%"; height "75%"; close_on_exit true; }; }
 
-          // Quick access to tools in dedicated panes
-          bind "Alt y" { NewPane "Down"; Run "yazi"; }
-          bind "Alt g" { NewPane "Right"; Run "lazygit"; }
-          bind "Alt z" { NewPane "Right"; Run "lazyjj"; }
-          bind "Alt e" { NewPane "Down"; Run "nvim"; }
+          // Quick access to tools in dedicated panes. Run spawns the pane
+          // itself; a preceding NewPane would only add a stray shell pane.
+          bind "Alt y" { Run "yazi" { direction "Down"; close_on_exit true; }; }
+          bind "Alt g" { Run "lazygit" { direction "Right"; close_on_exit true; }; }
+          bind "Alt z" { Run "lazyjj" { direction "Right"; close_on_exit true; }; }
+          bind "Alt e" { Run "nvim" { direction "Down"; close_on_exit true; }; }
         }
 
         // Normal mode: Gateway to other modes
@@ -226,11 +229,11 @@ in {
           // Quick plugin access (also work in normal mode)
           bind "Alt w" { LaunchOrFocusPlugin "forgot" { floating true; }; }
           bind "Alt r" { LaunchOrFocusPlugin "harpoon" { floating true; }; }
-          bind "Alt x" { Run "fish" { floating true; x "12%"; y "12%"; width "75%"; height "75%"; }; }
-          bind "Alt y" { NewPane "Down"; Run "yazi"; }
-          bind "Alt g" { NewPane "Right"; Run "lazygit"; }
-          bind "Alt z" { NewPane "Right"; Run "lazyjj"; }
-          bind "Alt e" { NewPane "Down"; Run "nvim"; }
+          bind "Alt x" { Run "fish" { floating true; x "12%"; y "12%"; width "75%"; height "75%"; close_on_exit true; }; }
+          bind "Alt y" { Run "yazi" { direction "Down"; close_on_exit true; }; }
+          bind "Alt g" { Run "lazygit" { direction "Right"; close_on_exit true; }; }
+          bind "Alt z" { Run "lazyjj" { direction "Right"; close_on_exit true; }; }
+          bind "Alt e" { Run "nvim" { direction "Down"; close_on_exit true; }; }
         }
 
         // Tab mode: Manage tabs
