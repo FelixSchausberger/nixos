@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }: let
   inherit (config.editors) languages;
@@ -36,12 +35,9 @@
   filetypeList = lib.concatMapStringsSep ", " (ft: ''"${ft}"'') autoFormatFiletypes;
 in {
   programs.nixvim = {
-    # rustfmt is the one formatter of the shared set that home.packages does
-    # not ship (the Rust toolchain normally comes from devShells); on nvim's
-    # PATH it keeps format-on-save and the conform :checkhealth working in
-    # plain shells too.
-    extraPackages = [pkgs.rustfmt];
-
+    # Formatter binaries come from the shared, feature-gated home.packages
+    # set; rustfmt ships with the Rust toolchain in profiles/features.nix,
+    # which nvim inherits through the environment PATH.
     plugins.conform-nvim = {
       enable = true;
 
