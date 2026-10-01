@@ -116,6 +116,21 @@
             default = false;
           };
         };
+        # monitoring.nix's Prometheus serve-port assertion compares
+        # prometheusHttpsPort against the Tailscale Serve ports of the three
+        # modules that expose one; none of them is imported in this test VM.
+        zellijWeb.httpsPort = lib.mkOption {
+          type = lib.types.port;
+          default = 8443;
+        };
+        opencodeWeb.httpsPort = lib.mkOption {
+          type = lib.types.port;
+          default = 8444;
+        };
+        homepage.httpsPort = lib.mkOption {
+          type = lib.types.port;
+          default = 8445;
+        };
         # monitoring.nix feeds determinate-nixd GC data through
         # modules.system.maintenance, which the test node does not import (see
         # the modules.system.maintenance stub below).

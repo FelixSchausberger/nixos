@@ -5,6 +5,7 @@
   ...
 }: let
   cfg = config.modules.system.homelab.monitoring;
+  hl = config.modules.system.homelab;
   inherit (lib) mkIf;
 
   blackboxConfig = pkgs.writeText "blackbox.yml" ''
@@ -68,6 +69,11 @@ in {
       default = 9090;
       description = "Prometheus HTTP port (localhost only)";
     };
+    prometheusHttpsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8446;
+      description = "Tailscale Serve HTTPS port terminating TLS for the Prometheus UI";
+    };
     nodeExporterPort = lib.mkOption {
       type = lib.types.port;
       default = 9100;
@@ -109,6 +115,14 @@ in {
           || cfg.grafanaPort != config.modules.system.homelab.adguardhome.port;
         message = "When AdGuard Home is enabled, Grafana port must differ from AdGuard admin port";
       }
+      {
+        assertion =
+          cfg.prometheusHttpsPort
+          != hl.zellijWeb.httpsPort
+          && cfg.prometheusHttpsPort != hl.opencodeWeb.httpsPort
+          && cfg.prometheusHttpsPort != hl.homepage.httpsPort;
+        message = "modules.system.homelab.monitoring.prometheusHttpsPort must differ from the zellij-web, opencode-web and homepage Tailscale Serve ports";
+      }
     ];
 
     services.prometheus = {
@@ -117,9 +131,17 @@ in {
       listenAddress = "127.0.0.1";
       retentionTime = "14d";
 
-      extraFlags = [
-        "--storage.tsdb.wal-compression"
-      ];
+      extraFlags =
+        [
+          "--storage.tsdb.wal-compression"
+        ]
+        # external-url carries no path prefix ("/"), so handlers stay
+        # exactly where they are: loopback probes, the Grafana datasource
+        # and the Homepage widget keep hitting /api/v1 and /-/healthy
+        # directly. Only link generation changes - the UI's / -> /query
+        # redirect gains the https Serve URL, because a plain-http redirect
+        # to a Serve port is answered with 400.
+        ++ lib.optional hl.caddyProxy.enable "--web.external-url=https://${hl.caddyProxy.tailnetDomain}:${toString cfg.prometheusHttpsPort}/";
 
       globalConfig = {
         scrape_interval = "30s";
@@ -678,6 +700,43 @@ in {
         EnvironmentFile = config.sops.templates."grafana-env".path;
         RestartSec = "5s";
       };
+    };
+
+    # The Prometheus UI is root-absolute (/api/v1, / -> /query redirect), so
+    # a path-stripping route cannot front it; like zellij-web, opencode-web
+    # and homepage it gets its own Tailscale Serve port that terminates TLS
+    # with the node certificate and needs no firewall change. The gate
+    # mirrors the other serve units: without caddyProxy.tailnetDomain there
+    # is no tailnet name to serve on.
+    systemd.services.tailscale-serve-prometheus = mkIf hl.caddyProxy.enable {
+      description = "Expose Prometheus UI via Tailscale Serve";
+      after = [
+        "tailscale.service"
+        "prometheus.service"
+      ];
+      wants = [
+        "tailscale.service"
+        "prometheus.service"
+      ];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        TimeoutStartSec = 30;
+        Restart = "on-failure";
+        RestartSec = 30;
+        ExecStart = "${pkgs.writeShellScript "tailscale-serve-prometheus-setup" ''
+          ${pkgs.tailscale}/bin/tailscale serve --bg \
+            --https ${toString cfg.prometheusHttpsPort} \
+            http://127.0.0.1:${toString cfg.prometheusPort}
+        ''}";
+      };
+      # Fail loudly and retry when tailscaled is not yet connected; never
+      # swallow the error into a green "active (exited)" state. Re-serve
+      # whenever tailscaled comes back up.
+      upholds = ["tailscale.service"];
+      unitConfig.StartLimitBurst = 5;
+      unitConfig.StartLimitIntervalSec = 300;
     };
 
     users.groups.netdev = {};
