@@ -108,16 +108,6 @@
             default = ports.nextcloud;
           };
         };
-        homepage = {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-          };
-          port = lib.mkOption {
-            type = lib.types.port;
-            default = ports.homepage;
-          };
-        };
       };
     };
 
@@ -157,7 +147,6 @@
         # http:// prefix forces HTTP-only listener — required in test VMs
         # where Tailscale is not available for TLS certificate provisioning.
         tailnetDomain = "http://m920q.test.local";
-        homepage = false;
       };
     };
   };

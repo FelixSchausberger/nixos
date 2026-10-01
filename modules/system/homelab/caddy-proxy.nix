@@ -82,12 +82,11 @@ in {
       description = "Expose Nextcloud via Tailscale at <tailnetDomain>/nextcloud";
     };
 
-    homepage = lib.mkOption {
-      type = lib.types.bool;
-      default = hl.homepage.enable;
-      defaultText = lib.literalExpression "config.modules.system.homelab.homepage.enable";
-      description = "Expose Homepage dashboard via Tailscale at <tailnetDomain>/homepage";
-    };
+    # No Homepage toggle: its Next.js build emits root-absolute /_next and
+    # /api URLs (the package carries no basePath), so a path-stripped prefix
+    # serves a page whose assets land on the Immich catch-all. Homepage runs
+    # at the origin root of a dedicated Tailscale Serve port instead
+    # (homepage.nix httpsPort).
   };
 
   config = lib.mkIf cfg.enable {
@@ -116,10 +115,6 @@ in {
         assertion = !cfg.nextcloud || hl.nextcloud.enable;
         message = "caddyProxy.nextcloud requires modules.system.homelab.nextcloud.enable = true";
       }
-      {
-        assertion = !cfg.homepage || hl.homepage.enable;
-        message = "caddyProxy.homepage requires modules.system.homelab.homepage.enable = true";
-      }
     ];
 
     # Allow Caddy to fetch TLS certificates from the local Tailscale daemon.
@@ -143,7 +138,6 @@ in {
           + lib.optionalString cfg.grafana (mkKeepRoute "grafana" hl.monitoring.grafanaPort)
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
-          + lib.optionalString cfg.homepage (mkRoute "homepage" hl.homepage.port)
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.
           + lib.optionalString cfg.nextcloud (mkWellKnownRedirects "/nextcloud")

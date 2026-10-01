@@ -1,11 +1,26 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   cfg = config.modules.system.homelab.homepage;
   hl = config.modules.system.homelab;
   inherit (lib) mkIf;
+
+  # Loopback URL for probes. The dashboard runs on the m920q itself, so site
+  # monitors and widgets reach services over 127.0.0.1 instead of going out
+  # through the tailnet name the card links to. Probes are HTTP only: the
+  # service runs with an empty CapabilityBoundingSet, which rules out the ICMP
+  # that `ping:` would need, while siteMonitor is a HEAD request with a GET
+  # fallback (405 from Navidrome therefore still reads as up).
+  local = port: "http://127.0.0.1:${toString port}";
+
+  # Ports with no module option behind them: jellyfin.nix follows the nixpkgs
+  # default and ntfy.nix hardcodes its own listener, so each number is pinned
+  # once here instead of repeated per URL.
+  jellyfinPort = 8096;
+  ntfyPort = 2586;
 
   # Build services YAML from enabled homelab services
   # Remote wake for the gaming PC lives on the router, not here:
@@ -18,6 +33,10 @@
         icon = "mdi-server";
         href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
         description = "Homelab Server";
+        # node_exporter answers on loopback only and stands in for the host
+        # itself: if it stops answering, the monitoring stack is blind, which
+        # is the condition this card exists to reveal.
+        siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
       };
     }
   ];
@@ -26,30 +45,33 @@
     lib.optionals hl.immich.enable [
       {
         "Immich" = {
-          icon = "mdi-photo";
+          icon = "immich.png";
           href = "https://${hl.caddyProxy.tailnetDomain}";
           description = "Photo Management";
+          siteMonitor = local hl.immich.port;
         };
       }
     ]
     ++ lib.optionals hl.navidrome.enable [
       {
         "Navidrome" = {
-          icon = "mdi-music";
+          icon = "navidrome.png";
           href = "https://${hl.caddyProxy.tailnetDomain}/navidrome";
           description = "Music Streaming";
+          siteMonitor = local hl.navidrome.port;
         };
       }
     ]
     ++ lib.optionals hl.jellyfin.enable [
       {
         "Jellyfin" = {
-          icon = "mdi-filmstrip";
+          icon = "jellyfin.png";
           # Served directly on the LAN/tailnet port. Jellyfin client apps
           # expect to be reached at the server root, so it is not path-routed
           # through Caddy like the other services.
-          href = "http://192.168.178.2:8096";
+          href = "http://192.168.178.2:${toString jellyfinPort}";
           description = "Movies & Series";
+          siteMonitor = local jellyfinPort;
         };
       }
     ];
@@ -57,16 +79,35 @@
   monitoringServices = lib.optionals hl.monitoring.enable [
     {
       "Grafana" = {
-        icon = "mdi-chart-line";
+        icon = "grafana.png";
         href = "https://${hl.caddyProxy.tailnetDomain}/grafana";
         description = "Dashboards";
+        siteMonitor = local hl.monitoring.grafanaPort;
+        widget = {
+          type = "grafana";
+          version = 2;
+          url = local hl.monitoring.grafanaPort;
+          username = "admin";
+          # Credentials never reach services.yaml: Homepage substitutes the
+          # token from the environment file at config read time.
+          password = "{{HOMEPAGE_VAR_GRAFANA_ADMIN_PASSWORD}}";
+        };
       };
     }
     {
       "Prometheus" = {
-        icon = "mdi-database";
-        href = "http://192.168.178.2:${toString hl.monitoring.prometheusPort}";
+        icon = "prometheus.png";
+        # Prometheus binds 127.0.0.1 only (see monitoring.nix listenAddress),
+        # so unlike the other cards this link resolves for a browser on the
+        # host itself; remote viewers still get the widget below, which is
+        # queried server-side.
+        href = local hl.monitoring.prometheusPort;
         description = "Metrics";
+        siteMonitor = "${local hl.monitoring.prometheusPort}/-/healthy";
+        widget = {
+          type = "prometheus";
+          url = local hl.monitoring.prometheusPort;
+        };
       };
     }
   ];
@@ -75,18 +116,26 @@
     lib.optionals hl.adguardhome.enable [
       {
         "AdGuard Home" = {
-          icon = "mdi-shield";
+          icon = "adguard-home.png";
           href = "https://${hl.caddyProxy.tailnetDomain}/adguard";
           description = "DNS";
+          siteMonitor = local hl.adguardhome.port;
+          widget = {
+            type = "adguard";
+            url = local hl.adguardhome.port;
+            username = "admin";
+            password = "{{HOMEPAGE_VAR_ADGUARD_PASSWORD}}";
+          };
         };
       }
     ]
     ++ [
       {
         "Fritz!Box" = {
-          icon = "mdi-router-wireless";
+          icon = "fritzbox.png";
           href = "http://192.168.178.1";
           description = "Router";
+          siteMonitor = "http://192.168.178.1";
         };
       }
     ];
@@ -95,38 +144,58 @@
     lib.optionals hl.nextcloud.enable [
       {
         "Nextcloud" = {
-          icon = "mdi-cloud";
+          icon = "nextcloud.png";
           href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud";
           description = "File Sync";
+          siteMonitor = local hl.nextcloud.port;
+          # Loopback works because nextcloud.nix trusts 127.0.0.1 as a domain;
+          # probing it there keeps the widget independent of Caddy.
+          widget = {
+            type = "nextcloud";
+            url = local hl.nextcloud.port;
+            username = "admin";
+            password = "{{HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD}}";
+            fields = ["activeusers" "numfiles" "freespace"];
+          };
         };
       }
     ]
     ++ lib.optionals hl.ntfy.enable [
       {
         "ntfy.sh" = {
-          icon = "mdi-bell";
-          href = "http://192.168.178.2:2586";
+          icon = "ntfy.png";
+          href = "http://192.168.178.2:${toString ntfyPort}";
           description = "Push Notifications";
+          siteMonitor = "http://127.0.0.1:${toString ntfyPort}";
+          # auth-default-access is read-write, so the topic needs no
+          # credentials for the widget to read the latest alert.
+          widget = {
+            type = "ntfy";
+            url = "http://127.0.0.1:${toString ntfyPort}";
+            topic = "homelab-alerts";
+          };
         };
       }
     ]
     ++ lib.optionals hl.zellijWeb.enable [
       {
         "Zellij Web" = {
-          icon = "mdi-console";
+          icon = "zellij.png";
           # Tailscale Serve endpoint (TLS, tailnet-only). The server binds
           # loopback only, so the LAN IP is unreachable.
           href = "https://${hl.zellijWeb.tailnetDomain}:${toString hl.zellijWeb.httpsPort}";
           description = "Terminal";
+          siteMonitor = local hl.zellijWeb.port;
         };
       }
     ]
     ++ lib.optionals hl.opencodeWeb.enable [
       {
         "OpenCode" = {
-          icon = "mdi-robot";
+          icon = "opencode.png";
           href = "https://${hl.opencodeWeb.tailnetDomain}:${toString hl.opencodeWeb.httpsPort}";
           description = "AI Agent";
+          siteMonitor = local hl.opencodeWeb.port;
         };
       }
     ];
@@ -167,6 +236,66 @@
     ++ lib.optionals (monitoringServices != []) [{"Monitoring" = monitoringServices;}]
     ++ lib.optionals (networkServices != []) [{"Network" = networkServices;}]
     ++ lib.optionals (systemServices != []) [{"System" = systemServices;}];
+
+  # Group arrangement: one tab per concern, horizontal rows inside a tab.
+  # Tab names are the only navigation on the page, so a group without a tab
+  # would surface on every one of them - each entry below is assigned.
+  groupLayout = {
+    Rescue = {
+      tab = "Home";
+      icon = "mdi-lifebuoy";
+      # Emergency links are consulted rarely and must not push the everyday
+      # groups below the fold on a phone.
+      initiallyCollapsed = true;
+    };
+    Infrastructure = {
+      tab = "Home";
+      icon = "mdi-server";
+      style = "row";
+      columns = 4;
+    };
+    Media = {
+      tab = "Media";
+      icon = "mdi-play";
+      style = "row";
+      columns = 3;
+    };
+    Monitoring = {
+      tab = "Home";
+      icon = "mdi-chart-line";
+      style = "row";
+      columns = 3;
+    };
+    Network = {
+      tab = "Home";
+      icon = "mdi-lan-connect";
+      style = "row";
+      columns = 3;
+    };
+    System = {
+      tab = "Tools";
+      icon = "mdi-cog";
+      style = "row";
+      columns = 3;
+    };
+  };
+  # Layout keys are intersected with the groups actually rendered. Services
+  # without a layout entry self-filter upstream, but the tab bar is built from
+  # the raw layout keys, so a key for a disabled group would leave an empty tab
+  # behind and shift the default tab (the first one alphabetically).
+  groupNames = map (group: builtins.head (builtins.attrNames group)) allServices;
+  layout = lib.filterAttrs (name: _: builtins.elem name groupNames) groupLayout;
+
+  # Widget credentials reach Homepage as environment variables, never as YAML
+  # values in the store: services.yaml carries {{HOMEPAGE_VAR_*}} tokens that
+  # Homepage substitutes when it reads the file. A placeholder only exists for
+  # a declared secret, so every entry is gated on the service that declares it
+  # and an unused service contributes nothing instead of a dangling token.
+  widgetEnv = lib.concatStringsSep "\n" (
+    lib.optional hl.monitoring.enable "HOMEPAGE_VAR_GRAFANA_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}"
+    ++ lib.optional hl.adguardhome.enable "HOMEPAGE_VAR_ADGUARD_PASSWORD=${config.sops.placeholder."adguard/password"}"
+    ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD=${config.sops.placeholder."nextcloud/admin-password"}"
+  );
 in {
   options.modules.system.homelab.homepage = {
     enable = lib.mkEnableOption "Homepage dashboard — live service status overview";
@@ -175,9 +304,21 @@ in {
       default = 3002;
       description = "Homepage dashboard HTTP port";
     };
+    httpsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8445;
+      description = "Tailscale Serve HTTPS port terminating TLS for the Homepage dashboard";
+    };
   };
 
   config = mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.httpsPort != hl.zellijWeb.httpsPort && cfg.httpsPort != hl.opencodeWeb.httpsPort;
+        message = "modules.system.homelab.homepage.httpsPort must differ from the zellij-web and opencode-web Tailscale Serve ports";
+      }
+    ];
+
     # The upstream NixOS module sets DynamicUser=true, which creates a
     # private-namespace bind mount at /var/lib/homepage-dashboard. This
     # conflicts with impermanence's bind mount at that path and the
@@ -190,55 +331,177 @@ in {
     };
     users.groups.homepage-dashboard = {};
 
-    systemd.services.homepage-dashboard.serviceConfig = {
-      DynamicUser = lib.mkForce false;
-      User = lib.mkForce "homepage-dashboard";
-      Group = lib.mkForce "homepage-dashboard";
+    systemd.services.homepage-dashboard = {
+      # The widget credential file is planted by sops-nix at activation; the
+      # unit fails to start if EnvironmentFile points at a path that does not
+      # exist yet, so it waits for the installer (same pattern as garmin.nix).
+      after = ["sops-nix.service"];
+      wants = ["sops-nix.service"];
+      serviceConfig = {
+        DynamicUser = lib.mkForce false;
+        User = lib.mkForce "homepage-dashboard";
+        Group = lib.mkForce "homepage-dashboard";
+      };
+    };
+
+    # The dashboard must be served from the origin root: its Next.js build
+    # emits root-absolute /_next and /api URLs (the package carries no
+    # basePath), so a path-stripping Caddy prefix loads a page whose assets
+    # and API calls land on the Immich catch-all instead. Like zellij-web
+    # and opencode-web, it therefore gets its own Tailscale Serve port, which
+    # terminates TLS with the node certificate and reaches any device on the
+    # tailnet: https://<tailnetDomain>:<httpsPort>/. The gate mirrors
+    # allowedHosts below: caddyProxy.tailnetDomain is the only tailnet name
+    # this module knows, so without it there is nothing to serve on.
+    systemd.services.tailscale-serve-homepage = mkIf hl.caddyProxy.enable {
+      description = "Expose Homepage dashboard via Tailscale Serve";
+      after = [
+        "tailscale.service"
+        "homepage-dashboard.service"
+      ];
+      wants = [
+        "tailscale.service"
+        "homepage-dashboard.service"
+      ];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        TimeoutStartSec = 30;
+        Restart = "on-failure";
+        RestartSec = 30;
+        ExecStart = "${pkgs.writeShellScript "tailscale-serve-homepage-setup" ''
+          ${pkgs.tailscale}/bin/tailscale serve --bg \
+            --https ${toString cfg.httpsPort} \
+            http://127.0.0.1:${toString cfg.port}
+        ''}";
+      };
+      # Fail loudly and retry when tailscaled is not yet connected; never
+      # swallow the error into a green "active (exited)" state. Re-serve
+      # whenever tailscaled comes back up.
+      upholds = ["tailscale.service"];
+      unitConfig.StartLimitBurst = 5;
+      unitConfig.StartLimitIntervalSec = 300;
+    };
+
+    sops.templates."homepage/env" = {
+      content = widgetEnv;
+      path = "/run/secrets/homepage/env";
+      owner = "homepage-dashboard";
+      mode = "0400";
     };
 
     services.homepage-dashboard = {
       enable = true;
       listenPort = cfg.port;
-      # Caddy terminates TLS for the tailnet domain and proxies with the
-      # original Host header, so Homepage must allow it. Without this every
-      # tailnet request fails with HTTP 400 "Host validation failed" while
-      # localhost still works. Local entries preserve direct loopback checks.
+      environmentFiles = [config.sops.templates."homepage/env".path];
+      # Tailnet clients arrive through the Tailscale Serve port, which
+      # forwards the original Host header with or without the listener port
+      # depending on version; without an exact match every tailnet request
+      # fails with HTTP 400 "Host validation failed" while localhost still
+      # works. Local entries preserve direct loopback checks.
       allowedHosts = lib.concatStringsSep "," (
-        lib.optionals hl.caddyProxy.enable [hl.caddyProxy.tailnetDomain]
+        lib.optionals hl.caddyProxy.enable [
+          hl.caddyProxy.tailnetDomain
+          "${hl.caddyProxy.tailnetDomain}:${toString cfg.httpsPort}"
+        ]
         ++ [
           "localhost:${toString cfg.port}"
           "127.0.0.1:${toString cfg.port}"
         ]
       );
       services = allServices;
-      settings = {
-        title = "Homelab";
-        headerStyle = "clean";
-        theme = "dark";
-        color = "slate";
-      };
-      bookmarks = [
+      # No `bookmarks` attribute: the module default is an empty list, and the
+      # previous Quick Links group duplicated the Grafana and Nextcloud
+      # service cards outright.
+      # Header contents, left to right: greeting and host gauges on the left,
+      # clock, weather and search right-aligned. Setting resources.cpu is what
+      # makes the upstream module relax ProcSubset so /proc stays readable.
+      widgets = [
         {
-          "Quick Links" = [
-            {
-              "Grafana" = [
-                {
-                  icon = "mdi-chart-line";
-                  href = "https://${hl.caddyProxy.tailnetDomain}/grafana";
-                }
-              ];
-            }
-            {
-              "Nextcloud" = [
-                {
-                  icon = "mdi-cloud";
-                  href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud";
-                }
-              ];
-            }
-          ];
+          greeting = {
+            text_size = "2xl";
+            text = "Welcome";
+          };
+        }
+        {
+          resources = {
+            label = "m920q";
+            cpu = true;
+            memory = true;
+            disk = [
+              "/"
+              "/per"
+              "/per/mnt/data"
+            ];
+            uptime = true;
+            network = "eno1";
+          };
+        }
+        {
+          datetime = {
+            text_size = "xl";
+            # English UI, German regional format, 24h clock.
+            locale = "de";
+            format = {
+              dateStyle = "short";
+              timeStyle = "short";
+              hourCycle = "h23";
+            };
+          };
+        }
+        {
+          openmeteo = {
+            label = "Vienna";
+            latitude = 48.2082;
+            longitude = 16.3738;
+            timezone = "Europe/Vienna";
+            units = "metric";
+            cache = 10;
+          };
+        }
+        {
+          search = {
+            provider = ["duckduckgo" "google"];
+            target = "_blank";
+            showSearchSuggestions = true;
+          };
         }
       ];
+      settings = {
+        title = "Homelab";
+        description = "m920q homelab dashboard";
+        theme = "dark";
+        color = "slate";
+        headerStyle = "clean";
+        inherit layout;
+        # Response times render as a plain green/red dot so status reads at a
+        # glance next to the widget blocks.
+        statusStyle = "dot";
+        # Cards get equal height per row and the page spans the window.
+        # maxGroupColumns stays unset: it only applies to style: columns
+        # groups, and every group on this page is style: row.
+        useEqualHeights = true;
+        fullWidth = true;
+        # Glass cards over the gradient in customCSS below - cardBlur alone
+        # would be invisible against a flat colour.
+        cardBlur = "md";
+        target = "_blank";
+        quicklaunch = {
+          searchDescriptions = true;
+          provider = "duckduckgo";
+        };
+      };
+      # The config directory is read-only, so a background image cannot ship
+      # with the module; a gradient stands in for one and is what the card
+      # blur has to work against. The global stylesheet paints a flat
+      # background-color on html and body, hence !important.
+      customCSS = ''
+        html, body {
+          background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #0f172a 100%) !important;
+          background-attachment: fixed;
+        }
+      '';
     };
 
     networking.firewall.allowedTCPPorts = mkIf (!hl.caddyProxy.enable) [
