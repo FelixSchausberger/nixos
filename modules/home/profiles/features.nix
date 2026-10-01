@@ -85,11 +85,13 @@
             bugstalker # Modern Rust debugger with async support
             # Toolchain fallback for shells outside devShells/direnv: cargo
             # runs the overseer tasks and the layout's cargo-watch, clippy
-            # powers rust-analyzer's check.command, and rustc provides its
-            # sysroot. devShells take precedence via direnv PATH prepending.
+            # powers rust-analyzer's check.command, rustfmt ships cargo-fmt
+            # for cargo fmt, and rustc provides the sysroot. devShells take
+            # precedence via direnv PATH prepending.
             rustc
             cargo
             clippy
+            rustfmt
           ]
           ++ lib.optionals (lib.elem "python" config.features.development.languages) [
             python3
