@@ -58,8 +58,19 @@
       # https://github.com/stevearc/overseer.nvim
       # Task runner for the cargo keymaps. Its builtin cargo template is
       # discovered from the runtimepath and offers check/build/run/test for
-      # every directory containing a Cargo.toml.
-      overseer.enable = true;
+      # every directory containing a Cargo.toml. The stock default component
+      # alias only tracks status and notifies on completion; open_output docks
+      # a live output panel when a task starts (focus stays in the code) so
+      # cargo run/build output streams without opening the task view manually.
+      overseer = {
+        enable = true;
+        settings.component_aliases.default = [
+          "on_exit_set_status"
+          "on_complete_notify"
+          {on_complete_dispose.require_view = ["SUCCESS" "FAILURE"];}
+          "open_output"
+        ];
+      };
     };
   };
 }

@@ -161,6 +161,15 @@ _: {
           desc = "cargo test";
         };
       }
+      {
+        mode = "n";
+        key = "<leader>ro";
+        action = "<cmd>OverseerToggle<cr>";
+        options = {
+          silent = true;
+          desc = "Toggle task output";
+        };
+      }
     ];
 
     # Group labels: the keymap hints shown while a leader prefix is pending.
