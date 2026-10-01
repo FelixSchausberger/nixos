@@ -29,7 +29,14 @@
       yazi.enable = true; # Yazi inside Neovim
 
       # https://github.com/MeanderingProgrammer/render-markdown.nvim
-      render-markdown.enable = true; # Improve viewing Markdown
+      render-markdown = {
+        enable = true; # Improve viewing Markdown
+
+        # Rendering $...$ spans needs the latex tree-sitter parser plus the
+        # utftex and latex2text CLIs, none of which this config ships, so the
+        # plugin's :checkhealth advises disabling the feature outright.
+        settings.latex.enabled = false;
+      };
 
       # https://github.com/tpope/vim-commentary
       commentary.enable = true; # gc to comment (same as the previous setup)
