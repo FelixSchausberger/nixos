@@ -133,22 +133,20 @@
     # Tag, not a floating rev: only the v2 lineage ships the `packages/cli`
     # build the shim depends on (V1's nix track builds `packages/opencode`,
     # and the `2.0` branch is a stale exploration snapshot without the
-    # opencode2 symlink). The v2.0.3 tag is known broken (its installPhase
-    # mismatches the build layout); from v2.0.4 on the installPhase produces
-    # bin/opencode plus the `opencode2` symlink, so tags build again. The
-    # shim (`OPENCODE_CONFIG_DIR`) requires 2.0.9: earlier v2 builds compute
-    # the global config root purely from XDG_CONFIG_HOME and always union
-    # the V1 config dir, whose V1-only `plugin` list aborts V2 plugin
-    # generation and leaves the TUI without agents or a model picker.
-    # Bumps stay tag-only, and each candidate tag must build: upstream
-    # replaced the `completion` subcommand its installPhase still calls
-    # with a `--completions <shell>` flag, so v2.0.11's installPhase
-    # captures an error message into the completion files and v2.0.12
-    # fails outright (its error output moved to stderr, leaving empty
-    # files). The broken completion files are inert here: the module
-    # installs only a bin/opencode2 shim and never links upstream's
-    # share files. Check nix/opencode.nix against the tag's CLI before
-    # bumping.
+    # opencode2 symlink). The shim (`OPENCODE_CONFIG_DIR`) requires 2.0.9:
+    # earlier v2 builds compute the global config root purely from
+    # XDG_CONFIG_HOME and always union the V1 config dir, whose V1-only
+    # `plugin` list aborts V2 plugin generation and leaves the TUI without
+    # agents or a model picker. Bumps stay tag-only, and each candidate tag
+    # must build with the completion override below applied.
+    #
+    # The tag's nix/opencode.nix shells out to the `completion` subcommand
+    # upstream replaced with `--completions <shell>`; every v2.0.12+ tag
+    # still carries that call (upstream dropped the whole expression on
+    # `main` instead of fixing it), and the call fails with empty completion
+    # files, aborting installPhase. The module drops that step through
+    # overrideAttrs (see the opencode2 package in the v2 module): it emits
+    # only files this module never ships.
     #
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
@@ -159,10 +157,10 @@
     # and bump it only alongside an upstream hash that matches its bun (the
     # rev below is the nixpkgs pinned inside the upstream tag's flake.lock).
     nixpkgs-opencode2 = {
-      url = "github:NixOS/nixpkgs/9dd5558b06dbdacbf635a3dd36dce1b1a7ee3a89";
+      url = "github:NixOS/nixpkgs/3181085bfd08663b6b9e60bc7a8395c2aaa741bd";
     };
     opencode-v2 = {
-      url = "github:anomalyco/opencode/v2.0.11";
+      url = "github:anomalyco/opencode/v2.0.22";
       inputs.nixpkgs.follows = "nixpkgs-opencode2";
     };
 

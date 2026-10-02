@@ -110,7 +110,9 @@ in {
       # and full auto-generated titles overflow the tab bar. Relative path
       # resolves from ~/.config/opencode/opencode.json.
       plugin = [
-        "@slkiser/opencode-quota"
+        # Pinned to the4.x line: npm `latest` is5.x, which peers
+        # @opencode/plugin 2.0.16 and has no OpenCode 1 support.
+        "@slkiser/opencode-quota@4"
         "@ramtinj95/opencode-tokenscope@latest"
         "./plugins/zellij-indicator-felix"
         "@mohak34/opencode-notifier"
@@ -132,7 +134,8 @@ in {
     };
 
     tui = {
-      plugin = ["@slkiser/opencode-quota" "@mohak34/opencode-notifier"];
+      # Same major pin as settings.plugin: this entry installs separately.
+      plugin = ["@slkiser/opencode-quota@4" "@mohak34/opencode-notifier"];
     };
   };
 
@@ -187,32 +190,14 @@ in {
 
   # Quota display policy: active OpenCode Go subscription provides remote
   # quota via the official usage API, so toasts/sidebar/reset notifications
-  # are enabled and pinned to opencode-go. Compact status line stays on.
-  xdg.configFile."opencode/opencode-quota/quota-toast.json".text = builtins.toJSON {
-    enabledProviders = ["opencode-go"];
-    formatStyle = "singleWindow";
-    percentDisplayMode = "remaining";
-    accountingDetail = "summary";
-    tuiCommandDisplay = "inline";
-    enableToast = true;
-    resetNotifications = {
-      enabled = true;
-      windows = ["weekly"];
-    };
-    tuiSidebarPanel = {
-      enabled = true;
-    };
-    tuiCompactStatus = {
-      enabled = true;
-      homeBottom = true;
-      sessionPrompt = false;
-    };
-    tuiPromptBar = {
-      enabled = false;
-    };
-    showSessionTokens = true;
-    sessionTokenScope = "current";
-  };
+  # are enabled and pinned to opencode-go. Compact status line stays on the
+  # home row only. The shared shape lives in shared.nix; V1 adds no other
+  # provider because its registry's Zen entry needs a Console sign-in this
+  # machine does not have.
+  xdg.configFile."opencode/opencode-quota/quota-toast.json".text = builtins.toJSON (
+    shared.quotaToast
+    // {enabledProviders = ["opencode-go"];}
+  );
 
   xdg.configFile."opencode/opencode-notifier.json".text = builtins.toJSON {
     sound = true;
