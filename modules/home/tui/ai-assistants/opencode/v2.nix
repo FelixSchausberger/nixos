@@ -149,6 +149,14 @@ in {
   config = lib.mkIf cfg.enable {
     home.packages = [opencode2];
 
+    # Belt and braces for launches that bypass the exec shim above (`nix
+    # shell`, an absolute store path, any tool that inherits a bare PATH):
+    # without the variable opencode2 silently unions the V1 config, whose
+    # V1-only plugin list aborts V2 plugin generation. Exporting it for the
+    # whole session is safe because the V1 wrapper unsets it for its own
+    # process tree (default.nix) and V1 itself never reads it.
+    home.sessionVariables.OPENCODE_CONFIG_DIR = "${config.xdg.configHome}/${v2ConfigDir}";
+
     xdg.configFile = {
       "${v2ConfigDir}/opencode.jsonc".text = builtins.toJSON v2Config;
       "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
