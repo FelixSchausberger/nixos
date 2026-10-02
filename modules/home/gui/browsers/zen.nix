@@ -4,10 +4,7 @@
   pkgs,
   ...
 }: let
-  browserCommon = import ./firefox-common.nix {
-    inherit lib pkgs;
-    firefox-addons = inputs.firefox-addons or null;
-  };
+  browserCommon = import ./firefox-common.nix {inherit lib pkgs;};
 in {
   imports = [
     inputs.zen-browser.homeModules.beta # More stable, less frequent updates
@@ -18,7 +15,7 @@ in {
 
   programs.zen-browser = {
     enable = true;
-    inherit (browserCommon) languagePacks nativeMessagingHosts;
+    inherit (browserCommon) languagePacks;
 
     # Firefox/Zen policies - control browser behavior at the organization level
     policies =
@@ -42,10 +39,7 @@ in {
           engines = browserCommon.searchEngines;
         };
 
-      # Extensions configuration - use flake source for compatibility
-      extensions = {
-        packages = browserCommon.getExtensions "flake";
-      };
+      extensions.packages = browserCommon.extensions;
 
       # Containers and spaces are managed manually by the user in the browser
       # Declarative configuration removed to preserve user customizations
@@ -77,9 +71,7 @@ in {
           "zen.pinned-tab-manager.restore-pinned-tabs-to-pinned-url" = true; # Restore pinned tabs properly
 
           # Linux transparency settings (GNOME/Wayland compatible)
-          "browser.tabs.allow_transparent_browser" = true; # Allow browser transparency
           "zen.widget.linux.transparency" = true; # Enable Linux-specific transparency
-          "toolkit.legacyUserProfileCustomizations.stylesheets" = true; # Enable userChrome.css
 
           # Skip first-time setup and onboarding
           "browser.aboutwelcome.enabled" = false; # Disable welcome screen
