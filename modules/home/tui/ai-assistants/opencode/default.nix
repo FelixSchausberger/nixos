@@ -110,7 +110,9 @@ in {
       # and full auto-generated titles overflow the tab bar. Relative path
       # resolves from ~/.config/opencode/opencode.json.
       plugin = [
-        "@slkiser/opencode-quota"
+        # Pinned to the4.x line: npm `latest` is5.x, which peers
+        # @opencode/plugin 2.0.16 and has no OpenCode 1 support.
+        "@slkiser/opencode-quota@4"
         "@ramtinj95/opencode-tokenscope@latest"
         "./plugins/zellij-indicator-felix"
         "@mohak34/opencode-notifier"
@@ -132,7 +134,8 @@ in {
     };
 
     tui = {
-      plugin = ["@slkiser/opencode-quota" "@mohak34/opencode-notifier"];
+      # Same major pin as settings.plugin: this entry installs separately.
+      plugin = ["@slkiser/opencode-quota@4" "@mohak34/opencode-notifier"];
     };
   };
 
