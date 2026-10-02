@@ -61,14 +61,14 @@
     formatter = shared.formatters;
     skills = [combinedSkills];
     mcp.servers = v2McpServers // {github = v2McpServersGithub;};
-    # No server-side plugins yet: the V1 plugin set does not run under V2.
+    # Server-side plugins the isolated V2 config loads. The V1 plugin list
+    # does not run under V2 (no V2 entrypoint, see above), so only the V2
+    # build of the quota plugin is listed: @slkiser/opencode-quota 5 peers
+    # @opencode/plugin 2.0.16 and renders its sidebar/toast surfaces through
+    # the V2 API. Pinned to the major because npm `latest` already moved to
+    # a release that dropped OpenCode 1, and the same jump could strand V2.
     # The Zellij indicator is a CLI plugin and lives in cli.json instead.
-    # The quota TUI stays out too: @slkiser/opencode-quota 4.10.0 targets the
-    # older V2 beta plugin API ({id, tui} default export, api.* names,
-    # no ./rpc export, undeclared node_modules deps), which this V2 build
-    # silently refuses to load. Revisit when upstream ports to {id, setup}
-    # with @opencode/plugin.
-    plugins = [];
+    plugins = ["@slkiser/opencode-quota@5"];
   };
 
   # The V2 terminal client owns a global cli.json. The patched indicator fork
@@ -81,7 +81,19 @@
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
-    plugins = [indicatorV2Dir];
+    # CLI-only plugins, loaded by the terminal client and never by the
+    # server role. The status line (context/cache/speed/cost/diff row) draws
+    # in the `app` slot at the window bottom with the host theme palette; no
+    # config file is rendered for it because it looks up
+    # $XDG_CONFIG_HOME/opencode/opencode-status-line.json, a path it
+    # hard-codes around OPENCODE_CONFIG_DIR, and the defaults are what keep
+    # it inside the isolated config. Entry options in this list override that
+    # file should settings ever be needed. The version pin matches the release
+    # that fixed npm installs compiling the entry against React.
+    plugins = [
+      indicatorV2Dir
+      "@rashidrazak/opencode-status-line@1.0.2"
+    ];
     diffs.wrap = "word";
     session = {
       sidebar = "auto";
@@ -125,8 +137,21 @@
   # rejects; the company tool is reserved for IntelliJ/CLI. MCP github reads
   # its token from the sops file and gh authenticates through hosts.yml, so
   # no part of the V2 tree needs the variable.
+  # Upstream's installPhase ends in a postInstall that shells out to the
+  # `completion` subcommand upstream replaced with `--completions <shell>`;
+  # the call fails (ENOENT on a directory that no longer exists) and leaves
+  # empty completion files, aborting the build. Dropping the step loses
+  # nothing: this module installs only the exec shim below and never links
+  # upstream's share/completion files, and upstream deleted the expression on
+  # `main` rather than fixing it (flake.nix carries the tag history).
+  opencode2Package =
+    inputs.opencode-v2.packages.${system}.opencode.overrideAttrs
+    (_: {
+      postInstall = "";
+    });
+
   opencode2 = pkgs.writeShellScriptBin "opencode2" ''
-    exec env -u GITHUB_TOKEN OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${inputs.opencode-v2.packages.${system}.opencode}/bin/opencode2 "$@"
+    exec env -u GITHUB_TOKEN OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${opencode2Package}/bin/opencode2 "$@"
   '';
 in {
   options.ai-assistants.opencodeV2 = {
@@ -136,11 +161,27 @@ in {
   config = lib.mkIf cfg.enable {
     home.packages = [opencode2];
 
+    # Belt and braces for launches that bypass the exec shim above (`nix
+    # shell`, an absolute store path, any tool that inherits a bare PATH):
+    # without the variable opencode2 silently unions the V1 config, whose
+    # V1-only plugin list aborts V2 plugin generation. Exporting it for the
+    # whole session is safe because the V1 wrapper unsets it for its own
+    # process tree (default.nix) and V1 itself never reads it.
+    home.sessionVariables.OPENCODE_CONFIG_DIR = "${config.xdg.configHome}/${v2ConfigDir}";
+
     xdg.configFile = {
       "${v2ConfigDir}/opencode.jsonc".text = builtins.toJSON v2Config;
       "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
       "${v2ConfigDir}/AGENTS.md".text = shared.combinedRules;
       "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgentV2;
+      # Quota policy from shared.nix, with the Zen gateway added: the shared
+      # default model bills against it (provider id `opencode`, synonym
+      # `opencode-zen`), and its state-only row needs a Console sign-in
+      # (`opencode2 auth login opencode`) to leave the unknown state.
+      "${v2ConfigDir}/opencode-quota/quota-toast.json".text = builtins.toJSON (
+        shared.quotaToast
+        // {enabledProviders = ["opencode-go" "opencode"];}
+      );
       "${v2ConfigDir}/indicator-v2".source = ./zellij-indicator-v2;
     };
   };
