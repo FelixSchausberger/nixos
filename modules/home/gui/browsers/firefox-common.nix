@@ -1,62 +1,32 @@
 {
   lib,
   pkgs,
-  firefox-addons ? null,
   ...
 }: let
-  # Extension source selection
-  # - "flake": Use firefox-addons flake input (for zen-browser)
-  # - "nur": Use NUR repository (backward compatible)
-  getExtensions = source: let
-    # Keepa is marked as unfree in firefox-addons flake, so always use NUR for it
-    # NUR respects the system's allowUnfree config
-    keepaFromNur = [pkgs.nur.repos.rycee.firefox-addons.keepa];
-
-    # Get other extensions from requested source
-    otherExtensions =
-      if source == "flake" && firefox-addons != null
-      then
-        with firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
-          bitwarden
-          chrome-mask
-          darkreader
-          ff2mpv
-          i-dont-care-about-cookies
-          private-grammar-checker-harper
-          ublock-origin
-          vimium-c
-          youtube-nonstop
-        ]
-      else
-        with pkgs.nur.repos.rycee.firefox-addons; [
-          bitwarden
-          chrome-mask
-          darkreader
-          ff2mpv
-          i-dont-care-about-cookies
-          private-grammar-checker-harper
-          ublock-origin
-          vimium-c
-          youtube-nonstop
-        ];
-  in
-    otherExtensions ++ keepaFromNur;
+  # Common extensions from NUR (rycee's Firefox addon repository)
+  extensions = with pkgs.nur.repos.rycee.firefox-addons; [
+    bitwarden
+    chrome-mask
+    darkreader
+    ff2mpv
+    i-dont-care-about-cookies
+    keepa
+    private-grammar-checker-harper
+    ublock-origin
+    vimium-c
+    youtube-nonstop
+  ];
 in {
   # Shared browser configuration for Firefox and Zen
   # Contains common settings, extensions, and search engines
 
-  # Export the helper function
-  inherit getExtensions;
+  inherit extensions;
 
   # Common language packs
   languagePacks = [
     "de"
     "en-US"
   ];
-
-  # firefoxpwa is currently broken on this nixpkgs pin (missing $out/lib/firefoxpwa
-  # during fixup). Disable it so Home Manager can build.
-  nativeMessagingHosts = [];
 
   # Common search configuration
   searchConfig = {
@@ -140,9 +110,6 @@ in {
     "ecosia".metaData.hidden = true;
   };
 
-  # Common extensions (default to NUR for backward compatibility)
-  extensions = getExtensions "nur";
-
   # Common uBlock Origin configuration
   ublockSettings = rec {
     uiTheme = "dark";
@@ -191,8 +158,8 @@ in {
   commonPolicies = {
     DisableAppUpdate = true;
     DisableFeedbackCommands = true;
+    DisableFirefoxAccounts = true;
     DisableFirefoxStudies = true;
-    DisablePocket = true;
     DisableTelemetry = true;
     DontCheckDefaultBrowser = true;
     NoDefaultBookmarks = true;
@@ -235,6 +202,9 @@ in {
 
     # General behavior
     "browser.aboutConfig.showWarning" = false;
+    # ETP strict: Firefox applies the strict preset (cookie behavior, tracking
+    # protection, query stripping, ...) from this category at startup, so it is
+    # the single source of truth for content blocking.
     "browser.contentblocking.category" = "strict";
     "browser.ctrlTab.recentlyUsedOrder" = false;
     "browser.discovery.enabled" = false;
@@ -266,19 +236,11 @@ in {
     "dom.security.https_only_mode" = true;
     "dom.security.https_only_mode_ever_enabled" = true;
     "privacy.donottrackheader.enabled" = true;
-    "privacy.trackingprotection.enabled" = true;
-    "privacy.trackingprotection.socialtracking.enabled" = true;
-    "privacy.trackingprotection.cryptomining.enabled" = true;
-    "privacy.trackingprotection.fingerprinting.enabled" = true;
 
     # Advanced fingerprinting resistance (replaces manual API blocking)
     "privacy.resistFingerprinting" = true;
     "privacy.resistFingerprinting.letterboxing" = true;
     "privacy.resistFingerprinting.block_mozAddonManager" = true;
-    "privacy.resistFingerprinting.randomization.enabled" = true;
-
-    # Cookie behavior (0 = Accept all, 1 = Block third-party, 2 = Block all, 4 = Block known trackers)
-    "network.cookie.cookieBehavior" = 4;
 
     # Cookie persistence - disabled to allow persistent cookies with expiry
     "privacy.sanitize.sanitizeOnShutdown" = false;
@@ -298,18 +260,10 @@ in {
     "browser.formfill.enable" = true;
     "signon.autofillForms" = true;
     "signon.autofillForms.http" = true;
-    "browser.payments.enable" = false;
-
-    # Extensions
-    "extensions.pocket.enabled" = false;
 
     # Hardware acceleration
     "gfx.webrender.all" = true;
-    "media.ffmpeg.vaapi.enabled" = true;
     "widget.dmabuf.force-enabled" = true;
-
-    # Reader mode
-    "reader.parse-on-load.force-enabled" = true;
 
     # User customization
     "toolkit.legacyUserProfileCustomizations.stylesheets" = true;

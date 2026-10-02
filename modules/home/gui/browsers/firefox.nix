@@ -42,19 +42,11 @@ in {
           "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features" = false;
           "browser.newtabpage.activity-stream.improvesearch.topSiteSearchShortcuts.havePinned" = "";
           "browser.newtabpage.activity-stream.improvesearch.topSiteSearchShortcuts.searchEngines" = "";
-          "browser.newtabpage.activity-stream.section.highlights.includePocket" = false;
-          "browser.newtabpage.pinned" = false;
           "browser.search.region" = "AT";
-          "browser.search.widget.inNavBar" = true;
           "browser.protections_panel.infoMessage.seen" = true;
           "browser.quitShortcut.disabled" = true;
-          "browser.ssb.enabled" = true;
-          "browser.startup.homepage.StartPage" = "none";
-          "browser.startup.page.StartPage" = "none";
           "browser.tabs.closeWindowWithLastTab" = false;
-          "browser.tabs.tabmanager.enabled" = false;
           "browser.theme.native-theme" = true;
-          "browser.urlbar.hidebuttons" = true;
           "browser.urlbar.placeholderName" = "DuckDuckGo";
           "browser.urlbar.quickactions.showPrefs" = false;
           "browser.urlbar.shortcuts.quickactions" = false;
@@ -64,14 +56,12 @@ in {
           "extensions.autoDisableScopes" = 0;
           "extensions.getAddons.showPane" = false;
           "extensions.htmlaboutaddons.recommendations.enabled" = false;
-          "identity.fxaccounts.enabled" = false;
           "pref.privacy.disable_button.view_passwords" = false;
           "print.print_footerleft" = "";
           "print.print_footerright" = "";
           "print.print_headerleft" = "";
           "print.print_headerright" = "";
           "ui.key.menuAccessKeyFocuses" = false;
-          "widget.windows.mica" = true;
         };
 
       userChrome = ''
