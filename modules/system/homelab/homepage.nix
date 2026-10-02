@@ -26,7 +26,7 @@
   # Remote wake for the gaming PC lives on the router, not here:
   # Fritz!Box Heimnetz → computer → "Computer starten" (or MyFRITZ!App
   # when off-LAN). The Moonlight / Steam Link apps handle wake + presence
-  # on the LAN themselves. The Fritz!Box card under Network links there.
+  # on the LAN themselves. The Fritz!Box card under Rescue links there.
   infraServices = [
     {
       "M920q" = {
@@ -56,6 +56,10 @@
       {
         "Navidrome" = {
           icon = "navidrome.png";
+          # The path route keeps the prefix (mkKeepRoute) and Navidrome
+          # runs with BaseURL=/navidrome; stripping the prefix would make
+          # its root-absolute redirects and API calls land on the Immich
+          # catch-all instead of the music server.
           href = "https://${hl.caddyProxy.tailnetDomain}/navidrome";
           description = "Music Streaming";
           siteMonitor = local hl.navidrome.port;
@@ -98,10 +102,10 @@
       "Prometheus" = {
         icon = "prometheus.png";
         # Prometheus binds 127.0.0.1 only (see monitoring.nix listenAddress),
-        # so unlike the other cards this link resolves for a browser on the
-        # host itself; remote viewers still get the widget below, which is
-        # queried server-side.
-        href = local hl.monitoring.prometheusPort;
+        # so the UI is published through its own Tailscale Serve port like
+        # Zellij and OpenCode; the probe and widget below stay on loopback
+        # and are queried server-side from this host.
+        href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.monitoring.prometheusHttpsPort}/";
         description = "Metrics";
         siteMonitor = "${local hl.monitoring.prometheusPort}/-/healthy";
         widget = {
@@ -112,33 +116,25 @@
     }
   ];
 
-  networkServices =
-    lib.optionals hl.adguardhome.enable [
-      {
-        "AdGuard Home" = {
-          icon = "adguard-home.png";
-          href = "https://${hl.caddyProxy.tailnetDomain}/adguard";
-          description = "DNS";
-          siteMonitor = local hl.adguardhome.port;
-          widget = {
-            type = "adguard";
-            url = local hl.adguardhome.port;
-            username = "admin";
-            password = "{{HOMEPAGE_VAR_ADGUARD_PASSWORD}}";
-          };
+  networkServices = lib.optionals hl.adguardhome.enable [
+    {
+      "AdGuard Home" = {
+        icon = "adguard-home.png";
+        # Trailing slash: the admin UI references its CSS/JS relatively,
+        # and at /adguard (no slash) those resolve against the site root
+        # where the Immich catch-all answers HTML instead of the bundle.
+        href = "https://${hl.caddyProxy.tailnetDomain}/adguard/";
+        description = "DNS";
+        siteMonitor = local hl.adguardhome.port;
+        widget = {
+          type = "adguard";
+          url = local hl.adguardhome.port;
+          username = "admin";
+          password = "{{HOMEPAGE_VAR_ADGUARD_PASSWORD}}";
         };
-      }
-    ]
-    ++ [
-      {
-        "Fritz!Box" = {
-          icon = "fritzbox.png";
-          href = "http://192.168.178.1";
-          description = "Router";
-          siteMonitor = "http://192.168.178.1";
-        };
-      }
-    ];
+      };
+    }
+  ];
 
   systemServices =
     lib.optionals hl.nextcloud.enable [
@@ -200,11 +196,14 @@
       }
     ];
 
-  # Emergency access to Intel AMT. Convenience links only: the dashboard
-  # runs on the m920q itself, so with the host down these vanish and the
-  # phone's pinned browser bookmarks (AMT over IPv4 and IPv6) are the
-  # authoritative path. Power control is deliberately not a card - the HTTP
-  # relay was removed on purpose and the phone issues
+  # Emergency access: Intel AMT from each vantage (LAN, WAN via FRITZ!Box
+  # DNAT, IPv6), the router on LAN with MyFRITZ!Net as its off-LAN
+  # fallback, and the tailnet admin console for route and DNS recovery.
+  # Convenience links only: the dashboard runs on the m920q itself, so
+  # with the host down these vanish and the phone's pinned browser
+  # bookmarks (AMT over IPv4 and IPv6) are the authoritative path. Power
+  # control is deliberately not a card - the HTTP relay was removed on
+  # purpose and the phone issues
   # "ssh m920q desktop-power on|off|status" from a termux widget instead.
   rescueServices = [
     {
@@ -225,6 +224,42 @@
         icon = "mdi-chip";
         href = "https://[2a02:1748:dd4d:9990::10]:16993";
         description = "Intel AMT direct, outside the home LAN only";
+      };
+    }
+    {
+      "AMT (LAN)" = {
+        icon = "mdi-chip";
+        # Plain HTTP on the LAN endpoint: no ME legacy-TLS negotiation for
+        # the browser to reject, and the phone reaches it through the
+        # advertised 192.168.178.0/24 subnet route.
+        href = "http://192.168.178.10:16992/index.htm";
+        description = "Intel AMT direct on the home LAN";
+        siteMonitor = "http://192.168.178.10:16992/";
+      };
+    }
+    {
+      "Fritz!Box" = {
+        icon = "fritzbox.png";
+        href = "http://192.168.178.1";
+        description = "Router";
+        siteMonitor = "http://192.168.178.1";
+      };
+    }
+    {
+      "MyFRITZ!" = {
+        icon = "mdi-cloud";
+        # Off-LAN fallback for the LAN router card above: the Fritz!Box is
+        # only a 192.168.178.x address, which needs the subnet route, while
+        # MyFRITZ!Net works from any network with just an internet link.
+        href = "https://myfritz.net/";
+        description = "Router via AVM cloud";
+      };
+    }
+    {
+      "Tailscale" = {
+        icon = "tailscale.png";
+        href = "https://login.tailscale.com/login?next_url=%2Fadmin%2Fmachines%3Frefreshed%3Dtrue";
+        description = "Tailnet admin console";
       };
     }
   ];
@@ -314,8 +349,12 @@ in {
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.httpsPort != hl.zellijWeb.httpsPort && cfg.httpsPort != hl.opencodeWeb.httpsPort;
-        message = "modules.system.homelab.homepage.httpsPort must differ from the zellij-web and opencode-web Tailscale Serve ports";
+        assertion =
+          cfg.httpsPort
+          != hl.zellijWeb.httpsPort
+          && cfg.httpsPort != hl.opencodeWeb.httpsPort
+          && cfg.httpsPort != hl.monitoring.prometheusHttpsPort;
+        message = "modules.system.homelab.homepage.httpsPort must differ from the zellij-web, opencode-web and Prometheus Tailscale Serve ports";
       }
     ];
 

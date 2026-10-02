@@ -42,6 +42,14 @@ in {
         Address = "0.0.0.0";
         Port = cfg.port;
         MusicFolder = cfg.musicFolder;
+        # Serve every route under /navidrome so Caddy can keep the prefix
+        # (mkKeepRoute in caddy-proxy.nix). Without a base path Navidrome's
+        # root-absolute redirects (/ -> /app/) and API calls (/auth/login)
+        # escape the stripped route and hit the Immich catch-all instead.
+        # Direct port access keeps working: the server redirects its root
+        # into the base path, so /rest clients that follow redirects are
+        # unaffected too.
+        BaseURL = "/navidrome";
         EnableInsightsCollector = false;
         EnableDownloads = true;
         AutoImportPlaylists = false;
