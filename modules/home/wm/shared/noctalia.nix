@@ -17,10 +17,10 @@ _sessionTarget: {
   hyprland = config.wm.hyprland.enable or false;
   enabled = (config.wm.shell or "custom") == "noctalia" && (niri || hyprland);
 in {
-  imports = [
-    inputs.noctalia.homeModules.default
-  ];
-
+  # programs.noctalia comes from home-manager's own module, which is loaded
+  # together with the rest of modules/programs. The noctalia flake exports a
+  # near-identical module; importing both declares every option twice and
+  # aborts evaluation.
   config = lib.mkIf enabled {
     # Stylix theme target (HM-only). With stylix.autoEnable = false the target
     # must be enabled explicitly; it writes programs.noctalia.settings.theme and
@@ -30,14 +30,14 @@ in {
 
     programs.noctalia = {
       enable = true;
-      # Upstream systemd user service (bound to graphical-session.target,
-      # which contains niri-session.target). The flake module exposes no
-      # target override (unlike the nixpkgs module), so ordering relies on
-      # the graphical session being up.
+      # Upstream systemd user service, tied to wayland.systemd.target
+      # (graphical-session.target, which contains niri-session.target). The
+      # module exposes no target override, so ordering relies on the
+      # graphical session being up.
       systemd.enable = true;
-      # Minimal settings: upstream defaults apply. validateConfig (default
-      # true) fails the build on schema drift, which is the desired trial
-      # signal. Theming stays Nix-owned via future [theme.templates].
+      # Minimal settings: upstream defaults apply. checkConfig (default true)
+      # fails the build on schema drift, which is the desired trial signal.
+      # Theming stays Nix-owned via future [theme.templates].
       settings = {};
     };
 
