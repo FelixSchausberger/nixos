@@ -81,7 +81,19 @@
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
-    plugins = [indicatorV2Dir];
+    # CLI-only plugins, loaded by the terminal client and never by the
+    # server role. The status line (context/cache/speed/cost/diff row) draws
+    # in the `app` slot at the window bottom with the host theme palette; no
+    # config file is rendered for it because it looks up
+    # $XDG_CONFIG_HOME/opencode/opencode-status-line.json, a path it
+    # hard-codes around OPENCODE_CONFIG_DIR, and the defaults are what keep
+    # it inside the isolated config. Entry options in this list override that
+    # file should settings ever be needed. The version pin matches the release
+    # that fixed npm installs compiling the entry against React.
+    plugins = [
+      indicatorV2Dir
+      "@rashidrazak/opencode-status-line@1.0.2"
+    ];
     diffs.wrap = "word";
     session = {
       sidebar = "auto";
