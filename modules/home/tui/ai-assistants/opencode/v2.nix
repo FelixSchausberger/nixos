@@ -61,14 +61,14 @@
     formatter = shared.formatters;
     skills = [combinedSkills];
     mcp.servers = v2McpServers // {github = v2McpServersGithub;};
-    # No server-side plugins yet: the V1 plugin set does not run under V2.
+    # Server-side plugins the isolated V2 config loads. The V1 plugin list
+    # does not run under V2 (no V2 entrypoint, see above), so only the V2
+    # build of the quota plugin is listed: @slkiser/opencode-quota 5 peers
+    # @opencode/plugin 2.0.16 and renders its sidebar/toast surfaces through
+    # the V2 API. Pinned to the major because npm `latest` already moved to
+    # a release that dropped OpenCode 1, and the same jump could strand V2.
     # The Zellij indicator is a CLI plugin and lives in cli.json instead.
-    # The quota TUI stays out too: @slkiser/opencode-quota 4.10.0 targets the
-    # older V2 beta plugin API ({id, tui} default export, api.* names,
-    # no ./rpc export, undeclared node_modules deps), which this V2 build
-    # silently refuses to load. Revisit when upstream ports to {id, setup}
-    # with @opencode/plugin.
-    plugins = [];
+    plugins = ["@slkiser/opencode-quota@5"];
   };
 
   # The V2 terminal client owns a global cli.json. The patched indicator fork
@@ -162,6 +162,14 @@ in {
       "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
       "${v2ConfigDir}/AGENTS.md".text = shared.combinedRules;
       "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgentV2;
+      # Quota policy from shared.nix, with the Zen gateway added: the shared
+      # default model bills against it (provider id `opencode`, synonym
+      # `opencode-zen`), and its state-only row needs a Console sign-in
+      # (`opencode2 auth login opencode`) to leave the unknown state.
+      "${v2ConfigDir}/opencode-quota/quota-toast.json".text = builtins.toJSON (
+        shared.quotaToast
+        // {enabledProviders = ["opencode-go" "opencode"];}
+      );
       "${v2ConfigDir}/indicator-v2".source = ./zellij-indicator-v2;
     };
   };

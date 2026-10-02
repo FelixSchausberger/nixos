@@ -53,6 +53,38 @@
     };
   };
 
+  # Quota display policy, rendered by each harness as
+  # <config-root>/opencode-quota/quota-toast.json (the path the quota plugin
+  # reads). The provider list is deliberately not shared: it differs per
+  # harness because the two run different plugin majors with different
+  # provider registries.
+  quotaToast = {
+    formatStyle = "singleWindow";
+    percentDisplayMode = "remaining";
+    accountingDetail = "summary";
+    tuiCommandDisplay = "inline";
+    enableToast = true;
+    resetNotifications = {
+      enabled = true;
+      windows = ["weekly"];
+    };
+    tuiSidebarPanel = {
+      enabled = true;
+    };
+    # Compact status stays home-only: on the prompt row it would compete with
+    # whatever renders below the composer in that harness.
+    tuiCompactStatus = {
+      enabled = true;
+      homeBottom = true;
+      sessionPrompt = false;
+    };
+    tuiPromptBar = {
+      enabled = false;
+    };
+    showSessionTokens = true;
+    sessionTokenScope = "current";
+  };
+
   # Canonical ordered permission rules in the native V2 shape. V1 derives its
   # grouped `permission` map from the shell rules; V2 consumes the array as-is.
   # The trailing edit ask guards the primary checkout: rules resolve by last
@@ -178,6 +210,7 @@ in {
     sharedSkills
     model
     formatters
+    quotaToast
     permissionRules
     codeSimplifierAgent
     codeSimplifierAgentV2
