@@ -136,6 +136,11 @@ in {
     tui = {
       # Same major pin as settings.plugin: this entry installs separately.
       plugin = ["@slkiser/opencode-quota@4" "@mohak34/opencode-notifier"];
+      # Attention is the event source for desktop notifications (questions,
+      # permissions, errors, completed turns); it is disabled by default.
+      # The TUI emits OSC 9 (forced by OPENTUI_NOTIFICATION_PROTOCOL in
+      # zellij.nix) and zellij re-encodes it as a host bell.
+      attention.enabled = true;
     };
   };
 
