@@ -128,6 +128,23 @@ in {
       # Windows Terminal does not support the protocol either.
       support_kitty_keyboard_protocol = false;
 
+      # Desktop notifications: re-encode pane notifications (opencode's
+      # attention events) as a host bell. Bell is the only sequence Windows
+      # Terminal converts to feedback (sound/flash via bellStyle, plus a
+      # toast on channels carrying the notification bell flag) and the only
+      # one that survives mosh; OSC 9/99 is dropped by both WT and mosh.
+      # Applied to connected clients whenever config.kdl changes, so this
+      # key needs no restart.
+      host_notification_protocol = "bell";
+
+      # OpenTUI inside zellij reports no notification capability until the
+      # host answers its OSC 99 capability query, which no non-kitty
+      # terminal does, and then emits nothing at all; force OSC 9 so
+      # zellij receives a notification to re-encode. zellij applies env
+      # only when the server starts, so a server restart is required
+      # after changes here.
+      env.OPENTUI_NOTIFICATION_PROTOCOL = "osc9";
+
       # UI settings
       pane_frames = false;
       simplified_ui = true;

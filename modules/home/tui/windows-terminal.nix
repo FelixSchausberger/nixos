@@ -36,15 +36,6 @@ in {
       // {
         default = true;
       };
-
-    # Absolute path on the Windows side where settings.json is deployed.
-    target = lib.mkOption {
-      type = lib.types.str;
-      default =
-        "/mnt/c/Users/SchausbergerF/AppData/Local/Packages/"
-        + "Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json";
-      description = "Windows path to deploy Windows Terminal settings.json to";
-    };
   };
 
   config = lib.mkIf config.tui.windows-terminal.enable {
@@ -96,6 +87,12 @@ in {
             size = 14;
           };
           useAcrylic = true;
+          # A BEL becomes sound plus window/taskbar flash on every channel;
+          # on builds whose BellStyle carries the notification flag (canary
+          # 1.26, All = 0xffffffff) the same value also raises a Windows
+          # toast. "all" is valid on stable's enum today, so one value
+          # covers all channels.
+          bellStyle = "all";
         };
 
         list = [
@@ -172,13 +169,23 @@ in {
     };
 
     # Named with zz- prefix to run after writeBoundary (alphabetical ordering),
-    # mirroring the WezTerm Windows deploy. Only copies if the Windows side exists.
+    # mirroring the WezTerm Windows deploy. Deploys to every installed Windows
+    # Terminal channel: Stable, Preview and Canary are separate MSIX packages
+    # (Identity Names Microsoft.WindowsTerminal, ...Preview, ...Canary) and
+    # each keeps its own LocalState/settings.json, so canary would otherwise
+    # never receive this file. A channel directory that exists without
+    # LocalState (installed, never launched) gets one; channels that are not
+    # installed simply do not match the glob, and off-Windows hosts match
+    # nothing.
     home.activation.zz-windows-terminal-deploy = ''
-      WT_TARGET="${config.tui.windows-terminal.target}"
+      WT_SETTINGS="$HOME/.config/windows-terminal/settings.json"
 
-      if [ -f "$HOME/.config/windows-terminal/settings.json" ] && [ -d "/mnt/c/Users/SchausbergerF" ]; then
-        mkdir -p "$(dirname "$WT_TARGET")"
-        cp "$HOME/.config/windows-terminal/settings.json" "$WT_TARGET"
+      if [ -f "$WT_SETTINGS" ]; then
+        for wt_pkg in /mnt/c/Users/*/AppData/Local/Packages/Microsoft.WindowsTerminal*; do
+          [ -d "$wt_pkg" ] || continue
+          mkdir -p "$wt_pkg/LocalState"
+          cp "$WT_SETTINGS" "$wt_pkg/LocalState/settings.json"
+        done
       fi
     '';
   };
