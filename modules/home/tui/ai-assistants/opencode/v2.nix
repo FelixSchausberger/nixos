@@ -174,13 +174,16 @@ in {
       "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
       "${v2ConfigDir}/AGENTS.md".text = shared.combinedRules;
       "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgentV2;
-      # Quota policy from shared.nix, with the Zen gateway added: the shared
-      # default model bills against it (provider id `opencode`, synonym
-      # `opencode-zen`), and its state-only row needs a Console sign-in
-      # (`opencode2 auth login opencode`) to leave the unknown state.
+      # Quota policy from shared.nix, scoped to the Go subscription. The Zen
+      # gateway (provider id `opencode`, synonym `opencode-zen`) is excluded
+      # deliberately: only free models bill against it, and neither the quota
+      # plugin nor the Console billing API exposes a free-tier usage
+      # percentage - only balance, spend and a budget percent that needs a
+      # USD monthly limit. A balance row is useless when nothing is planned
+      # to be spent, so no Zen rows are rendered.
       "${v2ConfigDir}/opencode-quota/quota-toast.json".text = builtins.toJSON (
         shared.quotaToast
-        // {enabledProviders = ["opencode-go" "opencode"];}
+        // {enabledProviders = ["opencode-go"];}
       );
       "${v2ConfigDir}/indicator-v2".source = ./zellij-indicator-v2;
     };
