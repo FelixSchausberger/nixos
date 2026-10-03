@@ -82,17 +82,18 @@
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
     # CLI-only plugins, loaded by the terminal client and never by the
-    # server role. The status line (context/cache/speed/cost/diff row) draws
-    # in the `app` slot at the window bottom with the host theme palette; no
-    # config file is rendered for it because it looks up
-    # $XDG_CONFIG_HOME/opencode/opencode-status-line.json, a path it
-    # hard-codes around OPENCODE_CONFIG_DIR, and the defaults are what keep
-    # it inside the isolated config. Entry options in this list override that
-    # file should settings ever be needed. The version pin matches the release
-    # that fixed npm installs compiling the entry against React.
+    # server role. Only the Zellij indicator remains here: the status-line
+    # plugin was removed because its 1s heartbeat re-render exhausts the
+    # opentui TextBuffer handle pool and freezes the TUI. An A/B test with
+    # two concurrent `-c` sessions (full config vs. quota surfaces off vs.
+    # no status-line) crashed both status-line arms with
+    # "Failed to create TextBuffer" ~4:14 after start while the arm without
+    # the plugin survived the whole window, matching 19 historical crashes
+    # that all began with the plugin's introduction in 1b6dda9. The render
+    # leak itself is upstream (opentui #1493); until it is fixed the plugin
+    # must not come back.
     plugins = [
       indicatorV2Dir
-      "@rashidrazak/opencode-status-line@1.0.2"
     ];
     diffs.wrap = "word";
     session = {
