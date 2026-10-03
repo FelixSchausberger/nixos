@@ -136,13 +136,19 @@
     }
   ];
 
+  # One card per Nextcloud app instead of a single dashboard link. The app
+  # set mirrors the extraApps declaration in nextcloud.nix (calendar,
+  # contacts, tasks) plus the bundled Files app, so new cards belong there
+  # first.
   systemServices =
     lib.optionals hl.nextcloud.enable [
       {
-        "Nextcloud" = {
+        "Files" = {
           icon = "nextcloud.png";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud";
+          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/files/";
           description = "File Sync";
+          # Instance-level light and widget live on the primary card only;
+          # repeating them per app card would show four identical probes.
           siteMonitor = local hl.nextcloud.port;
           # Loopback works because nextcloud.nix trusts 127.0.0.1 as a domain;
           # probing it there keeps the widget independent of Caddy.
@@ -153,6 +159,27 @@
             password = "{{HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD}}";
             fields = ["activeusers" "numfiles" "freespace"];
           };
+        };
+      }
+      {
+        "Calendar" = {
+          icon = "mdi-calendar";
+          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/calendar/dayGridMonth/now";
+          description = "Scheduling";
+        };
+      }
+      {
+        "Contacts" = {
+          icon = "mdi-account-multiple";
+          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/contacts/";
+          description = "Address Book";
+        };
+      }
+      {
+        "Tasks" = {
+          icon = "mdi-clipboard-text";
+          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/tasks/";
+          description = "To-dos";
         };
       }
     ]
@@ -279,9 +306,6 @@
     Rescue = {
       tab = "Home";
       icon = "mdi-lifebuoy";
-      # Emergency links are consulted rarely and must not push the everyday
-      # groups below the fold on a phone.
-      initiallyCollapsed = true;
     };
     Infrastructure = {
       tab = "Home";
