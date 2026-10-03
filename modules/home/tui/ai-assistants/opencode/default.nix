@@ -115,7 +115,6 @@ in {
         "@slkiser/opencode-quota@4"
         "@ramtinj95/opencode-tokenscope@latest"
         "./plugins/zellij-indicator-felix"
-        "@mohak34/opencode-notifier"
       ];
       permission.bash = v1BashPermissions;
       formatter = shared.formatters;
@@ -135,7 +134,7 @@ in {
 
     tui = {
       # Same major pin as settings.plugin: this entry installs separately.
-      plugin = ["@slkiser/opencode-quota@4" "@mohak34/opencode-notifier"];
+      plugin = ["@slkiser/opencode-quota@4"];
       # Attention is the event source for desktop notifications (questions,
       # permissions, errors, completed turns); it is disabled by default.
       # The TUI emits OSC 9 (forced by OPENTUI_NOTIFICATION_PROTOCOL in
@@ -203,46 +202,6 @@ in {
     shared.quotaToast
     // {enabledProviders = ["opencode-go"];}
   );
-
-  xdg.configFile."opencode/opencode-notifier.json".text = builtins.toJSON {
-    sound = true;
-    notification = true;
-    suppressWhenFocused = false;
-    bell = false;
-    timeout = 5;
-    showProjectName = true;
-    showSessionTitle = false;
-    showIcon = true;
-    linux = {
-      grouping = true;
-    };
-    events = {
-      permission = {
-        sound = true;
-        notification = true;
-      };
-      complete = {
-        sound = true;
-        notification = true;
-      };
-      error = {
-        sound = true;
-        notification = true;
-      };
-      question = {
-        sound = true;
-        notification = true;
-      };
-      subagent_complete = {
-        sound = false;
-        notification = false;
-      };
-      user_cancelled = {
-        sound = false;
-        notification = false;
-      };
-    };
-  };
 
   sops.secrets = {
     "ollama/api-key" = {};
