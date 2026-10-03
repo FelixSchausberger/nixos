@@ -100,10 +100,10 @@
       scrollbar = false;
       thinking = "show";
     };
-    # Native V2 attention replaces the V1 notifier plugin: system
-    # notifications plus sound for permission/question/error/done events.
-    # Per-event enablement is not configurable; V2 notifies when the
-    # terminal is unfocused, with no suppressWhenFocused equivalent.
+    # Native attention is V2's notification path: system notifications
+    # plus sound for permission/question/error/done events. Per-event
+    # enablement is not configurable; notifications fire only when the
+    # terminal is unfocused, while sounds play regardless of focus.
     attention = {
       notifications = true;
       sound = true;
