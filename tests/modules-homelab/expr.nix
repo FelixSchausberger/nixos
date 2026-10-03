@@ -52,4 +52,44 @@ in {
   grafana_port = config.modules.system.homelab.monitoring.grafanaPort;
   prometheus_port = config.modules.system.homelab.monitoring.prometheusPort;
   adguard_port = config.modules.system.homelab.adguardhome.port;
+
+  # Rendered dashboard card inventory: group, name, icon, href, and the
+  # presence (never the credentials) of per-card probes and widgets. The
+  # snapshot diff makes every added, removed or relinked card visible in
+  # review; it deliberately records current state rather than asserting
+  # reachability, which the site monitors cover at runtime.
+  homepage_cards = builtins.concatLists (map (
+      group: let
+        gname = builtins.head (builtins.attrNames group);
+      in
+        map (
+          card: let
+            name = builtins.head (builtins.attrNames card);
+            spec = card.${name};
+          in
+            "${gname}/${name}"
+            + (
+              if spec ? icon
+              then " icon=${spec.icon}"
+              else ""
+            )
+            + (
+              if spec ? href
+              then " href=${spec.href}"
+              else ""
+            )
+            + (
+              if spec ? siteMonitor
+              then " monitor"
+              else ""
+            )
+            + (
+              if spec ? widget
+              then " widget=${spec.widget.type}"
+              else ""
+            )
+        )
+        group.${gname}
+    )
+    config.services.homepage-dashboard.services);
 }

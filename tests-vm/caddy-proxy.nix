@@ -34,6 +34,33 @@
             httpd.serve_forever()
         "
       '';
+
+    # Behaves like a BaseURL-configured Navidrome: it only answers under the
+    # /navidrome prefix and replies to anything else (notably its unprefixed
+    # root, what a prefix-stripping route forwards) with the root-absolute
+    # redirect a BaseURL-less server emits. The containment check below fails
+    # if that redirect ever reaches a client that entered under /navidrome/.
+    mkNavidromeMock = port:
+      pkgs.writeShellScript "mock-navidrome" ''
+        exec ${pkgs.python3}/bin/python3 -c "
+        import http.server, socketserver
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path.startswith('/navidrome'):
+                    body = b'Mock Navidrome Response\n'
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/plain')
+                    self.send_header('Content-Length', str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                else:
+                    self.send_response(302)
+                    self.send_header('Location', '/app/')
+                    self.end_headers()
+        with socketserver.TCPServer(('127.0.0.1', ${toString port}), Handler) as httpd:
+            httpd.serve_forever()
+        "
+      '';
   in {
     imports = [
       ../modules/system/homelab/caddy-proxy.nix
@@ -119,7 +146,7 @@
         description = "Mock Navidrome";
         wantedBy = ["multi-user.target"];
         serviceConfig = {
-          ExecStart = mkMockServer "navidrome" ports.navidrome "Mock Navidrome Response";
+          ExecStart = mkNavidromeMock ports.navidrome;
           Restart = "always";
         };
       };
@@ -161,17 +188,26 @@
     # 1. Test Navidrome path routing
     machine.succeed("curl -s -H 'Host: m920q.test.local' http://127.0.0.1/navidrome/ | grep -q 'Mock Navidrome Response'")
 
-    # 2. Test AdGuard path routing
+    # 2. Redirect containment: following redirects from a prefixed path must
+    # never leave that prefix. The mock answers its unprefixed root with the
+    # root-absolute redirect a BaseURL-less Navidrome emits, so a route that
+    # strips the prefix lands the client on /app/ outside /navidrome/.
+    final = machine.succeed(
+        "curl -sL -o /dev/null -w '%{url_effective}' -H 'Host: m920q.test.local' http://127.0.0.1/navidrome/"
+    ).strip()
+    assert final.endswith("/navidrome/"), f"redirect escaped the prefix: {final}"
+
+    # 3. Test AdGuard path routing
     machine.succeed("curl -s -H 'Host: m920q.test.local' http://127.0.0.1/adguard/ | grep -q 'Mock AdGuard Response'")
 
-    # 3. Test Immich catch-all route at root
+    # 4. Test Immich catch-all route at root
     machine.succeed("curl -s -H 'Host: m920q.test.local' http://127.0.0.1/api/v1/ping | grep -q 'Mock Immich Response'")
 
-    # 4. Test Nextcloud .well-known redirects
+    # 5. Test Nextcloud .well-known redirects
     res = machine.succeed("curl -s -I -H 'Host: m920q.test.local' http://127.0.0.1/.well-known/carddav")
     assert "/nextcloud/remote.php/dav" in res, f"Redirect failed: {res}"
 
-    # 5. Verify Caddy is serving on port 80
+    # 6. Verify Caddy is serving on port 80
     machine.succeed("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/ | grep -q '200'")
   '';
 }
