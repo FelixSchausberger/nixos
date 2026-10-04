@@ -175,7 +175,29 @@
       "${name}".source = config.lib.file.mkOutOfStoreSymlink target;
     };
   in
-    mkDataLink "Documents" "/per/mnt/data/Documents"
+    mkDataLink "Documents" "/per/mnt/data/documents"
     // mkDataLink "Music" "/per/mnt/data/Media/Music"
     // mkDataLink "Videos" "/per/mnt/data/Media";
+
+  # XDG user directories point straight at the pool. This is the adapter that
+  # decouples pool naming from what applications expect: xdg-user-dir, the GTK
+  # file chooser and the desktop portals all read $XDG_CONFIG_HOME/user-dirs.dirs,
+  # and a XDG_*_DIR value may be any absolute path -- it does not have to live
+  # under $HOME. So the pool can use lowercase storage names while applications
+  # still see their usual "Documents" / "Projects" labels.
+  #
+  # The home.file symlinks above stay: they cover applications that hardcode
+  # $HOME/Documents instead of consulting XDG. Two mechanisms, one target.
+  #
+  # music/videos are left at their defaults for now -- they resolve through the
+  # symlinks above, and get pointed at media/ once the Media tree is normalized.
+  # pictures/download stay local: grim/satty write ~/Pictures/Screenshots and
+  # Downloads is transient.
+  xdg.userDirs = {
+    enable = true;
+    documents = "/per/mnt/data/documents";
+    projects = "/per/mnt/data/projects";
+    createDirectories = false;
+    setSessionVariables = true;
+  };
 }

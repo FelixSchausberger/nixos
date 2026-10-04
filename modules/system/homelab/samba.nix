@@ -98,15 +98,15 @@ in {
       "a+ ${dataPath} - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # Same ACLs on the Obsidian vault and Documents (Nextcloud-exposed dirs)
       "a+ ${dataPath}/Obsidian - - - - g:sambashare:rwx,d:g:sambashare:rwx"
-      "a+ ${dataPath}/Documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
-      # Projects root: own group gets full access, Nextcloud only traverse
-      # (x) so the Projects/CAD mount is reachable without exposing sibling
-      # project dirs. Projects/CAD and Inbox are Nextcloud external-storage
+      "a+ ${dataPath}/documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      # projects root: own group gets full access, nextcloud only traverse
+      # (x) so the projects/cad mount is reachable without exposing sibling
+      # project dirs. projects/cad and inbox are nextcloud external-storage
       # mounts: default ACL keeps nextcloud-created files SMB-accessible
-      "d ${dataPath}/Inbox 0775 schausberger users -"
-      "a+ ${dataPath}/Projects - - - - g:sambashare:rwx,d:g:sambashare:rwx,u:nextcloud:x,d:u:nextcloud:x"
-      "a+ ${dataPath}/Projects/CAD - - - - g:sambashare:rwx,d:g:sambashare:rwx"
-      "a+ ${dataPath}/Inbox - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "d ${dataPath}/inbox 0775 schausberger users -"
+      "a+ ${dataPath}/projects - - - - g:sambashare:rwx,d:g:sambashare:rwx,u:nextcloud:x,d:u:nextcloud:x"
+      "a+ ${dataPath}/projects/cad - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${dataPath}/inbox - - - - g:sambashare:rwx,d:g:sambashare:rwx"
     ];
 
     environment.persistence."/per".directories = [
