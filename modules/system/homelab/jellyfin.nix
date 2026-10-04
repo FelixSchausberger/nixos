@@ -85,7 +85,7 @@ in {
       # Library read access. No libraries are configured yet; this is applied
       # now so the first library added does not hit the "permission denied"
       # failure the service user otherwise gets on restrictively-imported media.
-      "a+ /per/mnt/data/Media - - - - u:jellyfin:rX,d:u:jellyfin:rX"
+      "a+ /per/mnt/data/media - - - - u:jellyfin:rX,d:u:jellyfin:rX"
     ];
   };
 }

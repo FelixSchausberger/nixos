@@ -97,7 +97,7 @@ in {
       # Allow sambashare group full access + default ACL for new files
       "a+ ${dataPath} - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # Same ACLs on the Obsidian vault and Documents (Nextcloud-exposed dirs)
-      "a+ ${dataPath}/Obsidian - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${dataPath}/notes - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       "a+ ${dataPath}/documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # projects root: own group gets full access, nextcloud only traverse
       # (x) so the projects/cad mount is reachable without exposing sibling

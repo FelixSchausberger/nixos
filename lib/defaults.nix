@@ -34,7 +34,7 @@ rec {
     # Obsidian vault on the data pool. The directory is also a Nextcloud
     # external-storage mount (modules/system/homelab/nextcloud.nix), so a
     # write here becomes a change on every synced client.
-    obsidianVault = "/per/mnt/data/Obsidian";
+    obsidianVault = "/per/mnt/data/notes";
 
     # Repositories directory
     repos = "/per/repos";

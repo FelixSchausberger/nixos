@@ -17,7 +17,7 @@ in {
 
     musicFolder = mkOption {
       type = types.str;
-      default = "/per/mnt/data/Media/Music";
+      default = "/per/mnt/data/media/music";
       description = "Path to music library for Navidrome to scan";
     };
 
