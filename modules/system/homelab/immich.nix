@@ -86,7 +86,7 @@ in {
       MemoryMax = "4G";
       MemoryHigh = "3G";
       CPUQuota = "300%";
-      BindReadOnlyPaths = ["/per/mnt/data/Media/Imports"];
+      BindReadOnlyPaths = ["/per/mnt/data/media/pictures"];
     };
 
     # ML inference runs during photo analysis, not during normal browsing.
@@ -164,7 +164,7 @@ in {
         "f ${cfg.dataPath}/upload/.immich 0600 immich immich - immich"
         # User-curated media: a real directory outside IMMICH_MEDIA_LOCATION,
         # exposed read-only, referenced as an external library import path.
-        "d /per/mnt/data/Media/Imports 0755 schausberger users -"
+        "d /per/mnt/data/media/pictures 0755 schausberger users -"
       ]
       ++ subdir "thumbs" cfg.thumbsPath
       ++ subdir "encoded-video" cfg.encodedVideoPath;

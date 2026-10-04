@@ -518,7 +518,7 @@ in {
 
   # Root ownership signals tmpfiles that subdirectory ownership transitions are intentional
   systemd.tmpfiles.rules = [
-    "d /per/mnt/data/Media 0755 root root -"
+    "d /per/mnt/data/media 0755 root root -"
   ];
 
   hardware.profiles.powerManagement = {
