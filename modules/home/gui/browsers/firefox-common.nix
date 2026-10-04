@@ -158,7 +158,9 @@ in {
   commonPolicies = {
     DisableAppUpdate = true;
     DisableFeedbackCommands = true;
-    DisableFirefoxAccounts = true;
+    # Accounts stay enabled on purpose: Mozilla Sync replicates bookmarks
+    # and essentials across devices (see zen.nix pins).
+    DisableFirefoxAccounts = false;
     DisableFirefoxStudies = true;
     DisableTelemetry = true;
     DontCheckDefaultBrowser = true;
