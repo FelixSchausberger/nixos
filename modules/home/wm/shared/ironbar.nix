@@ -213,7 +213,9 @@
         type = "clock";
         format = "%a %b %d  %H:%M";
         tooltip_format = "%A, %B %d, %Y\n%H:%M:%S";
-        on_click_left = "gnome-calendar";
+        # Interactive calendar (khal's ikhal); khal comes from the pim stack
+        # in modules/home/tui/pim.nix. gnome-calendar is not installed.
+        on_click_left = "ghostty -e ikhal";
       }
     ];
   };
