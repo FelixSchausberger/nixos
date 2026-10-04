@@ -25,6 +25,12 @@
       # Zellij plugin permissions cache and downloaded plugin data
       ".cache/zellij"
       ".local/share/zellij"
+
+      # PIM stack: synced CalDAV/CardDAV collections, vdirsyncer discovery
+      # cache and item status (without status the timer demands a re-discover)
+      ".local/share/calendars"
+      ".local/share/contacts"
+      ".local/share/vdirsyncer"
     ];
   };
 }
