@@ -26,6 +26,7 @@ in {
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./amt.nix # Intel AMT SOL for m920q (amtterm + amttool via sops)
     ./sops.nix # Simple and flexible tool for managing secrets
+    ./pim.nix # Nextcloud CalDAV/CardDAV sync (vdirsyncer) + khal/ikhal, todoman, khard
     # ./spotify-player.nix # Terminal-based Spotify client with full feature parity
     ./typix.nix # Typst: A markup-based typesetting system
     ./windows-terminal.nix # Windows Terminal settings deployment to Windows

@@ -184,7 +184,7 @@
             # Obsidian is handled by gui/obsidian.nix (self-gated)
           ]
           ++ lib.optionals (lib.elem "tasks" config.features.productivity.tools) [
-            planify # Task manager with Todoist support
+            planify # Task manager with native Nextcloud CalDAV support
             noto-fonts-emoji-blob-bin # Font needed for planify
           ]
       ))
