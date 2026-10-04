@@ -22,6 +22,9 @@
       # Task manager database
       ".local/share/io.github.alainm23.planify"
 
+      # Thunderbird mail/calendar/contacts profile
+      ".thunderbird"
+
       # Zen browser essential data only - persist entire default profile
       # XDG path since zen-browser 18.18.6b (previously ~/.zen)
       ".config/zen/browsers"

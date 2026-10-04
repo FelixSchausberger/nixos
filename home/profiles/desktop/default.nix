@@ -87,7 +87,7 @@
 
     communication = {
       enable = true;
-      protocols = ["matrix"];
+      protocols = ["matrix" "email"];
     };
   };
 

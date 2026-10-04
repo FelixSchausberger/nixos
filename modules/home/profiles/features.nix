@@ -61,7 +61,7 @@
     communication = {
       enable = lib.mkEnableOption "communication applications";
       protocols = lib.mkOption {
-        type = lib.types.listOf (lib.types.enum ["matrix"]);
+        type = lib.types.listOf (lib.types.enum ["matrix" "email"]);
         default = [];
         description = "Communication protocols to support";
       };
@@ -194,6 +194,9 @@
         with pkgs;
           lib.optionals (lib.elem "matrix" config.features.communication.protocols) [
             fractal # Matrix group messaging app
+          ]
+          ++ lib.optionals (lib.elem "email" config.features.communication.protocols) [
+            thunderbird # Mail + CalDAV/CardDAV client (Nextcloud account added manually)
           ]
       ))
     ];
