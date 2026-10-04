@@ -158,7 +158,7 @@
       declared;
   in
     lib.hm.dag.entryAfter ["writeBoundary"] ''
-      vault=/per/mnt/data/Obsidian/.obsidian
+      vault=/per/mnt/data/notes/.obsidian
       if [ -d "$vault" ] && [ -n "$(ls -A "$vault")" ]; then
         ${lib.concatMapStringsSep "\n" (f: ''[ -e "$vault/${f.name}" ] || install -m 0644 ${f.src} "$vault/${f.name}"'') files}
       fi
@@ -176,8 +176,8 @@
     };
   in
     mkDataLink "Documents" "/per/mnt/data/documents"
-    // mkDataLink "Music" "/per/mnt/data/Media/Music"
-    // mkDataLink "Videos" "/per/mnt/data/Media";
+    // mkDataLink "Music" "/per/mnt/data/media/music"
+    // mkDataLink "Videos" "/per/mnt/data/media/movies";
 
   # XDG user directories point straight at the pool. This is the adapter that
   # decouples pool naming from what applications expect: xdg-user-dir, the GTK
@@ -189,14 +189,15 @@
   # The home.file symlinks above stay: they cover applications that hardcode
   # $HOME/Documents instead of consulting XDG. Two mechanisms, one target.
   #
-  # music/videos are left at their defaults for now -- they resolve through the
-  # symlinks above, and get pointed at media/ once the Media tree is normalized.
-  # pictures/download stay local: grim/satty write ~/Pictures/Screenshots and
-  # Downloads is transient.
+  # music/videos now point into the normalized media/ tree and match the
+  # symlinks above one-for-one. pictures/download stay local: grim/satty write
+  # ~/Pictures/Screenshots and Downloads is transient.
   xdg.userDirs = {
     enable = true;
     documents = "/per/mnt/data/documents";
     projects = "/per/mnt/data/projects";
+    music = "/per/mnt/data/media/music";
+    videos = "/per/mnt/data/media/movies";
     createDirectories = false;
     setSessionVariables = true;
   };

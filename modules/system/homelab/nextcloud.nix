@@ -46,7 +46,7 @@ in {
       default = [
         {
           name = "Obsidian";
-          path = "/per/mnt/data/Obsidian";
+          path = "/per/mnt/data/notes";
         }
         {
           name = "Documents";
