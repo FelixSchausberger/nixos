@@ -32,6 +32,75 @@ in {
 
     # Browser profile configuration
     profiles."default" = {
+      # Declarative essentials strip. pinsForce + demote: exactly this list is
+      # enforced, any hand-pinned tabs survive as normal tabs (recoverable).
+      # Requires Zen to be closed during home-manager activation (the
+      # activation script edits zen-sessions.jsonlz4).
+      pinsForce = true;
+      pinsForceAction = "demote";
+      pins = {
+        "Homepage" = {
+          id = "44fb61d1-762c-4b90-84e9-90528be22fb4";
+          url = "https://m920q.tailf2f0ca.ts.net:8445/#tools";
+          position = 101;
+          isEssential = true;
+        };
+        "Reddit" = {
+          id = "712f88b3-d6cc-44ca-8292-54155db05112";
+          url = "https://www.reddit.com";
+          position = 102;
+          isEssential = true;
+        };
+        "GitHub" = {
+          id = "5ba46110-a91f-470d-8e69-93b76789c71a";
+          url = "https://github.com";
+          position = 103;
+          isEssential = true;
+        };
+        "Gmail" = {
+          id = "dcb369c7-7d73-4dd0-ba45-650e028feb9a";
+          url = "https://mail.google.com";
+          position = 104;
+          isEssential = true;
+        };
+        "Proton" = {
+          id = "e0b7e03c-f308-4fe9-a281-7fda94eb33ba";
+          url = "https://mail.proton.me";
+          position = 105;
+          isEssential = true;
+        };
+        "WhatsApp" = {
+          id = "6efb4c11-5dfe-4482-a2e6-f6f22fab27cd";
+          url = "https://web.whatsapp.com";
+          position = 106;
+          isEssential = true;
+        };
+        "YouTube" = {
+          id = "8fbd8fb2-d72e-46a7-9926-5142a0c580e6";
+          url = "https://www.youtube.com/feed/subscriptions";
+          position = 107;
+          isEssential = true;
+        };
+        "willhaben" = {
+          id = "c39d0d0d-86db-49a3-b47a-667f056e7212";
+          url = "https://www.willhaben.at";
+          position = 108;
+          isEssential = true;
+        };
+        "Telegram" = {
+          id = "6214ea82-d28e-4189-8b16-f849cb59f359";
+          url = "https://web.telegram.org";
+          position = 109;
+          isEssential = true;
+        };
+        "keybr" = {
+          id = "f643fce1-70b1-4875-b4e7-db18207935d7";
+          url = "https://keybr.com";
+          position = 110;
+          isEssential = true;
+        };
+      };
+
       # Search engine configuration
       search =
         browserCommon.searchConfig
