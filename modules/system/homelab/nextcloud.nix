@@ -130,6 +130,7 @@ in {
           (config.services.nextcloud.package.packages.apps)
           calendar
           contacts
+          previewgenerator
           tasks
           ;
       };
