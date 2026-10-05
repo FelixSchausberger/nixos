@@ -7,7 +7,13 @@
   # This avoids file conflicts by letting sops-nix handle the file creation
   sops.templates."rbw-config.json" = {
     content = builtins.toJSON {
-      base_url = null;
+      # Self-hosted vaultwarden on m920q, reached over the tailnet via its
+      # Tailscale Serve port (modules/system/homelab/vaultwarden.nix — keep
+      # the port in sync with its httpsPort default). identity_url and
+      # notifications_url derive from base_url; null would mean the hosted
+      # Bitwarden API. The fleet-wide literal mirrors how ntfy's base-url
+      # names m920q directly.
+      base_url = "https://m920q.tailf2f0ca.ts.net:8447";
       email = "${config.sops.placeholder."private/email"}";
       identity_url = null;
       lock_timeout = 3600;
