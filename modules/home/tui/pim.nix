@@ -94,7 +94,9 @@ in {
   accounts.contact.accounts.nextcloud = {
     remote = {
       type = "carddav";
-      url = "${ncDav}/addressbooks/admin/my-contacts/";
+      # CardDAV nests the uid under users/, unlike the calendars/ tree above;
+      # addressbooks/<uid>/<book>/ answers 404 on Nextcloud 30+.
+      url = "${ncDav}/addressbooks/users/admin/my-contacts/";
       userName = "admin";
       inherit passwordCommand;
     };
