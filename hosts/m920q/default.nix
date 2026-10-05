@@ -768,8 +768,6 @@ in {
     homepage.enable = true;
     ntfy.enable = true;
     samba.enable = true;
-    # One registration window to create the first vault account, then flip
-    # SIGNUPS_ALLOWED in modules/system/homelab/vaultwarden.nix to false.
     vaultwarden.enable = true;
     tailscale = {
       enable = true;

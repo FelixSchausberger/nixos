@@ -67,9 +67,9 @@ in {
         # vaultwarden would fall back to port 80 (unbindable unprivileged).
         ROCKET_ADDRESS = "127.0.0.1";
         ROCKET_PORT = 8222;
-        # One open window to register the first account; flip to false right
-        # after (the server is tailnet-only, but nothing stays open).
-        SIGNUPS_ALLOWED = true;
+        # Registration closed after the first account was created; new
+        # users can only be added by the admin panel.
+        SIGNUPS_ALLOWED = false;
       };
       # ADMIN_TOKEN and friends stay out of the world-readable store.
       environmentFile = [config.sops.secrets."vaultwarden/admin-token".path];
