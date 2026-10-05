@@ -25,6 +25,9 @@ in {
       ../../modules/system/ssh.nix
       ../../modules/system/nixpkgs-overlays.nix
       ../../modules/system/boot-fallback.nix
+      # Vaultwarden client half only: the DR pull timer (dr.pull) that
+      # fetches the quarterly snapshot off the m920q Samba share.
+      ../../modules/system/homelab/vaultwarden.nix
       ../../modules/vitals.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
@@ -230,4 +233,11 @@ in {
       };
     };
   };
+
+  # Chassis-loss copy of the m920q vault: syncoid above only moves this
+  # machine's own data, so the vault gets a quarterly sops-encrypted
+  # snapshot pulled from the m920q Samba share onto this host's backup
+  # pool. Persistent=true makes the timer fire at boot whenever a due run
+  # was missed while the machine was off.
+  modules.system.homelab.vaultwarden.dr.pull.enable = true;
 }
