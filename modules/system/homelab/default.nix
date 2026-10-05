@@ -16,6 +16,7 @@
     ./opencode-web.nix
     ./samba.nix
     ./ssh-hardened.nix
+    ./vaultwarden.nix
     ./zellij-web.nix
   ];
 }
