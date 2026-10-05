@@ -257,36 +257,64 @@ in {
         Type = "oneshot";
         RemainAfterExit = true;
       };
+      # Reconcile instead of rebuilding. The previous delete-all/create-all
+      # cycle gave every mount a fresh storage signature on every run, which
+      # renumbered every file ID below it and invalidated the file-ID cache
+      # held by every desktop sync client -- surfacing as sync conflicts on
+      # the Windows box. A mount whose datadir already matches the declared
+      # config is now left alone, so this is a no-op after an unrelated
+      # deploy, and a path change only renumbers the one mount that moved.
       script = let
         occ = lib.getExe config.services.nextcloud.occ;
         jq = lib.getExe' pkgs.jq "jq";
         setfacl = lib.getExe' pkgs.acl "setfacl";
-        deleteExisting = ''
-          echo "Removing all existing external storage mounts..."
-          ${occ} files_external:list --output json \
-            | ${jq} -r '.[].mount_id' \
-            | while read -r id; do
-                ${occ} files_external:delete "$id" --yes
-              done
+
+        # files_external:create normalises its argument to a leading-slash
+        # mount_point, so match on that normalised form.
+        mountPoint = m: "/${m.name}";
+
+        # Apply ACLs, then keep an already-correct mount or recreate one.
+        ensureMount = m: ''
+          echo "Ensuring external storage: ${m.name} (${m.path})"
+          ${setfacl} -R -m u:nextcloud:rwx,d:u:nextcloud:rwx ${m.path}
+          _id="$(${jq} -r --arg mp "${mountPoint m}" \
+            '[.[] | select(.mount_point == $mp) | .mount_id][0] // empty' <<<"$_mounts")"
+          _dir="$(${jq} -r --arg mp "${mountPoint m}" \
+            '[.[] | select(.mount_point == $mp) | .configuration.datadir][0] // empty' <<<"$_mounts")"
+          if [ -n "$_id" ] && [ "$_dir" = "${m.path}" ]; then
+            echo "    unchanged (mount_id $_id)"
+          else
+            if [ -n "$_id" ]; then
+              echo "    datadir changed ($_dir -> ${m.path}); recreating"
+              ${occ} files_external:delete "$_id" --yes
+            fi
+            ${occ} files_external:create "${m.name}" "local" "null::null" -c datadir="${m.path}"
+            _mounts="$(${occ} files_external:list --output json)"
+          fi
         '';
-        mountScripts = lib.concatStringsSep "\n" (
-          map (m: ''
-            echo "Configuring external storage: ${m.name} (${m.path})"
-            ${setfacl} -R -m u:nextcloud:rwx,d:u:nextcloud:rwx ${m.path}
-            ${occ} files_external:create \
-              "${m.name}" \
-              "local" \
-              "null::null" \
-              -c datadir="${m.path}"
-          '')
-          cfg.externalStorage
-        );
+
+        declaredMounts = builtins.toJSON (map mountPoint cfg.externalStorage);
       in ''
         set -euo pipefail
         echo "Enabling files_external app..."
         ${occ} app:enable files_external
-        ${deleteExisting}
-        ${mountScripts}
+
+        echo "Reconciling external storage mounts..."
+        _mounts="$(${occ} files_external:list --output json)"
+
+        # Retire mounts the configuration no longer declares.
+        ${jq} -r --argjson keep '${declaredMounts}' \
+          '.[] | select(.mount_point as $p | ($keep | index($p)) == null) | .mount_id' \
+          <<<"$_mounts" \
+          | while read -r _id; do
+              [ -n "$_id" ] || continue
+              echo "    removing undeclared mount_id $_id"
+              ${occ} files_external:delete "$_id" --yes
+            done
+        _mounts="$(${occ} files_external:list --output json)"
+
+        ${lib.concatMapStringsSep "\n" ensureMount cfg.externalStorage}
+
         echo "Scanning files into Nextcloud file cache..."
         ${occ} files:scan admin 2>&1 || true
         echo "Cleaning up orphaned file cache entries..."
