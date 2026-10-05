@@ -768,7 +768,12 @@ in {
     homepage.enable = true;
     ntfy.enable = true;
     samba.enable = true;
-    vaultwarden.enable = true;
+    vaultwarden = {
+      enable = true;
+      # Chassis-loss copy: quarterly sops-encrypted snapshot into the Samba
+      # share, pulled by the desktop (dr.pull in hosts/desktop/default.nix).
+      dr.enable = true;
+    };
     tailscale = {
       enable = true;
       # Tailscale SSH for phone/Termux access: tailscaled authenticates
