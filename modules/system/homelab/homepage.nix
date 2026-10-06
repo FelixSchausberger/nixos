@@ -221,6 +221,21 @@
           siteMonitor = local hl.opencodeWeb.port;
         };
       }
+    ]
+    ++ lib.optionals hl.vaultwarden.enable [
+      {
+        "Vaultwarden" = {
+          # mdi-* via iconify, same family as the Infra/Rescue cards; the
+          # .png names elsewhere resolve against a config icons/ dir this
+          # host does not have.
+          icon = "mdi-key-variant";
+          href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.vaultwarden.httpsPort}";
+          description = "Password Manager";
+          # /alive is unauthenticated liveness; the probe hits the Rocket
+          # loopback port, not the Serve front.
+          siteMonitor = "${local config.services.vaultwarden.config.ROCKET_PORT}/alive";
+        };
+      }
     ];
 
   # Emergency access: Intel AMT from each vantage (LAN, WAN via FRITZ!Box

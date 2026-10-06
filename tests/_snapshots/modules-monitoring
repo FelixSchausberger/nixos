@@ -31,7 +31,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 14;
+  rule_count = 15;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -59,6 +59,15 @@
       severity = "urgent";
       title = "JellyfinDown";
       uid = "jellyfin-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox\",app=\"vaultwarden\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "VaultwardenDown";
+      uid = "vaultwarden-down";
     }
     {
       datasource_uid = "prometheus";
