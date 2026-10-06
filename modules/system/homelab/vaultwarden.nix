@@ -118,6 +118,9 @@ in {
         environmentFile = [config.sops.secrets."vaultwarden/admin-token".path];
       };
 
+      # ADMIN_TOKEN is stored as an argon2id PHC hash (m=65536, t=3, p=4);
+      # vaultwarden verifies the presented token against it instead of
+      # comparing plaintext, so a leaked env file yields no usable token.
       sops.secrets."vaultwarden/admin-token" = {};
 
       systemd.services.vaultwarden = {
