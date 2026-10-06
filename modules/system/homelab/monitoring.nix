@@ -188,7 +188,8 @@ in {
         hasAppTargets =
           config.modules.system.homelab.immich.enable
           || config.modules.system.homelab.nextcloud.enable
-          || config.modules.system.homelab.jellyfin.enable;
+          || config.modules.system.homelab.jellyfin.enable
+          || config.modules.system.homelab.vaultwarden.enable;
         # One static_config per service so each probe carries an "app" label:
         # the relabeling below sets instance to the probed URL, which contains
         # no service name, so alert rules must select by label instead of
@@ -216,6 +217,14 @@ in {
               # /health returns 200 once the server is up, independent of auth.
               targets = ["http://127.0.0.1:8096/health"];
               labels.app = "jellyfin";
+            }
+          ]
+          ++ lib.optionals config.modules.system.homelab.vaultwarden.enable [
+            {
+              # /alive is the unauthenticated liveness endpoint; probed on the
+              # Rocket loopback port, not through the Tailscale Serve front.
+              targets = ["http://127.0.0.1:${toString config.services.vaultwarden.config.ROCKET_PORT}/alive"];
+              labels.app = "vaultwarden";
             }
           ];
       in
@@ -593,6 +602,11 @@ in {
                   (mkAlert "jellyfin-down" "urgent" "JellyfinDown"
                     "Jellyfin is not responding to HTTP health probes"
                     ''probe_success{job="blackbox",app="jellyfin"} == bool 0'' "Alerting")
+                ])
+                ++ (lib.optionals config.modules.system.homelab.vaultwarden.enable [
+                  (mkAlert "vaultwarden-down" "urgent" "VaultwardenDown"
+                    "Vaultwarden is not responding to HTTP health probes"
+                    ''probe_success{job="blackbox",app="vaultwarden"} == bool 0'' "Alerting")
                 ])
                 ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
                   (mkAlert "adguard-down" "urgent" "AdGuardDown"

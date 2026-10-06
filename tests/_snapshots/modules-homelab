@@ -29,6 +29,7 @@
     "System/ntfy.sh icon=ntfy.png href=http://192.168.178.2:2586 monitor widget=ntfy"
     "System/Zellij Web icon=zellij.png href=https://m920q.tailf2f0ca.ts.net:8443 monitor"
     "System/OpenCode icon=opencode.png href=https://m920q.tailf2f0ca.ts.net:8444 monitor"
+    "System/Vaultwarden icon=mdi-key-variant href=https://m920q.tailf2f0ca.ts.net:8447 monitor"
   ];
   monitoring_enabled = true;
   opencode_server_exec_start = [

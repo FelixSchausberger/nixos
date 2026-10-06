@@ -77,6 +77,10 @@
           type = lib.types.bool;
           default = false;
         };
+        vaultwarden.enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
         # garmin.nix reads these sibling options; the VM test does not import
         # the garmin module itself (no live Garmin credentials in CI).
         garmin = {
