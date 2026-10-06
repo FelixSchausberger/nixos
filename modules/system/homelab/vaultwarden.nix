@@ -121,7 +121,12 @@ in {
       # ADMIN_TOKEN is stored as an argon2id PHC hash (m=65536, t=3, p=4);
       # vaultwarden verifies the presented token against it instead of
       # comparing plaintext, so a leaked env file yields no usable token.
-      sops.secrets."vaultwarden/admin-token" = {};
+      sops.secrets."vaultwarden/admin-token" = {
+        # The EnvironmentFile is only read at unit start, so a token
+        # rotation would silently keep the old value verifying until an
+        # unrelated restart; sops-nix restarts the unit on secret change.
+        restartUnits = ["vaultwarden.service"];
+      };
 
       systemd.services.vaultwarden = {
         # Resolve the /per/mnt/data automount before the unit's mount
