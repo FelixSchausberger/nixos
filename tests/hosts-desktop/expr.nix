@@ -30,10 +30,17 @@ in {
   monitoring_enabled = config.modules.system.maintenance.monitoring.enable;
   alerts_enabled = config.modules.system.maintenance.monitoring.alerts;
 
-  # Test: assertion quality gates are present for enabled desktop modules
-  has_display_manager_gui_assertion = hasAssertionWithMessage "display-manager.nix requires hostConfig.isGui = true when hostConfig.wms is non-empty";
+  # Test: headless profile — GUI stack stays in the closure, no display
+  # manager starts a session at boot, the session comes up on demand
+  auto_start_session = config.hostConfig.autoStartSession;
+  session_on_demand_enabled = config.modules.system.sessionOnDemand.enable;
+  # The desktop keeps its desktop application set despite on-demand sessions
+  gui_apps = config.hostConfig.guiApps;
+  greetd_disabled = !config.services.greetd.enable;
+  # Single-compositor guarantee: niri.service owns the session, not UWSM
+  uwsm_disabled = !config.programs.uwsm.enable;
 
-  # Moonshine replaces Sunshine — no GUI assertions needed (Moonshine is headless-first)
+  # Test: assertion quality gates are present for enabled desktop modules
   has_gaming_gui_assertion = hasAssertionWithMessage "modules.system.gaming.enable requires hostConfig.isGui = true";
   has_steam_gamemode_assertion = hasAssertionWithMessage "modules.system.steam.enable requires programs.gamemode.enable for GAMEMODERUN integration";
 
@@ -91,11 +98,19 @@ in {
       "Zelda A Link to the Past"
     ];
 
-  # Vitals parity with m920q, in GUI mode (user daemon on
-  # graphical-session.target instead of default.target)
+  # Vitals parity with m920q, in headless mode: the user daemon binds
+  # default.target because graphical-session.target only exists while an
+  # on-demand session runs.
   vitals_enabled = config.services.vitals.enable;
-  vitals_gui_mode = !config.services.vitals.headless;
-  vitals_daemon_gui_target =
-    builtins.elem "graphical-session.target"
+  vitals_headless = config.services.vitals.headless;
+  vitals_daemon_default_target =
+    builtins.elem "default.target"
     config.home-manager.users.schausberger.systemd.user.services.vitals-daemon.Unit.After;
+
+  # Test: node exporter for the m920q scrape (job "node-desktop"), and the
+  # RAPL mode fix that lets its built-in rapl collector read energy_uj
+  node_exporter_enabled = config.services.prometheus.exporters.node.enable;
+  rapl_energy_readable =
+    builtins.any (rule: builtins.match ".*energy_uj.*" rule != null)
+    config.systemd.tmpfiles.rules;
 }

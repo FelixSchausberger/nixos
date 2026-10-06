@@ -3,10 +3,12 @@
   alerts_enabled = true;
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
+  auto_start_session = false;
   fzero_gx_forces_fullscreen = true;
   fzero_snes_uses_xvideo = true;
   fzero_x_uses_rmg_wrapper = true;
-  has_display_manager_gui_assertion = true;
+  greetd_disabled = true;
+  gui_apps = true;
   has_gaming_gui_assertion = true;
   has_hyprland = false;
   has_steam_gamemode_assertion = true;
@@ -15,11 +17,15 @@
   maintenance_enabled = true;
   monitoring_enabled = true;
   moonshine_x11_socket_guard = true;
+  node_exporter_enabled = true;
   qmk_enabled = true;
+  rapl_energy_readable = true;
   rom_tiles_have_boxart = true;
+  session_on_demand_enabled = true;
   user_exists = true;
-  vitals_daemon_gui_target = true;
+  uwsm_disabled = true;
+  vitals_daemon_default_target = true;
   vitals_enabled = true;
-  vitals_gui_mode = true;
+  vitals_headless = true;
   wm_count = 1;
 }
