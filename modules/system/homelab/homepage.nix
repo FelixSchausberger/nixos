@@ -49,6 +49,14 @@
           href = "https://${hl.caddyProxy.tailnetDomain}";
           description = "Photo Management";
           siteMonitor = local hl.immich.port;
+          # Widget v2 against the installed Immich (>= v1.118); the sops
+          # key grants server.statistics, all the widget reads.
+          widget = {
+            type = "immich";
+            version = 2;
+            url = local hl.immich.port;
+            key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
+          };
         };
       }
     ]
@@ -63,6 +71,17 @@
           href = "https://${hl.caddyProxy.tailnetDomain}/navidrome";
           description = "Music Streaming";
           siteMonitor = local hl.navidrome.port;
+          # Subsonic token auth: token = md5(password + salt) and Homepage
+          # does no hashing, so the digest lives in sops while the salt
+          # stays literal (useless on its own). BaseURL applies app-wide,
+          # so loopback needs the /navidrome prefix as well.
+          widget = {
+            type = "navidrome";
+            url = "${local hl.navidrome.port}/navidrome";
+            user = "schausberger";
+            token = "{{HOMEPAGE_VAR_NAVIDROME_TOKEN}}";
+            salt = "hm2026nav";
+          };
         };
       }
     ]
@@ -76,6 +95,13 @@
           href = "http://192.168.178.2:${toString jellyfinPort}";
           description = "Movies & Series";
           siteMonitor = local jellyfinPort;
+          # Widget v2: the docs map Jellyfin >= 12 (installed 12.x) to v2.
+          widget = {
+            type = "jellyfin";
+            url = local jellyfinPort;
+            key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
+            version = 2;
+          };
         };
       }
     ];
@@ -86,7 +112,10 @@
         icon = "grafana.png";
         href = "https://${hl.caddyProxy.tailnetDomain}/grafana";
         description = "Dashboards";
-        siteMonitor = local hl.monitoring.grafanaPort;
+        # Root 301s to the https origin, which the plain-HTTP probe cannot
+        # follow, so it reads as a synthesized 500; /api/health answers
+        # 200 without a redirect hop.
+        siteMonitor = "${local hl.monitoring.grafanaPort}/api/health";
         widget = {
           type = "grafana";
           version = 2;
@@ -112,6 +141,25 @@
           type = "prometheus";
           url = local hl.monitoring.prometheusPort;
         };
+      };
+    }
+    # Grafana deep links, not bookmarks: the no-bookmarks note below
+    # records why a link row was dropped before, and these cards belong
+    # to the Grafana entry above rather than to a new group. Both wear
+    # the Grafana icon so they read as "opens in Grafana" instead of as
+    # second Fritz cards.
+    {
+      "Fritz!Exporter" = {
+        icon = "grafana.png";
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
+        description = "Router metrics";
+      };
+    }
+    {
+      "Garmin Stats" = {
+        icon = "grafana.png";
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
+        description = "Cycling stats";
       };
     }
   ];
@@ -149,7 +197,10 @@
           description = "File Sync";
           # Instance-level light and widget live on the primary card only;
           # repeating them per app card would show four identical probes.
-          siteMonitor = local hl.nextcloud.port;
+          # Root 302s to https, which the plain-HTTP probe cannot follow
+          # (it reads as a synthesized 500), so probe the loopback
+          # endpoint blackbox already uses (monitoring.nix).
+          siteMonitor = "${local hl.nextcloud.port}/status.php";
           # Loopback works because nextcloud.nix trusts 127.0.0.1 as a domain;
           # probing it there keeps the widget independent of Caddy.
           widget = {
@@ -166,6 +217,20 @@
           icon = "mdi-calendar";
           href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/calendar/dayGridMonth/now";
           description = "Scheduling";
+          # Single published share (Personal); the other calendars are
+          # task.org task lists with no events. The token URL is the only
+          # anonymous read path (DAV itself stays auth-gated), so the
+          # widget needs no credentials.
+          widget = {
+            type = "calendar";
+            integrations = [
+              {
+                type = "ical";
+                name = "Personal";
+                url = "{{HOMEPAGE_VAR_NEXTCLOUD_ICS_URL}}";
+              }
+            ];
+          };
         };
       }
       {
@@ -226,8 +291,8 @@
       {
         "Vaultwarden" = {
           # mdi-* via iconify, same family as the Infra/Rescue cards; the
-          # .png names elsewhere resolve against a config icons/ dir this
-          # host does not have.
+          # .png names elsewhere have no local config icons/ dir and fall
+          # back to the dashboard-icons CDN, which serves all of them.
           icon = "mdi-key-variant";
           href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.vaultwarden.httpsPort}";
           description = "Password Manager";
@@ -285,6 +350,14 @@
         href = "http://192.168.178.1";
         description = "Router";
         siteMonitor = "http://192.168.178.1";
+        # No credentials: the widget reads AVM's status interface, which
+        # needs "allow access for applications" plus UPnP status
+        # transmission in the router's network settings. http stays on
+        # purpose - the TLS handshake against this router is slow.
+        widget = {
+          type = "fritzbox";
+          url = "http://192.168.178.1";
+        };
       };
     }
     {
@@ -338,7 +411,7 @@
       tab = "Home";
       icon = "mdi-chart-line";
       style = "row";
-      columns = 3;
+      columns = 4;
     };
     Network = {
       tab = "Home";
@@ -369,6 +442,10 @@
     lib.optional hl.monitoring.enable "HOMEPAGE_VAR_GRAFANA_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}"
     ++ lib.optional hl.adguardhome.enable "HOMEPAGE_VAR_ADGUARD_PASSWORD=${config.sops.placeholder."adguard/password"}"
     ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD=${config.sops.placeholder."nextcloud/admin-password"}"
+    ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_ICS_URL=${config.sops.placeholder."nextcloud/calendar-ics-share-url"}"
+    ++ lib.optional hl.immich.enable "HOMEPAGE_VAR_IMMICH_API_KEY=${config.sops.placeholder."immich/api-key"}"
+    ++ lib.optional hl.jellyfin.enable "HOMEPAGE_VAR_JELLYFIN_API_KEY=${config.sops.placeholder."jellyfin/api-key"}"
+    ++ lib.optional hl.navidrome.enable "HOMEPAGE_VAR_NAVIDROME_TOKEN=${config.sops.placeholder."navidrome/token"}"
   );
 in {
   options.modules.system.homelab.homepage = {

@@ -239,6 +239,11 @@ in {
       mode = "0440";
     };
 
+    # Published share link for the Homepage calendar widget: the token URL
+    # is itself the credential (the calendar DAV backend requires auth,
+    # this anonymous export path does not).
+    sops.secrets."nextcloud/calendar-ics-share-url" = {};
+
     systemd.tmpfiles.rules = let
       aclRules = map (m: "a+ ${m.path} - - - - u:nextcloud:rwx,d:u:nextcloud:rwx") cfg.externalStorage;
     in
