@@ -5,6 +5,8 @@
     ./lsp.nix
     ./opencode.nix
     ./rust.nix
+    ./scooter.nix
+    ./snacks.nix
     ./treesitter.nix
   ];
 

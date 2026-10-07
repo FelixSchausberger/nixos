@@ -67,6 +67,16 @@ in {
     # explicit config above merges over.
     plugins.lspconfig.enable = true;
 
+    # Render diagnostics inline with a readable float, sorted worst-first.
+    diagnostic.settings = {
+      severity_sort = true;
+      virtual_text = {
+        spacing = 2;
+        source = "if_many";
+      };
+      float.border = "rounded";
+    };
+
     lsp = {
       # vim.lsp.inlay_hint.enable(true): inline parameter and return-type hints.
       inlayHints.enable = true;

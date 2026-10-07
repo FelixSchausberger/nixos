@@ -20,6 +20,7 @@ _: {
 
     opts = {
       updatetime = 100; # Faster completion
+      timeoutlen = 300; # Snappier which-key/leader hints (default 1000)
 
       # Line numbers
       number = true; # Display the absolute line number of the current line
@@ -52,6 +53,7 @@ _: {
       hidden = true; # Keep closed buffer open in the background
       undofile = true; # Automatically save and restore undo history
       swapfile = false; # Disable the swap file
+      confirm = true; # Offer to save instead of failing on :q/:e with changes
       modeline = true; # Recognize 'vim:ft=sh' modelines
       modelines = 100; # Number of lines checked for modelines
 
@@ -60,6 +62,7 @@ _: {
       laststatus = 3; # Use a single global status line
       colorcolumn = "100"; # Column to highlight
       title = true; # Set the window title; Niri's border rules match on it
+      winborder = "rounded"; # Border for floating windows (nvim 0.11+)
       mouse = "a"; # Enable mouse control
       mousemodel = "extend"; # Right-click extends the selection instead of a popup
       inccommand = "split"; # Preview substitutions in a split
