@@ -77,6 +77,18 @@
           type = lib.types.bool;
           default = false;
         };
+        # monitoring.nix's navidrome probe references enable and port; the
+        # probe itself stays out of the test (navidrome.enable defaults off).
+        navidrome = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+          };
+          port = lib.mkOption {
+            type = lib.types.port;
+            default = 4533;
+          };
+        };
         vaultwarden.enable = lib.mkOption {
           type = lib.types.bool;
           default = false;

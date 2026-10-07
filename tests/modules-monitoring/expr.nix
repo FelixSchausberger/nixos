@@ -56,6 +56,7 @@
     ++ (lib.optionals config.modules.system.homelab.nextcloud.enable ["nextcloud-down"])
     ++ (lib.optionals config.modules.system.homelab.immich.enable ["immich-down"])
     ++ (lib.optionals config.modules.system.homelab.jellyfin.enable ["jellyfin-down"])
+    ++ (lib.optionals config.modules.system.homelab.navidrome.enable ["navidrome-down"])
     ++ (lib.optionals config.modules.system.homelab.adguardhome.enable ["adguard-down" "dns-resolution-failed"])
     ++ (lib.optionals config.modules.system.homelab.backup.enable ["backup-failed"]);
 
