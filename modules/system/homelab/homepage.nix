@@ -544,6 +544,11 @@ in {
       path = "/run/secrets/homepage/env";
       owner = "homepage-dashboard";
       mode = "0400";
+      # Homepage reads HOMEPAGE_VAR_* once per process (memory-cached) and
+      # the nixpkgs unit carries no restart trigger, so without this a new or
+      # rotated variable reaches the dashboard only after an unrelated
+      # restart; sops-nix restarts the unit when the rendered env changes.
+      restartUnits = ["homepage-dashboard.service"];
     };
 
     services.homepage-dashboard = {
