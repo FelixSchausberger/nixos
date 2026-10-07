@@ -46,9 +46,12 @@ in {
         # (mkKeepRoute in caddy-proxy.nix). Without a base path Navidrome's
         # root-absolute redirects (/ -> /app/) and API calls (/auth/login)
         # escape the stripped route and hit the Immich catch-all instead.
-        # Direct port access keeps working: the server redirects its root
-        # into the base path, so /rest clients that follow redirects are
-        # unaffected too.
+        # The prefix is mandatory for clients, not optional: a GET to /rest
+        # on the direct port answers 302 into the SPA shell, and a Subsonic
+        # client (which expects XML/JSON and does not follow redirects)
+        # reports that as a silent connection failure with nothing in the
+        # journal. Point clients at http://<host>:4533/navidrome or
+        # <tailnetDomain>/navidrome.
         BaseURL = "/navidrome";
         EnableInsightsCollector = false;
         EnableDownloads = true;
