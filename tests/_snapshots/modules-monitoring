@@ -19,6 +19,7 @@
     "nextcloud-down"
     "immich-down"
     "jellyfin-down"
+    "navidrome-down"
     "adguard-down"
     "dns-resolution-failed"
     "backup-failed"
@@ -31,7 +32,7 @@
     group_wait = "30s";
     repeat_interval = "4h";
   };
-  rule_count = 15;
+  rule_count = 16;
   rules = [
     {
       datasource_uid = "prometheus";
@@ -59,6 +60,15 @@
       severity = "urgent";
       title = "JellyfinDown";
       uid = "jellyfin-down";
+    }
+    {
+      datasource_uid = "prometheus";
+      execErrState = "KeepLast";
+      expr = "probe_success{job=\"blackbox\",app=\"navidrome\"} == bool 0";
+      noDataState = "Alerting";
+      severity = "urgent";
+      title = "NavidromeDown";
+      uid = "navidrome-down";
     }
     {
       datasource_uid = "prometheus";
