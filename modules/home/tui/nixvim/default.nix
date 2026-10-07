@@ -20,6 +20,7 @@
 
     # Bespoke logic stays in real Lua files under lua/, loaded here.
     extraFiles."lua/config/clipboard.lua".source = ./lua/config/clipboard.lua;
+    extraFiles."lua/config/opencode_server.lua".source = ./lua/config/opencode_server.lua;
     extraFiles."lua/config/title.lua".source = ./lua/config/title.lua;
 
     extraConfigLua = ''
