@@ -137,16 +137,12 @@
     # earlier v2 builds compute the global config root purely from
     # XDG_CONFIG_HOME and always union the V1 config dir, whose V1-only
     # `plugin` list aborts V2 plugin generation and leaves the TUI without
-    # agents or a model picker. Bumps stay tag-only, and each candidate tag
-    # must build with the completion override below applied.
+    # agents or a model picker. Bumps stay tag-only.
     #
-    # The tag's nix/opencode.nix shells out to the `completion` subcommand
-    # upstream replaced with `--completions <shell>`; every v2.0.12+ tag
-    # still carries that call (upstream dropped the whole expression on
-    # `main` instead of fixing it), and the call fails with empty completion
-    # files, aborting installPhase. The module drops that step through
-    # overrideAttrs (see the opencode2 package in the v2 module): it emits
-    # only files this module never ships.
+    # v2.0.23 repaired the packaging defects that needed an overrideAttrs in
+    # the v2 module until then: nix/opencode.nix now generates shell
+    # completions with `--completions <shell>` instead of the `completion`
+    # subcommand upstream removed, whose empty output aborted installPhase.
     #
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
@@ -160,7 +156,7 @@
       url = "github:NixOS/nixpkgs/3181085bfd08663b6b9e60bc7a8395c2aaa741bd";
     };
     opencode-v2 = {
-      url = "github:anomalyco/opencode/v2.0.22";
+      url = "github:anomalyco/opencode/v2.0.24";
       inputs.nixpkgs.follows = "nixpkgs-opencode2";
     };
 

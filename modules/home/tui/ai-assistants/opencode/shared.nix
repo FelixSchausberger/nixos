@@ -39,6 +39,13 @@
   # both harnesses. Paid opencode-go models stay one /model switch away.
   model = "opencode/mimo-v2.6-flash-free";
 
+  # Port of the shared OpenCode server: the V2 managed service when
+  # ai-assistants.opencodeV2 is enabled, V1's programs.opencode.web otherwise.
+  # Both bind loopback only; Tailscale Serve terminates TLS in front of it.
+  # Consumers: the `oc` function, the zellij-web seed pane, the nixvim
+  # integration and the homepage card monitor.
+  webPort = 4096;
+
   formatters = {
     nixfmt = {};
     rustfmt = {};
@@ -209,6 +216,7 @@ in {
     combinedRules
     sharedSkills
     model
+    webPort
     formatters
     quotaToast
     permissionRules

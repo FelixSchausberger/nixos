@@ -27,17 +27,20 @@
   uid = 1000;
   runtimeDir = "/run/user/${toString uid}";
 
-  # Port of the persistent shared opencode server (opencode-web HM user service).
-  # The web session seeds an attach pane to it so phone access survives reboots.
+  # Port of the persistent shared opencode server (the V2 managed service when
+  # ai-assistants.opencodeV2 is enabled, V1's programs.opencode.web otherwise;
+  # see modules/home/tui/ai-assistants/opencode/). The web session seeds an
+  # attach pane to it so phone access survives reboots.
   opencodePort = config.modules.system.homelab.opencodeWeb.port;
   # Waits for the shared server, then attaches (avoids an empty pane if the user
-  # service is not up yet at seed time). Uses `opencode attach` (not a throwaway
-  # `opencode`) so it joins the same session store as the web UI and other clients.
+  # service is not up yet at seed time). Uses the V2 client when it is on PATH
+  # and falls back to V1's `opencode attach`; both join the session store the
+  # server serves rather than spawning a throwaway instance.
   # The wait is bounded because this runs inside a zellij pane, where no systemd
   # timeout applies: an unbounded poll would hang the pane forever if the user
   # service never starts. On timeout it warns and attaches anyway.
   seedWaitAttempts = 30;
-  opencodeSeedCmd = "${pkgs.bash}/bin/sh -c 'n=0; while ! ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString opencodePort} >/dev/null 2>&1; do n=$((n + 1)); if [ \"$n\" -ge ${toString seedWaitAttempts} ]; then echo \"warning: opencode server not ready after $(( ${toString seedWaitAttempts} * 2 ))s; attaching anyway\" >&2; break; fi; sleep 2; done; exec opencode attach http://127.0.0.1:${toString opencodePort}'";
+  opencodeSeedCmd = "${pkgs.bash}/bin/sh -c 'n=0; while ! ${pkgs.curl}/bin/curl -sf http://127.0.0.1:${toString opencodePort} >/dev/null 2>&1; do n=$((n + 1)); if [ \"$n\" -ge ${toString seedWaitAttempts} ]; then echo \"warning: opencode server not ready after $(( ${toString seedWaitAttempts} * 2 ))s; attaching anyway\" >&2; break; fi; sleep 2; done; if command -v opencode2 >/dev/null 2>&1; then exec opencode2; else exec opencode attach http://127.0.0.1:${toString opencodePort}; fi'";
 in {
   options.modules.system.homelab.zellijWeb = {
     enable = lib.mkEnableOption "Zellij web server for remote terminal sessions";
@@ -94,7 +97,7 @@ in {
         RestartSec = "5";
         ExecStart = pkgs.writeShellScript "zellij-web" ''
           set -u
-          # Seed the web session with an opencode attach pane once the server is up.
+          # Seed the web session with an opencode pane once the server is up.
           # Runs in a subshell so `exec` below stays the service's main process
           # (systemd manages the zellij web server correctly on stop/restart).
           (

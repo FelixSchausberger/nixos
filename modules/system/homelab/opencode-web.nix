@@ -2,7 +2,9 @@
 #
 # Architecture:
 #   - The opencode server itself is the HM-level user service
-#     `opencode-web` (programs.opencode.web), bound to 127.0.0.1 only.
+#     `opencode-web`, bound to 127.0.0.1 only: the V2 managed service when
+#     ai-assistants.opencodeV2 is enabled, V1's programs.opencode.web
+#     otherwise (see modules/home/tui/ai-assistants/opencode/).
 #   - This module adds the system-level Tailscale Serve oneshot that
 #     terminates TLS and forwards to it, mirroring zellij-web.nix.
 #   - Tailscale HTTPS certificates are Let's Encrypt-issued for the exact
@@ -23,7 +25,7 @@ in {
     port = lib.mkOption {
       type = lib.types.port;
       default = 4096;
-      description = "Local opencode server port (must match programs.opencode.web extraArgs)";
+      description = "Local opencode server port (must match the shared server's port)";
     };
 
     httpsPort = lib.mkOption {
