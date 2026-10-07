@@ -84,6 +84,8 @@ nix fmt                # alejandra, prettier, treefmt
 prek run --all-files   # commit hooks (deadnix, statix, ripsecrets, ...)
 namaka check           # snapshot tests
 nix flake check        # evaluate all configurations
+nix eval --json .#packages.x86_64-linux --apply 'ps: builtins.mapAttrs (_: v: v.drvPath) ps' >/dev/null
+                       # instantiate all package drvs (flake check is WHNF-only; CI runs this)
 ```
 
 `just` wraps common flows (`just niri-validate`, `just fmt`, `just test`,

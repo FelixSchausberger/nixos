@@ -219,7 +219,16 @@ test-vm-all:
     done
 
 # Full validation: format, hooks, and tests
-validate: fmt check test
+validate: fmt check test eval-packages
+
+# Instantiate every package derivation (mirrors CI's "Evaluate package
+# derivations" step). nix flake check only forces WHNF, so eval errors that
+# surface solely in package contexts (e.g. VM tests importing individual
+# modules) pass there and only fail CI.
+eval-packages:
+    nix eval --json .#packages.x86_64-linux \
+        --apply 'ps: builtins.mapAttrs (_: v: v.drvPath) ps' > /dev/null
+    echo "All package derivations evaluated"
 
 # === SYSTEM MANAGEMENT ===
 
