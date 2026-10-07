@@ -6,7 +6,7 @@
 }: let
   # Shared config source rendered into both the V1 and V2 harnesses.
   shared = import ./shared.nix {inherit config lib pkgs;};
-  inherit (shared) model;
+  inherit (shared) model webPort;
 
   # V1 groups permission effects per tool; derive the bash map from the
   # canonical ordered rule list so the two harnesses cannot drift.
@@ -15,11 +15,6 @@
       builtins.filter (rule: rule.action == "shell") shared.permissionRules
     )
   );
-
-  # Fixed port of the long-lived shared server. Local TUIs attach to it via the
-  # `oc` fish function instead of spawning throwaway servers, so TUI and web UI
-  # share one session store.
-  webPort = 4096;
 in {
   programs.opencode = {
     enable = true;
@@ -120,8 +115,11 @@ in {
       formatter = shared.formatters;
     };
 
+    # The shared server on webPort is V2's managed service when
+    # ai-assistants.opencodeV2 is enabled (see v2.nix); this V1 web service is
+    # the fallback for hosts without it. Both must never race for the port.
     web = {
-      enable = true;
+      enable = !config.ai-assistants.opencodeV2.enable;
       extraArgs = [
         "--port"
         (toString webPort)
@@ -144,13 +142,19 @@ in {
   };
 
   # Attach a TUI client to the shared server instead of letting bare `opencode`
-  # start its own throwaway instance. Attaching keeps sessions visible in and
-  # controllable from both the TUI here and the web UI on other devices.
+  # start its own throwaway instance, so the TUI, the web UI and the other
+  # clients share one session store. V2 discovers the registered service (URL
+  # and password) itself; V1 needs the explicit URL.
   programs.fish.functions.oc = {
     description = "Attach to the shared opencode server (same sessions as the web UI)";
-    body = ''
-      opencode attach "http://127.0.0.1:${toString webPort}" $argv
-    '';
+    body =
+      if config.ai-assistants.opencodeV2.enable
+      then ''
+        opencode2 $argv
+      ''
+      else ''
+        opencode attach "http://127.0.0.1:${toString webPort}" $argv
+      '';
   };
 
   # Set API keys from sops secrets at login time

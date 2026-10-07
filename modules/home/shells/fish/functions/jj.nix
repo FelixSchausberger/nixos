@@ -546,13 +546,13 @@
       jj workspace add "$dir" --name "$task" -r 'main@origin' -m "$task: started from main@origin"
 
       if [ "''${OCWS_V2:-0}" = "1" ]; then
-        run=(
-          env
-          "XDG_CONFIG_HOME=''${OCWS_V2_CONFIG_HOME:-$HOME/.config/opencode-v2}"
-          "OPENCODE_DB=''${OCWS_V2_DB:-$HOME/.local/share/opencode/opencode2.db}"
-          opencode2
-          "$@"
-        )
+        # opencode2 resolves its own config root (the shim exports
+        # OPENCODE_CONFIG_DIR) and its own database (opencode.db under the data
+        # dir, shared with the TUI and the web service). Overriding either here
+        # split V2 sessions into a second config root and the stale
+        # opencode2.db, so a plain `opencode2` and an OCWS_V2=1 workspace never
+        # saw each other's sessions.
+        run=(opencode2 "$@")
       else
         run=(opencode "$@")
       fi
