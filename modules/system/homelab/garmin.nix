@@ -199,9 +199,8 @@ in {
 
     systemd.services.garmin-fetch-data = {
       description = "Garmin Connect to InfluxDB health-data fetcher";
-      after = ["influxdb-garmin-setup.service" "sops-nix.service"];
+      after = ["influxdb-garmin-setup.service"];
       requires = ["influxdb.service"];
-      wants = ["sops-nix.service"];
       wantedBy = ["multi-user.target"];
       # Garmin rate-limits aggressively; a slow restart loop is deliberate.
       unitConfig = {

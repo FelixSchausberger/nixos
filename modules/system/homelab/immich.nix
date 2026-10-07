@@ -115,10 +115,7 @@ in {
 
     systemd.services.immich-admin-setup = {
       description = "Create Immich admin user from sops secret";
-      after = [
-        "immich-server.service"
-        "sops-nix.service"
-      ];
+      after = ["immich-server.service"];
       wants = ["immich-server.service"];
       serviceConfig = {
         Type = "oneshot";
