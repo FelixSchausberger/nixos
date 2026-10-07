@@ -153,6 +153,39 @@ in {
   config = lib.mkIf cfg.enable {
     home.packages = [opencode2];
 
+    # The shared server every V2 client attaches to; default.nix disables V1's
+    # programs.opencode.web for this host so the two never race for the port.
+    # `serve --service` registers itself as the user's background service, so
+    # the TUI, `oc` and the nixvim integration discover this exact URL and
+    # password instead of auto-starting a second server on a random port. Only
+    # the loopback bind and the fixed port are pinned here, for the Tailscale
+    # Serve target in modules/system/homelab/opencode-web.nix. PATH mirrors the
+    # V1 launcher: the server hands its environment to every bash tool it runs,
+    # so the user profile must stay resolvable under systemd.
+    systemd.user.services.opencode-web = {
+      Unit = {
+        Description = "OpenCode 2 shared server (API and web UI)";
+        After = ["network.target"];
+      };
+      Service = {
+        ExecStart = [
+          "${opencode2}/bin/opencode2"
+          "serve"
+          "--service"
+          "--hostname"
+          "127.0.0.1"
+          "--port"
+          (toString shared.webPort)
+        ];
+        Environment = [
+          "PATH=${config.home.profileDirectory}/bin:/run/wrappers/bin:/run/current-system/sw/bin"
+        ];
+        Restart = "always";
+        RestartSec = 5;
+      };
+      Install.WantedBy = ["default.target"];
+    };
+
     # Belt and braces for launches that bypass the exec shim above (`nix
     # shell`, an absolute store path, any tool that inherits a bare PATH):
     # without the variable opencode2 silently unions the V1 config, whose
