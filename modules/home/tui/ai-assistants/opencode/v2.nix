@@ -138,18 +138,9 @@
   # rejects; the company tool is reserved for IntelliJ/CLI. MCP github reads
   # its token from the sops file and gh authenticates through hosts.yml, so
   # no part of the V2 tree needs the variable.
-  # Upstream's installPhase ends in a postInstall that shells out to the
-  # `completion` subcommand upstream replaced with `--completions <shell>`;
-  # the call fails (ENOENT on a directory that no longer exists) and leaves
-  # empty completion files, aborting the build. Dropping the step loses
-  # nothing: this module installs only the exec shim below and never links
-  # upstream's share/completion files, and upstream deleted the expression on
-  # `main` rather than fixing it (flake.nix carries the tag history).
-  opencode2Package =
-    inputs.opencode-v2.packages.${system}.opencode.overrideAttrs
-    (_: {
-      postInstall = "";
-    });
+  # Upstream builds `bin/opencode` and symlinks `bin/opencode2` at it; the exec
+  # shim below is the only entry point this module exposes.
+  opencode2Package = inputs.opencode-v2.packages.${system}.opencode;
 
   opencode2 = pkgs.writeShellScriptBin "opencode2" ''
     exec env -u GITHUB_TOKEN OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${opencode2Package}/bin/opencode2 "$@"
