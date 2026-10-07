@@ -1,4 +1,7 @@
-_: {
+{config, ...}: let
+  # nixvim's helper for embedding Lua functions in keymaps.
+  inherit (config.lib.nixvim) mkRaw;
+in {
   programs.nixvim = {
     keymaps = [
       # Write/quit (Helix space-w / space-q parity)
@@ -170,6 +173,134 @@ _: {
           desc = "Toggle task output";
         };
       }
+
+      # Terminal: snacks float (plugins/snacks.nix), independent of the
+      # docked overseer output panel.
+      {
+        mode = "n";
+        key = "<leader>tt";
+        action = mkRaw ''function() require("snacks").terminal.toggle(vim.o.shell, { win = { position = "float", height = 0.6, width = 0.9 } }) end'';
+        options = {
+          silent = true;
+          desc = "Toggle floating terminal";
+        };
+      }
+
+      # Rust: rustaceanvim targets. The cargo tasks stay on <leader>r*; these
+      # run/target-test at the cursor and drive the nvim-dap session.
+      {
+        mode = "n";
+        key = "<leader>rR";
+        action = "<cmd>RustLsp runnables<cr>";
+        options = {
+          silent = true;
+          desc = "Rust runnables";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>rd";
+        action = "<cmd>RustLsp debuggables<cr>";
+        options = {
+          silent = true;
+          desc = "Rust debuggables";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>rT";
+        action = "<cmd>RustLsp testables<cr>";
+        options = {
+          silent = true;
+          desc = "Rust testables";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>re";
+        action = "<cmd>RustLsp explainError<cr>";
+        options = {
+          silent = true;
+          desc = "Rust explain error";
+        };
+      }
+
+      # Git hunks (gitsigns): navigation plus the common hunk actions.
+      {
+        mode = "n";
+        key = "]c";
+        action = mkRaw ''function() require("gitsigns").nav_hunk("next") end'';
+        options = {
+          silent = true;
+          desc = "Next git hunk";
+        };
+      }
+      {
+        mode = "n";
+        key = "[c";
+        action = mkRaw ''function() require("gitsigns").nav_hunk("prev") end'';
+        options = {
+          silent = true;
+          desc = "Previous git hunk";
+        };
+      }
+      {
+        mode = ["n" "x"];
+        key = "<leader>gs";
+        action = mkRaw ''function() require("gitsigns").stage_hunk() end'';
+        options = {
+          silent = true;
+          desc = "Stage hunk";
+        };
+      }
+      {
+        mode = ["n" "x"];
+        key = "<leader>gr";
+        action = mkRaw ''function() require("gitsigns").reset_hunk() end'';
+        options = {
+          silent = true;
+          desc = "Reset hunk";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>gp";
+        action = mkRaw ''function() require("gitsigns").preview_hunk() end'';
+        options = {
+          silent = true;
+          desc = "Preview hunk";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>gb";
+        action = mkRaw ''function() require("gitsigns").blame_line({ full = true }) end'';
+        options = {
+          silent = true;
+          desc = "Blame line";
+        };
+      }
+
+      # Paste over a selection without clobbering the unnamed register; the
+      # black-hole register keeps the yanked text available (:h quote_).
+      {
+        mode = "x";
+        key = "p";
+        action = "\"_dP";
+        options.desc = "Paste without yanking selection";
+      }
+
+      # Esc clears the search highlight (Helix parity); normal mode only, so
+      # terminal mode keeps its own Esc.
+      {
+        mode = "n";
+        key = "<Esc>";
+        action = "<cmd>nohlsearch<cr>";
+        options = {
+          silent = true;
+          desc = "Clear search highlight";
+        };
+      }
     ];
 
     # Group labels: the keymap hints shown while a leader prefix is pending.
@@ -191,6 +322,18 @@ _: {
         {
           __unkeyed-1 = "<leader>r";
           group = "Run";
+        }
+        {
+          __unkeyed-1 = "<leader>s";
+          group = "Search";
+        }
+        {
+          __unkeyed-1 = "<leader>t";
+          group = "Terminal";
+        }
+        {
+          __unkeyed-1 = "<leader>g";
+          group = "Git";
         }
         {
           __unkeyed-1 = "<leader>y";

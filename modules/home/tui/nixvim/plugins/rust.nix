@@ -5,6 +5,17 @@
     # package, the same debugger Helix uses.
     plugins.dap.enable = true;
 
+    # nvim-dap-ui renders scopes/stacks/repl during a session. rustaceanvim
+    # starts sessions but never opens the UI, so dap's listeners below do.
+    plugins.dap-ui.enable = true;
+    extraConfigLua = ''
+      local dap = require("dap")
+      local dapui = require("dapui")
+      dap.listeners.after.event_initialized["dapui"] = function() dapui.open() end
+      dap.listeners.before.event_terminated["dapui"] = function() dapui.close() end
+      dap.listeners.before.event_exited["dapui"] = function() dapui.close() end
+    '';
+
     plugins.rustaceanvim = {
       enable = true;
       # Single-sourced from the shared editor data: the absolute store-path
