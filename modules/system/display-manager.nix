@@ -54,7 +54,13 @@
   #   )
   #   hostConfig.wms);
 in
-  lib.mkIf (hostConfig.wms != [] && !(hostConfig.isWsl or false) && (hostConfig.autoStartSession or true)) {
+  # The gate must read the RESOLVED option (config.hostConfig): the specialArgs
+  # hostConfig is the static lib/hosts.nix registry, which has no
+  # autoStartSession field — `or true` there kept greetd + xserver running on
+  # every host whose host file assigns autoStartSession = false (m920q has
+  # shipped with a greeter on tty1 this whole time). wms/isGui still come from
+  # the static copy; host files assign those from the same lib values.
+  lib.mkIf (hostConfig.wms != [] && !(hostConfig.isWsl or false) && config.hostConfig.autoStartSession) {
     assertions = [
       {
         assertion = hostConfig.isGui;

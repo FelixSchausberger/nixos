@@ -1,7 +1,9 @@
 # Desktop workstation host: AMD gaming/rendering machine with Niri as the only WM.
+# Headless-first profile (same shape as m920q): no display manager runs at boot;
+# the session starts on monitor hotplug through modules.system.sessionOnDemand.
 # Games stream headless via Moonshine — each Moonlight session runs in its own
-# compositor, so no local session or monitor is needed. greetd remains available
-# for occasional console logins.
+# compositor, so no local session or monitor is needed. The tty1 getty stays
+# enabled as the console of last resort.
 {
   inputs,
   lib,
@@ -38,7 +40,20 @@ in {
     inherit (hostInfo) wms;
 
     zellijAutoAttach.sessionName = "desktop";
+
+    # Headless-first like m920q: the GUI stack stays in the base closure, but
+    # no display manager starts a session at boot — the session comes up on
+    # monitor (DP/HDMI) hotplug instead. guiApps stays true: unlike a server,
+    # this host keeps its desktop application set for local sessions and gaming.
+    autoStartSession = false;
+    guiApps = true;
   };
+
+  # Single-compositor guarantee: the on-demand session starts niri.service
+  # itself, so UWSM must not also manage a Wayland session (same as m920q).
+  programs.uwsm.enable = lib.mkForce false;
+
+  modules.system.sessionOnDemand.enable = true;
 
   hardware = {
     keyboard.qmk.enable = true;
@@ -132,8 +147,13 @@ in {
     udpGROInterface = "eno1";
   };
 
-  # Steam Remote Play firewall ports (for direct LAN connections via Steam Link)
-  networking.firewall.allowedTCPPorts = [27036];
+  # Steam Remote Play firewall ports (for direct LAN connections via Steam
+  # Link), plus 9100 for the node exporter the m920q Prometheus scrapes
+  # (job "node-desktop").
+  networking.firewall.allowedTCPPorts = [
+    9100
+    27036
+  ];
   networking.firewall.allowedUDPPorts = [
     27031
     27032
@@ -152,12 +172,12 @@ in {
   modules.system.gaming.enable = true;
   modules.system.emulation.enable = true;
 
-  # Vitals health monitoring, same daemon+CLI as m920q but in GUI mode:
-  # headless=false binds the user daemon to graphical-session.target (Niri)
-  # instead of default.target.
+  # Vitals health monitoring, same daemon+CLI as m920q in headless mode:
+  # headless=true binds the user daemon to default.target, because
+  # graphical-session.target only exists while an on-demand session runs.
   services.vitals = {
     enable = true;
-    headless = false;
+    headless = true;
   };
   # Steam game library on the games pool; registered into libraryfolders.vdf
   # by home activation (skipped while Steam runs, applied on next rebuild)
@@ -183,6 +203,37 @@ in {
 
   # Kill user processes immediately on shutdown instead of waiting 90s
   services.logind.settings.Login.KillUserProcesses = true;
+
+  # Node exporter scraped by the m920q Prometheus (job "node-desktop",
+  # firewall 9100 above). Collector list mirrors the node exporter in
+  # modules/system/homelab/monitoring.nix; no textfile collector here — the
+  # maintenance health-check only writes GC metrics when the directory exists.
+  # hwmon carries the amdgpu power1_average series (GPU watts) unprivileged.
+  services.prometheus.exporters.node = {
+    enable = true;
+    port = 9100;
+    enabledCollectors = [
+      "systemd"
+      "processes"
+      "filesystem"
+      "diskstats"
+      "netdev"
+      "meminfo"
+      "loadavg"
+      "zfs"
+      "hwmon"
+      "thermal_zone"
+    ];
+  };
+
+  # RAPL energy counters ship 0400 root-only (CVE-2020-8694) while the node
+  # exporter runs unprivileged; tmpfiles re-applies the readable mode after
+  # every boot, activating the built-in rapl collector
+  # (node_rapl_package_joules_total, AMD package-0 on this host). Effective on
+  # next boot, or immediately via `systemd-tmpfiles --create`.
+  systemd.tmpfiles.rules = [
+    "z /sys/class/powercap/*/energy_uj 0444 - - -"
+  ];
 
   # System maintenance and monitoring
   modules.system.maintenance = {

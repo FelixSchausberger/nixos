@@ -1,12 +1,16 @@
 # Shared DRM-hotplug logic for on-demand user services.
 #
-# Only HDMI-A connectors are matched: the vkms virtual connector is permanently
-# "connected" and would otherwise keep a session up forever. The debounced stop
-# re-reads the CURRENT state after a window instead of trusting the triggering
-# event, so a reconnect during the window keeps the session while a genuine loss
-# stops it.
+# Only external connectors are matched (HDMI-A and DisplayPort — the projector
+# and the desktop monitor): the vkms virtual connector is permanently
+# "connected" and would otherwise keep a session up forever (writeback and eDP
+# connectors are excluded the same way). The debounced stop re-reads the
+# CURRENT state after a window instead of trusting the triggering event, so a
+# reconnect during the window keeps the session while a genuine loss stops it.
 {pkgs}: rec {
-  displayConnected = "grep -qsx connected /sys/class/drm/*-HDMI-A-*/status";
+  # The subshell grouping is load-bearing: callers negate this as
+  # `! ( a || b )`, and ungrouped `! grep a || grep b` would take the stop
+  # branch whenever HDMI is absent even with a DP display attached.
+  displayConnected = "( grep -qsx connected /sys/class/drm/*-HDMI-A-*/status || grep -qsx connected /sys/class/drm/*-DP-*/status )";
 
   # Start on connect, debounced stop on disconnect. The handlers run as root, so
   # they reach the user manager through machined (`-M user@`).
