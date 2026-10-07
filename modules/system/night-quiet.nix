@@ -3,10 +3,12 @@
 # by how aggressively the CPU is allowed to spike. Lowering the
 # energy_performance_preference (EPP) and disabling turbo during the quiet
 # window drops sustained package temperature, keeping the fan on its slowest
-# curve while services stay fully available - nothing is stopped, only the
-# performance/latency profile changes. Scheduled jobs stay out of the window
-# anyway (quiet-window timer overrides on the host), so the throughput loss
-# during 00:00-09:00 is invisible.
+# curve while services stay fully available - only the CPU power policy
+# changes. The auto-cpufreq tuner is suspended while the window is active so
+# it cannot re-apply EPP and turbo behind this module's back; it resumes at
+# the day boundary. Scheduled jobs stay out of the window anyway (quiet-window
+# timer overrides on the host), so the throughput loss during 00:00-09:00 is
+# invisible.
 {
   lib,
   pkgs,
@@ -19,6 +21,21 @@
   # generic so the module is host-agnostic; writing applies per-CPU state.
   setState = pkgs.writeShellScript "night-quiet-set-state" ''
     set -eu
+
+    # A Persistent timer fires both directions when the host boots after both
+    # edges have passed (the on-disk stamps predate the boot); apply a
+    # transition only when it matches the wall clock, so a daytime boot is not
+    # left in the night profile and a boot inside the window is not flipped to
+    # the day one.
+    now="$(${pkgs.coreutils}/bin/date +%H:%M:%S)"
+    start="${cfg.quietWindow.startTime}"
+    end="${cfg.quietWindow.endTime}"
+    in_window=0
+    if [[ "$start" < "$end" ]]; then
+      if [[ ! "$now" < "$start" ]] && [[ "$now" < "$end" ]]; then in_window=1; fi
+    else
+      if [[ ! "$now" < "$start" ]] || [[ "$now" < "$end" ]]; then in_window=1; fi
+    fi
 
     state="$1"
     case "$state" in
@@ -35,6 +52,20 @@
         exit 2
         ;;
     esac
+
+    if [ "$state" = night ] && [ "$in_window" = 0 ]; then exit 0; fi
+    if [ "$state" = day ] && [ "$in_window" = 1 ]; then exit 0; fi
+
+    ${lib.optionalString config.services.auto-cpufreq.enable ''
+      # auto-cpufreq re-applies EPP and re-enables turbo above 20% CPU load
+      # within seconds, undoing the writes below; suspend it while the window
+      # is active and resume it at the day boundary.
+      if [ "$state" = night ]; then
+        ${pkgs.systemd}/bin/systemctl stop auto-cpufreq.service
+      else
+        ${pkgs.systemd}/bin/systemctl start auto-cpufreq.service
+      fi
+    ''}
 
     for f in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
       if [ -f "$f" ]; then
@@ -85,6 +116,10 @@ in {
   config = lib.mkIf cfg.enable {
     systemd.services.night-quiet-on = {
       description = "Night-quiet CPU policy (EPP ${cfg.nightEpp}, turbo off)";
+      # On a reboot inside the window both units start in the same transaction;
+      # order after auto-cpufreq so the suspend in the script lands once it is
+      # actually up, rather than racing its start.
+      after = lib.optionals config.services.auto-cpufreq.enable ["auto-cpufreq.service"];
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${setState} night";
