@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: let
   cfg = config.modules.system.homelab.caddyProxy;
@@ -33,6 +34,22 @@
     redir /.well-known/caldav ${path}/remote.php/dav permanent
     redir /.well-known/host-meta ${path}/public.php?service=host-meta permanent
     redir /.well-known/host-meta.json ${path}/public.php?service=host-meta-json permanent
+  '';
+
+  # Homepage's background image, shipped for the browser to fetch. Homepage's
+  # config directory is a read-only store path and its public directory
+  # belongs to the package, so the dashboard cannot serve the file itself.
+  homepageWallpaper = pkgs.runCommand "homepage-wallpaper" {} ''
+    install -Dm444 ${../../home/wallpapers/appa_blurred.jpg} $out/appa_blurred.jpg
+  '';
+
+  # Static route for that image. The longer /bg match wins over the Immich
+  # catch-all below, so the route order in extraConfig does not matter.
+  mkWallpaperRoute = ''
+    handle_path /bg* {
+      root * ${homepageWallpaper}
+      file_server
+    }
   '';
 in {
   options.modules.system.homelab.caddyProxy = {
@@ -138,6 +155,7 @@ in {
           + lib.optionalString cfg.grafana (mkKeepRoute "grafana" hl.monitoring.grafanaPort)
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
+          + lib.optionalString hl.homepage.enable mkWallpaperRoute
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.
           + lib.optionalString cfg.nextcloud (mkWellKnownRedirects "/nextcloud")

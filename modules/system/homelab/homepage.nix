@@ -628,7 +628,10 @@ in {
         description = "m920q homelab dashboard";
         theme = "dark";
         color = "slate";
-        headerStyle = "clean";
+        # Boxed wraps the widget strip in one translucent panel that picks up
+        # the card blur below, so the widgets read as glass like the service
+        # cards rather than floating on the background.
+        headerStyle = "boxed";
         inherit layout;
         # Response times render as a plain green/red dot so status reads at a
         # glance next to the widget blocks.
@@ -638,19 +641,27 @@ in {
         # groups, and every group on this page is style: row.
         useEqualHeights = true;
         fullWidth = true;
-        # Glass cards over the gradient in customCSS below - cardBlur alone
+        # Glass cards over the wallpaper background below - cardBlur alone
         # would be invisible against a flat colour.
         cardBlur = "md";
+        # Wallpaper served by the caddy proxy (the module's config directory is
+        # read-only, so the file ships from modules/home/wallpapers instead).
+        # opacity blends the image towards the theme colour: appa_blurred is
+        # bright, and the light card text needs that darkening to stay legible.
+        background = {
+          image = "https://${hl.caddyProxy.tailnetDomain}/bg/appa_blurred.jpg";
+          opacity = 60;
+        };
         target = "_blank";
         quicklaunch = {
           searchDescriptions = true;
           provider = "duckduckgo";
         };
       };
-      # The config directory is read-only, so a background image cannot ship
-      # with the module; a gradient stands in for one and is what the card
-      # blur has to work against. The global stylesheet paints a flat
-      # background-color on html and body, hence !important.
+      # Fallback for the wallpaper: if the caddy route is unreachable the
+      # theme-colour overlay above this sits on the gradient instead of the
+      # image. The global stylesheet paints a flat background-color on html
+      # and body, hence !important.
       customCSS = ''
         html, body {
           background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #0f172a 100%) !important;
