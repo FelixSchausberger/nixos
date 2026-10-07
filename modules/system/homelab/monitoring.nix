@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -38,11 +39,11 @@
           preferred_ip_protocol: ip4
   '';
 
-  # Blackbox probes carry the probed endpoint as the scrape target; these
-  # relabels move it to __param_target, record it as instance, and point the
-  # actual scrape at the local blackbox exporter. Shared by the HTTP, DNS and
-  # ICMP jobs.
-  blackboxRelabel = [
+  # Probes carry the probed endpoint as the scrape target; these relabels move
+  # it to __param_target, record it as instance, and point the actual scrape
+  # at the local prober exporter (blackbox 9115, json 7979). Shared by the
+  # HTTP, DNS, ICMP and wall-power jobs.
+  proberRelabel = port: [
     {
       source_labels = ["__address__"];
       target_label = "__param_target";
@@ -53,9 +54,30 @@
     }
     {
       target_label = "__address__";
-      replacement = "127.0.0.1:9115";
+      replacement = "127.0.0.1:${toString port}";
     }
   ];
+
+  hasWallPlugs = cfg.wallPower.plugs != {};
+
+  # Wall-power measurement: the Shelly plug meters the whole machine at the
+  # outlet over local HTTP RPC (no cloud). apower is the instantaneous WALL
+  # draw in watts, aenergy.total the cumulative Wh counter — both are wall
+  # power by definition; CPU/GPU series come from the node exporter and must
+  # never be labelled as system power.
+  shellyConfig = pkgs.writeText "json-exporter-shelly.yml" ''
+    modules:
+      default:
+        metrics:
+          - name: wall_power_watts
+            type: gauge
+            help: Wall power metered by the Shelly plug (instantaneous)
+            path: '{ .apower }'
+          - name: wall_energy_wh_total
+            type: counter
+            help: Cumulative wall energy counter of the Shelly plug since power-on (Wh)
+            path: '{ .aenergy.total }'
+  '';
 in {
   options.modules.system.homelab.monitoring = {
     enable = lib.mkEnableOption "Prometheus + node_exporter + Grafana monitoring stack";
@@ -90,6 +112,23 @@ in {
           Monitor a Fritz!Box router via the fritz exporter (scrape job,
           WAN-down alert rule, and fritzbox/password secret). Disable on
           hosts without a Fritz!Box on the LAN.
+        '';
+      };
+    };
+    wallPower = {
+      plugs = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = {};
+        example = {
+          m920q = "192.168.178.21";
+          desktop = "192.168.178.22";
+        };
+        description = ''
+          Shelly wall-power plugs to scrape through the json exporter, as
+          name to LAN-IP pairs (DHCP-reserved in the Fritz!Box, cloud disabled).
+          Feeds the wall-power side of the power benchmark; CPU/GPU series
+          stay with the node exporter. Empty until the plugs are provisioned,
+          which disables the json exporter and the wall-power job entirely.
         '';
       };
     };
@@ -183,6 +222,13 @@ in {
           }
         ];
       };
+      # Local JSON scraping for the Shelly wall-power plugs (apower /
+      # aenergy.total over LAN RPC). Only runs once plugs are configured.
+      exporters.json = mkIf hasWallPlugs {
+        enable = true;
+        port = 7979;
+        configFile = shellyConfig;
+      };
 
       scrapeConfigs = let
         hasAppTargets =
@@ -235,6 +281,19 @@ in {
             static_configs = [
               {
                 targets = ["127.0.0.1:${toString cfg.nodeExporterPort}"];
+              }
+            ];
+          }
+          {
+            # The desktop host's node exporter over the LAN. A separate job
+            # from "node" on purpose: the desktop is regularly powered off, and
+            # NodeExporterDown selects job="node" — an intentional off is not
+            # an incident and must not page.
+            job_name = "node-desktop";
+            scrape_interval = "30s";
+            static_configs = [
+              {
+                targets = ["${inputs.self.lib.hosts.desktop.ip}:9100"];
               }
             ];
           }
@@ -297,7 +356,7 @@ in {
             metrics_path = "/probe";
             params.module = ["http_2xx"];
             static_configs = blackboxProbes;
-            relabel_configs = blackboxRelabel;
+            relabel_configs = proberRelabel 9115;
           }
         ]
         ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
@@ -312,7 +371,7 @@ in {
                 labels.probe = "adguard-dns";
               }
             ];
-            relabel_configs = blackboxRelabel;
+            relabel_configs = proberRelabel 9115;
           }
         ]
         ++ lib.optionals cfg.fritzbox.enable [
@@ -327,7 +386,25 @@ in {
                 labels.probe = "wan";
               }
             ];
-            relabel_configs = blackboxRelabel;
+            relabel_configs = proberRelabel 9115;
+          }
+        ]
+        ++ lib.optionals hasWallPlugs [
+          {
+            # Shelly plugs over local HTTP RPC: the probe target is the full
+            # endpoint URL, fetched by the json exporter through the prober
+            # relabels above. The "plug" label names the measured machine
+            # (name from the wallPower.plugs attribute).
+            job_name = "wall-power";
+            scrape_interval = "30s";
+            metrics_path = "/probe";
+            static_configs =
+              lib.mapAttrsToList (name: ip: {
+                targets = ["http://${ip}/rpc/Switch.GetStatus?id=0"];
+                labels.plug = name;
+              })
+              cfg.wallPower.plugs;
+            relabel_configs = proberRelabel config.services.prometheus.exporters.json.port;
           }
         ];
     };
@@ -346,6 +423,16 @@ in {
       enable = true;
       configFile = blackboxConfig;
     };
+
+    # RAPL energy counters ship 0400 root-only (CVE-2020-8694) while the node
+    # exporter runs unprivileged; tmpfiles re-applies the readable mode after
+    # every boot, activating the built-in rapl collector
+    # (node_rapl_package_joules_total). The glob covers every powercap zone
+    # (package/core/dram/uncore on Intel, package-0/core on AMD). Effective on
+    # next boot, or immediately via `systemd-tmpfiles --create`.
+    systemd.tmpfiles.rules = [
+      "z /sys/class/powercap/*/energy_uj 0444 - - -"
+    ];
 
     # Postgres is only deployed as Nextcloud's database backend; scrape the
     # exporter (and alert on it) only when that stack exists.
