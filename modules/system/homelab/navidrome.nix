@@ -62,6 +62,10 @@ in {
       };
     };
 
+    # Precomputed Subsonic token digest (md5(password + salt)) for the
+    # Homepage widget; the account password itself never leaves sops.
+    sops.secrets."navidrome/token" = {};
+
     # Navidrome reads the library as its own system user, which is neither the
     # file owner nor (historically) in the owner's group, so a track imported
     # with restrictive modes (0740 schausberger:schausberger) fails every play

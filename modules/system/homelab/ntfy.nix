@@ -30,6 +30,12 @@ in {
         cache-file = "/per/var/lib/ntfy-sh/cache-file.db";
         attachment-cache-dir = "/per/var/lib/ntfy-sh/attachments";
 
+        # A week of history instead of the 12h default: the dashboard
+        # widget renders the newest homelab-alerts message, real traffic
+        # is only a few messages a day, and the default cache leaves the
+        # card empty most of the time.
+        cache-duration = "168h";
+
         auth-default-access = "read-write";
       };
     };
