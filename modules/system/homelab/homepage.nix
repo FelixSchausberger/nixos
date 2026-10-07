@@ -487,11 +487,9 @@ in {
     users.groups.homepage-dashboard = {};
 
     systemd.services.homepage-dashboard = {
-      # The widget credential file is planted by sops-nix at activation; the
-      # unit fails to start if EnvironmentFile points at a path that does not
-      # exist yet, so it waits for the installer (same pattern as garmin.nix).
-      after = ["sops-nix.service"];
-      wants = ["sops-nix.service"];
+      # The widget credential file is planted by the sops activation script,
+      # which completes before any unit starts, so the EnvironmentFile is in
+      # place without an explicit ordering.
       serviceConfig = {
         DynamicUser = lib.mkForce false;
         User = lib.mkForce "homepage-dashboard";

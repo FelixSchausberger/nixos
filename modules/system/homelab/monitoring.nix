@@ -803,10 +803,7 @@ in {
     };
 
     systemd.services.grafana = {
-      after = [
-        "sops-nix.service"
-        "prometheus.service"
-      ];
+      after = ["prometheus.service"];
       wants = ["prometheus.service"];
       unitConfig = {
         StartLimitBurst = 10;

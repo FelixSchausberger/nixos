@@ -122,12 +122,12 @@ in {
     };
 
     # Systemd service to create ESET-enhanced CA bundle at boot
-    # Runs after sops secrets are available, before nix-daemon starts
+    # Secrets are installed during activation, which completes before any unit
+    # starts, so this only has to precede nix-daemon
     systemd.services.eset-ca-bundle = {
       description = "Create CA bundle with ESET SSL Filter cert";
       wantedBy = ["multi-user.target"];
       before = ["nix-daemon.service"];
-      after = ["sops-nix.service"];
 
       serviceConfig = {
         Type = "oneshot";

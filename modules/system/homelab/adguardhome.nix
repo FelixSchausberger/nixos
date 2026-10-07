@@ -203,7 +203,7 @@
 
     systemd.services.adguard-exporter = {
       description = "AdGuard Home Prometheus exporter";
-      after = ["adguardhome.service" "sops-nix.service"];
+      after = ["adguardhome.service"];
       wants = ["adguardhome.service"];
       wantedBy = ["multi-user.target"];
       serviceConfig = {
