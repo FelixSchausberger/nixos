@@ -68,6 +68,10 @@ in {
     # Config, metadata and transcoding scratch live in /var/lib/jellyfin, which
     # is persisted to /per (NVMe rpool). The media library itself stays on the
     # SMR SATA dpool, where only sequential reads occur.
+    # Homepage widget credential, consumed as a sops template placeholder
+    # in homepage.nix; nothing reads the file, so it stays root-owned.
+    sops.secrets."jellyfin/api-key" = {};
+
     environment.persistence."/per".directories = [
       "/var/lib/jellyfin"
     ];
