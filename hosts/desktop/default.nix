@@ -58,11 +58,19 @@ in {
   hardware = {
     keyboard.qmk.enable = true;
 
+    # DDC/CI brightness control for the external monitors (no internal
+    # backlight): exposes /dev/i2c-* for noctalia's ddcutil backend.
+    i2c.enable = true;
+
     profiles.amdGpu = {
       enable = true;
       variant = "desktop";
     };
   };
+
+  # i2c.enable grants /dev/i2c-* to the i2c group; the on-demand session
+  # has no local seat, so membership is required for DDC brightness access.
+  users.users.${inputs.self.lib.user}.extraGroups = ["i2c"];
 
   # Wake-on-LAN on the wired ethernet interface. Wake is LAN-local: magic
   # packets cannot traverse Tailscale (tailscale/tailscale#306), so remote
