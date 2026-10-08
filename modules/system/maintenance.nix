@@ -143,15 +143,12 @@
                 secondaryFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
               })}
 
-            # Check for failed services
+            # Failed services are alerted by the Prometheus ServiceFailed rule
+            # (node_systemd_unit_state); this stays as a local journal record.
             failed_services=$(${pkgs.systemd}/bin/systemctl --failed --no-legend | wc -l)
             if [[ $failed_services -gt 0 ]]; then
-              failed_detail=$(${pkgs.systemd}/bin/systemctl --failed --no-legend)
               echo "WARNING: $failed_services failed services detected"
-              echo "$failed_detail"
-              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "Failed Services on $host" "high" "warning" "$failed_detail"
-            ''}
+              ${pkgs.systemd}/bin/systemctl --failed --no-legend
             fi
 
             # A loaded timer with no next elapse never fires again. Automated
@@ -223,36 +220,28 @@
               fi
             done
 
-            # Disk space: every persistent filesystem, not just / and /nix.
-            # m920q fills datasets /per and /home long before / or /nix, and
-            # on ZFS pool exhaustion zeroed avail shows up on all datasets
-            # at once (2026-09-15). >=95% is urgent every run; 90% warns.
+            # Disk space is alerted by the Prometheus FilesystemFull/Warn rules;
+            # this stays as a local journal record. Every persistent filesystem
+            # is checked, not just / and /nix: m920q fills datasets /per and
+            # /home first, and on ZFS pool exhaustion zeroed avail shows up on
+            # all datasets at once (2026-09-15).
             filesystems="$(df -B1 -l --output=fstype,pcent,avail,target | grep -E '^(zfs|ext[234]|btrfs|xfs|f2fs|vfat)[[:space:]]+')"
             while IFS= read -r line; do
               read -r pcent avail mount < <(${pkgs.gawk}/bin/awk '{print $2,$3,$4}' <<< "$line")
               # df's pcent field carries the sign ("67%"); strip it so the -ge
-              # comparisons below are arithmetic, not a bash syntax error.
+              # comparison below is arithmetic, not a bash syntax error.
               pcent="''${pcent%\%}"
               # ZFS exposes old snapshots as mountable dfs (read-only views
-              # at <dataset>/.zfs/snapshot); they share the same pool and
-              # must not double-alert the live filesystem.
+              # at <dataset>/.zfs/snapshot); they share the same pool and must
+              # not double-count the live filesystem.
               if [[ "$mount" == *".zfs/"* ]]; then continue; fi
               if [[ $pcent -ge 90 ]]; then
                 avail_gib=$((avail / (1024 * 1024 * 1024)))
-                msg="$mount is $pcent% full ($avail_gib GiB free)"
                 if [[ $pcent -ge 95 ]]; then
-                  echo "ERROR: $msg"
-                  prio="urgent"; tags="warning,rotating_light"
+                  echo "ERROR: $mount is $pcent% full ($avail_gib GiB free)"
                 else
-                  echo "WARNING: $msg"
-                  prio="high"; tags="warning"
+                  echo "WARNING: $mount is $pcent% full ($avail_gib GiB free)"
                 fi
-                if [[ "$mount" == /nix ]]; then
-                  msg="$msg. Consider running: clean"
-                fi
-                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Disk Usage on $host" "$prio" "$tags" "$msg"
-            ''}
               fi
             done <<< "$filesystems"
 
@@ -266,19 +255,18 @@
               echo "INFO: $generation_count system generations present (consider cleanup)"
             fi
 
-            # Check memory usage
+            # Memory pressure is alerted by the Prometheus MemoryPressure rule
+            # (node_memory_MemAvailable_bytes); this stays as a journal record.
             mem_usage=$(${pkgs.procps}/bin/free | grep Mem | ${pkgs.gawk}/bin/awk '{printf "%.0f", $3/$2 * 100.0}')
             if [[ $mem_usage -gt 90 ]]; then
               echo "WARNING: Memory usage is $mem_usage%"
-              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High Memory Usage on $host" "high" "warning" "Memory usage is $mem_usage%"
-            ''}
             fi
 
-            # CPU package temperature: >=90 C indicates cooling failure (fan or
-            # dust). Hardware still throttles at Tjmax (~100 C), so this is an
-            # early warning below the kernel's "high" mark. Only x86_pkg_temp
-            # exists on Intel hosts; other platforms are silently skipped.
+            # CPU package temperature is alerted by the Prometheus CpuTemperature
+            # rule (node_thermal_zone_temp); this stays as a journal record.
+            # >=90 C indicates cooling failure (fan or dust); hardware still
+            # throttles at Tjmax (~100 C), so this is an early warning. Only
+            # x86_pkg_temp exists on Intel hosts; other platforms are skipped.
             pkg_temp=0
             for zone in /sys/class/thermal/thermal_zone*; do
               if [[ "$(<"$zone/type")" == x86_pkg_temp ]]; then
@@ -288,9 +276,6 @@
             done
             if [[ $pkg_temp -ge 90000 ]]; then
               echo "WARNING: CPU package temperature is $((pkg_temp / 1000)) C"
-              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "High CPU Temperature on $host" "urgent" "warning" "CPU package at $((pkg_temp / 1000)) C, check cooling"
-            ''}
             fi
 
             # Kernel update pending (deployed but not booted): reboot required. On

@@ -44,7 +44,7 @@
     "config-health"
     "garmin"
   ];
-  rule_count = 16;
+  rule_count = 19;
   rules = [
     {
       alert = "NextcloudDown";
@@ -120,6 +120,21 @@
       alert = "NixdGcStorm";
       expr = "nixd_gc_runs_last_90min > 3";
       priority = "high";
+    }
+    {
+      alert = "ServiceFailed";
+      expr = "node_systemd_unit_state{state=\"failed\"} == 1";
+      priority = "high";
+    }
+    {
+      alert = "MemoryPressure";
+      expr = "node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1";
+      priority = "high";
+    }
+    {
+      alert = "CpuTemperature";
+      expr = "node_thermal_zone_temp{type=\"x86_pkg_temp\"} >= 90";
+      priority = "urgent";
     }
     {
       alert = "PostgresDown";
