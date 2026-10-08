@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Emit deploy-time closure metrics for the Prometheus node_exporter textfile
-# collector after a system generation is activated.
+# collector when a system generation is activated.
 #
-# Runs from the comin post-deployment hook as root, which is what lets it write
-# the textfile directory the node exporter reads (owned by node-exporter). The
-# emitter never fails a deployment: a missing generation link, an unsizeable
-# store path or an unwritable directory logs to the journal and exits 0.
+# Runs from the monitoring activation script as root, so it fires for every
+# `nh os switch`, comin switch and `switch-to-configuration test`, and on boot.
+# Root is what lets it write the textfile directory the node exporter reads
+# (owned by node-exporter). The emitter never fails an activation: a missing
+# generation link, an unsizeable store path or an unwritable directory logs to
+# the journal and exits 0.
 #
 # Series carry only a host label so the closure-size series stays continuous
 # across deploys. The deployed revision is exposed once as
@@ -23,6 +25,7 @@ profile="${COMIN_PROFILE:-/nix/var/nix/profiles/system}"
 host="${COMIN_HOSTNAME:-$(cat /etc/hostname 2>/dev/null || echo unknown)}"
 rev="${COMIN_GIT_SHA:-unknown}"
 out_dir="${NIX_DEPLOY_METRICS_DIR:-/var/lib/node-exporter/textfile}"
+out_file="$out_dir/nix_deploy.prom"
 
 note() { printf 'emit-deploy-metrics: %s\n' "$*" >&2; }
 
@@ -43,6 +46,14 @@ fi
 gen="${target//[^0-9]/}"
 if [[ -z "$gen" ]]; then
 	note "cannot parse a generation number from '$target'"
+	exit 0
+fi
+
+# Activation runs on every boot as well as every switch, so skip the closure
+# walk when this generation is already recorded for this host; only a new
+# generation changes any value, and boot activation must stay fast.
+if [[ -f "$out_file" ]] && grep -q "^nixos_deploy_generation{host=\"$host\"} $gen\$" "$out_file" 2>/dev/null; then
+	note "generation $gen already recorded for $host; nothing to emit"
 	exit 0
 fi
 
@@ -93,6 +104,10 @@ if ! tmp_out="$(mktemp "$out_dir/.nix_deploy.prom.XXXXXX" 2>/dev/null)"; then
 	exit 0
 fi
 
+# The profile symlink is rewritten on each activation, so its mtime is the
+# deploy time; using it (not now) keeps a reboot from looking like a deploy.
+deploy_ts="$(stat -c %Y "$profile" 2>/dev/null || date +%s)"
+
 {
 	printf '# HELP nixos_deploy_info Deployed system revision and generation.\n'
 	printf '# TYPE nixos_deploy_info gauge\n'
@@ -103,9 +118,9 @@ fi
 	printf '# HELP nixos_deploy_closure_size_bytes Closure size of the newly activated generation.\n'
 	printf '# TYPE nixos_deploy_closure_size_bytes gauge\n'
 	printf 'nixos_deploy_closure_size_bytes{host="%s"} %s\n' "$host" "$cur_size"
-	printf '# HELP nixos_deploy_timestamp_seconds Unix time these deploy metrics were emitted.\n'
+	printf '# HELP nixos_deploy_timestamp_seconds Unix time the activated generation was created.\n'
 	printf '# TYPE nixos_deploy_timestamp_seconds gauge\n'
-	printf 'nixos_deploy_timestamp_seconds{host="%s"} %s\n' "$host" "$(date +%s)"
+	printf 'nixos_deploy_timestamp_seconds{host="%s"} %s\n' "$host" "$deploy_ts"
 	if [[ -n "$delta" ]]; then
 		printf '# HELP nixos_deploy_closure_delta_bytes Closure-size change versus the previous generation; positive is growth.\n'
 		printf '# TYPE nixos_deploy_closure_delta_bytes gauge\n'
