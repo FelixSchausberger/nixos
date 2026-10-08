@@ -269,7 +269,11 @@
         },
         "showPercentChange": false,
         "textMode": "auto",
-        "wideLayout": true
+        "wideLayout": true,
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        }
       },
       "pluginVersion": "11.5.2",
       "targets": [
