@@ -129,6 +129,31 @@ def parse_events(ics_text: str) -> list[dict]:
             try:
                 from dateutil.rrule import rrulestr
 
+                # dateutil rejects a naive UNTIL when DTSTART is timezone-aware
+                # ("RRULE UNTIL values must be specified in UTC ..."). Google
+                # emits a bare date for all-day recurring events, which this
+                # script normalizes to aware-UTC midnight above. Lift such an
+                # UNTIL to the same instant: a date becomes the inclusive end of
+                # that day in UTC, a naive datetime is taken in DTSTART's zone.
+                until = rrule.get("UNTIL")
+                if until and start_dt.tzinfo is not None:
+                    value = until[0] if isinstance(until, list) else until
+                    if isinstance(value, datetime):
+                        if value.tzinfo is None:
+                            value = value.replace(tzinfo=start_dt.tzinfo)
+                        value = value.astimezone(timezone.utc)
+                    else:
+                        value = datetime(
+                            value.year,
+                            value.month,
+                            value.day,
+                            23,
+                            59,
+                            59,
+                            tzinfo=timezone.utc,
+                        )
+                    rrule["UNTIL"] = [value]
+
                 # rrulestr needs a naive or aware dt consistent with the rule.
                 rule = rrulestr(rrule.to_ical().decode(), dtstart=start_dt)
                 occurrences = list(rule.between(lo, hi, inc=True))
