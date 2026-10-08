@@ -13,7 +13,12 @@
           enable = true;
           editor = true; # Allow recovery by passing init=/bin/sh
           consoleMode = "max";
-          configurationLimit = 20;
+          # The ESP is small (~500MiB on the fleet) and each generation's
+          # kernel + initrd reaches ~80MiB on GPU hosts, so a long menu cannot
+          # fit: once the partition is full the installer cannot write the new
+          # entry and no generation becomes bootable. mkDefault so a host with
+          # more ESP space can raise it.
+          configurationLimit = lib.mkDefault 4;
 
           # Boot counting: if a new generation fails to boot to a usable state
           # (drops to emergency/rescue), systemd-boot auto-rolls back to the
