@@ -168,15 +168,12 @@ in {
         After = ["network.target"];
       };
       Service = {
-        ExecStart = [
-          "${opencode2}/bin/opencode2"
-          "serve"
-          "--service"
-          "--hostname"
-          "127.0.0.1"
-          "--port"
-          (toString shared.webPort)
-        ];
+        # A single command string, never a multi-element argv list: Home
+        # Manager renders one systemd ExecStart= line per list element, and
+        # systemd rejects a Type=simple unit with more than one ("more than
+        # one ExecStart= setting"). The option coerces the string into a
+        # one-element list, which is exactly what the unit needs.
+        ExecStart = "${opencode2}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
         Environment = [
           "PATH=${config.home.profileDirectory}/bin:/run/wrappers/bin:/run/current-system/sw/bin"
         ];
