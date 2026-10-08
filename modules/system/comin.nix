@@ -20,24 +20,28 @@
 }: let
   cfg = config.modules.system.comin;
 
-  # Detector bundle: exactly the two files the post-deploy detector needs.
+  # Post-deployment bundle: only the files the hook needs, so the whole
+  # scripts directory does not ship unrelated tooling into every closure.
   # detect-downgrades.sh sources its sibling lib-downgrade-compare.sh at
-  # runtime via BASH_SOURCE, so both must land in the store together — but the
-  # whole scripts directory would ship unrelated tooling into every closure.
-  detectorBundle = pkgs.runCommand "comin-downgrade-detector" {} ''
+  # runtime via BASH_SOURCE, so both must land in the store together.
+  postDeployBundle = pkgs.runCommand "comin-post-deployment-scripts" {} ''
     mkdir -p $out
     cp ${../../tools/scripts/detect-downgrades.sh} $out/detect-downgrades.sh
     cp ${../../tools/scripts/lib-downgrade-compare.sh} $out/lib-downgrade-compare.sh
+    cp ${../../tools/scripts/emit-deploy-metrics.sh} $out/emit-deploy-metrics.sh
   '';
 
   # Wrapper bridges comin's postDeploymentCommand hook (absolute path, no
-  # arguments) to the repo detector script and its ntfy configuration.
+  # arguments) to the repo scripts and their ntfy configuration. Deploy metrics
+  # run first and non-fatally: a textfile the node exporter rejects must never
+  # suppress the downgrade alert.
   postDeploy = pkgs.writeShellApplication {
     name = "comin-post-deployment";
     runtimeInputs = with pkgs; [coreutils curl nix];
     text = ''
       export COMIN_NTFY_URL=${lib.escapeShellArg (toString cfg.alertNtfyUrl)}
-      exec ${pkgs.bash}/bin/bash ${detectorBundle}/detect-downgrades.sh
+      ${pkgs.bash}/bin/bash ${postDeployBundle}/emit-deploy-metrics.sh || true
+      exec ${pkgs.bash}/bin/bash ${postDeployBundle}/detect-downgrades.sh
     '';
   };
 in {

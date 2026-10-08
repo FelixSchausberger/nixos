@@ -8,6 +8,11 @@
     type = "webhook";
     url = "http://127.0.0.1:2586/";
   };
+  dashboard_providers = [
+    "fritz"
+    "config-health"
+    "garmin"
+  ];
   expected_rules = [
     "fritzbox-wan-down"
     "wan-unreachable"
@@ -179,4 +184,17 @@
       uid = "filesystem-warning";
     }
   ];
+  scrape_jobs = [
+    "node"
+    "node-desktop"
+    "postgres"
+    "vitals"
+    "fritz"
+    "nextcloud-exporter"
+    "adguard"
+    "blackbox"
+    "blackbox-dns"
+    "blackbox-icmp"
+  ];
+  vitals_scrape_enabled = true;
 }

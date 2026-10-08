@@ -322,6 +322,22 @@ in {
             ];
           }
         ]
+        ++ lib.optionals (config.services.vitals.enable or false) [
+          {
+            # vitals-daemon runs as a per-user service on loopback with no
+            # NixOS option to move its port (default 8080, from its own
+            # config.toml), so the address is pinned here. Scraped only where
+            # the daemon is enabled; Prometheus reaches the user daemon over
+            # loopback regardless of which user manager owns it.
+            job_name = "vitals";
+            scrape_interval = "30s";
+            static_configs = [
+              {
+                targets = ["127.0.0.1:8080"];
+              }
+            ];
+          }
+        ]
         ++ lib.optionals cfg.fritzbox.enable [
           {
             job_name = "fritz";
@@ -517,6 +533,15 @@ in {
               type = "file";
               disableDeletion = true;
               options.path = ./fritz-dashboard.json;
+            }
+            {
+              # Deploy-time closure metrics (emit-deploy-metrics.sh) and the
+              # vitals health score. Always provisioned: the panels stay empty
+              # until the first deploy or on hosts without the vitals daemon.
+              name = "config-health";
+              type = "file";
+              disableDeletion = true;
+              options.path = ./config-health-dashboard.json;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.garmin.enable [
