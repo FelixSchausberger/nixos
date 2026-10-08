@@ -56,6 +56,27 @@
     };
   };
 
+  # A stable machine-id. Under an ephemeral root systemd regenerates
+  # /etc/machine-id every boot, so journald writes each boot into a fresh
+  # /var/log/journal/<machine-id>/ directory and `journalctl` reads only the
+  # current one: `journalctl -b -1` finds nothing and an incident's logs look
+  # lost after a reboot even though /var/log persists. Other sd-id128 consumers
+  # (DHCP DUID, application state) churn the same way.
+  #
+  # Declared as an /etc entry, not an impermanence `files` bind mount: the bind
+  # mount is known to break systemd-machine-id-commit.service, which refuses a
+  # transient id that is "not on a temporary file system"
+  # (nix-community/impermanence#229). Activation restores this symlinked entry
+  # from the store on every boot - in the initrd here, before stage-2 systemd -
+  # so PID1 finds it and never generates a transient id.
+  #
+  # Derived from the hostname: stable and unique per host, disclosing nothing
+  # beyond the (already public) hostname.
+  environment.etc."machine-id" = {
+    mode = "0444";
+    text = builtins.substring 0 32 (builtins.hashString "sha256" "machine-id:${hostConfig.hostName}");
+  };
+
   environment.persistence."/per" = {
     hideMounts = true;
 
