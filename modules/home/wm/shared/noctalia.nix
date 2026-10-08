@@ -35,10 +35,38 @@ in {
       # module exposes no target override, so ordering relies on the
       # graphical session being up.
       systemd.enable = true;
-      # Minimal settings: upstream defaults apply. checkConfig (default true)
-      # fails the build on schema drift, which is the desired trial signal.
-      # Theming stays Nix-owned via future [theme.templates].
-      settings = {};
+      # Wiring for the features noctalia takes over from the custom stack.
+      # Theming stays Nix-owned (stylix writes settings.theme/palettes).
+      # checkConfig (default true) fails the build on schema drift.
+      settings = {
+        # Blurred wallpaper behind the niri overview. Noctalia only creates
+        # the noctalia-backdrop surface when this is on (upstream default:
+        # off); the place-within-backdrop layer-rule is wired below.
+        backdrop.enabled = true;
+
+        # Idle management replaced stasis for full-layer shells (stasis is
+        # gated off for noctalia). Mirrors the custom stack: lock at 5 min,
+        # blank the screen later. Locking runs through logind, which noctalia
+        # subscribes to, so the Super+Alt+L bind keeps working.
+        idle.behavior.lock = {
+          enabled = true;
+          timeout = 300;
+          action = "lock";
+        };
+        idle.behavior."screen-off" = {
+          enabled = true;
+          timeout = 660;
+          action = "screen_off";
+        };
+
+        # Noctalia replaced wl-gammarelay for full-layer shells.
+        nightlight.enabled = true;
+
+        # External monitors have no backlight; brightness keys and the
+        # control-center widget need the DDC/CI backend. Pairs with
+        # hardware.i2c.enable on the host.
+        brightness.enable_ddcutil = true;
+      };
     };
 
     # Niri-side integration per upstream compositor guide.
@@ -47,7 +75,7 @@ in {
     # attribute-set option, so split definitions conflict.
     programs.niri.settings = lib.mkIf niri {
       # Dedicated backdrop layer sits inside Niri's overview backdrop.
-      # Requires [niri.backdrop] enabled in noctalia settings (default).
+      # Requires [backdrop] enabled in the noctalia settings above.
       layer-rules = [
         {
           matches = [{namespace = "^noctalia-backdrop";}];
