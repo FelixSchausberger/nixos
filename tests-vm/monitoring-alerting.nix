@@ -2,9 +2,10 @@
 #
 # Boots Prometheus + Alertmanager + alertmanager-ntfy + ntfy-sh with the
 # production monitoring module, then verifies the full alert path that page
-# delivery depends on: stopping an exporter must produce a properly formatted
-# ntfy publish (title naming the host, priority from the alert's `priority`
-# label, tags), and restarting it must produce the matching resolve message.
+# delivery depends on: a failed unit and a stopped exporter must each produce a
+# properly formatted ntfy publish (title naming the host, priority from the
+# alert's `priority` label, tags), and recovery must produce the matching
+# resolve message.
 # This is the only layer that catches a broken rule file, a wrong Alertmanager
 # receiver, or a bridge/template regression that eval-level tests cannot see.
 #
@@ -166,6 +167,12 @@
       };
       modules.system.homelab.ntfy.enable = true;
 
+      # Enables the maintenance-gated alert rules (NixdGcStorm, ServiceFailed,
+      # MemoryPressure, CpuTemperature) so the failed-unit path below is
+      # exercised. monitoring.nix only reads the flag; maintenance.nix itself
+      # is not imported in this VM.
+      modules.system.maintenance.enable = true;
+
       services.postgresql.enable = true;
       # The postgres exporter (and its PostgresDown alert rule) is gated on
       # nextcloud.enable in monitoring.nix since 53e6db1. Enable the stub
@@ -211,6 +218,16 @@
           mkdir -p /var/lib/monitoring-test-status
           echo '{"status":"ok"}' > /var/lib/monitoring-test-status/status.php
         '';
+      };
+
+      # A unit that always fails, used to exercise the ServiceFailed rule and
+      # its resolved counterpart. Not wanted by anything, so it stays inactive
+      # until the test starts it.
+      systemd.services.fail-me = {
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.coreutils}/bin/false";
+        };
       };
 
       environment.systemPackages = with pkgs; [
@@ -259,21 +276,55 @@
     names = sorted(
         r["name"] for g in groups for r in g["rules"] if r["type"] == "alerting"
     )
-    # nextcloud.enable is on (the postgres exporter and its rule depend on it)
-    # so NextcloudDown and PostgresDown load too. The status.php stub answers
-    # the Nextcloud probe, keeping NextcloudDown quiet.
+    # maintenance.enable adds the maintenance-gated rules (CpuTemperature,
+    # MemoryPressure, NixdGcStorm, ServiceFailed); nextcloud.enable adds
+    # NextcloudDown and PostgresDown. The status.php stub answers the Nextcloud
+    # probe, keeping NextcloudDown quiet.
     assert names == [
+        "CpuTemperature",
         "FilesystemFull",
         "FilesystemWarn",
+        "MemoryPressure",
         "NextcloudDown",
+        "NixdGcStorm",
         "NodeExporterDown",
         "PostgresDown",
+        "ServiceFailed",
     ], f"unexpected loaded rules: {names}"
 
     machine.sleep(150)
     print("subtest: healthy system sends no notifications")
     count = len(ntfy_messages())
     assert count == 0, f"expected no notifications on healthy system, got {count}"
+
+    print("subtest: failed unit produces a firing push resolved on recovery")
+    machine.succeed("systemctl start fail-me.service || true")
+
+    def is_service_failed():
+        return any(
+            m.get("title", "").startswith("ServiceFailed") for m in ntfy_messages()
+        )
+
+    poll_until(is_service_failed, "ServiceFailed notification")
+    failed = [
+        m
+        for m in ntfy_messages()
+        if m.get("title", "").startswith("ServiceFailed")
+    ][-1]
+    # ServiceFailed carries priority=high, so ntfy priority 4.
+    assert failed["title"].startswith("ServiceFailed on "), failed["title"]
+    assert failed["priority"] == 4, f"expected priority 4, got {failed['priority']}"
+    assert "rotating_light" in failed["tags"], failed["tags"]
+
+    machine.succeed("systemctl reset-failed fail-me.service")
+
+    def is_service_recovered():
+        return any(
+            m.get("title", "").startswith("Resolved: ServiceFailed")
+            for m in ntfy_messages()
+        )
+
+    poll_until(is_service_recovered, "ServiceFailed resolve notification")
 
     print("subtest: stopped exporter produces a formatted firing push")
     machine.systemctl("stop prometheus-node-exporter.service")
