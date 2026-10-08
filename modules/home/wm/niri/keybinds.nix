@@ -39,6 +39,70 @@
     "Mod+${modifier}${keys.vim}".action.${actionName} = {};
     "Mod+${modifier}${keys.arrow}".action.${actionName} = {};
   };
+
+  # Hardware/media keys. niri exposes no volume or brightness actions, so the
+  # active shell handles them: noctalia/dms through their IPC, avizo for the
+  # custom/wayle stack. Transport keys use playerctl under every shell.
+  # Mirrors modules/home/wm/hyprland/keybinds.nix so the two stay aligned.
+  pick = noctalia: dms: custom:
+    if shellIsNoctalia
+    then noctalia
+    else if shellIsDms
+    then dms
+    else custom;
+
+  hwBinds =
+    {
+      "XF86AudioRaiseVolume".action.spawn =
+        pick
+        ["noctalia" "msg" "volume-up"]
+        ["dms" "ipc" "call" "audio" "increment" "3"]
+        ["${pkgs.avizo}/bin/volumectl" "-u" "up"];
+
+      "XF86AudioLowerVolume".action.spawn =
+        pick
+        ["noctalia" "msg" "volume-down"]
+        ["dms" "ipc" "call" "audio" "decrement" "3"]
+        ["${pkgs.avizo}/bin/volumectl" "-u" "down"];
+
+      "XF86AudioMute".action.spawn =
+        pick
+        ["noctalia" "msg" "volume-mute"]
+        ["dms" "ipc" "call" "audio" "mute"]
+        ["${pkgs.avizo}/bin/volumectl" "toggle-mute"];
+
+      "XF86MonBrightnessUp".action.spawn =
+        pick
+        ["noctalia" "msg" "brightness-up"]
+        ["dms" "ipc" "call" "brightness" "increment" "5"]
+        ["${pkgs.avizo}/bin/lightctl" "up"];
+
+      "XF86MonBrightnessDown".action.spawn =
+        pick
+        ["noctalia" "msg" "brightness-down"]
+        ["dms" "ipc" "call" "brightness" "decrement" "5"]
+        ["${pkgs.avizo}/bin/lightctl" "down"];
+
+      "XF86AudioPlay".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "play-pause"];
+      "XF86AudioPause".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "play-pause"];
+      "XF86AudioNext".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "next"];
+      "XF86AudioPrev".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "previous"];
+      "XF86AudioStop".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "stop"];
+
+      "XF86Search".action.spawn =
+        pick
+        ["noctalia" "msg" "panel-toggle" "launcher"]
+        ["dms" "ipc" "call" "spotlight" "toggle"]
+        "walker";
+    }
+    # dms exposes no microphone-mute IPC; noctalia and avizo do.
+    // lib.optionalAttrs (!shellIsDms) {
+      "XF86AudioMicMute".action.spawn =
+        pick
+        ["noctalia" "msg" "mic-mute"]
+        ["dms" "ipc" "call" "audio" "mute"]
+        ["${pkgs.avizo}/bin/volumectl" "-m" "toggle-mute"];
+    };
 in {
   config = lib.mkIf cfg.enable {
     programs.niri.settings.binds = lib.mkMerge [
@@ -213,6 +277,9 @@ in {
           )
         ];
       }
+
+      # Hardware/media keys (shell-aware, see hwBinds above).
+      hwBinds
 
       # stasis-toggle only exists when stasis runs (custom/wayle shells).
       # optionalAttrs at merge level: lib.mkIf must not nest inside binds
