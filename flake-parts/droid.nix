@@ -4,10 +4,15 @@
   # any nixosConfiguration. Apply from the phone with
   # `nix-on-droid switch --flake .#phone`.
   flake.nixOnDroidConfigurations.phone = inputs.nix-on-droid.lib.nixOnDroidConfiguration {
-    pkgs = import inputs.nixpkgs {
-      system = "aarch64-linux";
-      config.allowUnfree = true;
-    };
+    pkgs = import inputs.nixpkgs {system = "aarch64-linux";};
     modules = [../droid];
+
+    # Forwarded into the Nix-on-Droid module system so droid/default.nix can
+    # hand them to Home Manager: droid/home.nix reads inputs.self.lib, and the
+    # reused starship.nix leaf reads hostConfig.isGui.
+    extraSpecialArgs = {
+      inherit inputs;
+      hostConfig = {isGui = false;};
+    };
   };
 }
