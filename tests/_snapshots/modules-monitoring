@@ -1,188 +1,135 @@
 #pretty
 {
-  contact_point = {
-    disable_resolve_message = false;
-    name = "ntfy";
-    priority_templated = true;
-    topic_in_payload = true;
-    type = "webhook";
-    url = "http://127.0.0.1:2586/";
+  alertmanager = {
+    alertmanager_targets = [
+      "127.0.0.1:9093"
+    ];
+    receiver = {
+      name = "ntfy";
+      send_resolved = true;
+      url = "http://127.0.0.1:8000/hook";
+    };
+    route = {
+      group_by = [
+        "alertname"
+        "host"
+      ];
+      group_interval = "5m";
+      group_wait = "30s";
+      receiver = "ntfy";
+      repeat_interval = "4h";
+    };
+  };
+  alertmanager_ntfy = {
+    headers = {
+      X-Click = "{{ .GeneratorURL }}";
+      X-Markdown = "yes";
+    };
+    priority = "status == \"resolved\" ? \"default\" : alert.labels.priority";
+    tags = [
+      {
+        condition = "status == \"firing\"";
+        tag = "rotating_light";
+      }
+      {
+        condition = "status == \"resolved\"";
+        tag = "white_check_mark";
+      }
+    ];
+    title = "{{ if eq .Status \"resolved\" }}Resolved: {{ end }}{{ index .Labels \"alertname\" }} on {{ index .Labels \"host\" }}";
+    topic = "homelab-alerts";
   };
   dashboard_providers = [
     "fritz"
     "config-health"
     "garmin"
   ];
-  expected_rules = [
-    "fritzbox-wan-down"
-    "wan-unreachable"
-    "wan-high-latency"
-    "node-exporter-down"
-    "nixd-gc-storm"
-    "postgres-down"
-    "filesystem-full"
-    "nextcloud-down"
-    "immich-down"
-    "jellyfin-down"
-    "navidrome-down"
-    "adguard-down"
-    "dns-resolution-failed"
-    "backup-failed"
-  ];
-  folder = "Homelab";
-  interval = "2m";
-  policy = {
-    group_by = [ ];
-    group_interval = "5m";
-    group_wait = "30s";
-    repeat_interval = "4h";
-  };
   rule_count = 16;
   rules = [
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox\",app=\"nextcloud\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "NextcloudDown";
-      uid = "nextcloud-down";
+      alert = "NextcloudDown";
+      expr = "probe_success{job=\"blackbox\",app=\"nextcloud\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox\",app=\"immich\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "ImmichDown";
-      uid = "immich-down";
+      alert = "ImmichDown";
+      expr = "probe_success{job=\"blackbox\",app=\"immich\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox\",app=\"jellyfin\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "JellyfinDown";
-      uid = "jellyfin-down";
+      alert = "JellyfinDown";
+      expr = "probe_success{job=\"blackbox\",app=\"jellyfin\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox\",app=\"navidrome\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "NavidromeDown";
-      uid = "navidrome-down";
+      alert = "NavidromeDown";
+      expr = "probe_success{job=\"blackbox\",app=\"navidrome\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox\",app=\"vaultwarden\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "VaultwardenDown";
-      uid = "vaultwarden-down";
+      alert = "VaultwardenDown";
+      expr = "probe_success{job=\"blackbox\",app=\"vaultwarden\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "up{job=\"adguard\"} == bool 0 or adguard_running == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "AdGuardDown";
-      uid = "adguard-down";
+      alert = "AdGuardDown";
+      expr = "up{job=\"adguard\"} == 0 or adguard_running == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "node_systemd_unit_state{name=~\".*(sanoid|syncoid).*[.]service\",state=\"failed\"} == bool 1";
-      noDataState = "Alerting";
-      severity = "high";
-      title = "BackupFailed";
-      uid = "backup-failed";
+      alert = "DnsResolutionFailed";
+      expr = "probe_success{job=\"blackbox-dns\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "fritz_wan_phys_link_status == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "FritzboxWanDown";
-      uid = "fritzbox-wan-down";
+      alert = "BackupFailed";
+      expr = "node_systemd_unit_state{name=~\".*(sanoid|syncoid).*[.]service\",state=\"failed\"} == 1";
+      priority = "high";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox-dns\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "DnsResolutionFailed";
-      uid = "dns-resolution-failed";
+      alert = "FritzboxWanDown";
+      expr = "fritz_wan_phys_link_status == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_success{job=\"blackbox-icmp\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "WanUnreachable";
-      uid = "wan-unreachable";
+      alert = "WanUnreachable";
+      expr = "probe_success{job=\"blackbox-icmp\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "probe_duration_seconds{job=\"blackbox-icmp\"} > bool 0.5";
-      noDataState = "Alerting";
-      severity = "high";
-      title = "WanHighLatency";
-      uid = "wan-high-latency";
+      alert = "WanHighLatency";
+      expr = "probe_duration_seconds{job=\"blackbox-icmp\"} > 0.5";
+      priority = "high";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "up{job=\"node\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "NodeExporterDown";
-      uid = "node-exporter-down";
+      alert = "NodeExporterDown";
+      expr = "up{job=\"node\"} == 0";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "nixd_gc_runs_last_90min > bool 3";
-      noDataState = "OK";
-      severity = "high";
-      title = "NixdGcStorm";
-      uid = "nixd-gc-storm";
+      alert = "FilesystemFull";
+      expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < 0.1 and node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} > 2e9";
+      priority = "urgent";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "up{job=\"postgres\"} == bool 0";
-      noDataState = "Alerting";
-      severity = "high";
-      title = "PostgresDown";
-      uid = "postgres-down";
+      alert = "FilesystemWarn";
+      expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < 0.2 and node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} > 2e9";
+      priority = "high";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < bool 0.1";
-      noDataState = "Alerting";
-      severity = "urgent";
-      title = "FilesystemFull";
-      uid = "filesystem-full";
+      alert = "NixdGcStorm";
+      expr = "nixd_gc_runs_last_90min > 3";
+      priority = "high";
     }
     {
-      datasource_uid = "prometheus";
-      execErrState = "KeepLast";
-      expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < bool 0.2";
-      noDataState = "Alerting";
-      severity = "high";
-      title = "FilesystemWarn";
-      uid = "filesystem-warning";
+      alert = "PostgresDown";
+      expr = "up{job=\"postgres\"} == 0";
+      priority = "high";
     }
+  ];
+  scrape_hosts = [
+    "desktop"
+    "m920q"
   ];
   scrape_jobs = [
     "node"

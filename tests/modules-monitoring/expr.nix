@@ -1,114 +1,85 @@
-# Test: Grafana alerting pipeline integrity.
+# Test: alerting pipeline integrity.
 #
-# The alerting stack fails silently when broken: a wrong datasource
-# reference or an ignored misspelled key produces no eval-time error, only
-# missing push notifications on the phone. These checks turn such
+# Prometheus evaluates the alert rules, Alertmanager groups and re-notifies
+# them, and alertmanager-ntfy delivers each alert to ntfy. These layers fail
+# silently when broken (a missing priority label, a wrong receiver URL, a
+# dropped option all still evaluate), so the checks below turn such
 # regressions into hard eval failures; the remaining values are snapshotted
 # for review of intentional changes.
 {flake, ...}: let
   inherit (flake.nixosConfigurations.m920q) config;
-  provision = config.services.grafana.provision.alerting;
+  pkgs = flake.nixosConfigurations.m920q.pkgs;
+  inherit (pkgs) lib;
 
-  homelabGroup = builtins.head (
-    builtins.filter (g: g.name == "homelab") provision.rules.settings.groups
-  );
-  inherit (homelabGroup) rules;
+  groups = config.modules.system.homelab.monitoring.alerting.ruleGroups;
+  rules = builtins.concatMap (g: g.rules) groups;
 
-  queryOf = refId: rule:
-    builtins.head (builtins.filter (q: q.refId == refId) rule.data);
+  # ntfy priority names (docs.ntfy.sh/publish/#message-priority). The delivery
+  # bridge reads the priority verbatim from the alert's `priority` label.
+  validPriorities = ["urgent" "high" "default" "low" "min"];
 
-  contactPoints = provision.contactPoints.settings.contactPoints;
-  receiver = builtins.head (builtins.head contactPoints).receivers;
-  policy = builtins.head provision.policies.settings.policies;
+  route = config.services.prometheus.alertmanager.configuration.route;
+  receivers = config.services.prometheus.alertmanager.configuration.receivers;
+  receiver = builtins.head receivers;
 
-  # Keys understood by the Grafana provisioning API for alert rules. A key
-  # outside this list is silently dropped by Grafana (e.g. snake_case
-  # exec_err_state instead of camelCase execErrState), so its intended
-  # behavior never takes effect.
-  knownRuleKeys = [
-    "uid"
-    "title"
-    "condition"
-    "for"
-    "noDataState"
-    "execErrState"
-    "labels"
-    "annotations"
-    "data"
-  ];
+  # Prometheus targets Alertmanager; Alertmanager's webhook points at the
+  # bridge; the bridge publishes to the local ntfy topic.
+  alertmanagerTargets =
+    builtins.concatMap (a: builtins.concatMap (s: s.targets) a.static_configs)
+    config.services.prometheus.alertmanagers;
 
-  validNoDataStates = ["NoData" "Alerting" "OK"];
-  validExecErrStates = ["OK" "Alerting" "Error" "KeepLast"];
-
-  unknownKeys = rule:
-    builtins.filter (k: !builtins.elem k knownRuleKeys) (builtins.attrNames rule);
-
-  enabledServices =
-    [
-      "fritzbox-wan-down"
-      "wan-unreachable"
-      "wan-high-latency"
-      "node-exporter-down"
-      "nixd-gc-storm"
-      "postgres-down"
-      "filesystem-full"
-    ]
-    ++ (lib.optionals config.modules.system.homelab.nextcloud.enable ["nextcloud-down"])
-    ++ (lib.optionals config.modules.system.homelab.immich.enable ["immich-down"])
-    ++ (lib.optionals config.modules.system.homelab.jellyfin.enable ["jellyfin-down"])
-    ++ (lib.optionals config.modules.system.homelab.navidrome.enable ["navidrome-down"])
-    ++ (lib.optionals config.modules.system.homelab.adguardhome.enable ["adguard-down" "dns-resolution-failed"])
-    ++ (lib.optionals config.modules.system.homelab.backup.enable ["backup-failed"]);
-
-  inherit (flake.nixosConfigurations.m920q.pkgs) lib;
+  amNtfy = config.services.prometheus.alertmanager-ntfy.settings;
 in
-  # Every data query must reference the provisioned Prometheus datasource by
-  # its scalar uid. The nested datasource object form does not survive
-  # provisioning round-trip and yields "can not get data source by uid" at
-  # evaluation time, killing every alert silently.
-  assert builtins.all (r: (queryOf "A" r).datasourceUid or "" == "prometheus") rules;
-  assert builtins.all (r: (queryOf "A" r).model.expr != "") rules;
-  # Unknown keys must fail here, not vanish inside Grafana.
-  assert builtins.all (r: unknownKeys r == []) rules;
-  # State values must be from the sets Grafana actually accepts.
-  assert builtins.all (r: builtins.elem r.noDataState validNoDataStates) rules;
-  assert builtins.all (r: builtins.elem r.execErrState validExecErrStates) rules;
-  # Down-detection rules fire when data disappears entirely; the one
-  # tripwire metric (nixd-gc-storm) legitimately has no series until
-  # the first post-deploy health-check run, so it opts into noDataState OK.
-  assert builtins.all (
-    r:
-      r.noDataState
-      == "Alerting"
-      || (r.uid == "nixd-gc-storm" && r.noDataState == "OK")
-  )
-  rules; {
+  # Every rule needs an expr, a valid ntfy priority, and a host-templated
+  # summary so the notification names its source machine.
+  assert builtins.length rules > 0;
+  assert builtins.all (r: r.expr != "") rules;
+  assert builtins.all (r: builtins.elem r.labels.priority validPriorities) rules;
+  assert builtins.all (r: lib.hasSuffix "{{ $labels.host }}" r.annotations.summary) rules;
+  # Delivery chain is wired end to end.
+  assert builtins.elem "127.0.0.1:9093" alertmanagerTargets;
+  assert receiver.name == "ntfy";
+  assert (builtins.head receiver.webhook_configs).url == "http://127.0.0.1:8000/hook";
+  assert amNtfy.ntfy.baseurl == "http://127.0.0.1:2586";
+  assert amNtfy.ntfy.notification.topic == "homelab-alerts";
+  assert lib.hasInfix "alert.labels.priority" amNtfy.ntfy.notification.priority;
+  # The rules are serialized into services.prometheus.rules as one file.
+  assert builtins.length config.services.prometheus.rules == 1; {
     rule_count = builtins.length rules;
-    expected_rules = enabledServices;
     rules =
       map (r: {
-        inherit (r) uid title noDataState execErrState;
-        severity = r.labels.severity;
-        datasource_uid = (queryOf "A" r).datasourceUid;
-        expr = (queryOf "A" r).model.expr;
+        inherit (r) alert expr;
+        priority = r.labels.priority;
       })
       rules;
     scrape_jobs = map (j: j.job_name) config.services.prometheus.scrapeConfigs;
+    # Every scrape target carries a host label so the rule summaries and the
+    # notification title can name the machine.
+    scrape_hosts =
+      lib.sort (a: b: a < b)
+      (lib.unique (builtins.concatMap
+        (j: builtins.concatMap (s: lib.optional (s.labels ? host) s.labels.host) j.static_configs)
+        config.services.prometheus.scrapeConfigs));
     vitals_scrape_enabled =
       builtins.any (j: j.job_name == "vitals") config.services.prometheus.scrapeConfigs;
     dashboard_providers =
       map (p: p.name) config.services.grafana.provision.dashboards.settings.providers;
-    inherit (homelabGroup) folder;
-    inherit (homelabGroup) interval;
-    contact_point = {
-      inherit ((builtins.head contactPoints)) name;
-      inherit (receiver) type;
-      url = receiver.settings.url;
-      topic_in_payload = builtins.match ".*homelab-alerts.*" receiver.settings.payload.template != null;
-      priority_templated = builtins.match ".*priority.*" receiver.settings.payload.template != null;
-      disable_resolve_message = receiver.disableResolveMessage;
+    alertmanager = {
+      alertmanager_targets = alertmanagerTargets;
+      route = {
+        inherit (route) receiver group_by group_wait group_interval repeat_interval;
+      };
+      receiver = {
+        inherit (receiver) name;
+        inherit ((builtins.head receiver.webhook_configs)) url;
+        inherit ((builtins.head receiver.webhook_configs)) send_resolved;
+      };
     };
-    policy = {
-      inherit (policy) group_by group_wait group_interval repeat_interval;
+    alertmanager_ntfy = {
+      topic = amNtfy.ntfy.notification.topic;
+      priority = amNtfy.ntfy.notification.priority;
+      title = amNtfy.ntfy.notification.templates.title;
+      inherit (amNtfy.ntfy.notification.templates) headers;
+      inherit (amNtfy.ntfy.notification) tags;
     };
   }
