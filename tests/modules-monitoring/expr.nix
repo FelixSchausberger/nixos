@@ -93,6 +93,11 @@ in
         expr = (queryOf "A" r).model.expr;
       })
       rules;
+    scrape_jobs = map (j: j.job_name) config.services.prometheus.scrapeConfigs;
+    vitals_scrape_enabled =
+      builtins.any (j: j.job_name == "vitals") config.services.prometheus.scrapeConfigs;
+    dashboard_providers =
+      map (p: p.name) config.services.grafana.provision.dashboards.settings.providers;
     inherit (homelabGroup) folder;
     inherit (homelabGroup) interval;
     contact_point = {

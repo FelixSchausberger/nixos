@@ -145,7 +145,7 @@
     }
     # Grafana deep links, not bookmarks: the no-bookmarks note below
     # records why a link row was dropped before, and these cards belong
-    # to the Grafana entry above rather than to a new group. Both wear
+    # to the Grafana entry above rather than to a new group. All wear
     # the Grafana icon so they read as "opens in Grafana" instead of as
     # second Fritz cards.
     {
@@ -160,6 +160,15 @@
         icon = "grafana.png";
         href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
         description = "Cycling stats";
+      };
+    }
+    {
+      "Config Health" = {
+        icon = "grafana.png";
+        # uid "config-health" (monitoring.nix provisions the dashboard). Shows
+        # NixOS generation size per deploy and the vitals host health score.
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+        description = "NixOS & host health";
       };
     }
   ];
