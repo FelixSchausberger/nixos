@@ -101,6 +101,19 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Nix package manager on Android (a Termux fork; proot-based, no root).
+    # Consumed only by the nixOnDroidConfigurations flake output (flake-parts/
+    # droid.nix, module tree in droid/): it declares the phone's terminal
+    # environment without touching any NixOS host. nixpkgs and home-manager
+    # follow the fleet pins so the phone shares the same package set instead
+    # of fetching a second nixpkgs. Install the com.termux.nix app (F-Droid),
+    # then `nix-on-droid switch --flake .#phone`.
+    nix-on-droid = {
+      url = "github:nix-community/nix-on-droid";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+
     # Editors (used by both TUI and GUI hosts)
     nixvim = {
       url = "github:nix-community/nixvim";
@@ -322,6 +335,7 @@
           ./flake-parts/apps.nix
           ./flake-parts/packages.nix
           ./flake-parts/dev.nix
+          ./flake-parts/droid.nix
         ];
 
         flake = {
