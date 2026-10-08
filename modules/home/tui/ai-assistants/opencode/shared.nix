@@ -94,14 +94,15 @@
 
   # Canonical ordered permission rules in the native V2 shape. V1 derives its
   # grouped `permission` map from the shell rules; V2 consumes the array as-is.
-  # The trailing edit ask guards the primary checkout: rules resolve by last
-  # match, so this overrides the wildcard allow only for /per/etc/nixos paths.
+  # The trailing edit rule denies the primary checkout: rules resolve by last
+  # match, so it overrides the wildcard allow only for /per/etc/nixos paths.
   # Empirically (scratch-config probes, 2026-09-21) the edit resource is the
   # literal path string the model supplies: absolute paths match this rule,
-  # location-relative paths bypass it and stay allowed. The gate is therefore
-  # best-effort; the ocws workspace rules in AGENTS.md are the real boundary.
-  # V1 cannot express path-scoped edit rules (its permission schema is a
-  # per-tool map), so the guard is V2-only there.
+  # location-relative paths bypass it and stay allowed - but a session whose cwd
+  # is an `ocws` workspace resolves relative paths there, not in the primary.
+  # The rule is defence in depth, not a boundary; working in a workspace is the
+  # real boundary. V1 cannot express path-scoped edit rules (its permission
+  # schema is a per-tool map), so the guard is V2-only there.
   permissionRules = [
     {
       action = "shell";
@@ -146,11 +147,11 @@
     {
       action = "edit";
       resource = "/per/etc/nixos/*";
-      effect = "ask";
+      effect = "deny";
     }
   ];
 
-  # The V2 array appends the primary-checkout edit ask after this agent's own
+  # The V2 array appends the primary-checkout edit deny after this agent's own
   # edit allow: agent rules are appended after global rules and the last match
   # wins, so without it the subagent's allow would bypass the global guard.
   # V1 reads the legacy permission map, which cannot express path-scoped edit
@@ -206,7 +207,7 @@
         effect: deny
       - action: edit
         resource: "/per/etc/nixos/*"
-        effect: ask
+        effect: deny
     ---
 
     ${codeSimplifierBody}
