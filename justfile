@@ -313,10 +313,19 @@ desktop-status:
 
 # === QUALITY MONITORING ===
 
-# Profile evaluation time
-profile-eval:
-    @echo "Profiling evaluation time..."
-    @bash tools/scripts/profile-evaluation.sh
+# Evaluation work counters. These are CPU-independent (thunk and function-call
+# counts), so a regression is comparable across machines, unlike wall-clock
+# eval time which varies with runner speed.
+eval-stats HOST="m920q":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    stats="$(mktemp)"
+    trap 'rm -f "$stats"' EXIT
+    NIX_SHOW_STATS=1 NIX_SHOW_STATS_PATH="$stats" \
+        nix eval --no-eval-cache \
+        ".#nixosConfigurations.{{HOST}}.config.system.build.toplevel" \
+        --apply 'x: x.drvPath' >/dev/null
+    jq '{cpuTime, nrThunks, nrFunctionCalls, nrOpUpdates, nrPrimOpCalls}' "$stats"
 
 # Profile evaluation with flamegraph visualization for identifying bottlenecks
 # Output: HOST-profile.svg — open in browser or upload to https://speedscope.app
@@ -331,11 +340,6 @@ profile-flamegraph HOST="desktop":
         --option eval-profile-file "{{HOST}}-profile"
     nix shell nixpkgs#flamegraph -c flamegraph.pl "{{HOST}}-profile" > "{{HOST}}-profile.svg"
     echo "Flamegraph: {{HOST}}-profile.svg"
-
-# Check closure sizes
-check-closures:
-    @echo "Checking closure sizes..."
-    @bash tools/scripts/check-closure-size.sh
 
 # === FLAKE MANAGEMENT ===
 
