@@ -50,19 +50,23 @@
 
     parallel-agents = {
       content = ''
-        Isolate concurrent work in jj workspaces — never share one working copy between simultaneous agent sessions. The primary checkout (/per/etc/nixos) is reserved for the user and the comin reconciler.
+        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `ocws` workspace. The primary checkout (/per/etc/nixos) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
 
-        Before editing files, check for active claims:
+        Start of work, always:
         ```bash
         ocws ls
         ```
-        An undescribed or unfinished `@` in another workspace means: do not touch that workspace; report the conflict and halt.
+        This is read-only. Halt and report if the primary or any other workspace shows a described `@` you do not own, or an undescribed non-empty `@` (an unclaimed working copy is a hazard to every session).
 
-        For isolated work, create a workspace with `ocws <task>` (or `ocws tab <task>`). It creates `<base>/nixos-ws-<task>`, claims it with a change description, and starts opencode rooted there. The base is `$OCWS_BASE`, else the parent of the current workspace when writable, else `$XDG_DATA_HOME/ocws` (default `~/.local/share/ocws`), else `/tmp/opencode`.
+        For isolated work, create a workspace with `ocws <task>` (or `ocws tab <task>`). It creates `<base>/nixos-ws-<task>`, claims it with a change description, starts opencode rooted there, and reclaims finished workspaces. The base is `$OCWS_BASE`, else the parent of the current workspace when writable, else `$XDG_DATA_HOME/ocws` (default `~/.local/share/ocws`), else `/tmp/opencode`.
 
-        Claim discipline: start work with `jj new main@origin`, describe immediately, then edit — a described commit at `@` silently absorbs every edit made in its working copy, and the description is the ownership claim. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk from a parallel session.
+        Claim discipline: start work with `jj new main@origin`, describe immediately, then edit — a described commit at `@` silently absorbs every edit made in its working copy, and the description is the ownership claim. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk from a parallel session. Rebasing never loses commits (recover with `jj op log` / `jj undo`); the loss vectors are undescribed WIP and `jj new`/abandon, which the `jjwork` guard blocks.
 
-        Integration runs from the workspace itself: `jjwork`, then `jjpush`. Nothing pushes background work: the primary checkout and secondary workspaces are pushed only by an explicit `jjpush`. See the jj-workspaces skill for the full workflow and concurrency hazards.
+        Integration runs from the workspace itself: `jjwork`, then `jjpush`. Nothing pushes background work. After the PR merges, release the workspace:
+        ```bash
+        ocws done <task>
+        ```
+        It refuses while unmerged work remains, doubling as a close-out check; `ocws gc` (also run automatically by `ocws <task>`) reclaims finished workspaces idle past `OCWS_GC_AGE`. See the jj-workspaces skill for the full workflow and concurrency hazards.
       '';
       enabled = true;
       description = "Isolate parallel agents in jj workspaces via the ocws launcher";

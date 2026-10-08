@@ -89,8 +89,14 @@ benefit for single quick changes.
 5. Cleanup after the PR merges:
 
    ```bash
-   ocws rm <task>   # jj workspace forget + send the directory to the rip graveyard
+   ocws done <task>   # fetch, refuse if unmerged, then forget + rip the directory
    ```
+
+   `done` refuses while the workspace still carries commits outside
+   `main@origin` or uncommitted changes, so it doubles as a close-out check.
+   `ocws gc` (also run by `ocws <task>`) forgets finished workspaces idle past
+   `OCWS_GC_AGE` (default 86400s). `ocws rm [--force] <task>` removes without
+   the fetch/check; `--force` discards unmerged work.
 
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.
