@@ -453,13 +453,17 @@
       Usage:
         ocws <task> [-- <opencode args>...]   create a workspace and run opencode there
         ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
-        ocws ls                               list workspaces and their claims
-        ocws rm <task>                        forget the workspace and send its directory to the graveyard
+        ocws ls                               list workspaces and their claims (never mutates a working copy)
+        ocws done <task>                      remove a finished workspace (refuses unmerged work)
+        ocws rm [--force] <task>              remove a workspace; --force discards unmerged work
+        ocws gc                               remove finished workspaces idle past OCWS_GC_AGE
 
       Environment:
-        OCWS_BASE   directory holding workspace directories (default: beside the repo
-                    when writable, else ~/.local/share/ocws, else /tmp/opencode)
-        OCWS_V2=1   run opencode 2 (opencode2) with the isolated V2 config
+        OCWS_BASE     directory holding workspace directories (default: beside the repo
+                      when writable, else ~/.local/share/ocws, else /tmp/opencode)
+        OCWS_V2=1     run opencode 2 (opencode2) with the isolated V2 config
+        OCWS_GC_AGE   seconds an empty, finished workspace must sit idle before gc
+                      removes it (default 86400)
       USAGE
         exit 2
       }
@@ -486,7 +490,58 @@
 
       valid_task() { printf '%s' "$1" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*$'; }
       ws_dir_for() { printf '%s/nixos-ws-%s' "$base" "$1"; }
-      workspace_exists() { jj workspace list -T 'name ++ "\n"' 2>/dev/null | grep -qx "$1"; }
+      # Workspace listings and the finished-work check are read-only and must
+      # never snapshot a foreign working copy: an `ocws ls` run from the primary
+      # or another session's workspace would otherwise fold that workspace's
+      # uncommitted changes into its @.
+      workspace_exists() {
+        local names
+        names="$(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null)"
+        grep -qx "$1" <<<"$names"
+      }
+      # A workspace "has work" when its @ carries commits outside main@origin
+      # (ignoring its own empty working-copy commit) or uncommitted changes.
+      # Rebasing never loses commits reachable from an @, so anything that
+      # differs from main@origin is work worth protecting.
+      ws_has_work() {
+        local rev="$1@" c d
+        c="$(jj --ignore-working-copy log --no-graph -r "ancestors($rev) ~ ::main@origin ~ empty()" -T 'commit_id' 2>/dev/null | tr -d '[:space:]')"
+        d="$(jj --ignore-working-copy diff -r "$rev" --name-only 2>/dev/null | tr -d '[:space:]')"
+        [ -n "$c" ] || [ -n "$d" ]
+      }
+      rip_workspace() {
+        local task="$1" dir
+        dir="$(ws_dir_for "$task")"
+        if [ "$(realpath -m "$dir")" = "$(realpath -m "$root")" ]; then
+          echo "ocws: refusing to remove the current workspace ('$task')" >&2
+          exit 1
+        fi
+        jj workspace forget "$task"
+        [ -d "$dir" ] && rip "$dir"
+      }
+      # Forget+rip workspaces whose work is finished (nothing outside
+      # main@origin) and that have been idle for at least OCWS_GC_AGE seconds,
+      # never the current one. An active session touches its directory as it
+      # works, so idle time separates abandoned workspaces from live ones; rip's
+      # graveyard makes a mistaken removal restorable.
+      ocws_gc() {
+        local name dir age now
+        now="$(date +%s)"
+        for name in $(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null); do
+          [ "$name" = "default" ] && continue
+          dir="$base/nixos-ws-$name"
+          [ -d "$dir" ] || continue
+          [ "$(realpath -m "$dir")" = "$(realpath -m "$root")" ] && continue
+          age="$((now - $(stat -c %Y "$dir" 2>/dev/null || echo "$now")))"
+          [ "$age" -ge "''${OCWS_GC_AGE:-86400}" ] || continue
+          if ws_has_work "$name"; then
+            echo "ocws gc: keeping '$name' (unmerged work)"
+            continue
+          fi
+          rip_workspace "$name"
+          echo "ocws gc: forgot '$name' (finished)"
+        done
+      }
 
       sub="''${1:-}"
       [ -n "$sub" ] || usage
@@ -502,21 +557,47 @@
       case "$sub" in
         ls|list)
           shift
-          jj workspace list
+          jj --ignore-working-copy workspace list
           echo ""
           echo "Claims (working copies):"
-          jj log --no-graph -r 'working_copies()' -T 'change_id.short() ++ "  " ++ description.first_line() ++ "\n"'
+          jj --ignore-working-copy log --no-graph -r 'working_copies()' -T 'change_id.short() ++ "  " ++ description.first_line() ++ "\n"'
           exit 0
           ;;
-        rm|forget)
+        gc)
+          shift
+          ocws_gc
+          exit 0
+          ;;
+        done)
           shift
           task="''${1:-}"
           [ -n "$task" ] || usage
           valid_task "$task" || { echo "ocws: invalid task '$task'" >&2; exit 2; }
           workspace_exists "$task" || { echo "ocws: no workspace named '$task'" >&2; exit 1; }
-          jj workspace forget "$task"
-          dir="$(ws_dir_for "$task")"
-          [ -d "$dir" ] && rip "$dir"
+          jj git fetch >/dev/null 2>&1 || true
+          if ws_has_work "$task"; then
+            echo "ocws: '$task' still has unmerged/uncommitted work; refusing to remove." >&2
+            jj --ignore-working-copy log --no-graph -r "ancestors($task@) ~ ::main@origin ~ empty()" -T '"  " ++ commit_id.short() ++ " " ++ description.first_line() ++ "\n"' >&2
+            echo "Merge the PR, then retry; or 'ocws rm --force $task' to discard." >&2
+            exit 1
+          fi
+          rip_workspace "$task"
+          echo "Done: forgot '$task' (directory sent to the graveyard)."
+          exit 0
+          ;;
+        rm|forget)
+          shift
+          force=0
+          if [ "''${1:-}" = "--force" ]; then force=1; shift; fi
+          task="''${1:-}"
+          [ -n "$task" ] || usage
+          valid_task "$task" || { echo "ocws: invalid task '$task'" >&2; exit 2; }
+          workspace_exists "$task" || { echo "ocws: no workspace named '$task'" >&2; exit 1; }
+          if [ "$force" != "1" ] && ws_has_work "$task"; then
+            echo "ocws: '$task' has unmerged/uncommitted work; use 'ocws done $task' after merging, or 'ocws rm --force $task' to discard." >&2
+            exit 1
+          fi
+          rip_workspace "$task"
           echo "Forgot '$task' (directory sent to the graveyard)."
           exit 0
           ;;
@@ -541,6 +622,10 @@
         exit 1
       fi
       [ -e "$dir" ] && { echo "ocws: path already exists: $dir" >&2; exit 1; }
+
+      # Opportunistically reclaim finished workspaces before adding a new one.
+      # Best-effort: a gc failure must never block workspace creation.
+      ocws_gc || true
 
       jj git fetch >/dev/null 2>&1 || true
       jj workspace add "$dir" --name "$task" -r 'main@origin' -m "$task: started from main@origin"
