@@ -15,7 +15,7 @@ jobs:
   # Security and compliance checks
   security:
     name: Security Scan
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -49,7 +49,7 @@ jobs:
   # Quick validation and linting
   validate:
     name: Quick Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     permissions:
       contents: read

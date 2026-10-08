@@ -22,7 +22,7 @@ concurrency:
 jobs:
   vm-test:
     name: ${{ matrix.test }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # TCG emulation is slow; two concurrent tests per job keep the hosted
     # runner within memory/disk limits (the shared Nix config caps at 2).
     timeout-minutes: 60

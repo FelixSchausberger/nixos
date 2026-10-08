@@ -1,0 +1,7 @@
+# actionlint's bundled list of GitHub-hosted runner labels lags images that
+# have only just reached GA. `ubuntu-26.04` is a real GitHub-hosted label
+# (generally available 2026-09); listing it here only silences the stale-label
+# check, it does not make the runner self-hosted.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
