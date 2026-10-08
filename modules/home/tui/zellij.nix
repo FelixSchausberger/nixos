@@ -151,6 +151,16 @@ in {
       default_layout = "default";
       show_startup_tips = false;
 
+      # Web client (browser/mobile). Upstream defaults the mobile client to
+      # 24px and floors the mobile downscale-to-fit at 16px; both read as
+      # oversized on a phone. An explicit font_size is used verbatim and skips
+      # that mobile branch, so 14 stays compact on a phone without changing
+      # the desktop rendering.
+      web_client = {
+        font = "monospace";
+        font_size = 14;
+      };
+
       # Mouse support
       mouse_mode = true;
       copy_on_select = true; # Automatically copy selected text via OSC 52
