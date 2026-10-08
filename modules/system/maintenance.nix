@@ -118,10 +118,11 @@
     systemd = {
       services = {
         # Generic host-level health checks. Works on any NixOS host without
-        # Prometheus. Grafana-provisioned alert rules (modules/system/homelab/
-        # monitoring.nix) extend this with homelab-specific service
-        # monitoring (Nextcloud, Immich, AdGuard, Postgres, Node exporter) via
-        # Prometheus queries with grouping and resolve notifications.
+        # Prometheus. The Prometheus alert rules in modules/system/homelab/
+        # monitoring.nix extend this with homelab-specific service monitoring
+        # (Nextcloud, Immich, AdGuard, Postgres, Node exporter) via Prometheus
+        # queries routed through Alertmanager with grouping and resolve
+        # notifications.
         system-health-check = lib.mkIf config.modules.system.maintenance.monitoring.enable {
           description = "System health monitoring";
           script = ''

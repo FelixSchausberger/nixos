@@ -1,11 +1,12 @@
 # NixOS VM Integration Test: Monitoring alert pipeline end-to-end.
 #
-# Boots Prometheus + Grafana + ntfy-sh with the production monitoring
-# module, then verifies the full alert path that page delivery depends on:
-# stopping an exporter must produce a properly formatted ntfy publish
-# ([FIRING] title, severity-derived priority, tags), and restarting it must
-# produce the matching resolve message. This is the only layer that catches
-# provisioning-load errors and Grafana version drift breaking rendering.
+# Boots Prometheus + Alertmanager + alertmanager-ntfy + ntfy-sh with the
+# production monitoring module, then verifies the full alert path that page
+# delivery depends on: stopping an exporter must produce a properly formatted
+# ntfy publish (title naming the host, priority from the alert's `priority`
+# label, tags), and restarting it must produce the matching resolve message.
+# This is the only layer that catches a broken rule file, a wrong Alertmanager
+# receiver, or a bridge/template regression that eval-level tests cannot see.
 #
 # Secrets come from tests-vm/fixtures/monitoring/: a throwaway age key plus a
 # secrets.yaml encrypted to it. They secure nothing and exist only so
@@ -198,12 +199,10 @@
         "d /per/var/lib/ntfy-sh 0700 ntfy-sh ntfy-sh -"
       ];
 
-      # Static answer for the Nextcloud blackbox probe. Nextcloud itself is
-      # absent in this VM, and provisioned alert rules cannot be deleted
-      # through the API at runtime (provenance mismatch, HTTP 409), so the
-      # probe must be satisfied instead: from boot, before the alert rule's
-      # first evaluation, a plain 200 on status.php keeps NextcloudDown
-      # from firing during the healthy-quiet window.
+      # Static answer for the Nextcloud blackbox probe so the healthy-quiet
+      # window stays quiet: Nextcloud itself is absent in this VM, and its
+      # status.php probe would otherwise fire NextcloudDown. A plain 200 from
+      # boot satisfies the probe.
       systemd.services.monitoring-test-status = {
         description = "Static status.php stub for the Nextcloud blackbox probe";
         wantedBy = ["multi-user.target"];
@@ -230,14 +229,10 @@
     machine.wait_for_unit("multi-user.target")
 
     machine.wait_for_unit("prometheus.service")
+    machine.wait_for_unit("alertmanager.service")
+    machine.wait_for_unit("alertmanager-ntfy.service")
     machine.wait_for_unit("prometheus-postgres-exporter.service")
-    machine.wait_for_unit("grafana.service")
     machine.wait_for_unit("ntfy-sh.service")
-
-    # Grafana waits for Prometheus itself; give the web UI a moment more.
-    machine.wait_until_succeeds(
-        "curl -sf http://127.0.0.1:3001/api/health | jq -e .database"
-    )
 
     def ntfy_messages():
         out = machine.succeed(
@@ -257,52 +252,67 @@
             machine.sleep(10)
         raise Exception(f"timed out waiting for {description}")
 
-    print("subtest: provisioned rules match the expected set")
-    rules = json.loads(
-        machine.succeed(
-            "curl -sf -u 'admin:vm-test-grafana-admin-password' "
-            "http://127.0.0.1:3001/api/v1/provisioning/alert-rules"
-        )
+    print("subtest: loaded rules match the expected set")
+    groups = json.loads(
+        machine.succeed("curl -sf http://127.0.0.1:9090/api/v1/rules")
+    )["data"]["groups"]
+    names = sorted(
+        r["name"] for g in groups for r in g["rules"] if r["type"] == "alerting"
     )
-    uids = sorted(r["uid"] for r in rules)
-    # nextcloud.enable is on (postgres-exporter dependency) so the Nextcloud
-    # blackbox probe and rules provision too. The status.php stub service
-    # answers that probe, so NextcloudDown stays quiet like every other rule.
-    assert uids == [
-        "filesystem-full",
-        "filesystem-warning",
-        "nextcloud-down",
-        "node-exporter-down",
-        "postgres-down",
-    ], f"unexpected provisioned rules: {uids}"
+    # nextcloud.enable is on (the postgres exporter and its rule depend on it)
+    # so NextcloudDown and PostgresDown load too. The status.php stub answers
+    # the Nextcloud probe, keeping NextcloudDown quiet.
+    assert names == [
+        "FilesystemFull",
+        "FilesystemWarn",
+        "NextcloudDown",
+        "NodeExporterDown",
+        "PostgresDown",
+    ], f"unexpected loaded rules: {names}"
 
     machine.sleep(150)
     print("subtest: healthy system sends no notifications")
     count = len(ntfy_messages())
     assert count == 0, f"expected no notifications on healthy system, got {count}"
 
-    print("subtest: stopped exporter produces formatted firing push")
+    print("subtest: stopped exporter produces a formatted firing push")
     machine.systemctl("stop prometheus-node-exporter.service")
 
     def is_firing():
-        return any(m.get("title", "").startswith("[FIRING") for m in ntfy_messages())
+        return any(
+            m.get("title", "").startswith("NodeExporterDown") for m in ntfy_messages()
+        )
 
-    poll_until(is_firing, "[FIRING] notification")
-    fire = [m for m in ntfy_messages() if m.get("title", "").startswith("[FIRING")][-1]
-    assert "NodeExporterDown" in fire["title"], fire["title"]
-    assert fire["priority"] == 4, f"expected priority 4, got {fire['priority']}"
-    assert "warning" in fire["tags"], fire["tags"]
+    poll_until(is_firing, "firing notification")
+    fire = [
+        m
+        for m in ntfy_messages()
+        if m.get("title", "").startswith("NodeExporterDown")
+    ][-1]
+    # The title names the source host; priority comes from the rule's
+    # priority=urgent label, and the firing tag is attached.
+    assert fire["title"].startswith("NodeExporterDown "), fire["title"]
+    assert " on " in fire["title"], fire["title"]
+    assert fire["priority"] == 5, f"expected priority 5, got {fire['priority']}"
+    assert "rotating_light" in fire["tags"], fire["tags"]
 
-    print("subtest: recovered exporter produces resolve push")
+    print("subtest: recovered exporter produces a resolve push")
     machine.systemctl("start prometheus-node-exporter.service")
 
     def is_resolved():
-        return any(m.get("title", "").startswith("[RESOLVED") for m in ntfy_messages())
+        return any(
+            m.get("title", "").startswith("Resolved: NodeExporterDown")
+            for m in ntfy_messages()
+        )
 
-    poll_until(is_resolved, "[RESOLVED] notification")
-    done = [m for m in ntfy_messages() if m.get("title", "").startswith("[RESOLVED")][-1]
-    assert "NodeExporterDown" in done["title"], done["title"]
-    assert done["priority"] == 2, f"expected priority 2, got {done['priority']}"
+    poll_until(is_resolved, "resolved notification")
+    done = [
+        m
+        for m in ntfy_messages()
+        if m.get("title", "").startswith("Resolved: NodeExporterDown")
+    ][-1]
+    # Resolved alerts drop to the default ntfy priority.
+    assert done["priority"] == 3, f"expected priority 3, got {done['priority']}"
     assert "white_check_mark" in done["tags"], done["tags"]
   '';
 }

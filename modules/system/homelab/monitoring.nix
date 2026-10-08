@@ -60,6 +60,118 @@
 
   hasWallPlugs = cfg.wallPower.plugs != {};
 
+  # The alerting host's own name. Every scrape job carries it as a `host`
+  # label so alert rules, notification titles and the local ntfy topic all
+  # name the source machine; the one remote job (node-desktop) overrides it.
+  localHost = config.networking.hostName;
+
+  # Prometheus alert rules: evaluated by the local Prometheus and routed by
+  # Alertmanager to alertmanager-ntfy, which reads the ntfy priority verbatim
+  # from `alert.labels.priority`. `for = 2m` matches the former Grafana rule
+  # cadence. Annotations are Prometheus-templated, so `summary` names the host
+  # and `description` can quote the offending mountpoint or value.
+  mkRule = name: priority: summary: description: expr: {
+    alert = name;
+    inherit expr;
+    "for" = "2m";
+    labels.priority = priority;
+    annotations = {
+      summary = "${summary} on {{ $labels.host }}";
+      inherit description;
+    };
+  };
+
+  # tmpfs/overlay-style pseudo-filesystems never warrant a capacity page; the
+  # size floor drops small non-ZFS boot partitions. A 511 MiB vfat ESP on the
+  # desktop read as under 10% free and paged the ZFS-oriented rule (2026-10),
+  # which was never the rule's intent.
+  fsFstype = ''fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"'';
+  fsSize = "node_filesystem_size_bytes{${fsFstype}}";
+  fsAvail = "node_filesystem_avail_bytes{${fsFstype}}";
+
+  alertRuleGroups =
+    (lib.optionals config.modules.system.homelab.nextcloud.enable [
+      (mkRule "NextcloudDown" "urgent" "Nextcloud is down"
+        "Nextcloud is not answering HTTP health probes ({{ $labels.instance }})"
+        ''probe_success{job="blackbox",app="nextcloud"} == 0'')
+    ])
+    ++ (lib.optionals config.modules.system.homelab.immich.enable [
+      (mkRule "ImmichDown" "urgent" "Immich is down"
+        "Immich is not answering HTTP health probes ({{ $labels.instance }})"
+        ''probe_success{job="blackbox",app="immich"} == 0'')
+    ])
+    ++ (lib.optionals config.modules.system.homelab.jellyfin.enable [
+      (mkRule "JellyfinDown" "urgent" "Jellyfin is down"
+        "Jellyfin is not answering HTTP health probes ({{ $labels.instance }})"
+        ''probe_success{job="blackbox",app="jellyfin"} == 0'')
+    ])
+    ++ (lib.optionals config.modules.system.homelab.navidrome.enable [
+      (mkRule "NavidromeDown" "urgent" "Navidrome is down"
+        "Navidrome is not answering HTTP health probes ({{ $labels.instance }})"
+        ''probe_success{job="blackbox",app="navidrome"} == 0'')
+    ])
+    ++ (lib.optionals config.modules.system.homelab.vaultwarden.enable [
+      (mkRule "VaultwardenDown" "urgent" "Vaultwarden is down"
+        "Vaultwarden is not answering HTTP health probes ({{ $labels.instance }})"
+        ''probe_success{job="blackbox",app="vaultwarden"} == 0'')
+    ])
+    ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
+      (mkRule "AdGuardDown" "urgent" "AdGuard Home DNS is down"
+        "AdGuard Home is not responding"
+        ''up{job="adguard"} == 0 or adguard_running == 0'')
+      (mkRule "DnsResolutionFailed" "urgent" "LAN DNS resolution is failing"
+        "AdGuard Home is not resolving queries; LAN name resolution is failing"
+        ''probe_success{job="blackbox-dns"} == 0'')
+    ])
+    ++ (lib.optionals config.modules.system.homelab.backup.enable [
+      (mkRule "BackupFailed" "high" "A backup job failed"
+        "A ZFS snapshot or replication job (sanoid/syncoid) ended in failed state; backups are incomplete until fixed"
+        ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == 1'')
+    ])
+    ++ (lib.optionals cfg.fritzbox.enable [
+      (mkRule "FritzboxWanDown" "urgent" "Fritz!Box WAN link is down"
+        "Fritz!Box WAN physical link is down"
+        "fritz_wan_phys_link_status == 0")
+      (mkRule "WanUnreachable" "urgent" "Public internet is unreachable"
+        "Public internet is unreachable over ICMP (uplink down or dropping packets)"
+        ''probe_success{job="blackbox-icmp"} == 0'')
+      (mkRule "WanHighLatency" "high" "WAN latency is high"
+        "ICMP round-trip to the public internet exceeds 500 ms (bufferbloat starving DNS)"
+        ''probe_duration_seconds{job="blackbox-icmp"} > 0.5'')
+    ])
+    ++ [
+      (mkRule "NodeExporterDown" "urgent" "Node exporter is unreachable"
+        "Node exporter is unreachable; system metrics are unavailable"
+        ''up{job="node"} == 0'')
+      (mkRule "FilesystemFull" "urgent" "Filesystem nearly full"
+        "Persistent filesystem {{ $labels.mountpoint }} ({{ $labels.device }}) is at {{ $value | humanizePercentage }} free"
+        ''(${fsAvail} / ${fsSize}) < 0.1 and ${fsSize} > 2e9'')
+      (mkRule "FilesystemWarn" "high" "Filesystem low on free space"
+        "Persistent filesystem {{ $labels.mountpoint }} ({{ $labels.device }}) is at {{ $value | humanizePercentage }} free; runaway writes head toward FilesystemFull"
+        ''(${fsAvail} / ${fsSize}) < 0.2 and ${fsSize} > 2e9'')
+    ]
+    ++ lib.optionals config.modules.system.maintenance.enable [
+      # Tripwire for the disabled managed collector: garbageCollector.strategy
+      # is "disabled" (sops-common), so determinate-nixd must never trim the
+      # store on its own. An absent series (pre-first-run deploy gap) does not
+      # fire; only a sustained storm does.
+      (mkRule "NixdGcStorm" "high" "determinate-nixd GC storm"
+        "determinate-nixd managed GC ran more than 3 times in 90 minutes"
+        "nixd_gc_runs_last_90min > 3")
+    ]
+    ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
+      (mkRule "PostgresDown" "high" "PostgreSQL exporter is unreachable"
+        "PostgreSQL exporter is unreachable"
+        ''up{job="postgres"} == 0'')
+    ];
+
+  homelabGroups = [
+    {
+      name = "homelab";
+      rules = alertRuleGroups;
+    }
+  ];
+
   # Wall-power measurement: the Shelly plug meters the whole machine at the
   # outlet over local HTTP RPC (no cloud). apower is the instantaneous WALL
   # draw in watts, aenergy.total the cumulative Wh counter — both are wall
@@ -102,7 +214,17 @@ in {
       description = "Node exporter metrics port (localhost only)";
     };
     alerting = {
-      enable = lib.mkEnableOption "Grafana alert rules and notification channel to ntfy";
+      enable = lib.mkEnableOption "Prometheus alert rules delivered through Alertmanager and alertmanager-ntfy";
+      ruleGroups = lib.mkOption {
+        type = lib.types.listOf lib.types.anything;
+        default = [];
+        description = ''
+          Generated Prometheus alert rule groups. The same value is serialized
+          into services.prometheus.rules; it is exposed here so the monitoring
+          test can assert rule integrity structurally instead of parsing the
+          rendered YAML.
+        '';
+      };
     };
     fritzbox = {
       enable = lib.mkOption {
@@ -251,12 +373,14 @@ in {
             {
               targets = ["http://127.0.0.1:${toString config.modules.system.homelab.immich.port}/api/server/ping"];
               labels.app = "immich";
+              labels.host = localHost;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
             {
               targets = ["http://127.0.0.1:${toString config.modules.system.homelab.nextcloud.port}/status.php"];
               labels.app = "nextcloud";
+              labels.host = localHost;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.jellyfin.enable [
@@ -264,6 +388,7 @@ in {
               # /health returns 200 once the server is up, independent of auth.
               targets = ["http://127.0.0.1:8096/health"];
               labels.app = "jellyfin";
+              labels.host = localHost;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.navidrome.enable [
@@ -276,6 +401,7 @@ in {
                 "http://127.0.0.1:${toString config.modules.system.homelab.navidrome.port}/navidrome/rest/ping.view"
               ];
               labels.app = "navidrome";
+              labels.host = localHost;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.vaultwarden.enable [
@@ -284,6 +410,7 @@ in {
               # Rocket loopback port, not through the Tailscale Serve front.
               targets = ["http://127.0.0.1:${toString config.services.vaultwarden.config.ROCKET_PORT}/alive"];
               labels.app = "vaultwarden";
+              labels.host = localHost;
             }
           ];
       in
@@ -294,6 +421,7 @@ in {
             static_configs = [
               {
                 targets = ["127.0.0.1:${toString cfg.nodeExporterPort}"];
+                labels.host = localHost;
               }
             ];
           }
@@ -307,6 +435,7 @@ in {
             static_configs = [
               {
                 targets = ["${inputs.self.lib.hosts.desktop.ip}:9100"];
+                labels.host = "desktop";
               }
             ];
           }
@@ -318,6 +447,7 @@ in {
                 targets = [
                   "127.0.0.1:${toString config.services.prometheus.exporters.postgres.port}"
                 ];
+                labels.host = localHost;
               }
             ];
           }
@@ -349,6 +479,7 @@ in {
                 targets = [
                   "127.0.0.1:${toString config.services.prometheus.exporters.fritz.port}"
                 ];
+                labels.host = localHost;
               }
             ];
           }
@@ -362,6 +493,7 @@ in {
                 targets = [
                   "127.0.0.1:${toString config.services.prometheus.exporters.nextcloud.port}"
                 ];
+                labels.host = localHost;
               }
             ];
           }
@@ -373,6 +505,7 @@ in {
             static_configs = [
               {
                 targets = ["127.0.0.1:${toString config.modules.system.homelab.adguardhome.exporterPort}"];
+                labels.host = localHost;
               }
             ];
             metrics_path = "/metrics";
@@ -398,6 +531,7 @@ in {
               {
                 targets = ["127.0.0.1:53"];
                 labels.probe = "adguard-dns";
+                labels.host = localHost;
               }
             ];
             relabel_configs = proberRelabel 9115;
@@ -413,6 +547,7 @@ in {
               {
                 targets = ["1.1.1.1"];
                 labels.probe = "wan";
+                labels.host = localHost;
               }
             ];
             relabel_configs = proberRelabel 9115;
@@ -431,6 +566,7 @@ in {
               lib.mapAttrsToList (name: ip: {
                 targets = ["http://${ip}/rpc/Switch.GetStatus?id=0"];
                 labels.plug = name;
+                labels.host = localHost;
               })
               cfg.wallPower.plugs;
             relabel_configs = proberRelabel config.services.prometheus.exporters.json.port;
@@ -552,256 +688,98 @@ in {
               options.path = ./garmin-dashboard.json;
             }
           ];
+      };
+    };
 
-        # Grafana alerting contact point and notification policy
-        #
-        # ntfy receives Grafana's webhook as publish-as-JSON: a raw
-        # alertmanager payload POSTed to ntfy fails to parse as a publish
-        # message and is delivered as an unnamed file attachment without
-        # title or priority. The custom payload template renders proper
-        # title/message/priority/tags instead. It must produce valid JSON on
-        # every render; interpolated text is limited to repo-constant
-        # descriptions and alert labels.
-        alerting.contactPoints.settings = lib.mkIf cfg.alerting.enable {
-          apiVersion = 1;
-          contactPoints = [
-            {
-              name = "ntfy";
-              receivers = [
-                {
-                  uid = "ntfy-webhook";
-                  type = "webhook";
-                  settings = {
-                    url = "http://127.0.0.1:2586/";
-                    httpMethod = "POST";
-                    payload = {
-                      # Rendered output must be valid ntfy publish-as-JSON on
-                      # a SINGLE line: raw newlines inside a JSON string are
-                      # rejected by ntfy, and YAML folding escapes them into
-                      # literal backslash-n.
-                      #
-                      # No Go-template variables ($p := ...) here: Grafana's
-                      # provisioning interpolator strips bare $identifier
-                      # tokens from provisioned payloads before storing them,
-                      # which corrupts the template until it fails to parse
-                      # at send time. Priority is therefore status-based
-                      # rather than severity-based. Descriptions are repo
-                      # constants (no user input), so skipping JSON escaping
-                      # is safe — Grafana's alert templates have no
-                      # jsonEscape function anyway.
-                      template = ''
-                        {"topic":"homelab-alerts","tags":[{{ if eq .Status "resolved" }}"white_check_mark"{{ else }}"warning","rotating_light"{{ end }}],"priority":{{ if eq .Status "resolved" }}2{{ else }}4{{ end }},"title":"[{{ .Status | toUpper }}:{{ len .Alerts }}] {{ range .Alerts }}{{ .Labels.alertname }} {{ end }}","message":"{{ range .Alerts }}- {{ .Labels.alertname }}{{ with .Annotations.description }}: {{ . }}{{ end }}{{ with .Labels.instance }} ({{ . }}){{ end }} | {{ end }}Manage: {{ .ExternalURL }}"}
-                      '';
-                    };
-                  };
-                  disableResolveMessage = false;
-                }
-              ];
-            }
-          ];
+    # Alerting: Prometheus evaluates the rules, Alertmanager groups, dedups and
+    # re-notifies them, and alertmanager-ntfy delivers each alert to the local
+    # ntfy topic. Grafana keeps its dashboards and datasources only; its
+    # unified alerting (query/reduce/threshold pipeline and provisioned
+    # webhook payload) is gone.
+    modules.system.homelab.monitoring.alerting.ruleGroups =
+      mkIf cfg.alerting.enable homelabGroups;
+
+    services.prometheus.globalConfig.evaluation_interval = "1m";
+
+    # nixpkgs' lib.generators.toYAML is an alias of toJSON, so the rule file
+    # is JSON. Prometheus (yaml.v3) accepts JSON, and services.prometheus.rules
+    # is promtool-checked at build time, so a malformed rule fails the build.
+    services.prometheus.rules = mkIf cfg.alerting.enable [
+      (lib.generators.toYAML {} {
+        groups = homelabGroups;
+      })
+    ];
+
+    services.prometheus.alertmanagers = mkIf cfg.alerting.enable [
+      {
+        static_configs = [
+          {
+            targets = ["127.0.0.1:9093"];
+          }
+        ];
+      }
+    ];
+
+    services.prometheus.alertmanager = mkIf cfg.alerting.enable {
+      enable = true;
+      listenAddress = "127.0.0.1";
+      configuration = {
+        route = {
+          receiver = "ntfy";
+          # One notification per alert, grouped by rule and host. group_wait
+          # coalesces a burst; repeat_interval bounds how often a still-firing
+          # alert re-notifies.
+          group_by = ["alertname" "host"];
+          group_wait = "30s";
+          group_interval = "5m";
+          repeat_interval = "4h";
         };
+        receivers = [
+          {
+            name = "ntfy";
+            webhook_configs = [
+              {
+                url = "http://127.0.0.1:8000/hook";
+                send_resolved = true;
+              }
+            ];
+          }
+        ];
+      };
+    };
 
-        alerting.policies.settings = lib.mkIf cfg.alerting.enable {
-          apiVersion = 1;
-          policies = [
-            {
-              receiver = "ntfy";
-              # Empty group_by consolidates all simultaneous alerts (e.g. an
-              # outage taking down several exporters) into a single
-              # notification listing every affected rule.
-              group_by = [];
-              group_wait = "30s";
-              group_interval = "5m";
-              repeat_interval = "4h";
-            }
-          ];
-        };
-
-        # Prometheus alert rules evaluated by Grafana unified alerting and
-        # routed to ntfy through the contact point and notification policy
-        # above.
-        #
-        # Queries use the "<metric> == bool <threshold>" pattern instead of a
-        # plain filter: boolean comparisons always return a series (1 when
-        # triggered, 0 when healthy), while filtered comparisons return an
-        # empty vector on healthy systems, which the count/threshold chain
-        # would report as NoData and page falsely. Genuinely missing data
-        # (Prometheus unreachable) stays meaningful and fires via noDataState.
-        alerting.rules.settings = lib.mkIf cfg.alerting.enable {
-          apiVersion = 1;
-          groups = let
-            # Down-style alerts use noDataState "Alerting" (default): missing
-            # data means the monitored thing is unobservable and must page.
-            # Decision-data metrics (e.g. NixdGcStorm) set "OK" instead: their
-            # series legitimately does not exist until the first post-deploy
-            # health-check publishes it, and treating that gap as an incident
-            # paged every evaluation until data arrived (2026-09-16, false
-            # NixdGcStorm right after switch).
-            mkAlert = uid: severity: title: description: expr: noDataState: {
-              inherit uid title;
-              condition = "C";
-              "for" = "2m";
-              # Missing data means the monitored thing is unobservable, which
-              # for down-detection is itself an alert; evaluation errors keep
-              # the last state instead of paging (visible in the Grafana UI).
-              inherit noDataState;
-              execErrState = "KeepLast";
-              labels.severity = severity;
-              annotations.description = description;
-              data = [
-                {
-                  refId = "A";
-                  relativeTimeRange.from = 600;
-                  relativeTimeRange.to = 0;
-                  # Scalar datasourceUid is load-bearing: the provisioner does
-                  # not round-trip the datasource object form into the DB, and
-                  # evaluation then fails with "uid is empty".
-                  datasourceUid = "prometheus";
-                  model = {
-                    inherit expr;
-                    datasource.type = "prometheus";
-                    datasource.uid = "prometheus";
-                    instant = true;
-                    intervalMs = 1000;
-                    maxDataPoints = 43200;
-                    refId = "A";
-                  };
-                }
-                {
-                  # Legacy datasourceUid here (not a datasource object): the
-                  # expression engine rejects __expr__ nodes that look like
-                  # data queries (it then demands a relative time range).
-                  refId = "B";
-                  datasourceUid = "__expr__";
-                  model = {
-                    datasource.type = "__expr__";
-                    datasource.uid = "__expr__";
-                    type = "reduce";
-                    expression = "A";
-                    reducer = "count";
-                    intervalMs = 1000;
-                    maxDataPoints = 43200;
-                    refId = "B";
-                  };
-                }
-                {
-                  refId = "C";
-                  datasourceUid = "__expr__";
-                  model = {
-                    datasource.type = "__expr__";
-                    datasource.uid = "__expr__";
-                    type = "threshold";
-                    expression = "B";
-                    conditions = [
-                      {
-                        evaluator.params = [0];
-                        evaluator.type = "gt";
-                        operator.type = "and";
-                        query.params = ["A"];
-                      }
-                    ];
-                    intervalMs = 1000;
-                    maxDataPoints = 43200;
-                    refId = "C";
-                  };
-                }
-              ];
+    # alertmanager-ntfy sends one ntfy message per alert. Priority comes
+    # verbatim from the alert's `priority` label (ntfy names, set by the rule
+    # groups); the title names the source host; tapping opens the Prometheus
+    # expression that fired.
+    services.prometheus.alertmanager-ntfy = mkIf cfg.alerting.enable {
+      enable = true;
+      settings = {
+        http.addr = "127.0.0.1:8000";
+        ntfy = {
+          baseurl = "http://127.0.0.1:2586";
+          notification = {
+            topic = "homelab-alerts";
+            priority = ''status == "resolved" ? "default" : alert.labels.priority'';
+            tags = [
+              {
+                tag = "rotating_light";
+                condition = ''status == "firing"'';
+              }
+              {
+                tag = "white_check_mark";
+                condition = ''status == "resolved"'';
+              }
+            ];
+            templates = {
+              title = ''{{ if eq .Status "resolved" }}Resolved: {{ end }}{{ index .Labels "alertname" }} on {{ index .Labels "host" }}'';
+              description = ''{{ index .Annotations "description" }}'';
+              headers = {
+                "X-Click" = "{{ .GeneratorURL }}";
+                "X-Markdown" = "yes";
+              };
             };
-          in [
-            {
-              name = "homelab";
-              folder = "Homelab";
-              interval = "2m";
-              rules =
-                (lib.optionals config.modules.system.homelab.nextcloud.enable [
-                  (mkAlert "nextcloud-down" "urgent" "NextcloudDown"
-                    "Nextcloud is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="nextcloud"} == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.immich.enable [
-                  (mkAlert "immich-down" "urgent" "ImmichDown"
-                    "Immich is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="immich"} == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.jellyfin.enable [
-                  (mkAlert "jellyfin-down" "urgent" "JellyfinDown"
-                    "Jellyfin is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="jellyfin"} == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.navidrome.enable [
-                  (mkAlert "navidrome-down" "urgent" "NavidromeDown"
-                    "Navidrome is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="navidrome"} == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.vaultwarden.enable [
-                  (mkAlert "vaultwarden-down" "urgent" "VaultwardenDown"
-                    "Vaultwarden is not responding to HTTP health probes"
-                    ''probe_success{job="blackbox",app="vaultwarden"} == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
-                  (mkAlert "adguard-down" "urgent" "AdGuardDown"
-                    "AdGuard Home DNS server is not responding"
-                    ''up{job="adguard"} == bool 0 or adguard_running == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.backup.enable [
-                  (mkAlert "backup-failed" "high" "BackupFailed"
-                    "A ZFS snapshot or replication job (sanoid/syncoid) ended in failed state; backups are incomplete until fixed"
-                    ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == bool 1'' "Alerting")
-                ])
-                ++ (lib.optionals cfg.fritzbox.enable [
-                  (mkAlert "fritzbox-wan-down" "urgent" "FritzboxWanDown"
-                    "Fritz!Box WAN physical link is down"
-                    "fritz_wan_phys_link_status == bool 0" "Alerting")
-                ])
-                ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
-                  (mkAlert "dns-resolution-failed" "urgent" "DnsResolutionFailed"
-                    "AdGuard Home is not resolving queries; LAN name resolution is failing"
-                    ''probe_success{job="blackbox-dns"} == bool 0'' "Alerting")
-                ])
-                ++ (lib.optionals cfg.fritzbox.enable [
-                  (mkAlert "wan-unreachable" "urgent" "WanUnreachable"
-                    "Public internet is unreachable over ICMP (uplink down or dropping packets)"
-                    ''probe_success{job="blackbox-icmp"} == bool 0'' "Alerting")
-                  (mkAlert "wan-high-latency" "high" "WanHighLatency"
-                    "ICMP round-trip to the public internet exceeds 500 ms (bufferbloat starving DNS)"
-                    ''probe_duration_seconds{job="blackbox-icmp"} > bool 0.5'' "Alerting")
-                ])
-                ++ [
-                  (mkAlert "node-exporter-down" "urgent" "NodeExporterDown"
-                    "Node exporter is unreachable (system metrics unavailable)"
-                    ''up{job="node"} == bool 0'' "Alerting")
-                ]
-                ++ lib.optionals config.modules.system.maintenance.enable [
-                  # Tripwire for the disabled managed collector:
-                  # garbageCollector.strategy is "disabled" (sops-common), so
-                  # determinate-nixd must never trim the store on its own. A
-                  # sustained storm means a deploy or an upstream default put
-                  # it back in charge of the store, waking the disks during
-                  # quiet hours again. Absent data (pre-first-run deploy gap)
-                  # is not an incident; only a sustained storm is.
-                  (mkAlert "nixd-gc-storm" "high" "NixdGcStorm"
-                    "determinate-nixd managed GC ran more than 3 times in 90 minutes"
-                    ''nixd_gc_runs_last_90min > bool 3'' "OK")
-                ]
-                ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
-                  (mkAlert "postgres-down" "high" "PostgresDown"
-                    "PostgreSQL exporter is unreachable"
-                    ''up{job="postgres"} == bool 0'' "Alerting")
-                  (mkAlert "filesystem-full" "urgent" "FilesystemFull"
-                    "A persistent filesystem is under 10% free. On ZFS all datasets of a pool share free space, so any runaway writer can zero all of them (2026-09 m920q incident)"
-                    ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.1'' "Alerting")
-                  # Early warning ahead of the urgent FilesystemFull rule: no
-                  # automatic collector trims the store on pressure, so these
-                  # two rules are the only signal a runaway writer is filling
-                  # a pool. At 20% the filesystem is still fast; ZFS already
-                  # degrades as a pool approaches capacity, which is what the
-                  # 10% rule pages about.
-                  (mkAlert "filesystem-warning" "high" "FilesystemWarn"
-                    "A persistent filesystem is under 20% free; runaway writes head toward FilesystemFull"
-                    ''(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}) < bool 0.2'' "Alerting")
-                ];
-            }
-          ];
+          };
         };
       };
     };
