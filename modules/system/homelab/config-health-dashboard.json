@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "NixOS generation size (emit-deploy-metrics.sh) and the vitals host health score",
+  "description": "NixOS generation size (emit-deploy-metrics.sh) and the vitals host health score. Deploy panels are point-in-time (a generation is recorded only when it is activated), so they update once per deploy; the vitals panels are continuous.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -135,7 +135,7 @@
       },
       "targets": [
         {
-          "expr": "nixos_deploy_timestamp_seconds",
+          "expr": "nixos_deploy_timestamp_seconds * 1000",
           "instant": true,
           "refId": "A"
         }
@@ -287,7 +287,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -374,7 +374,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -461,7 +461,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -628,7 +628,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -672,6 +672,7 @@
         "y": 22
       },
       "id": 20,
+      "timeFrom": "24h",
       "options": {
         "legend": {
           "calcs": [],
@@ -729,7 +730,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -758,6 +759,7 @@
         "y": 22
       },
       "id": 21,
+      "timeFrom": "24h",
       "options": {
         "legend": {
           "calcs": [],
@@ -815,7 +817,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -845,6 +847,7 @@
         "y": 30
       },
       "id": 22,
+      "timeFrom": "24h",
       "options": {
         "legend": {
           "calcs": [],
@@ -902,7 +905,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -931,6 +934,7 @@
         "y": 30
       },
       "id": 23,
+      "timeFrom": "24h",
       "options": {
         "legend": {
           "calcs": [],
@@ -953,6 +957,54 @@
       ],
       "title": "Load average",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+      "id": 102,
+      "panels": [],
+      "title": "Scrape health",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 39 },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "up", "legendFormat": "{{job}} {{instance}}", "refId": "A" }
+      ],
+      "title": "Targets up",
+      "type": "timeseries"
     }
   ],
   "refresh": "5m",
@@ -962,7 +1014,7 @@
     "list": []
   },
   "time": {
-    "from": "now-90d",
+    "from": "now-14d",
     "to": "now"
   },
   "timepicker": {},
