@@ -93,7 +93,11 @@ benefit for single quick changes.
    ```
 
    `done` refuses while the workspace still carries commits outside
-   `main@origin` or uncommitted changes, so it doubles as a close-out check.
+   `main@origin` that are not already absorbed into it, so it doubles as a
+   close-out check. Absorption is checked per revision, so a squash-merged PR
+   counts as finished even though its draft commit is not an ancestor of
+   `main@origin`; unsnapshotted edits in a foreign workspace are invisible by
+   design (ocws never snapshots a workspace it does not own).
    `ocws gc` (also run by `ocws <task>`) forgets finished workspaces idle past
    `OCWS_GC_AGE` (default 86400s). `ocws rm [--force] <task>` removes without
    the fetch/check; `--force` discards unmerged work.
@@ -119,7 +123,7 @@ A reader can then map any workspace `@` to its session without a registry.
   workspace `@` is childless and empty, so without the exclusion it is "fully
   absorbed" into `main@origin` and gets abandoned and reset under a parallel
   agent's feet. The exclusion lives in
-  `modules/home/shells/fish/functions/jj.nix`; do not remove it.
+  `pkgs/jj-tools/jj-tidy.nix`; do not remove it.
 - comin only reconciles the primary checkout. Never rely on it to push a
   secondary workspace's change.
 - One writer per clone: do not run interactive jj mutations in the primary
