@@ -258,7 +258,15 @@
       # nixos-unstable channel removed after Go 1.25 EOL, and elephant's
       # package set does not see host overlays. Pin its nixpkgs to the
       # previous channel snapshot so it keeps the Go 1.25 builder.
-      inputs.elephant.inputs.nixpkgs.follows = "nixpkgs-elephant";
+      inputs.elephant.follows = "elephant";
+    };
+    # Declared at the root rather than as walker's nested input: nix-on-droid's
+    # bootstrap ships Nix 2.20, which treats a transitive follows through a
+    # non-root input as an indirect 'flake:elephant' and then cannot resolve
+    # the lock (walker/elephant fails with "cannot find flake 'flake:elephant'").
+    elephant = {
+      url = "github:abenz1267/elephant";
+      inputs.nixpkgs.follows = "nixpkgs-elephant";
     };
     # Channel snapshot with the Go 1.25 builder still present; every consumer
     # that cannot migrate off buildGo125Module (elephant, sops-nix at
