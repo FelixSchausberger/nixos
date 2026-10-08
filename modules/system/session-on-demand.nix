@@ -56,6 +56,12 @@ in {
     systemd.packages = [config.programs.niri.package];
     systemd.user.services.niri = {
       overrideStrategy = "asDropin";
+      # Defining the unit here generates a drop-in; without this it would
+      # carry the NixOS default Environment="PATH=coreutils:findutils:…",
+      # clobbering the PATH niri imported into the user manager and breaking
+      # every spawn bind that relies on it (sh, bash, noctalia, walker).
+      # Same reason nixpkgs' own niri module sets this false.
+      enableDefaultPath = false;
       serviceConfig = {
         Restart = "on-failure";
         RestartSec = 2;
