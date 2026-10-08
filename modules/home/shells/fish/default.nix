@@ -45,9 +45,11 @@
       # disappears (delete is async), and recreate with the same atomic primitive.
       # delete-session (not kill-session): kill targets live sessions and is a
       # no-op on EXITED metadata, leaving `attach --create` to fail with
-      # "already exists, but is dead" — delete removes the metadata instead.
-      # Concurrent recreates are harmless: the second `attach --create` just
-      # joins the fresh session.
+      # "already exists, but is dead". zellij 0.45+ refuses to delete a
+      # session without --force even when it is only EXITED metadata, so the
+      # forced form is required for the recreate fallback to actually heal.
+      # Concurrent recreates are harmless: a second `attach --create` joins
+      # the fresh session.
       if status is-interactive
           and ${lib.boolToString attachEnabled}
           and not __emergency_check
@@ -62,7 +64,7 @@
           else if zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
             if not zellij attach "$session_name"
               echo "zellij-attach: session '$session_name' is dead; recreating" >&2
-              zellij delete-session "$session_name" 2>/dev/null
+              zellij delete-session --force "$session_name" 2>/dev/null
               for i in (seq 1 50)
                 if not zellij list-sessions --no-formatting 2>/dev/null | string match -rq "^$session_name\b.*"
                   break
