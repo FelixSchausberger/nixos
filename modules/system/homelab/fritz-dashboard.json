@@ -94,7 +94,7 @@
       "id": 3,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -102,8 +102,11 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
+        "textMode": "value"
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -168,7 +171,7 @@
       "id": 5,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -176,8 +179,11 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
+        "textMode": "value"
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -235,7 +241,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -309,8 +318,11 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
+        "textMode": "value"
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -383,8 +395,11 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
+        "textMode": "value"
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -457,7 +472,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -519,7 +537,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -578,7 +599,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -640,7 +664,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        }
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -702,7 +730,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        }
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -764,7 +796,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        }
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -826,7 +862,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        }
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -1116,8 +1156,11 @@
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "name"
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
+        "textMode": "value"
       },
       "pluginVersion": "8.5.3",
       "targets": [
@@ -1175,7 +1218,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "name"
       },
       "pluginVersion": "8.5.3",
@@ -1234,7 +1280,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -1487,7 +1536,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -1549,7 +1601,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -1611,7 +1666,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "name"
       },
       "pluginVersion": "8.5.3",
@@ -1887,7 +1945,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
@@ -1947,7 +2008,10 @@
           "fields": "",
           "values": false
         },
-        "text": {},
+        "text": {
+          "valueSize": 24,
+          "titleSize": 14
+        },
         "textMode": "auto"
       },
       "pluginVersion": "8.5.3",
