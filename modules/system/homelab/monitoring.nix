@@ -70,16 +70,18 @@
   # from `alert.labels.priority`. `for = 2m` matches the former Grafana rule
   # cadence. Annotations are Prometheus-templated, so `summary` names the host
   # and `description` can quote the offending mountpoint or value.
-  mkRule = name: priority: summary: description: expr: {
+  mkRuleFor = for: name: priority: summary: description: expr: {
     alert = name;
     inherit expr;
-    "for" = "2m";
+    "for" = for;
     labels.priority = priority;
     annotations = {
       summary = "${summary} on {{ $labels.host }}";
       inherit description;
     };
   };
+  # Most rules need the same 2m hold.
+  mkRule = mkRuleFor "2m";
 
   # tmpfs/overlay-style pseudo-filesystems never warrant a capacity page; the
   # size floor drops small non-ZFS boot partitions. A 511 MiB vfat ESP on the
@@ -158,6 +160,18 @@
       (mkRule "NixdGcStorm" "high" "determinate-nixd GC storm"
         "determinate-nixd managed GC ran more than 3 times in 90 minutes"
         "nixd_gc_runs_last_90min > 3")
+      # Host health signals formerly pushed by the shell health-check. Moving
+      # them here gives Alertmanager dedup and repeat_interval instead of an
+      # hourly re-notify, and covers the desktop through the node-desktop job.
+      (mkRule "ServiceFailed" "high" "A systemd unit failed"
+        "{{ $labels.name }} ({{ $labels.type }}) is in failed state"
+        ''node_systemd_unit_state{state="failed"} == 1'')
+      (mkRuleFor "10m" "MemoryPressure" "high" "Memory is nearly exhausted"
+        "Only {{ $value | humanizePercentage }} of memory is available; the OOM killer may start reaping"
+        ''node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1'')
+      (mkRule "CpuTemperature" "urgent" "CPU package temperature is critical"
+        "CPU package at {{ $value }} C; check cooling"
+        ''node_thermal_zone_temp{type="x86_pkg_temp"} >= 90'')
     ]
     ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
       (mkRule "PostgresDown" "high" "PostgreSQL exporter is unreachable"
