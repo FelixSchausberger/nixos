@@ -35,14 +35,9 @@
   ];
   monitoring_enabled = true;
   opencode_server_exec_start = [
-    "/nix/store/<hash>/opencode2/bin/opencode2"
-    "serve"
-    "--service"
-    "--hostname"
-    "127.0.0.1"
-    "--port"
-    "4096"
+    "/nix/store/<hash>/opencode2/bin/opencode2 serve --service --hostname 127.0.0.1 --port 4096"
   ];
+  opencode_server_single_exec_start = true;
   opencode_server_working_directory = "/per/etc/nixos";
   opencode_web_enabled = true;
   opencode_web_https_port = 8444;
