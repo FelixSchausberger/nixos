@@ -63,15 +63,37 @@ in {
   in
     builtins.any (arg: builtins.match ".*rmg-moonshine.*" arg != null) tile.command;
 
-  # Dolphin has no --fullscreen flag and its stored config launches windowed,
-  # so the GameCube tiles must force fullscreen through the config override.
-  # The Moonshine compositor only auto-fills Steam windows.
+  # Moonshine's compositor only force-fills windows that carry a Steam app id,
+  # so a non-Steam emulator's X11 fullscreen request is acknowledged without a
+  # resize. GameCube tiles route through the gamescope wrapper, which provides
+  # a real compositor for the fullscreen request, and still force Dolphin's
+  # fullscreen through the config override so it renders at the client
+  # resolution inside gamescope's output.
+  fzero_gx_uses_gamescope = let
+    tile =
+      builtins.head
+      (builtins.filter (app: app.title == "F-Zero GX") config.services.moonshine.settings.application);
+  in
+    builtins.any (arg: builtins.match ".*gamescope-moonshine.*" arg != null) tile.command;
+
   fzero_gx_forces_fullscreen = let
     tile =
       builtins.head
       (builtins.filter (app: app.title == "F-Zero GX") config.services.moonshine.settings.application);
   in
     builtins.elem "Dolphin.Display.Fullscreen=True" tile.command;
+
+  # Every non-Steam emulator tile must fill the stream via the gamescope
+  # wrapper; RMG keeps its dedicated GLideN64 resolution wrapper instead.
+  emulator_tiles_use_gamescope = let
+    tileFor = title: builtins.head (builtins.filter (app: app.title == title) config.services.moonshine.settings.application);
+    usesGamescope = title: builtins.any (arg: builtins.match ".*gamescope-moonshine.*" arg != null) (tileFor title).command;
+  in
+    builtins.all usesGamescope [
+      "F-Zero GX"
+      "F-Zero"
+      "Mario Kart 8 Deluxe"
+    ];
 
   # snes9x's X11 fullscreen path only scales when the Xvideo path is enabled;
   # without it the SNES image is drawn at a fixed 2x centered in the output.
