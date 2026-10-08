@@ -9,6 +9,17 @@ _: {
           python-lsp-server = pyprev.python-lsp-server.overridePythonAttrs (_: {
             doCheck = false;
           });
+
+          # python-lsp-server depends on black at runtime. Black's check
+          # inputs alone pull aiohttp -> proxy-py -> httpx -> anyio, and anyio
+          # 4.14.2's test suite fails in the sandbox (test_tls_connectable,
+          # test_contextmanagers, test_fileio) on the nixos-unstable channel
+          # rev 151fa4e. In the 3.12 package set anyio is reached *only*
+          # through black's tests, so disabling black's checks prunes that
+          # whole subtree instead of compiling it.
+          black = pyprev.black.overridePythonAttrs (_: {
+            doCheck = false;
+          });
         }
       );
 
@@ -16,6 +27,13 @@ _: {
       python314Packages = prev.python314Packages.overrideScope (
         _: pyprev: {
           python-lsp-server = pyprev.python-lsp-server.overridePythonAttrs (_: {
+            doCheck = false;
+          });
+
+          # Same black check cascade as the 3.12 scope. Anyio itself stays in
+          # this closure as a runtime dependency of immich-machine-learning,
+          # but black's tests still drag in aiohttp/ipython for no reason.
+          black = pyprev.black.overridePythonAttrs (_: {
             doCheck = false;
           });
 
