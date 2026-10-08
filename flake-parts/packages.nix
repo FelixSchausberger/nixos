@@ -1,6 +1,14 @@
 {inputs, ...}: {
   perSystem = {pkgs, ...}: let
     zellijPlugins = pkgs.callPackage ../pkgs/zellij-plugins {};
+
+    # Bookmark slug derivation used by jjpush.
+    jj-slug = pkgs.callPackage ../pkgs/jj-slug {};
+
+    # jj workspace workflow commands, split out of the home-manager module so
+    # each tool is a reviewable derivation. ocws/jjpush depend on jj-slug.
+    jjTools = pkgs.callPackage ../pkgs/jj-tools {inherit jj-slug;};
+
     makeISO = modules:
       (inputs.nixpkgs.lib.nixosSystem {
         inherit (pkgs.stdenv.hostPlatform) system;
@@ -24,7 +32,10 @@
       dssh = pkgs.callPackage ../pkgs/dssh {};
 
       # Bookmark slug derivation used by jjpush
-      jj-slug = pkgs.callPackage ../pkgs/jj-slug {};
+      inherit jj-slug;
+
+      # jj workspace workflow commands (jj-tidy, jjwork, jjpush, jjtest, ocws)
+      inherit (jjTools) jj-tidy jjwork jjpush jjtest ocws;
 
       inherit
         (zellijPlugins)

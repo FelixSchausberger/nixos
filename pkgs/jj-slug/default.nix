@@ -1,5 +1,5 @@
 # Single source of truth for deriving jj bookmark slugs from conventional
-# commit descriptions. Used by jjpush (modules/home/shells/fish/functions/jj.nix).
+# commit descriptions. Used by jjpush (pkgs/jj-tools/jjpush.nix).
 {
   writeShellApplication,
   gnused,
