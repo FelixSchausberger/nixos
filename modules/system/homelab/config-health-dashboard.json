@@ -775,7 +775,7 @@
       },
       "targets": [
         {
-          "expr": "vitals_issues_total",
+          "expr": "vitals_issues",
           "legendFormat": "{{severity}}",
           "refId": "A"
         }
