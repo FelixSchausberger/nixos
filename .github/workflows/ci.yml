@@ -5,47 +5,24 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-# Permissions for security scanning
-permissions:
-  id-token: write
-  actions: read
-  contents: read
-  security-events: write
-env:
-  # Enhanced SSL certificate configuration for all environments
-  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-  SSL_CERT_DIR: /etc/ssl/certs
-  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-  NIX_SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  NIX_CONFIG: |
-    experimental-features = nix-command flakes pipe-operators
-    allow-import-from-derivation = true
-    accept-flake-config = true
-    # SSL/TLS Configuration
-    ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    # Optimized substituters (prioritize speed: official → community)
-    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org https://yazi.cachix.org https://claude-code.cachix.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc= yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA= claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=
-    # Cache robustness settings
-    narinfo-cache-positive-ttl = 3600
-    connect-timeout = 5
-    stalled-download-timeout = 30
-    # A cache outage must not fail the job: substitute errors degrade to source builds.
-    fallback = true
-    # Performance optimizations
-    max-jobs = auto
-    cores = 0
-    builders-use-substitutes = true
-    # Reduce build log verbosity
-    log-lines = 25
+# A newer push to a PR branch makes the previous validation run pointless, so
+# cancel it. main pushes are never cancelled: every merge commit keeps a green
+# record. "Quick Validation" and "Security Scan" are the required checks.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   # Security and compliance checks
   security:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Run Trivy vulnerability scanner
@@ -57,7 +34,7 @@ jobs:
           format: "sarif"
           output: "trivy-results.sarif"
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4.38.2
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         if: always() && github.event_name != 'pull_request' && github.token != ''
         with:
           sarif_file: "trivy-results.sarif"
@@ -72,30 +49,17 @@ jobs:
   # Quick validation and linting
   validate:
     name: Quick Validation
-    runs-on: ubuntu-latest
-    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Setup SSL certificates
-        uses: ./.github/actions/setup-ssl
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            ${{ env.NIX_CONFIG }}
-      - name: Cache Nix store
-        # Pull-only from this repo's public Cachix cache; the store paths that
-        # matter (devshell, custom packages) are pushed by daily-updates and
-        # cachix-push, which are the only jobs that carry CACHIX_AUTH_TOKEN.
-        # Best-effort: a cache outage must not fail validation.
-        uses: cachix/cachix-action@v17
-        continue-on-error: true
-        with:
-          name: felixschausberger
-          skipPush: true
+      - name: Setup Nix
+        uses: ./.github/actions/nix-setup
       - name: Run prek hooks
         run: |
           # First pass: let formatters (alejandra, etc.) modify files in-place.
@@ -152,15 +116,3 @@ jobs:
           nix eval --json .#packages.x86_64-linux \
             --apply 'ps: builtins.mapAttrs (_: v: v.drvPath) ps' > /dev/null
           echo "✅ All package derivations evaluated"
-  # Deployment readiness check
-  deployment:
-    name: Deployment Ready
-    runs-on: ubuntu-latest
-    needs: [validate]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Deployment status
-        run: |
-          echo "✅ All checks passed - configurations are ready for deployment"
-          echo "🚀 NixOS configurations can be deployed to target systems"
-           echo "Note: Full build validation runs in dedicated workflows"

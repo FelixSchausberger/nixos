@@ -1,0 +1,44 @@
+name: "Nix Setup"
+description: "Install Nix and Cachix with the one shared substituter configuration"
+inputs:
+  cachix-auth-token:
+    description: "Cachix auth token. When empty the felixschausberger cache stays pull-only."
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Setup SSL certificates
+      uses: ./.github/actions/setup-ssl
+    - name: Install Nix
+      # Single source of truth for the workflow Nix configuration. Every
+      # workflow used to carry its own copy of this block and they drifted
+      # (different substituter subsets), so a path substitutable in one job
+      # could be source-built in another. Keep the substituter and key lists
+      # aligned with nixConfig in flake.nix.
+      uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      with:
+        extra_nix_config: |
+          experimental-features = nix-command flakes pipe-operators
+          allow-import-from-derivation = true
+          accept-flake-config = true
+          ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
+          extra-substituters = https://cache.nixos.org https://felixschausberger.cachix.org https://nix-community.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org https://yazi.cachix.org https://claude-code.cachix.org https://niri-epireyn.cachix.org https://noctalia.cachix.org
+          extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= felixschausberger.cachix.org-1:vCZvKWZ13V7CxC7HjRPqZJTwcKLJaaxYnfQsUIkDFaE= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc= yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA= claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk= niri-epireyn.cachix.org-1:tlVyFN7CtsDT+ZcLPS+ekFWeT1X6X4OqvWqbBMyIzFA= noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=
+          # A cache outage must not fail the job: substitute errors degrade to
+          # source builds.
+          fallback = true
+          narinfo-cache-positive-ttl = 3600
+          connect-timeout = 5
+          stalled-download-timeout = 30
+          # Cap parallelism so heavy closures cannot exhaust the hosted runner.
+          max-jobs = 2
+          cores = 2
+    - name: Install Cachix
+      uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+      with:
+        name: felixschausberger
+        authToken: ${{ inputs.cachix-auth-token }}
+        # Pull-only when no token is supplied; the warming jobs pass the token
+        # so cachix-action also pushes every store path the job adds.
+        skipPush: ${{ inputs.cachix-auth-token == '' }}
