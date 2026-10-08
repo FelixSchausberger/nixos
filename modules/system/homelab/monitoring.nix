@@ -9,6 +9,18 @@
   hl = config.modules.system.homelab;
   inherit (lib) mkIf;
 
+  # Deploy-time closure metrics. The node exporter textfile collector is the
+  # only reader, so the activation snippet below is a no-op on hosts without
+  # monitoring (no textfile directory) and the script itself skips the closure
+  # walk when the activated generation is already recorded.
+  emitDeployMetrics = pkgs.writeShellApplication {
+    name = "nixos-emit-deploy-metrics";
+    runtimeInputs = with pkgs; [coreutils gnugrep nix];
+    text = ''
+      exec ${pkgs.bash}/bin/bash ${../../../tools/scripts/emit-deploy-metrics.sh} "$@"
+    '';
+  };
+
   blackboxConfig = pkgs.writeText "blackbox.yml" ''
     modules:
       http_2xx:
@@ -179,6 +191,10 @@
         ''up{job="postgres"} == 0'')
     ];
 
+  # No closure-size alert is defined here: closure bytes and store-path counts
+  # are dominated by nixpkgs churn from the 6-hourly lock refresh, so a
+  # threshold would fire on routine updates rather than on config regressions.
+  # The config-health Grafana dashboard is the surface for that signal.
   homelabGroups = [
     {
       name = "homelab";
@@ -478,6 +494,7 @@ in {
             static_configs = [
               {
                 targets = ["127.0.0.1:8080"];
+                labels.host = localHost;
               }
             ];
           }
@@ -612,6 +629,17 @@ in {
     systemd.tmpfiles.rules = [
       "z /sys/class/powercap/*/energy_uj 0444 - - -"
     ];
+
+    # Emit deploy-time closure metrics on every activation (switch, test and
+    # boot), which covers `nh os switch`, comin's switch and `jjtest` without a
+    # per-path hook. Runs as root, so the textfile directory needs no
+    # permission change; the fragment is a no-op where the directory is absent
+    # (hosts without this module).
+    system.activationScripts.emitDeployMetrics = ''
+      if [ -d /var/lib/node-exporter/textfile ]; then
+        ${emitDeployMetrics}/bin/nixos-emit-deploy-metrics || true
+      fi
+    '';
 
     # Postgres is only deployed as Nextcloud's database backend; scrape the
     # exporter (and alert on it) only when that stack exists.
