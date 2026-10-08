@@ -48,15 +48,16 @@ in {
     home.packages = [pkgs.xclip];
 
     # VMware user agent service
-    # Runs vmware-user-suid-wrapper connected to xwayland-satellite's X11 display
+    # Runs vmware-user-suid-wrapper connected to niri's Xwayland display
+    # (xwayland-satellite is spawned by niri's built-in integration)
     systemd.user.services.vmware-user-wayland = {
       Unit = {
         Description = "VMware User Agent (Wayland)";
         After = [
           "graphical-session.target"
-          "xwayland-satellite.service"
+          "niri.service"
         ];
-        Wants = ["xwayland-satellite.service"]; # Soft dependency - start if available
+        Wants = ["niri.service"]; # Soft dependency - start if available
         PartOf = ["graphical-session.target"];
         # Only start when graphical session is actually active
         ConditionEnvironment = "WAYLAND_DISPLAY";
