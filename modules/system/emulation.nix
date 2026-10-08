@@ -87,6 +87,34 @@
     '';
   };
 
+  # Moonshine's compositor only force-fills windows that carry a Steam app id
+  # (upstream focus.rs: should_fill_output() requires has_game_id(), i.e.
+  # app_id != 0 detected via SteamLaunch in the process tree). A directly
+  # launched emulator has no app id, so its X11 fullscreen request is
+  # acknowledged without a resize and the window stays at its own size —
+  # Dolphin's Qt `-b` render window opens at Qt's 640x480 default.
+  #
+  # Gamescope is a real compositor: the emulator's fullscreen works inside it,
+  # and gamescope presents a window already sized to the output, which Moonshine
+  # draws 1:1. Size gamescope's output and render surface from the
+  # MOONSHINE_CLIENT_* values Moonshine exports for every launch (defaults cover
+  # local launches outside a stream); this is the upstream TIPS.md recipe for
+  # games that misbehave under Moonshine's compositor directly.
+  gamescopeMoonshine = pkgs.writeShellApplication {
+    name = "gamescope-moonshine";
+    runtimeInputs = with pkgs; [gamescope];
+    text = ''
+      exec gamescope \
+        -f \
+        -W "''${MOONSHINE_CLIENT_WIDTH:-1920}" \
+        -H "''${MOONSHINE_CLIENT_HEIGHT:-1080}" \
+        -w "''${MOONSHINE_CLIENT_WIDTH:-1920}" \
+        -h "''${MOONSHINE_CLIENT_HEIGHT:-1080}" \
+        -r "''${MOONSHINE_CLIENT_FRAMERATE:-60}" \
+        -- "$@"
+    '';
+  };
+
   # ROM paths relative to /per/mnt/games/Emulator
   gcGames = {
     "F-Zero GX" = {
@@ -182,17 +210,18 @@ in {
     ];
 
     modules.system.moonshine.extraApplications =
-      # GameCube/Wii via Dolphin. `-b` hides the GUI, which forces a separate
-      # render window at RenderWindowWidth/Height (640x480) unless fullscreen
-      # is requested; the Moonshine compositor only force-fills Steam windows,
-      # so pin fullscreen explicitly. FullscreenDisplayRes=Auto keeps the game
-      # at the client resolution while Dolphin's default aspect stays 4:3.
+      # GameCube/Wii via Dolphin. `-b` hides the GUI and opens a separate
+      # render window; gamescope (see gamescopeMoonshine) gives it a real
+      # compositor to fullscreen into, so the window fills the stream.
+      # FullscreenDisplayRes=Auto makes Dolphin render at gamescope's output
+      # resolution (the client's) while its default aspect stays 4:3.
       (lib.mapAttrsToList
         (title: g:
           appTile {
             inherit title;
             inherit (g) boxart;
             args = [
+              "${gamescopeMoonshine}/bin/gamescope-moonshine"
               "${pkgs.dolphin-emu}/bin/dolphin-emu"
               "-b"
               "-C"
@@ -218,12 +247,15 @@ in {
       # SNES image is drawn at a fixed 2x (512x478) centered in the output.
       # Xvideo without -maxaspect scales to full height while keeping the
       # native aspect, so the game fills the display without stretching.
+      # Gamescope (gamescopeMoonshine) provides the compositor its fullscreen
+      # request needs.
       ++ (lib.mapAttrsToList
         (title: g:
           appTile {
             inherit title;
             inherit (g) boxart;
             args = [
+              "${gamescopeMoonshine}/bin/gamescope-moonshine"
               "${pkgs.snes9x}/bin/snes9x"
               "-fullscreen"
               "-xvideo"
@@ -236,6 +268,7 @@ in {
           appTile {
             inherit title;
             args = [
+              "${gamescopeMoonshine}/bin/gamescope-moonshine"
               "${pkgs.eden}/bin/eden-cli"
               "-g"
               "${romDir}/${rom}"

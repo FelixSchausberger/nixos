@@ -4,7 +4,9 @@
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
   auto_start_session = false;
+  emulator_tiles_use_gamescope = true;
   fzero_gx_forces_fullscreen = true;
+  fzero_gx_uses_gamescope = true;
   fzero_snes_uses_xvideo = true;
   fzero_x_uses_rmg_wrapper = true;
   greetd_disabled = true;
