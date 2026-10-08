@@ -19,7 +19,7 @@ permissions:
 jobs:
   update-flake:
     name: Update Flake Inputs and Snapshots
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     outputs:
       decision: ${{ steps.classify.outputs.decision }}
@@ -162,7 +162,7 @@ jobs:
     name: Build and push ${{ matrix.host }}
     needs: update-flake
     if: needs.update-flake.outputs.decision == 'build'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 300
     strategy:
       fail-fast: false
@@ -195,7 +195,7 @@ jobs:
       always() &&
       (needs.update-flake.outputs.decision == 'fast' ||
        (needs.update-flake.outputs.decision == 'build' && needs.build-and-push.result == 'success'))
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
