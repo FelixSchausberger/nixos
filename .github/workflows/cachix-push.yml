@@ -13,30 +13,10 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
-env:
-  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-  SSL_CERT_DIR: /etc/ssl/certs
-  NIX_SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  NIX_CONFIG: |
-    experimental-features = nix-command flakes
-    accept-flake-config = true
-    ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org https://yazi.cachix.org https://claude-code.cachix.org https://niri-epireyn.cachix.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc= yazi.cachix.org-1:ot2ynJHj5l8T+FaRjblM6YV3sLzuEEr/KK10lC3aIaA= claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk= niri-epireyn.cachix.org-1:tlVyFN7CtsDT+ZcLPS+ekFWeT1X6X4OqvWqbBMyIzFA=
-    narinfo-cache-positive-ttl = 3600
-    connect-timeout = 5
-    stalled-download-timeout = 30
-    # A cache outage must not fail the job: substitute errors degrade to source builds.
-    fallback = true
-    # Limit build parallelism so heavy closures cannot starve the hosted
-    # runner (default auto detects vCPUs and can exhaust memory/disk).
-    max-jobs = 2
-    cores = 2
 jobs:
   build-and-push:
     name: Build and push ${{ matrix.host }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 300
     strategy:
       fail-fast: false
@@ -44,23 +24,13 @@ jobs:
         host: [desktop, hp-probook-wsl, m920q]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Setup SSL certificates
-        uses: ./.github/actions/setup-ssl
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
+      - name: Setup Nix
+        uses: ./.github/actions/nix-setup
         with:
-          extra_nix_config: |
-            ${{ env.NIX_CONFIG }}
-      - name: Install Cachix
-        uses: cachix/cachix-action@v17
-        with:
-          name: felixschausberger
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          # cachix-action automatically pushes every store path added
-          # during the job to felixschausberger.cachix.org.
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Build ${{ matrix.host }} toplevel
         run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --print-out-paths
       - name: Build ${{ matrix.host }} home activation
@@ -69,24 +39,16 @@ jobs:
   # Build it on every main push so it never rots into an unbootable state.
   build-portable-iso:
     name: Build and push installer-iso-portable
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 300
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Setup SSL certificates
-        uses: ./.github/actions/setup-ssl
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
+      - name: Setup Nix
+        uses: ./.github/actions/nix-setup
         with:
-          extra_nix_config: |
-            ${{ env.NIX_CONFIG }}
-      - name: Install Cachix
-        uses: cachix/cachix-action@v17
-        with:
-          name: felixschausberger
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Build portable recovery ISO
         run: nix build .#installer-iso-portable --print-out-paths

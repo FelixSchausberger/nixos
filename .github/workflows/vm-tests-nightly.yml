@@ -16,32 +16,15 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-env:
-  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-  SSL_CERT_DIR: /etc/ssl/certs
-  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-  NIX_SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
-  NIX_CONFIG: |
-    experimental-features = nix-command flakes pipe-operators
-    allow-import-from-derivation = true
-    accept-flake-config = true
-    ssl-cert-file = /etc/ssl/certs/ca-certificates.crt
-    extra-substituters = https://cache.nixos.org https://nix-community.cachix.org https://nixpkgs-unfree.cachix.org https://pre-commit-hooks.cachix.org
-    extra-trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nqlt4= pre-commit-hooks.cachix.org-1:Pkk3Panw5AW24TOv6kz3PvLhlH8puAsJTBbOPmBo7Rc=
-    connect-timeout = 5
-    stalled-download-timeout = 30
-    # A cache outage must not fail the job: substitute errors degrade to source builds.
-    fallback = true
-    max-jobs = auto
-    cores = 0
 concurrency:
   group: vm-tests-nightly
   cancel-in-progress: true
 jobs:
   vm-test:
     name: ${{ matrix.test }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # TCG emulation is slow; two concurrent tests per job keep the hosted
+    # runner within memory/disk limits (the shared Nix config caps at 2).
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -54,23 +37,11 @@ jobs:
           - monitoring-alerting
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Setup SSL certificates
-        uses: ./.github/actions/setup-ssl
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: ${{ env.NIX_CONFIG }}
-      - name: Cache Nix store
-        # Pull-only from this repo's public Cachix cache. The previous
-        # DeterminateSystems action logged a permanent FlakeHub 401 on every
-        # run; store paths are warmed by daily-updates and cachix-push, the
-        # only jobs carrying CACHIX_AUTH_TOKEN. Best-effort by design.
-        uses: cachix/cachix-action@v17
-        continue-on-error: true
-        with:
-          name: felixschausberger
-          skipPush: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Nix
+        # Pull-only: store paths are warmed by daily-updates and cachix-push,
+        # the only jobs carrying CACHIX_AUTH_TOKEN.
+        uses: ./.github/actions/nix-setup
       # A cached success from an identical lock means the test already ran
       # for this exact input; nothing changed, so skipping is correct.
       - name: Build and run VM test (${{ matrix.test }})
