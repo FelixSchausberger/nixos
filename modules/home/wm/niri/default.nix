@@ -411,6 +411,15 @@ in {
         skip-at-startup = true;
       };
 
+      # niri spawns xwayland-satellite itself and exports DISPLAY to the
+      # session ("listening on X11 socket: :0"). The path is explicit because
+      # niri.service's PATH excludes /run/current-system/sw/bin, so a bare-name
+      # lookup fails and niri disables Xwayland integration, leaving X11 apps
+      # without DISPLAY.
+      xwayland-satellite = {
+        path = "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable}/bin/xwayland-satellite";
+      };
+
       # Debug configuration for honoring XDG activation requests with invalid serial
       # Cannot be set via programs.niri.settings due to KDL generation limitation
       # See: https://github.com/sodiboo/niri-flake/issues
@@ -604,29 +613,6 @@ in {
         TimeoutStopSec = 10;
       };
       Install.WantedBy = ["niri.service"];
-    };
-
-    # Enable xwayland-satellite for X11 app compatibility
-    systemd.user.services.xwayland-satellite = {
-      Unit = {
-        Description = "Xwayland outside your Wayland";
-        BindsTo = ["niri-session.target"];
-        After = ["niri-session.target"];
-      };
-
-      Service = {
-        Type = "notify";
-        NotifyAccess = "all";
-        ExecStart = "${
-          inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable
-        }/bin/xwayland-satellite";
-        StandardOutput = "journal";
-        Restart = "on-failure";
-      };
-
-      Install = {
-        WantedBy = ["niri-session.target"];
-      };
     };
   };
 }
