@@ -135,21 +135,35 @@ in {
       '';
     };
 
+    # Shared by prst/prweb: the current change's feature bookmark (first in the
+    # recent ancestry), and the GitHub owner/repo from the origin remote. gh
+    # needs the repo explicitly because a jj secondary workspace has no .git.
+    __jj_pr_bookmark = {
+      description = "Internal: resolve the current change's PR bookmark";
+      body = ''
+        command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1
+      '';
+    };
+    __jj_pr_repo = {
+      description = "Internal: derive the GitHub owner/repo from the origin remote";
+      body = ''
+        command jj git remote list 2>/dev/null | sed -n 's/^origin[[:space:]]\{1,\}//p' | sed -E 's#\.git$##; s#^.*[:/]([^/]+/[^/]+)$#\1#'
+      '';
+    };
+
     prst = {
       description = "View current change's PR status without opening a browser";
       body = ''
         set -l pr_ref $argv[1]
         if test -z "$pr_ref"
-          set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
+          set -l bookmark (__jj_pr_bookmark)
           if test -z "$bookmark"
             echo "No bookmark on the current change. Pass a PR number or branch explicitly." >&2
             return 1
           end
           set pr_ref $bookmark
         end
-        # Resolve the repo explicitly: gh cannot infer it without a .git, which
-        # a jj secondary workspace does not have.
-        set -l repo (command jj git remote list 2>/dev/null | sed -n 's/^origin[[:space:]]\{1,\}//p' | sed -E 's#\.git$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')
+        set -l repo (__jj_pr_repo)
         if test -n "$repo"
           set -lx GH_REPO $repo
         end
@@ -162,14 +176,14 @@ in {
       body = ''
         set -l pr_ref $argv[1]
         if test -z "$pr_ref"
-          set -l bookmark (command jj bookmark list -r 'ancestors(@, 5) & bookmarks()' -T 'name' 2>/dev/null | head -1)
+          set -l bookmark (__jj_pr_bookmark)
           if test -z "$bookmark"
             echo "No bookmark on the current change. Pass a PR number or branch explicitly." >&2
             return 1
           end
           set pr_ref $bookmark
         end
-        set -l repo (command jj git remote list 2>/dev/null | sed -n 's/^origin[[:space:]]\{1,\}//p' | sed -E 's#\.git$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')
+        set -l repo (__jj_pr_repo)
         if test -n "$repo"
           set -lx GH_REPO $repo
         end

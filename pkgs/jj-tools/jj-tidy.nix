@@ -1,19 +1,17 @@
 # Repository tidy janitor, split out of jjwork: drops merged leftover
-# bookmarks and abandons stale off-main revisions. Runs in the caller's repo
-# checkout (bare jj/git invocations, like jjwork itself). Named jj-tidy to
-# avoid colliding with the interactive `just jj-hygiene` review recipe.
-# jjwork invokes it by default; automation wanting a bare fetch+rebase sets
-# JJWORK_CLEANUP=0.
+# bookmarks and abandons stale off-main revisions. Pure jj, so it runs from
+# any workspace - a secondary workspace has no .git, and the absorption test
+# below must work there too. Named jj-tidy to avoid colliding with the
+# interactive `just jj-hygiene` review recipe. jjwork invokes it by default;
+# automation wanting a bare fetch+rebase sets JJWORK_CLEANUP=0.
 {
   writeShellApplication,
   jujutsu,
-  git,
 }:
 writeShellApplication {
   name = "jj-tidy";
   runtimeInputs = [
     jujutsu
-    git
   ];
   text = ''
     set -euo pipefail
@@ -55,11 +53,6 @@ writeShellApplication {
       fi
     done
 
-    # main@origin resolves through jj; git does not know that ref name. Resolve
-    # it to a commit id once and hand the id to git, so the per-file absorption
-    # test below compares against the same revision the rest of the script does.
-    main_rev="$(jj log --no-graph -r 'main@origin' -T 'commit_id' 2>/dev/null | tr -d '[:space:]')"
-
     # Stale local work: heads outside main@origin whose effect is provably
     # already present there. Candidates are handled per revision (commit
     # id), never per change id: a divergent change-id (several visible
@@ -73,10 +66,11 @@ writeShellApplication {
     #   - carries no active remote bookmark (in-flight PR)
     #   - single parent (merge-node absorption semantics are ambiguous)
     #   - childless (dropping a parent rewrites all of its children)
-    #   - fully absorbed: every file it touches ends at the same state on
-    #     main@origin, compared via git diff --quiet per path against the
-    #     resolved main commit - exact, unlike patch-id matching, and immune
-    #     to how the content landed
+    #   - fully absorbed: every path it touches is identical between
+    #     main@origin and the revision, compared with jj diff per path - exact,
+    #     unlike patch-id matching, and immune to how the content landed. Using
+    #     jj rather than git lets jj-tidy run from any workspace, including the
+    #     git-less secondary ones.
     # Anything else is reported for human review (just jj-hygiene).
     # Actionable divergence (outside main@origin) is reported at the end;
     # immutable merge-era divergence inside main@origin is intentionally
@@ -116,7 +110,7 @@ writeShellApplication {
 
       differs=""
       for f in $(jj diff -r "$cid" --name-only 2>/dev/null); do
-        if ! git diff --quiet "$main_rev" "$cid" -- "$f" 2>/dev/null; then
+        if [ -n "$(jj diff --from 'main@origin' --to "$cid" -- "$f" 2>/dev/null)" ]; then
           differs="$differs $f"
         fi
       done
