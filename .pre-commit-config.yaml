@@ -58,11 +58,13 @@ repos:
         files: \.sh$
       - id: actionlint
         name: GitHub Actions workflow linter
-        entry: actionlint
+        entry: actionlint -config-file .github/actionlint.yaml
         language: system
         files: ^\.github/workflows/.*\.ya?ml$
-        # Pass the matching files: actionlint's own project detection needs a
-        # .git directory, which a jj secondary workspace does not have.
+        # Pass the matching files, and the config explicitly: actionlint's own
+        # project detection needs a .git directory, which a jj secondary
+        # workspace does not have, so it cannot discover .github/actionlint.yaml
+        # on its own (the file whitelists newly GA runner labels).
         pass_filenames: true
       - id: alejandra
         name: Alejandra Nix formatter
