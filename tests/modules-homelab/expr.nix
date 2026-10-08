@@ -40,6 +40,11 @@ in {
   # HM-level server unit: loopback bind and project-scoped CWD
   opencode_server_exec_start =
     stripStoreHash config.home-manager.users.schausberger.systemd.user.services.opencode-web.Service.ExecStart;
+  # Home Manager renders one systemd ExecStart= line per list element, and
+  # systemd rejects a Type=simple unit with more than one. The command must
+  # therefore stay a single element.
+  opencode_server_single_exec_start =
+    builtins.length config.home-manager.users.schausberger.systemd.user.services.opencode-web.Service.ExecStart == 1;
   opencode_server_working_directory =
     config.home-manager.users.schausberger.systemd.user.services.opencode-web.Service.WorkingDirectory;
 
