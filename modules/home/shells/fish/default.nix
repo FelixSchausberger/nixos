@@ -37,6 +37,12 @@
       # unset value here means "not inside zellij" — this prevents nested sessions.
       # (0.45+ also handles nested sessions natively over SSH.)
       #
+      # HERDR_ENV is exported by herdr inside its panes and guards the same way:
+      # without it, hosts that attach local terminals (enableLocal, i.e. WSL)
+      # would start Zellij inside a herdr pane and nest two multiplexers. The
+      # guard is a no-op on SSH-only hosts, whose panes are local shells that
+      # the SSH gate below already ignores.
+      #
       # Robustness: `zellij attach --create` is atomic server-side, so concurrent
       # logins simply share the session instead of racing. No pgrep
       # heuristics: liveness is decided by the attach exit status itself. A dead
@@ -55,6 +61,7 @@
           and not __emergency_check
           ${sshGate}and not set -q ZELLIJ
           and not set -q ZELLIJ_PANE_ID
+          and not set -q HERDR_ENV
           and command -q zellij
         set -l session_name "${attachSession}"
         if test -n "$session_name"
