@@ -2302,6 +2302,9 @@
         "sops-nix": "sops-nix",
         "spicetify-nix": "spicetify-nix",
         "stylix": "stylix",
+        "ttt": "ttt",
+        "ttt-plugins": "ttt-plugins",
+        "ttt-vim": "ttt-vim",
         "typix": "typix",
         "vitals": "vitals",
         "walker": "walker",
@@ -2743,6 +2746,61 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "ttt": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791531463,
+        "narHash": "sha256-cLfurV+WZxtKjh2mit4EdkUtqVzHh8O/KUR6V+hyUj8=",
+        "owner": "eugenioenko",
+        "repo": "ttt",
+        "rev": "fa836863a49fa7eeab80fe59bdb3cb3abde780a6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eugenioenko",
+        "repo": "ttt",
+        "type": "github"
+      }
+    },
+    "ttt-plugins": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791437648,
+        "narHash": "sha256-Etu6HNOFmrNkxZmRZUnayxBwrpCvZDU2sWodEYLOzEI=",
+        "owner": "eugenioenko",
+        "repo": "ttt-plugins",
+        "rev": "09d258dfc886e02f02db0d00616e00905dbe7f47",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eugenioenko",
+        "repo": "ttt-plugins",
+        "type": "github"
+      }
+    },
+    "ttt-vim": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788379405,
+        "narHash": "sha256-d1LawH98Y4mKfg1rk0OMGQX3kJXhghcDixYvfAXLpVE=",
+        "owner": "eugenioenko",
+        "repo": "ttt-vim",
+        "rev": "facd5d441ed208d3c4f6d881ff14a594e410be4d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eugenioenko",
+        "repo": "ttt-vim",
         "type": "github"
       }
     },
