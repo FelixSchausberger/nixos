@@ -67,7 +67,7 @@
     # the `*` semver channel is avoided because it can resolve to a release
     # older than the deployed determinate-nix. Bump version and UUID
     # together, by hand.
-    determinate.url = "https://api.flakehub.com/f/pinned/DeterminateSystems/determinate/3.22.5/01a0b15b-1d43-7be1-beb0-8aa22a4d3d93/source.tar.gz";
+    determinate.url = "https://api.flakehub.com/f/pinned/DeterminateSystems/determinate/3.23.1/01a10edb-9034-7171-81fd-c25275e39c48/source.tar.gz";
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
