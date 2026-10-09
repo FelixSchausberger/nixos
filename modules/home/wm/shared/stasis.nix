@@ -8,7 +8,6 @@ sessionTarget: {
   lib,
   config,
   pkgs,
-  inputs,
   ...
 }: let
   niriEnabled = config.wm.niri.enable or false;
@@ -69,7 +68,10 @@ sessionTarget: {
     end
   '';
 
-  stasisPackage = inputs.stasis.packages.${pkgs.stdenv.hostPlatform.system}.stasis;
+  # nixpkgs ships stasis with doCheck disabled; consuming it from here keeps
+  # the build substitutable from cache.nixos.org instead of source-building the
+  # upstream flake input, whose live-process tests are timing-flaky in CI.
+  stasisPackage = pkgs.stasis;
 
   # Toggle script with OSD notification via wired/notify-send
   stasisToggle = pkgs.writeShellApplication {
