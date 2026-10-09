@@ -31,10 +31,10 @@ jobs:
         uses: ./.github/actions/nix-setup
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      - name: Build ${{ matrix.host }} toplevel
-        run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --print-out-paths
-      - name: Build ${{ matrix.host }} home activation
-        run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths
+      - name: Build ${{ matrix.host }}
+        uses: ./.github/actions/build-host
+        with:
+          host: ${{ matrix.host }}
   # The portable recovery ISO is the USB rescue artifact (see hosts/portable).
   # Build it on every main push so it never rots into an unbootable state.
   build-portable-iso:

@@ -39,10 +39,19 @@ jobs:
         run: |
           set -o pipefail
           # Captured so the PR body can document exactly which inputs moved.
-          if ! nix flake update | tee update-output.txt; then
-            echo "nix flake update failed - input sources may be unreachable" >&2
-            exit 1
-          fi
+          # GitHub API rate limits and network blips fail the command
+          # transiently, so retry with backoff before giving up.
+          for attempt in 1 2 3; do
+            if nix flake update | tee update-output.txt; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "nix flake update failed after $attempt attempts - input sources may be unreachable" >&2
+              exit 1
+            fi
+            echo "nix flake update failed (attempt $attempt); retrying in $((attempt * 15))s" >&2
+            sleep $((attempt * 15))
+          done
 
           if ! nix develop --command namaka check; then
             if [ -d tests/_snapshots/.pending ]; then
@@ -185,9 +194,9 @@ jobs:
       - name: Apply candidate lock
         run: git apply --verbose lock.patch
       - name: Build and push closure
-        run: |
-          nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --print-out-paths
-          nix build ".#nixosConfigurations.${{ matrix.host }}.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths
+        uses: ./.github/actions/build-host
+        with:
+          host: ${{ matrix.host }}
   create-pr:
     name: Open lock PR
     needs: [update-flake, build-and-push]
@@ -241,3 +250,43 @@ jobs:
           labels: auto-merge
           commit-message: "chore: daily dependency update"
           body-path: pr-body.md
+  # A failing run otherwise leaves only a red status with no issue and no
+  # notification, so a stalled updater goes unnoticed (observed 2026-10-04..09).
+  # Open or update a single tracking issue per failure.
+  report-failure:
+    name: Report failure
+    needs: [update-flake, build-and-push, create-pr]
+    if: failure()
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Ensure the failure label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "daily-updates-failure" \
+            --repo "$REPO" \
+            --color "b60205" \
+            --description "Daily dependency update failed" \
+            2>/dev/null || true
+      - name: Open or update the tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="$(printf '## Daily Dependency Update failed\n\nThe scheduled lock update did not complete. Hosts keep converging on the previous lock until this is resolved.\n\n- Run: %s\n' "$RUN_URL")"
+          existing="$(gh issue list --repo "$REPO" --label "daily-updates-failure" --state open \
+            --json number --jq '.[0].number' 2>/dev/null || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" \
+              --title "Daily dependency update is failing" \
+              --label "daily-updates-failure" \
+              --body "$body"
+          fi
