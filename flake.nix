@@ -233,10 +233,6 @@
       url = "github:JakeStanger/ironbar";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    stasis = {
-      url = "github:saltnpepper97/stasis";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     vitals = {
       url = "github:FelixSchausberger/vitals";
       inputs.nixpkgs.follows = "nixpkgs";
