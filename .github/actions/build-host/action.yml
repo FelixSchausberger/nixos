@@ -1,0 +1,15 @@
+name: "Build host closure"
+description: "Build the NixOS toplevel and home-manager activation for one host. Whether the result is pushed to Cachix is decided by the caller's nix-setup, so the same recipe serves the pre-merge warm-up (daily-updates) and the post-merge warm-up (cachix-push)."
+inputs:
+  host:
+    description: "Host name; must match a nixosConfigurations key"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Build toplevel
+      shell: bash
+      run: nix build ".#nixosConfigurations.${{ inputs.host }}.config.system.build.toplevel" --print-out-paths
+    - name: Build home activation
+      shell: bash
+      run: nix build ".#nixosConfigurations.${{ inputs.host }}.config.home-manager.users.schausberger.home.activationPackage" --print-out-paths
