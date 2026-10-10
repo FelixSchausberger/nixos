@@ -703,6 +703,19 @@ in {
           # scrape.
         };
         exporters.prometheus.endpoint = "127.0.0.1:8889";
+        # The collector's own metrics are not scraped, but its internal
+        # listener defaults to the shared 127.0.0.1:8888: a bind failure there
+        # aborts startup, and systemd's start limit turns the retries into a
+        # failed unit even though receiver and exporter are fine. Pin it
+        # instead of leaving it on a port any local process can take.
+        service.telemetry.metrics.readers = [
+          {
+            pull.exporter.prometheus = {
+              host = "127.0.0.1";
+              port = 18888;
+            };
+          }
+        ];
         service.pipelines = {
           # Traces feed only the connector: individual traces are not stored,
           # because every panel reads aggregated series.
