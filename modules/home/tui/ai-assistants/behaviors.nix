@@ -67,6 +67,10 @@
         ocws done <task>
         ```
         It refuses while unmerged work remains, doubling as a close-out check; `ocws gc` (also run automatically by `ocws <task>`) reclaims finished workspaces idle past `OCWS_GC_AGE`. See the jj-workspaces skill for the full workflow and concurrency hazards.
+
+        `ocws ls` reports the jj claim, not whether a session is live in the directory, so a workspace can silently hold a second agent. Before settling into one, check the session database (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) for a session rooted there, and treat such a workspace as taken even when its `@` is empty; never start or move a session into one. jj snapshots the whole tree, so a file another session wrote rides into your commit unnoticed - if files you did not write appear in your working copy, leave for a fresh workspace, report them, and remove them with `rip` (restorable) rather than committing them.
+
+        Scratch output never reaches a commit: planning and audit files under `.opencode/` are ignored, and `jj diff --stat` before `jjpush` is what proves it.
       '';
       enabled = true;
       description = "Isolate parallel agents in jj workspaces via the ocws launcher";
@@ -184,6 +188,24 @@
       enabled = true;
       description = "Default development principles and communication guidelines";
       priority = 100; # Lowest priority
+    };
+
+    clean-diff-before-push = {
+      content = ''
+        Before `jj describe`, and again before `jjpush`, run `jj diff --stat` and `jj status` and confirm every path belongs to the concern you are landing. Files you did not touch for that concern - foreign work, editor droppings, scratch notes - are removed with `rip` (restorable via `rip -u`) or split out with `jj split`, never committed because they happened to be present. The push is the last cheap checkpoint: after a squash-merge a stray file is history.
+      '';
+      enabled = true;
+      description = "Verify the diff holds only the stated concern before pushing";
+      priority = 10;
+    };
+
+    no-orphan-processes = {
+      content = ''
+        Anything started for a test or verification is cleaned up before you move on. `pkill -f <pattern>` kills the process itself, while `kill $PID` only kills a wrapper such as `nix run` and leaves the real process - and its port - alive; confirm with `ps` and `ss` afterwards. Never test against a port a deployed service uses: a leftover collector test held 127.0.0.1:8888, the deployed OTel collector's default telemetry port, so the unit could not start, hit systemd's start limit, and paged through the ServiceFailed alert. Test servers get a private port and a command line a pattern can match.
+      '';
+      enabled = true;
+      description = "Clean up test processes and keep off deployed ports";
+      priority = 20;
     };
   };
 }
