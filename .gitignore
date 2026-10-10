@@ -66,4 +66,8 @@ pr-body.md
 __pycache__/
 *.pyc
 
+# Agent scratch: session plans, audits and notes, never part of a commit
+.opencode/audits/
+.opencode/plan/
+
 
