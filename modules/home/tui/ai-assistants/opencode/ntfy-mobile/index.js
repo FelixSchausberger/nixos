@@ -12,7 +12,10 @@
 // (opencode/herdr-agent-state.js). Child (subagent) sessions are skipped so one
 // turn does not fan out into several pushes.
 import { readFileSync } from "node:fs"
-import { Plugin } from "@opencode/plugin"
+
+// Plugin.define from @opencode/plugin is an identity helper, and a
+// path-referenced plugin has no node_modules to resolve that bare import from,
+// so the object is exported directly with the same { id, setup } shape.
 
 const DEFAULTS = {
   url: "http://127.0.0.1:2586",
@@ -28,7 +31,7 @@ const EVENTS = {
   "session.idle": {kind: "done", title: "OpenCode finished", priority: "3", tag: "white_check_mark"},
 }
 
-export default Plugin.define({
+export default {
   id: "ntfy-mobile",
   async setup(ctx) {
     const opt = {...DEFAULTS, ...(ctx.options ?? {})}
@@ -91,4 +94,4 @@ export default Plugin.define({
 
     return () => controller.abort()
   },
-})
+}
