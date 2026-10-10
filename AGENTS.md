@@ -58,6 +58,26 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   comin (origin `main`, `switch`) or `jjtest` (testing bookmark,
   `switch-to-configuration test`); rebuild validation commands stay with the
   user.
+- Keep the claim honest: `ocws ls` reports a workspace's jj claim, not whether a
+  session is live in its directory, so check the session database
+  (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) before
+  settling in. Two sessions in one directory cost a foreign plan file in a push
+  and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
+  report them instead of committing them.
+- Leave no orphan processes: clean verification runs with `pkill -f <pattern>`
+  (`kill $PID` only kills a `nix run` wrapper) and confirm with `ps` and `ss`.
+  Never bind a port a deployed service uses - a leftover collector test held
+  8888, the deployed OTel collector's default telemetry port, and crash-looped
+  the unit into `start-limit-hit`.
+- Before `jj describe` and `jjpush`, `jj diff --stat` must list only the files of
+  the stated concern; scratch plans and audits under `.opencode/` stay ignored
+  and never enter a commit.
+- `jj workspace add` run from a stale workspace can leave the new working copy at
+  jj's root commit; after creating a workspace, check `@-` is `main@origin` and
+  run `jj new main@origin` when it is the root.
+- herdr's git-worktree workspaces are deliberately unused: this repository
+  isolates agents with jj workspaces, and a second git-based checkout would
+  fight the jj op log.
 - Close-out check: before wrapping up a session, re-run any task list the
   session started with and verify every item was addressed - committed,
   pushed, or explicitly deferred with a note. Sessions have repeatedly left
