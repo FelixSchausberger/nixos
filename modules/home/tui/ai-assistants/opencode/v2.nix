@@ -68,7 +68,25 @@
     # the V2 API. Pinned to the major because npm `latest` already moved to
     # a release that dropped OpenCode 1, and the same jump could strand V2.
     # The Zellij indicator is a CLI plugin and lives in cli.json instead.
-    plugins = ["@slkiser/opencode-quota@5"];
+    # ntfy-mobile is added only where mobilePush is enabled; it is referenced
+    # by absolute path and kept outside the auto-discovered plugins/ directory
+    # so only the server role, which owns the event stream, loads it.
+    plugins =
+      ["@slkiser/opencode-quota@5"]
+      ++ lib.optional cfg.mobilePush.enable {
+        package = "${config.xdg.configHome}/${v2ConfigDir}/ntfy-mobile";
+        options =
+          {
+            url = cfg.mobilePush.ntfyUrl;
+            topic = cfg.mobilePush.topic;
+          }
+          // lib.optionalAttrs (cfg.mobilePush.clickBase != "") {
+            clickBase = cfg.mobilePush.clickBase;
+          }
+          // lib.optionalAttrs (cfg.mobilePush.tokenFile != null) {
+            tokenFile = toString cfg.mobilePush.tokenFile;
+          };
+      };
   };
 
   # The V2 terminal client owns a global cli.json. The patched indicator fork
@@ -148,6 +166,34 @@
 in {
   options.ai-assistants.opencodeV2 = {
     enable = lib.mkEnableOption "OpenCode 2 beta (opencode2) with a config rendered from the shared source";
+
+    # Server-side push for the phone-facing server. Enabled only on the host
+    # whose server the phone can reach (see the Tailscale Serve target in
+    # modules/system/homelab/opencode-web.nix); the per-host loopback servers
+    # the desktop, WSL and nvim clients attach to stay silent.
+    mobilePush = {
+      enable = lib.mkEnableOption "ntfy push notifications for the phone-facing OpenCode 2 server";
+      ntfyUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:2586";
+        description = "Base URL of the self-hosted ntfy instance, reachable from the server host (loopback)";
+      };
+      topic = lib.mkOption {
+        type = lib.types.str;
+        default = "opencode";
+        description = "ntfy topic the phone subscribes to";
+      };
+      clickBase = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "URL a tapped notification opens; the web UI origin (its Tailscale Serve address)";
+      };
+      tokenFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Optional file holding an ntfy access token, sent as a bearer credential";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -208,6 +254,8 @@ in {
         // {enabledProviders = ["opencode-go"];}
       );
       "${v2ConfigDir}/indicator-v2".source = ./zellij-indicator-v2;
+      # Server-side push plugin; listed above only when mobilePush is enabled.
+      "${v2ConfigDir}/ntfy-mobile".source = ./ntfy-mobile;
     };
   };
 }

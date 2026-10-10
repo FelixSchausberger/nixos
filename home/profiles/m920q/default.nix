@@ -13,7 +13,16 @@
   # Zellij session and the remote (phone) attach path live on m920q, so the
   # V2 parallel-agent workflow must run on this host. See
   # modules/home/tui/ai-assistants/opencode/v2.nix.
-  ai-assistants.opencodeV2.enable = true;
+  ai-assistants.opencodeV2 = {
+    enable = true;
+    # Push session events to the phone over the self-hosted ntfy instance.
+    # Scoped to this host because it is the only one whose server the phone can
+    # reach; the per-host loopback servers on desktop and WSL stay silent.
+    mobilePush = {
+      enable = true;
+      clickBase = "https://m920q.tailf2f0ca.ts.net:8444";
+    };
+  };
 
   features = {
     development = {
