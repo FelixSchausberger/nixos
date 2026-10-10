@@ -171,6 +171,15 @@
         description = "NixOS & host health";
       };
     }
+    {
+      "Nix Telemetry" = {
+        icon = "grafana.png";
+        # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
+        # build and substitution timings from Determinate Nix OTel traces.
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
+        description = "Build & eval timing";
+      };
+    }
   ];
 
   networkServices = lib.optionals hl.adguardhome.enable [

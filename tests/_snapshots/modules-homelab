@@ -24,6 +24,7 @@
     "Monitoring/Fritz!Exporter icon=grafana.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/hn51eUggz"
     "Monitoring/Garmin Stats icon=grafana.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/garmin-stats"
     "Monitoring/Config Health icon=grafana.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/config-health"
+    "Monitoring/Nix Telemetry icon=grafana.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/nix-otel"
     "Network/AdGuard Home icon=adguard-home.png href=https://m920q.tailf2f0ca.ts.net/adguard/ monitor widget=adguard"
     "System/Files icon=nextcloud.png href=https://m920q.tailf2f0ca.ts.net/nextcloud/apps/files/ monitor widget=nextcloud"
     "System/Calendar icon=mdi-calendar href=https://m920q.tailf2f0ca.ts.net/nextcloud/apps/calendar/dayGridMonth/now widget=calendar"

@@ -9,6 +9,9 @@
   hl = config.modules.system.homelab;
   inherit (lib) mkIf;
 
+  # Loopback OTLP receiver of the collector below; spans never leave the host.
+  otlpEndpoint = "http://127.0.0.1:4318";
+
   # Deploy-time closure metrics. The node exporter textfile collector is the
   # only reader, so the activation snippet below is a no-op on hosts without
   # monitoring (no textfile directory) and the script itself skips the closure
@@ -481,6 +484,26 @@ in {
               }
             ];
           }
+          {
+            # Trace-derived counters and histograms from the OTel collector.
+            # collector_instance_id changes on every collector restart and the
+            # otel_scope_* labels are always empty, so all of them are dropped
+            # at scrape time rather than starting a fresh series per restart.
+            job_name = "otel";
+            scrape_interval = "30s";
+            static_configs = [
+              {
+                targets = ["127.0.0.1:8889"];
+                labels.host = localHost;
+              }
+            ];
+            metric_relabel_configs = [
+              {
+                action = "labeldrop";
+                regex = "collector_instance_id|otel_scope_.*";
+              }
+            ];
+          }
         ]
         ++ lib.optionals (config.services.vitals.enable or false) [
           {
@@ -648,6 +671,62 @@ in {
       runAsLocalSuperUser = true;
     };
 
+    # Determinate Nix exports OpenTelemetry traces (evaluation, builds,
+    # substitutions, daemon connections) when a process has an OTLP endpoint in
+    # its environment; the spanmetrics connector turns those spans into the
+    # counters and histograms the dashboards read. Everything stays on loopback
+    # - spans carry store paths, fetched URLs and build-log tails, so they are
+    # handled like build logs and never leave the host.
+    services.opentelemetry-collector = {
+      enable = true;
+      # The core collector ships no spanmetrics connector.
+      package = pkgs.opentelemetry-collector-contrib;
+      settings = {
+        receivers.otlp.protocols.http.endpoint = "127.0.0.1:4318";
+        connectors.spanmetrics = {
+          # Bounds bracket the operations Nix reports: a cache lookup is
+          # milliseconds, a locally built derivation is minutes.
+          histogram.explicit.buckets = [
+            "10ms"
+            "50ms"
+            "100ms"
+            "500ms"
+            "1s"
+            "5s"
+            "10s"
+            "30s"
+            "60s"
+            "300s"
+          ];
+          # Dimensions keep the default set (service, span name, kind, status).
+          # nix.drv.name would be one series per package name and swamp the
+          # scrape.
+        };
+        exporters.prometheus.endpoint = "127.0.0.1:8889";
+        service.pipelines = {
+          # Traces feed only the connector: individual traces are not stored,
+          # because every panel reads aggregated series.
+          traces = {
+            receivers = ["otlp"];
+            exporters = ["spanmetrics"];
+          };
+          metrics = {
+            receivers = ["spanmetrics"];
+            exporters = ["prometheus"];
+          };
+        };
+      };
+    };
+
+    # Export is opt-in per process, so shell builds and unprivileged clients
+    # stay silent and the collector only sees the work the panels chart: the
+    # daemon covers builds and substitutions, comin the evaluation spans of a
+    # deploy. The guard keeps the unit off hosts that do not deploy with comin.
+    systemd.services.nix-daemon.environment.OTEL_EXPORTER_OTLP_ENDPOINT = otlpEndpoint;
+    systemd.services.comin = mkIf (config.services.comin.enable or false) {
+      environment.OTEL_EXPORTER_OTLP_ENDPOINT = otlpEndpoint;
+    };
+
     services.grafana = {
       enable = true;
       settings = {
@@ -720,6 +799,15 @@ in {
               type = "file";
               disableDeletion = true;
               options.path = ./config-health-dashboard.json;
+            }
+            {
+              # Nix evaluation, build and substitution spans aggregated by the
+              # OTel collector. Always provisioned: the panels stay empty until
+              # the collector has seen its first trace.
+              name = "nix-otel";
+              type = "file";
+              disableDeletion = true;
+              options.path = ./nix-otel-dashboard.json;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.garmin.enable [

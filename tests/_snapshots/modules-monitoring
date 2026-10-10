@@ -42,6 +42,7 @@
   dashboard_providers = [
     "fritz"
     "config-health"
+    "nix-otel"
     "garmin"
   ];
   rule_count = 19;
@@ -150,6 +151,7 @@
     "node"
     "node-desktop"
     "postgres"
+    "otel"
     "vitals"
     "fritz"
     "nextcloud-exporter"
