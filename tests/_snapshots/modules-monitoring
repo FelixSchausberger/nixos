@@ -43,6 +43,7 @@
     "fritz"
     "config-health"
     "nix-otel"
+    "power"
     "garmin"
   ];
   rule_count = 19;
@@ -159,6 +160,7 @@
     "blackbox"
     "blackbox-dns"
     "blackbox-icmp"
+    "wall-power"
   ];
   vitals_scrape_enabled = true;
 }

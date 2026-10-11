@@ -215,11 +215,11 @@
       default:
         metrics:
           - name: wall_power_watts
-            type: gauge
+            valuetype: gauge
             help: Wall power metered by the Shelly plug (instantaneous)
             path: '{ .apower }'
           - name: wall_energy_wh_total
-            type: counter
+            valuetype: counter
             help: Cumulative wall energy counter of the Shelly plug since power-on (Wh)
             path: '{ .aenergy.total }'
   '';
@@ -280,10 +280,11 @@ in {
         };
         description = ''
           Shelly wall-power plugs to scrape through the json exporter, as
-          name to LAN-IP pairs (DHCP-reserved in the Fritz!Box, cloud disabled).
-          Feeds the wall-power side of the power benchmark; CPU/GPU series
-          stay with the node exporter. Empty until the plugs are provisioned,
-          which disables the json exporter and the wall-power job entirely.
+          name to LAN-IP pairs (static address set on the plug, cloud
+          disabled). Feeds the wall-power side of the power benchmark; CPU/GPU
+          series stay with the node exporter. Empty until the plugs are
+          provisioned, which disables the json exporter and the wall-power job
+          entirely.
         '';
       };
     };
@@ -643,15 +644,17 @@ in {
       configFile = blackboxConfig;
     };
 
-    # RAPL energy counters ship 0400 root-only (CVE-2020-8694) while the node
-    # exporter runs unprivileged; tmpfiles re-applies the readable mode after
-    # every boot, activating the built-in rapl collector
-    # (node_rapl_package_joules_total). The glob covers every powercap zone
-    # (package/core/dram/uncore on Intel, package-0/core on AMD). Effective on
-    # next boot, or immediately via `systemd-tmpfiles --create`.
-    systemd.tmpfiles.rules = [
-      "z /sys/class/powercap/*/energy_uj 0444 - - -"
-    ];
+    # energy_uj ships 0400 root-only (CVE-2020-8694) while the node exporter
+    # runs unprivileged, and the powercap zone registers after
+    # systemd-tmpfiles-setup has already run, so a tmpfiles chmod is a per-boot
+    # race (this host has lost it). The udev add event fires exactly when the
+    # zone appears; the KERNEL glob skips the parent intel-rapl device, which
+    # has no energy_uj. Activates the built-in rapl collector
+    # (node_rapl_package_joules_total: package/core/dram/uncore on Intel,
+    # package-0/core on AMD).
+    services.udev.extraRules = ''
+      ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="*:*", RUN+="${pkgs.coreutils}/bin/chmod 0444 /sys/class/powercap/%k/energy_uj"
+    '';
 
     # Emit deploy-time closure metrics on every activation (switch, test and
     # boot), which covers `nh os switch`, comin's switch and `jjtest` without a
@@ -821,6 +824,15 @@ in {
               type = "file";
               disableDeletion = true;
               options.path = ./nix-otel-dashboard.json;
+            }
+            {
+              # Wall power at the plugs plus the CPU/GPU series that attribute
+              # it. Always provisioned: the attribution panels fill from the
+              # node exporters, the wall panels once wallPower.plugs is set.
+              name = "power";
+              type = "file";
+              disableDeletion = true;
+              options.path = ./power-dashboard.json;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.garmin.enable [

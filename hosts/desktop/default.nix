@@ -7,6 +7,7 @@
 {
   inputs,
   lib,
+  pkgs,
   ...
 }: let
   hostLib = import ../lib.nix;
@@ -234,14 +235,16 @@ in {
     ];
   };
 
-  # RAPL energy counters ship 0400 root-only (CVE-2020-8694) while the node
-  # exporter runs unprivileged; tmpfiles re-applies the readable mode after
-  # every boot, activating the built-in rapl collector
-  # (node_rapl_package_joules_total, AMD package-0 on this host). Effective on
-  # next boot, or immediately via `systemd-tmpfiles --create`.
-  systemd.tmpfiles.rules = [
-    "z /sys/class/powercap/*/energy_uj 0444 - - -"
-  ];
+  # energy_uj ships 0400 root-only (CVE-2020-8694) while the node exporter runs
+  # unprivileged, and the powercap zone registers after systemd-tmpfiles-setup
+  # has already run, so a tmpfiles chmod is a per-boot race (observed losing it
+  # on other hosts). The udev add event fires exactly when the zone appears;
+  # the KERNEL glob skips the parent intel-rapl device, which has no energy_uj.
+  # Activates the built-in rapl collector (node_rapl_package_joules_total,
+  # package-0 on this host).
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="*:*", RUN+="${pkgs.coreutils}/bin/chmod 0444 /sys/class/powercap/%k/energy_uj"
+  '';
 
   # System maintenance and monitoring
   modules.system.maintenance = {
