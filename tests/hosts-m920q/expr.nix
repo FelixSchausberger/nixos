@@ -74,6 +74,15 @@ in {
     builtins.elem "--collector.textfile.directory=/var/lib/node-exporter/textfile"
     config.services.prometheus.exporters.node.extraFlags;
 
+  # Test: the stable machine-id is seeded into the initrd (systemd requires it
+  # at the initrd -> host transition) and is byte-identical to /etc/machine-id,
+  # so journald cannot write a boot under a different machine-id than journalctl
+  # later reads.
+  machine_id_in_initrd =
+    config.boot.initrd.systemd.contents."/etc/machine-id".source
+    == config.environment.etc."machine-id".source;
+  machine_id_readonly = config.environment.etc."machine-id".mode == "0444";
+
   # Test: Backup configured
   backup_enabled = config.modules.system.homelab.backup.enable;
 
