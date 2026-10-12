@@ -12,11 +12,6 @@ in {
   mcp_server_count = builtins.length (builtins.attrNames mcpServers);
   mcp_server_names = builtins.attrNames mcpServers;
 
-  # Test: GitHub MCP server is configured correctly
-  github_mcp_exists = builtins.hasAttr "github" mcpServers;
-  github_mcp_enabled = mcpServers.github.enabled or false;
-  github_mcp_command = mcpServers.github.command or null;
-
   # Test: nix-language-server MCP is configured correctly
   nix_lang_mcp_exists = builtins.hasAttr "nix-language-server" mcpServers;
   nix_lang_mcp_enabled = mcpServers.nix-language-server.enabled or false;
