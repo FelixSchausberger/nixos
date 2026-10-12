@@ -149,6 +149,20 @@
       resource = "/per/etc/nixos/*";
       effect = "deny";
     }
+    # The LSP MCP server exposes write-capable tools whose permission action
+    # is `nix-language-server_<tool>`, not `edit`, so the guard above does not
+    # cover them. Deny the writes and keep the read/navigation tools
+    # (definition, references, hover, diagnostics).
+    {
+      action = "nix-language-server_edit_file";
+      resource = "*";
+      effect = "deny";
+    }
+    {
+      action = "nix-language-server_rename_symbol";
+      resource = "*";
+      effect = "deny";
+    }
   ];
 
   # The V2 array appends the primary-checkout edit deny after this agent's own
