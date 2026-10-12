@@ -40,8 +40,7 @@ in {
         # --unset GITHUB_TOKEN: a shell-exported GitHub PAT would shadow the
         # device-flow credential in auth.json, and the Copilot API rejects
         # PATs outright ("Personal Access Tokens are not supported for this
-        # endpoint"). The MCP github server reads its token from the sops
-        # file itself and needs nothing from the environment.
+        # endpoint").
         #
         # NODE_EXTRA_CA_CERTS points Bun at the system bundle; TLS verification
         # stays on. An earlier NODE_TLS_REJECT_UNAUTHORIZED=0 here was a
@@ -60,7 +59,6 @@ in {
     enableMcpIntegration = true;
 
     extraPackages = with pkgs; [
-      github-mcp-server
       mcp-nixos
       mcp-language-server
       # Typst toolchain (documents, slides, CVs)
