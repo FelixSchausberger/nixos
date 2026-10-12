@@ -230,6 +230,18 @@
         };
       };
     }
+    # uid "logs" (monitoring.nix provisions the dashboard, which needs the Loki
+    # datasource). Journald shipped from the fleet by Alloy. The probe is Loki's
+    # readiness endpoint, so a dead store shows a red dot instead of a silently
+    # empty dashboard. logging.nix is co-imported with this module, so the card
+    # exists wherever the dashboard does.
+    {
+      "Logs" = {
+        icon = "loki.png";
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/logs";
+        siteMonitor = "${local hl.logging.lokiPort}/ready";
+      };
+    }
   ];
 
   networkServices = lib.optionals hl.adguardhome.enable [
