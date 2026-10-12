@@ -192,6 +192,9 @@ in {
           "Read(./secrets/**)"
           "Read(./config/credentials.json)"
           "Read(./build)"
+          # Write-capable LSP MCP tools; navigation tools stay allowed.
+          "mcp__nix-language-server__edit_file"
+          "mcp__nix-language-server__rename_symbol"
         ];
       };
       environment.DISABLE_TELEMETRY = "1";
