@@ -81,6 +81,11 @@
     comin = {
       url = "github:nlewo/comin";
       inputs.nixpkgs.follows = "nixpkgs";
+      # comin's treefmt-nix defaults to pinning its own nixpkgs-unstable
+      # branch, which dragged a second, frozen nixpkgs into flake.lock (the
+      # stale Feb 2026 node). Follow the root nixpkgs so the lock carries
+      # exactly one nixpkgs.
+      inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     nix-index-database = {
