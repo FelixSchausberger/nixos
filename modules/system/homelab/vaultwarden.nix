@@ -215,7 +215,10 @@ in {
           ReadWritePaths = [drFolder];
           ExecStart = lib.getExe (pkgs.writeShellApplication {
             name = "vaultwarden-dr-generate";
-            runtimeInputs = with pkgs; [coreutils curl findutils gnutar sops sqlite];
+            # gnutar shells out to the external gzip for `tar -z`; without it
+            # the archive step aborts with "gzip: command not found" and the
+            # whole DR run fails before anything is written.
+            runtimeInputs = with pkgs; [coreutils curl findutils gnutar gzip sops sqlite];
             text = ''
               set -o errtrace
 
