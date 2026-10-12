@@ -80,6 +80,11 @@
   # name the source machine; the one remote job (node-desktop) overrides it.
   localHost = config.networking.hostName;
 
+  # True only when the logging module is imported and enabled. Guards the Loki
+  # datasource and logs dashboard so a host that runs monitoring without it
+  # provisions neither.
+  loggingEnabled = hl ? logging && hl.logging.enable;
+
   # Prometheus alert rules: evaluated by the local Prometheus and routed by
   # Alertmanager to alertmanager-ntfy, which reads the ntfy priority verbatim
   # from `alert.labels.priority`. `for = 2m` matches the former Grafana rule
@@ -804,9 +809,19 @@ in {
               url = "http://127.0.0.1:${toString cfg.prometheusPort}";
               isDefault = true;
             }
-            # Garmin health metrics (InfluxDB 1.x, InfluxQL). Only present when
-            # the garmin module is enabled; uid matches the dashboard JSON.
           ]
+          # Loki log store (logging.nix). Loopback URL: Grafana and Loki share
+          # the aggregator host. uid matches the logs dashboard.
+          ++ lib.optionals loggingEnabled [
+            {
+              name = "Loki";
+              type = "loki";
+              uid = "loki";
+              url = "http://127.0.0.1:${toString hl.logging.lokiPort}";
+            }
+          ]
+          # Garmin health metrics (InfluxDB 1.x, InfluxQL). Only present when
+          # the garmin module is enabled; uid matches the dashboard JSON.
           ++ lib.optionals config.modules.system.homelab.garmin.enable [
             {
               name = "Garmin-InfluxDB";
@@ -861,6 +876,17 @@ in {
               type = "file";
               disableDeletion = true;
               options.path = ./power-dashboard.json;
+            }
+          ]
+          # Journald logs shipped by Alloy and stored in Loki (logging.nix).
+          # Only provisioned where Loki runs: the panels query the Loki
+          # datasource, which exists only there.
+          ++ lib.optionals loggingEnabled [
+            {
+              name = "logs";
+              type = "file";
+              disableDeletion = true;
+              options.path = ./logs-dashboard.json;
             }
           ]
           ++ lib.optionals config.modules.system.homelab.garmin.enable [

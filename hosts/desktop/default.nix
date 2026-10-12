@@ -31,6 +31,9 @@ in {
       # Vaultwarden client half only: the DR pull timer (dr.pull) that
       # fetches the quarterly snapshot off the m920q Samba share.
       ../../modules/system/homelab/vaultwarden.nix
+      # Log shipping (client half): pushes this host's journald to the m920q
+      # Loki through Grafana Alloy.
+      ../../modules/system/homelab/logging.nix
       ../../modules/vitals.nix
     ]
     ++ hostLib.wmModules hostInfo.wms;
@@ -188,6 +191,11 @@ in {
     enable = true;
     headless = true;
   };
+
+  # Log shipping: journald goes to the m920q Loki over the LAN, resolved by
+  # AdGuard the same way as the ntfy endpoint above. The desktop needs no
+  # listener or firewall rule of its own.
+  modules.system.homelab.logging.shipEndpoint = "http://m920q:3100";
   # Steam game library on the games pool; registered into libraryfolders.vdf
   # by home activation (skipped while Steam runs, applied on next rebuild)
   modules.system.steam.extraLibraryFolders = ["/per/mnt/games/SteamLibrary"];

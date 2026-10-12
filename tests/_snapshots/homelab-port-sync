@@ -8,6 +8,7 @@
   grafana_port = true;
   homepage_port = true;
   immich_port = true;
+  loki_port = true;
   navidrome_port = true;
   nextcloud_port = true;
 }
