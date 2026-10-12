@@ -157,11 +157,25 @@ in {
     })
     (mkIf alloyEnabled {
       services.alloy.enable = true;
-      # The journal source needs the systemd-journal group; nixpkgs' module
-      # already adds it, and adm covers the container/journald cases the
-      # component docs call out. Without either the reader starts but collects
-      # nothing.
-      systemd.services.alloy.serviceConfig.SupplementaryGroups = ["adm"];
+      # The upstream module runs Alloy as a DynamicUser, whose state directory is
+      # /var/lib/private/alloy under a /var/lib/private that systemd requires to
+      # be mode 0700. Persisting a path inside it fights that setup: the parent
+      # comes back 0755 from the persistence tree and systemd aborts the unit
+      # with STATE_DIRECTORY, restarting into start-limit-hit. A static user
+      # moves the state to /var/lib/alloy, which persists cleanly - the same fix
+      # homepage.nix applies to its dashboard. The journal groups go on the user
+      # so the process keeps read access to the systemd journal.
+      users.users.alloy = {
+        isSystemUser = true;
+        group = "alloy";
+        extraGroups = ["systemd-journal" "adm"];
+      };
+      users.groups.alloy = {};
+      systemd.services.alloy.serviceConfig = {
+        DynamicUser = lib.mkForce false;
+        User = lib.mkForce "alloy";
+        Group = lib.mkForce "alloy";
+      };
       environment.etc."alloy/config.alloy".text =
         alloyConfig alloyEndpoint config.networking.hostName;
       # Alloy keeps its journal read position under its state directory. That
@@ -169,7 +183,12 @@ in {
       # max_age window is shipped again; persisting it lets a restart resume
       # where it stopped instead of duplicating logs in Loki.
       environment.persistence."/per".directories = [
-        "/var/lib/private/alloy"
+        {
+          directory = "/var/lib/alloy";
+          user = "alloy";
+          group = "alloy";
+          mode = "0700";
+        }
       ];
     })
   ];
