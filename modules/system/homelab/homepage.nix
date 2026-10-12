@@ -230,33 +230,6 @@
         };
       };
     }
-    # The provisioned Grafana dashboards sit flat beside Grafana and Prometheus:
-    # a nested subgroup inside a row-styled parent collapses into a single grid
-    # cell and crops its cards, so each deep link gets a brand icon and no
-    # description instead. Power moved to the Power group, Garmin to the health
-    # cluster under Tools.
-    {
-      "Fritz!Exporter" = {
-        icon = "fritzbox.png";
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
-      };
-    }
-    {
-      "Config Health" = {
-        icon = "nixos.png";
-        # uid "config-health" (monitoring.nix provisions the dashboard). Shows
-        # NixOS generation size per deploy and the vitals host health score.
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
-      };
-    }
-    {
-      "Nix Telemetry" = {
-        icon = "nixos.png";
-        # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
-        # build and substitution timings from Determinate Nix OTel traces.
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
-      };
-    }
   ];
 
   networkServices = lib.optionals hl.adguardhome.enable [
@@ -309,7 +282,7 @@
             }
             {
               field = "aenergy.total";
-              label = "Energy";
+              label = "Total";
               format = "float";
               suffix = " Wh";
             }
@@ -340,70 +313,71 @@
   # mirrors the extraApps declaration in nextcloud.nix (calendar, contacts,
   # tasks) plus the bundled Files app, so new cards belong there first.
   #
-  # The Tools tab is one flat System group ordered by cluster - cloud, terminal,
-  # security, notifications, health, code, media - because a nested subgroup in
-  # a row-styled parent collapses into a single grid cell and crops its cards.
-  systemServices =
-    lib.optionals hl.nextcloud.enable [
-      {
-        "Files" = {
-          icon = "nextcloud.png";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/files/";
-          description = "File Sync";
-          # Instance-level light and widget live on the primary card only;
-          # repeating them per app card would show four identical probes.
-          # Root 302s to https, which the plain-HTTP probe cannot follow
-          # (it reads as a synthesized 500), so probe the loopback
-          # endpoint blackbox already uses (monitoring.nix).
-          siteMonitor = "${local hl.nextcloud.port}/status.php";
-          # Loopback works because nextcloud.nix trusts 127.0.0.1 as a domain;
-          # probing it there keeps the widget independent of Caddy.
-          widget = {
-            type = "nextcloud";
-            url = local hl.nextcloud.port;
-            username = "admin";
-            password = "{{HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD}}";
-            fields = ["activeusers" "numfiles" "freespace"];
-          };
+  # The Tools tab is a stack of full-width bands: the System group runs
+  # columns = 1, so each nested subgroup spans the page (a nested subgroup in a
+  # row parent otherwise collapses into a single grid cell and crops its cards),
+  # and each band lays its own cards out in a row.
+  cloudServices = lib.optionals hl.nextcloud.enable [
+    {
+      "Files" = {
+        icon = "nextcloud.png";
+        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/files/";
+        description = "File Sync";
+        # Instance-level light and widget live on the primary card only;
+        # repeating them per app card would show four identical probes.
+        # Root 302s to https, which the plain-HTTP probe cannot follow
+        # (it reads as a synthesized 500), so probe the loopback
+        # endpoint blackbox already uses (monitoring.nix).
+        siteMonitor = "${local hl.nextcloud.port}/status.php";
+        # Loopback works because nextcloud.nix trusts 127.0.0.1 as a domain;
+        # probing it there keeps the widget independent of Caddy.
+        widget = {
+          type = "nextcloud";
+          url = local hl.nextcloud.port;
+          username = "admin";
+          password = "{{HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD}}";
+          fields = ["activeusers" "numfiles" "freespace"];
         };
-      }
-      {
-        "Calendar" = {
-          icon = "mdi-calendar";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/calendar/dayGridMonth/now";
-          description = "Scheduling";
-          # Single published share (Personal); the other calendars are
-          # task.org task lists with no events. The token URL is the only
-          # anonymous read path (DAV itself stays auth-gated), so the
-          # widget needs no credentials.
-          widget = {
-            type = "calendar";
-            integrations = [
-              {
-                type = "ical";
-                name = "Personal";
-                url = "{{HOMEPAGE_VAR_NEXTCLOUD_ICS_URL}}";
-              }
-            ];
-          };
+      };
+    }
+    {
+      "Calendar" = {
+        icon = "mdi-calendar";
+        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/calendar/dayGridMonth/now";
+        description = "Scheduling";
+        # Single published share (Personal); the other calendars are
+        # task.org task lists with no events. The token URL is the only
+        # anonymous read path (DAV itself stays auth-gated), so the
+        # widget needs no credentials.
+        widget = {
+          type = "calendar";
+          integrations = [
+            {
+              type = "ical";
+              name = "Personal";
+              url = "{{HOMEPAGE_VAR_NEXTCLOUD_ICS_URL}}";
+            }
+          ];
         };
-      }
-      {
-        "Tasks" = {
-          icon = "mdi-clipboard-text";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/tasks/";
-          description = "To-dos";
-        };
-      }
-      {
-        "Contacts" = {
-          icon = "mdi-account-multiple";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/contacts/";
-          description = "Address Book";
-        };
-      }
-    ]
-    ++ lib.optionals hl.zellijWeb.enable [
+      };
+    }
+    {
+      "Tasks" = {
+        icon = "mdi-clipboard-text";
+        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/tasks/";
+        description = "To-dos";
+      };
+    }
+    {
+      "Contacts" = {
+        icon = "mdi-account-multiple";
+        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/contacts/";
+        description = "Address Book";
+      };
+    }
+  ];
+  terminalServices =
+    lib.optionals hl.zellijWeb.enable [
       {
         "Zellij Web" = {
           icon = "zellij.png";
@@ -424,8 +398,9 @@
           siteMonitor = local hl.opencodeWeb.port;
         };
       }
-    ]
-    ++ lib.optionals hl.vaultwarden.enable [
+    ];
+  utilityServices =
+    lib.optionals hl.vaultwarden.enable [
       {
         "Vaultwarden" = {
           # mdi-* via iconify, same family as the Infra/Access cards; the
@@ -456,10 +431,36 @@
           };
         };
       }
-    ]
-    ++ healthServices
-    ++ codeServices
-    ++ mediaServices;
+    ];
+  # Config Health and Nix Telemetry describe the configuration, so they sit in
+  # the Nix band next to the repository card.
+  nixServices =
+    codeServices
+    ++ lib.optionals hl.monitoring.enable [
+      {
+        "Config Health" = {
+          icon = "nixos.png";
+          # uid "config-health" (monitoring.nix provisions the dashboard). Shows
+          # NixOS generation size per deploy and the vitals host health score.
+          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+        };
+      }
+      {
+        "Nix Telemetry" = {
+          icon = "nixos.png";
+          # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
+          # build and substitution timings from Determinate Nix OTel traces.
+          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
+        };
+      }
+    ];
+  systemServices =
+    lib.optionals (cloudServices != []) [{"Cloud" = cloudServices;}]
+    ++ lib.optionals (terminalServices != []) [{"Terminal" = terminalServices;}]
+    ++ lib.optionals (utilityServices != []) [{"Utilities" = utilityServices;}]
+    ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
+    ++ lib.optionals (nixServices != []) [{"Nix" = nixServices;}]
+    ++ lib.optionals (healthServices != []) [{"Health" = healthServices;}];
 
   # Access: every path to the machine and its management engine. The router is
   # the same FRITZ!Box over LAN and AVM cloud; AMT is the out-of-band fallback
@@ -499,6 +500,14 @@
             # MyFRITZ!Net works from any network with just an internet link.
             href = "https://myfritz.net/";
             description = "Router (cloud)";
+          };
+        }
+        {
+          "Fritz!Exporter" = {
+            icon = "fritzbox.png";
+            # uid "hn51eUggz" (monitoring.nix provisions the fritz dashboard).
+            # The router's own metrics belong with the router, not Monitoring.
+            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
           };
         }
       ];
@@ -693,7 +702,33 @@
       tab = "Tools";
       icon = "mdi-cog";
       style = "row";
-      columns = 3;
+      # columns = 1 makes each nested band span the page instead of collapsing
+      # into a single grid cell; the bands lay their own cards out in a row.
+      columns = 1;
+      Cloud = {
+        style = "row";
+        columns = 4;
+      };
+      Terminal = {
+        style = "row";
+        columns = 2;
+      };
+      Utilities = {
+        style = "row";
+        columns = 2;
+      };
+      Media = {
+        style = "row";
+        columns = 3;
+      };
+      Nix = {
+        style = "row";
+        columns = 3;
+      };
+      Health = {
+        style = "row";
+        columns = 3;
+      };
     };
   };
   # Layout keys are intersected with the groups actually rendered. Services
