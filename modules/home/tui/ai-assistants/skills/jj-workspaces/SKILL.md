@@ -89,18 +89,27 @@ benefit for single quick changes.
 5. Cleanup after the PR merges:
 
    ```bash
-   ocws done <task>   # fetch, refuse if unmerged, then forget + rip the directory
+   ocws ls            # classify every workspace; empty/merged are reclaimable
+   ocws done <task>   # fetch, refuse if unmerged or live, then forget + rip
    ```
 
-   `done` refuses while the workspace still carries commits outside
-   `main@origin` that are not already absorbed into it, so it doubles as a
-   close-out check. Absorption is checked per revision, so a squash-merged PR
-   counts as finished even though its draft commit is not an ancestor of
-   `main@origin`; unsnapshotted edits in a foreign workspace are invisible by
-   design (ocws never snapshots a workspace it does not own).
-   `ocws gc` (also run by `ocws <task>`) forgets finished workspaces idle past
-   `OCWS_GC_AGE` (default 86400s). `ocws rm [--force] <task>` removes without
-   the fetch/check; `--force` discards unmerged work.
+   `ocws ls` is a read-only status board. Each workspace is classified `empty`
+   (nothing outside `main@origin`), `merged` (its content is already absorbed
+   into `main@origin`), `unpushed` (content no remote bookmark tracks),
+   `in-flight` (content with an open PR) or `conflict`. Absorption is checked
+   per revision, so a squash-merged PR counts as finished even though its draft
+   commit is not an ancestor of `main@origin`; unsnapshotted edits in a foreign
+   workspace are invisible by design (ocws never snapshots a workspace it does
+   not own).
+
+   `done` refuses while unmerged work remains or a process is still rooted in
+   the workspace (`--force` overrides both), so it doubles as a close-out
+   check. `ocws gc` reclaims `empty`/`merged` workspaces, skipping any with a
+   live process and any touched within the age gate: an empty unclaimed
+   workspace after `OCWS_GC_EMPTY_AGE` (default 21600s), one that held work
+   after `OCWS_GC_AGE` (default 86400s). It runs on `ocws <task>` and daily
+   from a systemd user timer. `ocws rm [--force] <task>` removes without the
+   fetch/check; `--force` discards unmerged work and live sessions.
 
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.

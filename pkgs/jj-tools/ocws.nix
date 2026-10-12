@@ -4,6 +4,12 @@
 # of git worktrees and are the supported way to run parallel agents against
 # one repository.
 #
+# `ocws ls` classifies every workspace (empty, merged, unpushed, in-flight,
+# conflict) from the same absorption test that drives reclamation, so stale
+# workspaces are visible without mutating anything. `ocws gc` reclaims the
+# empty and merged ones; a systemd user timer runs it daily (see the
+# jujutsu home module).
+#
 # Base directory precedence: $OCWS_BASE, then the parent directory of the
 # current workspace (the sibling convention) when writable, then
 # $XDG_DATA_HOME/ocws (default ~/.local/share/ocws) so workspaces survive
@@ -21,6 +27,8 @@
   jujutsu,
   coreutils,
   gnugrep,
+  gnused,
+  findutils,
   rip2,
   zellij,
   bash,
@@ -31,6 +39,8 @@ writeShellApplication {
     jujutsu
     coreutils
     gnugrep
+    gnused
+    findutils
     rip2
     zellij
     bash
@@ -43,17 +53,24 @@ writeShellApplication {
     Usage:
       ocws <task> [-- <opencode args>...]   create a workspace and run opencode there
       ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
-      ocws ls                               list workspaces and their claims (never mutates a working copy)
-      ocws done <task>                      remove a finished workspace (refuses unmerged work)
+      ocws ls [--counts]                    list workspaces with their state and claim
+                                            (--counts prints the integers "total empty
+                                            merged unpushed in-flight conflict stale",
+                                            where stale = empty/merged with no live process)
+      ocws done [--force] <task>            remove a finished workspace (refuses unmerged work
+                                            or a live process; --force overrides both)
       ocws rm [--force] <task>              remove a workspace; --force discards unmerged work
-      ocws gc                               remove finished workspaces idle past OCWS_GC_AGE
+      ocws gc                               remove reclaimable workspaces idle past the age gate
 
     Environment:
       OCWS_BASE     directory holding workspace directories (default: beside the repo
                     when writable, else ~/.local/share/ocws, else /tmp/opencode)
       OCWS_V2=1     run opencode 2 (opencode2) with the isolated V2 config
-      OCWS_GC_AGE   seconds an empty, finished workspace must sit idle before gc
+      OCWS_GC_AGE   seconds a workspace that had work must sit idle before gc
                     removes it (default 86400)
+      OCWS_GC_EMPTY_AGE
+                    seconds an empty, unclaimed workspace must sit idle before
+                    gc removes it (default 21600)
       OCWS_HOOK_PRE_CREATE / OCWS_HOOK_POST_CREATE / OCWS_HOOK_PRE_DELETE /
       OCWS_HOOK_POST_DELETE
                     optional shell commands run around workspace create/remove,
@@ -93,32 +110,144 @@ writeShellApplication {
       names="$(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null)"
       grep -qx "$1" <<<"$names"
     }
+    # Resolve a workspace directory from jj's recorded root (jj >= 0.38 prints
+    # an absolute path), falling back to the base-directory convention for
+    # pre-0.38 workspaces whose root is not recorded.
+    ws_root_for() {
+      local out
+      out="$(jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null | sed -n "s/^$1\t//p")"
+      if [ -n "$out" ] && [ "$out" != "none" ]; then
+        printf '%s' "$out"
+      else
+        ws_dir_for "$1"
+      fi
+    }
     # A revision is absorbed when every file it touches already has its content
     # on main@origin: a squash-merge replaces the draft commit but lands the
     # same bytes, so the draft is finished even though it is not an ancestor.
+    # The touched files are batched into a single diff against main@origin
+    # (empty exactly when every file matches) rather than one diff per file.
     # Pure jj, so it also works in a secondary workspace, which has no .git.
     ws_commit_absorbed() {
-      local cid="$1" f
-      for f in $(jj --ignore-working-copy diff -r "$cid" --name-only 2>/dev/null); do
-        if [ -n "$(jj --ignore-working-copy diff --from 'main@origin' --to "$cid" -- "$f" 2>/dev/null)" ]; then
-          return 1
-        fi
-      done
-      return 0
+      local cid="$1"
+      local -a files=()
+      mapfile -t files < <(jj --ignore-working-copy diff -r "$cid" --name-only 2>/dev/null)
+      [ "''${#files[@]}" -eq 0 ] && return 0
+      [ -z "$(jj --ignore-working-copy diff --from 'main@origin' --to "$cid" -- "''${files[@]}" 2>/dev/null)" ]
     }
-    # A workspace "has work" when any commit reachable from its @ lies outside
-    # main@origin and is not fully absorbed there. Checking absorption per
-    # revision lets done/gc reclaim a workspace whose PR squash-merged, which -
-    # unlike a fast-forward - leaves the draft commit off main@origin. Only
-    # snapshotted commits are visible: a foreign workspace is never snapshotted
-    # (that would fold a live session's edits into its @), so unsnapshotted
-    # edits are invisible here and rip's graveyard is the recovery net.
+    # Classify a workspace from the commits reachable from its @ that carry
+    # content outside main@origin. Prints "<state>\t<@ description>" where
+    # state is one of:
+    #   empty     - nothing outside main@origin carries content
+    #   merged    - off-main content exists but is fully absorbed into main@origin
+    #   unpushed  - off-main content not absorbed, no remote bookmark
+    #   in-flight - off-main content not absorbed, a remote bookmark (open PR)
+    #   conflict  - @ or an off-main commit carries a conflict
+    # Absorption per revision is what lets a squash-merged PR count as finished:
+    # it leaves the draft off main@origin, so ancestry alone would call it
+    # unmerged. Only snapshotted commits are visible; a foreign workspace is
+    # never snapshotted (that would fold a live session's edits into its @), so
+    # unsnapshotted edits are invisible and rip's graveyard is the recovery net.
+    ws_state() {
+      local name="$1" rev="$1@" offmain cid rflag desc state has_work=0 has_remote=0
+      desc="$(jj --ignore-working-copy log --no-graph -r "$rev" -T 'description.first_line()' 2>/dev/null)"
+      offmain="$(jj --ignore-working-copy log --no-graph -r "ancestors($rev) ~ ::main@origin ~ empty()" \
+        -T 'commit_id ++ " " ++ if(self.remote_bookmarks(), "R", "-") ++ "\n"' 2>/dev/null)"
+      while read -r cid rflag; do
+        [ -n "$cid" ] || continue
+        [ "$rflag" = "R" ] && has_remote=1
+        ws_commit_absorbed "$cid" || has_work=1
+      done <<<"$offmain"
+
+      if [ -n "$(jj --ignore-working-copy log --no-graph -r "$rev | (ancestors($rev) ~ ::main@origin)" -T 'if(self.conflict(), "C", "")' 2>/dev/null)" ]; then
+        state=conflict
+      elif [ -z "$offmain" ]; then
+        state=empty
+      elif [ "$has_work" = 0 ]; then
+        state=merged
+      elif [ "$has_remote" = 1 ]; then
+        state=in-flight
+      else
+        state=unpushed
+      fi
+      printf '%s\t%s\n' "$state" "$desc"
+    }
+    # A workspace "has work" when its state holds content not yet on
+    # main@origin. done/rm refuse to reclaim such a workspace.
     ws_has_work() {
-      local rev="$1@" cid
-      for cid in $(jj --ignore-working-copy log --no-graph -r "ancestors($rev) ~ ::main@origin ~ empty()" -T 'commit_id ++ "\n"' 2>/dev/null); do
-        ws_commit_absorbed "$cid" || return 0
+      case "$(ws_state "$1" | cut -f1)" in
+        unpushed | in-flight | conflict) return 0 ;;
+        *) return 1 ;;
+      esac
+    }
+    # A live process whose cwd is inside the workspace means a session still
+    # uses it, even when its work has already merged. /proc cwd links resolve
+    # to the real path; entries owned by other users are unreadable and skipped.
+    ws_live() {
+      local target="$1" p cwd
+      for p in /proc/[0-9]*; do
+        [ -r "$p/cwd" ] || continue
+        cwd="$(readlink "$p/cwd" 2>/dev/null)" || continue
+        case "$cwd" in
+          "$target" | "$target"/*) return 0 ;;
+        esac
       done
       return 1
+    }
+    # True when any entry under the workspace changed at or after the epoch.
+    # GNU find's -newermt covers files and directories, so an edit, a new file
+    # or a jj snapshot all count as activity, unlike the directory mtime alone.
+    ws_touched_since() {
+      [ -n "$(find "$1" -newermt "@$2" -print -quit 2>/dev/null)" ]
+    }
+    # Read-only overview of every workspace and its state. --counts prints the
+    # integers "total empty merged unpushed in-flight conflict stale" on one
+    # line and nothing else, for the status badge.
+    emit_ls() {
+      local counts_only="$1" name state desc root live
+      local n_total=0 n_empty=0 n_merged=0 n_unpushed=0 n_inflight=0 n_conflict=0 n_stale=0
+      local rows=()
+      while IFS= read -r name; do
+        [ -n "$name" ] || continue
+        IFS=$'\t' read -r state desc < <(ws_state "$name")
+        root="$(realpath -m "$(ws_root_for "$name")")"
+        live="-"
+        ws_live "$root" && live="live"
+        if [ "$name" != "default" ]; then
+          n_total=$((n_total + 1))
+          case "$state" in
+            empty) n_empty=$((n_empty + 1)) ;;
+            merged) n_merged=$((n_merged + 1)) ;;
+            unpushed) n_unpushed=$((n_unpushed + 1)) ;;
+            in-flight) n_inflight=$((n_inflight + 1)) ;;
+            conflict) n_conflict=$((n_conflict + 1)) ;;
+          esac
+          # stale: gc would reclaim it now if not for the age gate - i.e. it
+          # is empty/merged and nothing is rooted in it. Live sessions and
+          # young workspaces are excluded so the badge does not nag.
+          if [ "$live" = "-" ] && { [ "$state" = "empty" ] || [ "$state" = "merged" ]; }; then
+            n_stale=$((n_stale + 1))
+          fi
+        fi
+        [ -n "$desc" ] || desc="(no description set)"
+        rows+=("$(printf '  %-18s %-10s %-5s %s' "$name" "$state" "$live" "$desc")")
+      done < <(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null)
+
+      if [ "$counts_only" = 1 ]; then
+        printf '%s %s %s %s %s %s %s\n' "$n_total" "$n_empty" "$n_merged" "$n_unpushed" "$n_inflight" "$n_conflict" "$n_stale"
+        return
+      fi
+
+      echo "Workspace states:"
+      printf '  %-18s %-10s %-5s %s\n' NAME STATE PROC DESCRIPTION
+      printf '%s\n' "''${rows[@]}"
+      echo ""
+      echo "  empty/merged: reclaimable by 'ocws gc' once idle and not live"
+      echo "  unpushed:     commits outside main@origin no remote bookmark tracks"
+      echo "  in-flight:    commits outside main@origin with an open PR"
+      echo "  conflict:     needs 'jj resolve'"
+      echo ""
+      echo "Summary: $n_empty empty, $n_merged merged, $n_unpushed unpushed, $n_inflight in-flight, $n_conflict conflict, $n_stale stale"
     }
     # Optional lifecycle hook, run with `bash -c` and OCWS_TASK/DIR/ROOT/BASE
     # exported. Env-only so there is no config file to parse. A failing hook is
@@ -132,8 +261,8 @@ writeShellApplication {
     }
     rip_workspace() {
       local task="$1" dir
-      dir="$(ws_dir_for "$task")"
-      if [ "$(realpath -m "$dir")" = "$(realpath -m "$root")" ]; then
+      dir="$(realpath -m "$(ws_root_for "$task")")"
+      if [ "$dir" = "$(realpath -m "$root")" ]; then
         echo "ocws: refusing to remove the current workspace ('$task')" >&2
         exit 1
       fi
@@ -142,28 +271,58 @@ writeShellApplication {
       [ -d "$dir" ] && rip "$dir"
       run_hook post_delete "$task" "$dir" "''${OCWS_HOOK_POST_DELETE:-}"
     }
-    # Forget+rip workspaces whose work is finished (nothing outside
-    # main@origin that is not absorbed) and that have been idle for at least
-    # OCWS_GC_AGE seconds, never the current one. An active session touches its
-    # directory as it works, so idle time separates abandoned workspaces from
-    # live ones; rip's graveyard makes a mistaken removal restorable.
+    # Forget+rip reclaimable workspaces (state empty or merged) that have sat
+    # untouched past the age gate and hold no live process, never the current
+    # one. An empty unclaimed workspace is pure overhead and gets the shorter
+    # OCWS_GC_EMPTY_AGE; a workspace that held work gets the longer
+    # OCWS_GC_AGE. A workspace whose recorded directory is gone is forgotten
+    # outright. Liveness and touch-time guards keep a still-open session from
+    # losing its directory; rip's graveyard makes a mistaken removal
+    # restorable regardless. do_fetch=1 fetches first so absorption is judged
+    # against current origin.
     ocws_gc() {
-      local name dir age now
+      local do_fetch="$1" name dir state desc age_limit now
       now="$(date +%s)"
-      for name in $(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null); do
+      # Without main@origin every workspace would classify as empty and be
+      # reclaimed. Refuse rather than guess.
+      jj --ignore-working-copy log -r 'main@origin' -n 0 >/dev/null 2>&1 || {
+        echo "ocws gc: main@origin not found; skipping" >&2
+        return 0
+      }
+      [ "$do_fetch" = 1 ] && { jj git fetch >/dev/null 2>&1 || true; }
+      while IFS= read -r name; do
         [ "$name" = "default" ] && continue
-        dir="$base/nixos-ws-$name"
-        [ -d "$dir" ] || continue
-        [ "$(realpath -m "$dir")" = "$(realpath -m "$root")" ] && continue
-        age="$((now - $(stat -c %Y "$dir" 2>/dev/null || echo "$now")))"
-        [ "$age" -ge "''${OCWS_GC_AGE:-86400}" ] || continue
-        if ws_has_work "$name"; then
-          echo "ocws gc: keeping '$name' (unmerged work)"
+        dir="$(realpath -m "$(ws_root_for "$name")")"
+        [ "$dir" = "$(realpath -m "$root")" ] && continue
+
+        if [ ! -d "$dir" ]; then
+          rip_workspace "$name"
+          echo "ocws gc: forgot '$name' (directory missing)"
           continue
         fi
+
+        IFS=$'\t' read -r state desc < <(ws_state "$name")
+        case "$state" in
+          unpushed) echo "ocws gc: keeping '$name' (unpushed work)"; continue ;;
+          in-flight) echo "ocws gc: keeping '$name' (open PR)"; continue ;;
+          conflict) echo "ocws gc: keeping '$name' (conflict)" >&2; continue ;;
+        esac
+
+        if ws_live "$dir"; then
+          echo "ocws gc: keeping '$name' (live process)"
+          continue
+        fi
+
+        if [ "$state" = "empty" ] && [ -z "$desc" ]; then
+          age_limit="''${OCWS_GC_EMPTY_AGE:-21600}"
+        else
+          age_limit="''${OCWS_GC_AGE:-86400}"
+        fi
+        ws_touched_since "$dir" "$((now - age_limit))" && continue
+
         rip_workspace "$name"
-        echo "ocws gc: forgot '$name' (finished)"
-      done
+        echo "ocws gc: forgot '$name' ($state)"
+      done < <(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null)
     }
 
     sub="''${1:-}"
@@ -180,19 +339,27 @@ writeShellApplication {
     case "$sub" in
       ls|list)
         shift
-        jj --ignore-working-copy workspace list
-        echo ""
-        echo "Claims (working copies):"
-        jj --ignore-working-copy log --no-graph -r 'working_copies()' -T 'change_id.short() ++ "  " ++ description.first_line() ++ "\n"'
+        counts=0
+        if [ "''${1:-}" = "--counts" ]; then
+          counts=1
+          shift
+        fi
+        if [ "$counts" = 0 ]; then
+          jj --ignore-working-copy workspace list
+          echo ""
+        fi
+        emit_ls "$counts"
         exit 0
         ;;
       gc)
         shift
-        ocws_gc
+        ocws_gc 1
         exit 0
         ;;
       done)
         shift
+        force=0
+        if [ "''${1:-}" = "--force" ]; then force=1; shift; fi
         task="''${1:-}"
         [ -n "$task" ] || usage
         valid_task "$task" || { echo "ocws: invalid task '$task'" >&2; exit 2; }
@@ -202,6 +369,12 @@ writeShellApplication {
           echo "ocws: '$task' still has unmerged/uncommitted work; refusing to remove." >&2
           jj --ignore-working-copy log --no-graph -r "ancestors($task@) ~ ::main@origin ~ empty()" -T '"  " ++ commit_id.short() ++ " " ++ description.first_line() ++ "\n"' >&2
           echo "Merge the PR, then retry; or 'ocws rm --force $task' to discard." >&2
+          exit 1
+        fi
+        # A session can still hold the directory after its work merged; a
+        # removal under an open session strands it, so require --force then.
+        if [ "$force" != "1" ] && ws_live "$(realpath -m "$(ws_root_for "$task")")"; then
+          echo "ocws: a process is still active in '$task'; close it first, or 'ocws done --force $task'." >&2
           exit 1
         fi
         rip_workspace "$task"
@@ -216,9 +389,15 @@ writeShellApplication {
         [ -n "$task" ] || usage
         valid_task "$task" || { echo "ocws: invalid task '$task'" >&2; exit 2; }
         workspace_exists "$task" || { echo "ocws: no workspace named '$task'" >&2; exit 1; }
-        if [ "$force" != "1" ] && ws_has_work "$task"; then
-          echo "ocws: '$task' has unmerged/uncommitted work; use 'ocws done $task' after merging, or 'ocws rm --force $task' to discard." >&2
-          exit 1
+        if [ "$force" != "1" ]; then
+          if ws_has_work "$task"; then
+            echo "ocws: '$task' has unmerged/uncommitted work; use 'ocws done $task' after merging, or 'ocws rm --force $task' to discard." >&2
+            exit 1
+          fi
+          if ws_live "$(realpath -m "$(ws_root_for "$task")")"; then
+            echo "ocws: a process is still active in '$task'; close it first, or 'ocws rm --force $task'." >&2
+            exit 1
+          fi
         fi
         rip_workspace "$task"
         echo "Forgot '$task' (directory sent to the graveyard)."
@@ -247,8 +426,9 @@ writeShellApplication {
     [ -e "$dir" ] && { echo "ocws: path already exists: $dir" >&2; exit 1; }
 
     # Opportunistically reclaim finished workspaces before adding a new one.
-    # Best-effort: a gc failure must never block workspace creation.
-    ocws_gc || true
+    # Best-effort: a gc failure must never block workspace creation. Skips the
+    # fetch (do_fetch=0) because the create path fetches immediately below.
+    ocws_gc 0 || true
 
     run_hook pre_create "$task" "$dir" "''${OCWS_HOOK_PRE_CREATE:-}"
 

@@ -66,9 +66,9 @@
         ```bash
         ocws done <task>
         ```
-        It refuses while unmerged work remains, doubling as a close-out check; `ocws gc` (also run automatically by `ocws <task>`) reclaims finished workspaces idle past `OCWS_GC_AGE`. See the jj-workspaces skill for the full workflow and concurrency hazards.
+        It refuses while unmerged work remains or a session is still active, doubling as a close-out check. `ocws ls` classifies every workspace (empty, merged, unpushed, in-flight, conflict); `ocws gc` reclaims the empty and merged ones once idle, skipping any with a live process, and a systemd user timer runs it daily. See the jj-workspaces skill for the full workflow and concurrency hazards.
 
-        `ocws ls` reports the jj claim, not whether a session is live in the directory, so a workspace can silently hold a second agent. Before settling into one, check the session database (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) for a session rooted there, and treat such a workspace as taken even when its `@` is empty; never start or move a session into one. jj snapshots the whole tree, so a file another session wrote rides into your commit unnoticed - if files you did not write appear in your working copy, leave for a fresh workspace, report them, and remove them with `rip` (restorable) rather than committing them.
+        `ocws ls` marks a workspace `live` when a process is rooted in its directory, but a session whose cwd is elsewhere can still hold it silently, so before settling into one check the session database (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) for a session rooted there, and treat such a workspace as taken even when its `@` is empty; never start or move a session into one. jj snapshots the whole tree, so a file another session wrote rides into your commit unnoticed - if files you did not write appear in your working copy, leave for a fresh workspace, report them, and remove them with `rip` (restorable) rather than committing them.
 
         Scratch output never reaches a commit: planning and audit files under `.opencode/` are ignored, and `jj diff --stat` before `jjpush` is what proves it.
       '';

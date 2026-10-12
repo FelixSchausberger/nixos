@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   hostConfig,
@@ -6,6 +7,10 @@
   ...
 }: let
   ctp = inputs.self.lib.catppuccinColors.mocha;
+
+  # Written by the ocws-gc systemd user timer (modules/home/tui/jujutsu.nix);
+  # read on every prompt so the jj classification runs once a day, not per prompt.
+  badgeFile = "${config.xdg.cacheHome}/ocws/badge";
 in {
   programs.starship = {
     enable = true;
@@ -76,6 +81,16 @@ in {
           style = "bold fg:${ctp.red}";
           format = "[$output]($style) ";
           ignore_timeout = true;
+        };
+
+        # 🧹 reclaimable workspaces that no live session holds, ⇡ workspaces
+        # holding work that needs a push. Hidden while the badge is empty.
+        ocws = {
+          when = "test -s ${badgeFile}";
+          command = "cat ${badgeFile}";
+          shell = ["bash"];
+          style = "bold fg:${ctp.peach}";
+          format = "[$output]($style) ";
         };
       };
     };

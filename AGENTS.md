@@ -58,8 +58,9 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   comin (origin `main`, `switch`) or `jjtest` (testing bookmark,
   `switch-to-configuration test`); rebuild validation commands stay with the
   user.
-- Keep the claim honest: `ocws ls` reports a workspace's jj claim, not whether a
-  session is live in its directory, so check the session database
+- Keep the claim honest: `ocws ls` marks a workspace `live` when a process is
+  rooted in its directory, but a session whose cwd is elsewhere still holds it
+  silently, so check the session database
   (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) before
   settling in. Two sessions in one directory cost a foreign plan file in a push
   and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
@@ -83,8 +84,10 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   pushed, or explicitly deferred with a note. Sessions have repeatedly left
   half-staged work reported as done; this check is the remedy. After the PR
   merges, release the workspace with `ocws done <task>` (it refuses while
-  unmerged work remains); `ocws gc` reclaims finished workspaces idle past
-  `OCWS_GC_AGE` and runs automatically on `ocws <task>`.
+  unmerged work remains or a session is still rooted there). `ocws ls`
+  classifies every workspace; `ocws gc` reclaims the empty/merged ones idle
+  past the age gate, skipping any with a live process, and runs on
+  `ocws <task>` and daily from a systemd user timer.
 - `jjpush` only pushes changes descended from `main`. If it refuses, run
   `jjwork` first.
 - One long-lived branch: `main`. Every other branch is ephemeral and
