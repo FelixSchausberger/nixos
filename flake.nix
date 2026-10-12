@@ -87,12 +87,18 @@
       # exactly one nixpkgs.
       inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixos-hardware.url = "github:NixOS/nixos-hardware";
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nur.url = "github:nix-community/NUR";
+    nur = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -226,6 +232,9 @@
     nixos-wizard = {
       url = "github:km-clay/nixos-wizard";
       inputs.nixpkgs.follows = "nixpkgs";
+      # The wizard's disko otherwise pins its own nixpkgs (a 2025-05 copy in
+      # the lock); follow the root input.
+      inputs.disko.inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # === GUI-SPECIFIC INPUTS (Only used by GUI hosts) ===
@@ -260,6 +269,8 @@
       url = "github:FelixSchausberger/vitals";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
+      # vitals' treefmt-nix pins its own nixpkgs; follow the root input.
+      inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     };
     ala-lape = {
       url = "git+https://git.madhouse-project.org/algernon/ala-lape.git";
