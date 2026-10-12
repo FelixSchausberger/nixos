@@ -246,6 +246,29 @@ in {
     ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="*:*", RUN+="${pkgs.coreutils}/bin/chmod 0444 /sys/class/powercap/%k/energy_uj"
   '';
 
+  # Motherboard and RAM RGB draw a few watts and are unwanted on this host.
+  # The OpenRGB server runs as root with the module's udev rules, and a boot
+  # oneshot blanks every controller it detects; a controller it does not
+  # support is simply not found and is left untouched, so the unit is safe to
+  # keep regardless of how much of the board OpenRGB covers.
+  services.hardware.openrgb.enable = true;
+  systemd.services.openrgb-off = {
+    description = "Blank RGB lighting";
+    after = ["openrgb.service"];
+    wants = ["openrgb.service"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.openrgb}/bin/openrgb --mode static --color 000000";
+    };
+  };
+
+  # PCIe links otherwise keep the BIOS ASPM policy, which leaves them at L0.
+  # The powersave policy lets idle links drop to L1, worth a watt or two on a
+  # headless host; drop it again if an NVMe or USB device misbehaves.
+  boot.kernelParams = ["pcie_aspm.policy=powersave"];
+
   # System maintenance and monitoring
   modules.system.maintenance = {
     enable = true;
