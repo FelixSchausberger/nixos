@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Nix evaluation, build and substitution activity from Determinate Nix OpenTelemetry traces, aggregated by the collector's spanmetrics connector (traces_span_metrics_*). Counts are exact: export is enabled for the daemon and comin, and no sampler drops spans. Panels distinguish client spans (nix/nixos-rebuild, where evaluation happens) from daemon spans (builds, substitutions, transfers).",
+  "description": "Nix evaluation, build and substitution activity from Determinate Nix OpenTelemetry traces, aggregated by the collector's spanmetrics connector (traces_span_metrics_*). Counts are exact: export is enabled for the daemon and comin and no sampler drops spans. Panels group by service_name: nix is the client (evaluation, flake fetching) and nix-daemon does builds, substitutions and transfers. The client names spans after the flake input it fetches; those unbounded span names are dropped at scrape time and do not appear. Deploy status comes from comin's exporter.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -81,8 +81,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (job, span_name) (rate(traces_span_metrics_calls_total[5m]))",
-          "legendFormat": "{{job}} {{span_name}}",
+          "expr": "sum by (service_name, span_name) (rate(traces_span_metrics_calls_total[5m]))",
+          "legendFormat": "{{service_name}} {{span_name}}",
           "range": true,
           "refId": "A"
         }
@@ -136,8 +136,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le, job, span_name) (rate(traces_span_metrics_duration_milliseconds_bucket[10m])))",
-          "legendFormat": "{{job}} {{span_name}}",
+          "expr": "histogram_quantile(0.95, sum by (le, service_name, span_name) (rate(traces_span_metrics_duration_milliseconds_bucket[10m])))",
+          "legendFormat": "{{service_name}} {{span_name}}",
           "range": true,
           "refId": "A"
         }
@@ -191,71 +191,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (job, span_name) (rate(traces_span_metrics_duration_milliseconds_sum[5m]))\n/\nsum by (job, span_name) (rate(traces_span_metrics_duration_milliseconds_count[5m]))",
-          "legendFormat": "{{job}} {{span_name}}",
+          "expr": "sum by (service_name, span_name) (rate(traces_span_metrics_duration_milliseconds_sum[5m]))\n/\nsum by (service_name, span_name) (rate(traces_span_metrics_duration_milliseconds_count[5m]))",
+          "legendFormat": "{{service_name}} {{span_name}}",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Mean duration by operation",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "lineWidth": 1,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "normal"
-            }
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": ["mean"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum by (job, span_name) (rate(traces_span_metrics_duration_milliseconds_sum[5m])) / 1000",
-          "legendFormat": "{{job}} {{span_name}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Share of wall time by operation",
       "type": "timeseries"
     },
     {
@@ -281,8 +223,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 17
+        "x": 12,
+        "y": 9
       },
       "id": 5,
       "options": {
@@ -304,8 +246,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (job, span_name) (rate(traces_span_metrics_calls_total{span_name=~\"Build|Substitute|QueryPathInfo|CopyPath|FetchTree|FileTransfer|PostBuildHook|daemon connection\"}[5m]))",
-          "legendFormat": "{{job}} {{span_name}}",
+          "expr": "sum by (service_name, span_name) (rate(traces_span_metrics_calls_total{span_name=~\"Build|Builds|SubstitutionGoal|Substitute|CopyPath|CopyPaths|Realise|FileTransfer|GET|QueryPathInfo|QueryMissing\"}[5m]))",
+          "legendFormat": "{{service_name}} {{span_name}}",
           "range": true,
           "refId": "A"
         }
@@ -336,7 +278,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 17
       },
       "id": 6,
@@ -359,14 +301,248 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (job, span_name) (rate(traces_span_metrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[15m]))",
-          "legendFormat": "{{job}} {{span_name}}",
+          "expr": "sum by (service_name, span_name) (rate(traces_span_metrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[15m]))",
+          "legendFormat": "{{service_name}} {{span_name}}",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Failed operations",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 101,
+      "panels": [],
+      "title": "Deploy (comin)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "comin_deployment_info",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Deployed revision (comin)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "renameByName": {
+              "commit_id": "Revision",
+              "status": "Status"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "ok"
+                },
+                "1": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "failed"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 26
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "comin_last_deployment_failed",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Last deployment failed",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "no"
+                },
+                "1": {
+                  "color": "orange",
+                  "index": 1,
+                  "text": "yes"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 26
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "comin_need_to_reboot",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Reboot needed",
+      "type": "stat"
     }
   ],
   "refresh": "1m",

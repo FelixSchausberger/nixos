@@ -502,6 +502,34 @@ in {
                 action = "labeldrop";
                 regex = "collector_instance_id|otel_scope_.*";
               }
+              {
+                # The nix client names a span after the flake input it fetches
+                # ("unpacking '<url>' into the Git cache") and after every git
+                # revision it probes, so span_name is unbounded: one series per
+                # input per evaluation. Those names dominate the spanmetrics
+                # histogram (they were over half of it) and chart nothing
+                # actionable, so the series are dropped here. The bounded daemon
+                # spans and the client's fixed command spans (nix eval,
+                # BuildInstallables, ...) still reach the dashboards.
+                action = "drop";
+                source_labels = ["span_name"];
+                regex = "unpacking .* into the Git cache|getting Git revision count of .*";
+              }
+            ];
+          }
+        ]
+        ++ lib.optionals (config.services.comin.enable or false) [
+          {
+            # comin's deployment status: the running commit, whether the last
+            # deployment/eval/fetch failed, and whether a reboot is pending.
+            # Served as plain HTTP on loopback only.
+            job_name = "comin";
+            scrape_interval = "60s";
+            static_configs = [
+              {
+                targets = ["127.0.0.1:4243"];
+                labels.host = localHost;
+              }
             ];
           }
         ]
