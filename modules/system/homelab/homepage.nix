@@ -180,6 +180,15 @@
         description = "Build & eval timing";
       };
     }
+    {
+      "Power" = {
+        icon = "grafana.png";
+        # uid "power" (monitoring.nix provisions the dashboard). Wall power at
+        # the plugs plus the CPU/GPU panels that attribute it.
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
+        description = "Wall, CPU & GPU power";
+      };
+    }
   ];
 
   networkServices = lib.optionals hl.adguardhome.enable [
@@ -201,6 +210,51 @@
       };
     }
   ];
+
+  # Wall power per configured Shelly plug. The live value comes straight from
+  # the plug's local RPC (a Prometheus round trip would add latency to a card
+  # whose whole point is the instantaneous number), while the plug's own web UI
+  # is the card target. wallPower.plugs is the single source of name and
+  # address, so no IP is repeated here; the group disappears while it is empty.
+  powerServices =
+    lib.optionals (hl.monitoring.enable && hl.monitoring.wallPower.plugs != {})
+    (lib.mapAttrsToList (name: ip: {
+        "${name}" = {
+          icon = "mdi-power-plug";
+          href = "http://${ip}/";
+          description = "Wall power (Shelly plug)";
+          siteMonitor = "http://${ip}/rpc/Shelly.GetDeviceInfo";
+          widget = {
+            type = "customapi";
+            url = "http://${ip}/rpc/Switch.GetStatus?id=0";
+            # The plug's own meter: watts now, watt-hours since the meter last
+            # reset, and mains voltage (a brown-out shows here before anything
+            # else complains).
+            refreshInterval = 15000;
+            mappings = [
+              {
+                field = "apower";
+                label = "Power";
+                format = "float";
+                suffix = " W";
+              }
+              {
+                field = "aenergy.total";
+                label = "Energy";
+                format = "float";
+                suffix = " Wh";
+              }
+              {
+                field = "voltage";
+                label = "Voltage";
+                format = "float";
+                suffix = " V";
+              }
+            ];
+          };
+        };
+      })
+      hl.monitoring.wallPower.plugs);
 
   # One card per Nextcloud app instead of a single dashboard link. The app
   # set mirrors the extraApps declaration in nextcloud.nix (calendar,
@@ -400,6 +454,7 @@
   allServices =
     lib.optionals (rescueServices != []) [{"Rescue" = rescueServices;}]
     ++ lib.optionals (infraServices != []) [{"Infrastructure" = infraServices;}]
+    ++ lib.optionals (powerServices != []) [{"Wall power" = powerServices;}]
     ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
     ++ lib.optionals (monitoringServices != []) [{"Monitoring" = monitoringServices;}]
     ++ lib.optionals (networkServices != []) [{"Network" = networkServices;}]
@@ -418,6 +473,12 @@
       icon = "mdi-server";
       style = "row";
       columns = 4;
+    };
+    "Wall power" = {
+      tab = "Home";
+      icon = "mdi-power-plug";
+      style = "row";
+      columns = 2;
     };
     Media = {
       tab = "Media";

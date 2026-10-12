@@ -742,6 +742,14 @@ in {
     monitoring = {
       enable = true;
       alerting.enable = true;
+      # Shelly wall-power plugs: static LAN addresses set on the device, cloud
+      # disabled. m920q's own plug and the desktop's, both scraped by the json
+      # exporter (wall_power_watts / wall_energy_wh_total) for the power
+      # benchmark and the Homepage wall-power cards.
+      wallPower.plugs = {
+        m920q = "192.168.178.12";
+        desktop = "192.168.178.11";
+      };
     };
     # Garmin health-data pipeline: InfluxDB store + fetcher + Grafana
     # dashboard. Calendar overlay rides on Nextcloud (calendar.enable

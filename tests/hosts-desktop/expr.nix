@@ -130,9 +130,10 @@ in {
     config.home-manager.users.schausberger.systemd.user.services.vitals-daemon.Unit.After;
 
   # Test: node exporter for the m920q scrape (job "node-desktop"), and the
-  # RAPL mode fix that lets its built-in rapl collector read energy_uj
+  # udev rule that makes energy_uj readable so its built-in rapl collector
+  # works (a tmpfiles chmod loses the boot race against the powercap device)
   node_exporter_enabled = config.services.prometheus.exporters.node.enable;
   rapl_energy_readable =
-    builtins.any (rule: builtins.match ".*energy_uj.*" rule != null)
-    config.systemd.tmpfiles.rules;
+    builtins.any (line: builtins.match ".*energy_uj.*" line != null)
+    (builtins.filter builtins.isString (builtins.split "\n" config.services.udev.extraRules));
 }
