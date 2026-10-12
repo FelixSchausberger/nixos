@@ -376,6 +376,7 @@
             };
             hosts = import ./lib/hosts.nix;
             homelabPorts = import ./lib/homelab-ports.nix;
+            wallpapers = import ./lib/wallpapers.nix;
 
             inherit (defaults.system) user;
             inherit (defaults) personalInfo;

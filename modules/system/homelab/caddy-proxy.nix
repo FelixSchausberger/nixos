@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -38,9 +39,14 @@
 
   # Homepage's background image, shipped for the browser to fetch. Homepage's
   # config directory is a read-only store path and its public directory
-  # belongs to the package, so the dashboard cannot serve the file itself.
+  # belongs to the package, so the dashboard cannot serve the file itself. The
+  # file follows homepage.backgroundWallpaper but takes the crisp variant:
+  # the *_blurred files carry the soft frame the niri overview needs, which the
+  # dashboard background must not show.
+  homepageWallpaperFile =
+    inputs.self.lib.wallpapers.available.${hl.homepage.backgroundWallpaper};
   homepageWallpaper = pkgs.runCommand "homepage-wallpaper" {} ''
-    install -Dm444 ${../../home/wallpapers/appa_blurred.jpg} $out/appa_blurred.jpg
+    install -Dm444 ${../../home/wallpapers}/${homepageWallpaperFile} $out/${homepageWallpaperFile}
   '';
 
   # Static route for that image. The longer /bg match wins over the Immich

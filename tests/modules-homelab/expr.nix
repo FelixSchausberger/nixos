@@ -18,6 +18,55 @@
     if builtins.isList v
     then map go v
     else go v;
+
+  # Rendered dashboard card inventory: path, icon, href, and the presence
+  # (never the credentials) of per-card probes and widgets. Nested groups
+  # (Rescue/AMT, Monitoring/Dashboards) are walked recursively so a card inside
+  # a subgroup stays visible in the snapshot diff. The snapshot deliberately
+  # records current state rather than asserting reachability, which the site
+  # monitors cover at runtime.
+  renderCards = prefix: entries:
+    builtins.concatLists (map (
+        entry: let
+          name = builtins.head (builtins.attrNames entry);
+          spec = entry.${name};
+          path =
+            if prefix == ""
+            then name
+            else "${prefix}/${name}";
+        in
+          if builtins.isList spec
+          then renderCards path spec
+          else [
+            (path
+              + (
+                if spec ? icon
+                then " icon=${spec.icon}"
+                else ""
+              )
+              + (
+                if spec ? href
+                then " href=${spec.href}"
+                else ""
+              )
+              + (
+                if spec ? siteMonitor
+                then " monitor"
+                else ""
+              )
+              + (
+                if spec ? widget
+                then " widget=${spec.widget.type}"
+                else ""
+              )
+              + (
+                if spec ? widgets
+                then " widgets=${builtins.concatStringsSep "," (map (w: w.type) spec.widgets)}"
+                else ""
+              ))
+          ]
+      )
+      entries);
 in {
   adguard_enabled = config.modules.system.homelab.adguardhome.enable;
   monitoring_enabled = config.modules.system.homelab.monitoring.enable;
@@ -58,43 +107,5 @@ in {
   prometheus_port = config.modules.system.homelab.monitoring.prometheusPort;
   adguard_port = config.modules.system.homelab.adguardhome.port;
 
-  # Rendered dashboard card inventory: group, name, icon, href, and the
-  # presence (never the credentials) of per-card probes and widgets. The
-  # snapshot diff makes every added, removed or relinked card visible in
-  # review; it deliberately records current state rather than asserting
-  # reachability, which the site monitors cover at runtime.
-  homepage_cards = builtins.concatLists (map (
-      group: let
-        gname = builtins.head (builtins.attrNames group);
-      in
-        map (
-          card: let
-            name = builtins.head (builtins.attrNames card);
-            spec = card.${name};
-          in
-            "${gname}/${name}"
-            + (
-              if spec ? icon
-              then " icon=${spec.icon}"
-              else ""
-            )
-            + (
-              if spec ? href
-              then " href=${spec.href}"
-              else ""
-            )
-            + (
-              if spec ? siteMonitor
-              then " monitor"
-              else ""
-            )
-            + (
-              if spec ? widget
-              then " widget=${spec.widget.type}"
-              else ""
-            )
-        )
-        group.${gname}
-    )
-    config.services.homepage-dashboard.services);
+  homepage_cards = renderCards "" config.services.homepage-dashboard.services;
 }
