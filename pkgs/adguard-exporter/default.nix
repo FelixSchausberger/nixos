@@ -2,6 +2,7 @@
   lib,
   fetchFromGitHub,
   buildGoModule,
+  nix-update-script,
 }:
 buildGoModule rec {
   pname = "adguard-exporter";
@@ -17,6 +18,10 @@ buildGoModule rec {
   };
 
   vendorHash = "sha256-yhUsU4sUir62QLtfiP4GAcOo+pK4Nrw91QfCFOy4I10=";
+
+  # Upstream publishes tagged releases. The pinned commit is the v1.4.4 tag's
+  # tree, so the first bump only replaces the date label with the real version.
+  passthru.updateScript = nix-update-script {extraArgs = ["--flake"];};
 
   meta = with lib; {
     description = "Prometheus exporter for AdGuard Home";
