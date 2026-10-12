@@ -55,7 +55,6 @@
       "typst"
       "prettier"
       "eslint"
-      "mcp-server-gitlab"
     ];
 
     userSettings = {
