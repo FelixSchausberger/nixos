@@ -44,6 +44,7 @@
     "config-health"
     "nix-otel"
     "power"
+    "logs"
     "garmin"
   ];
   rule_count = 19;

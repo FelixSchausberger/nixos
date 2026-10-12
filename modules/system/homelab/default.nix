@@ -9,6 +9,7 @@
     ./homepage.nix
     ./immich.nix
     ./jellyfin.nix
+    ./logging.nix
     ./monitoring.nix
     ./navidrome.nix
     ./nextcloud.nix
