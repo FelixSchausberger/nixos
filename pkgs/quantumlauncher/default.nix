@@ -15,6 +15,7 @@
   libxcursor,
   libxrandr,
   libxi,
+  nix-update-script,
 }: let
   desktopItem = makeDesktopItem {
     name = "quantumlauncher";
@@ -66,6 +67,9 @@ in
     ];
 
     desktopItems = [desktopItem];
+
+    # Upstream publishes tagged releases; version and hashes bump together.
+    passthru.updateScript = nix-update-script {extraArgs = ["--flake"];};
 
     postFixup = ''
       wrapProgram $out/bin/quantum_launcher \

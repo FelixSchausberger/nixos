@@ -2,6 +2,7 @@
   lib,
   buildGoModule,
   fetchFromGitHub,
+  nix-update-script,
 }:
 buildGoModule rec {
   pname = "dssh";
@@ -22,6 +23,9 @@ buildGoModule rec {
   ];
 
   doCheck = false;
+
+  # Upstream publishes tagged releases; the update is a version-and-hash bump.
+  passthru.updateScript = nix-update-script {extraArgs = ["--flake"];};
 
   meta = with lib; {
     description = "Dead-simple SSH connection manager CLI and TUI";

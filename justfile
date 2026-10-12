@@ -351,6 +351,20 @@ update:
 update-input INPUT:
     nix flake lock --update-input {{INPUT}}
 
+# Bump pinned packages in pkgs/ to their latest upstream release and build them.
+# Applies each package's passthru.updateScript where present (dssh,
+# quantumlauncher, adguard-exporter); the rest are deliberately pinned -
+# intel-lms matches Debian ABIs and the zellij plugins carry hand-ported
+# patches - and are bumped by hand.
+bump +ATTRS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for attr in {{ATTRS}}; do
+      echo "==> bumping $attr"
+      nix-update --flake --use-update-script --build "$attr"
+    done
+    nix fmt
+
 # Check flake for errors
 flake-check:
     nix flake check
