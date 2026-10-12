@@ -230,47 +230,32 @@
         };
       };
     }
-    # The provisioned Grafana dashboards, nested under one heading so the flat
-    # Monitoring row keeps only the two service entry points and the dashboard
-    # links read as children of Grafana. All wear the Grafana icon for the same
-    # reason. Garmin is personal health data and lives under Health instead.
+    # The provisioned Grafana dashboards sit flat beside Grafana and Prometheus:
+    # a nested subgroup inside a row-styled parent collapses into a single grid
+    # cell and crops its cards, so each deep link gets a brand icon and no
+    # description instead. Power moved to the Power group, Garmin to the health
+    # cluster under Tools.
     {
-      "Dashboards" = [
-        {
-          "Fritz!Exporter" = {
-            icon = "grafana.png";
-            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
-            description = "Router metrics";
-          };
-        }
-        {
-          "Config Health" = {
-            icon = "grafana.png";
-            # uid "config-health" (monitoring.nix provisions the dashboard). Shows
-            # NixOS generation size per deploy and the vitals host health score.
-            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
-            description = "NixOS & host health";
-          };
-        }
-        {
-          "Nix Telemetry" = {
-            icon = "grafana.png";
-            # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
-            # build and substitution timings from Determinate Nix OTel traces.
-            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
-            description = "Build & eval timing";
-          };
-        }
-        {
-          "Power" = {
-            icon = "grafana.png";
-            # uid "power" (monitoring.nix provisions the dashboard). Wall power at
-            # the plugs plus the CPU/GPU panels that attribute it.
-            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
-            description = "Wall, CPU & GPU power";
-          };
-        }
-      ];
+      "Fritz!Exporter" = {
+        icon = "fritzbox.png";
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
+      };
+    }
+    {
+      "Config Health" = {
+        icon = "nixos.png";
+        # uid "config-health" (monitoring.nix provisions the dashboard). Shows
+        # NixOS generation size per deploy and the vitals host health score.
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+      };
+    }
+    {
+      "Nix Telemetry" = {
+        icon = "nixos.png";
+        # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
+        # build and substitution timings from Determinate Nix OTel traces.
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
+      };
     }
   ];
 
@@ -294,57 +279,70 @@
     }
   ];
 
-  # Wall power per configured Shelly plug. The live value comes straight from
-  # the plug's local RPC (a Prometheus round trip would add latency to a card
-  # whose whole point is the instantaneous number), while the plug's own web UI
-  # is the card target. wallPower.plugs is the single source of name and
-  # address, so no IP is repeated here; the group disappears while it is empty.
-  powerServices =
-    lib.optionals (hl.monitoring.enable && hl.monitoring.wallPower.plugs != {})
-    (lib.mapAttrsToList (name: ip: {
-        "${name}" = {
-          icon = "mdi-power-plug";
-          href = "http://${ip}/";
-          description = "Wall power (Shelly plug)";
-          siteMonitor = "http://${ip}/rpc/Shelly.GetDeviceInfo";
-          widget = {
-            type = "customapi";
-            url = "http://${ip}/rpc/Switch.GetStatus?id=0";
-            # The plug's own meter: watts now, watt-hours since the meter last
-            # reset, and mains voltage (a brown-out shows here before anything
-            # else complains).
-            refreshInterval = 15000;
-            mappings = [
-              {
-                field = "apower";
-                label = "Power";
-                format = "float";
-                suffix = " W";
-              }
-              {
-                field = "aenergy.total";
-                label = "Energy";
-                format = "float";
-                suffix = " Wh";
-              }
-              {
-                field = "voltage";
-                label = "Voltage";
-                format = "float";
-                suffix = " V";
-              }
-            ];
-          };
+  # Wall power: one card per configured Shelly plug plus the Power dashboard
+  # that attributes the draw. The live plug value comes straight from the plug's
+  # local RPC (a Prometheus round trip would add latency to a card whose whole
+  # point is the instantaneous number), while the plug's own web UI is the card
+  # target. wallPower.plugs is the single source of name and address, so no IP
+  # is repeated here; the plug cards disappear while it is empty, the dashboard
+  # link stays (its CPU/GPU panels fill from the node exporters).
+  powerServices = lib.optionals hl.monitoring.enable (
+    lib.mapAttrsToList (name: ip: {
+      "${name}" = {
+        icon = "mdi-power-plug";
+        href = "http://${ip}/";
+        description = "Wall power (Shelly plug)";
+        siteMonitor = "http://${ip}/rpc/Shelly.GetDeviceInfo";
+        widget = {
+          type = "customapi";
+          url = "http://${ip}/rpc/Switch.GetStatus?id=0";
+          # The plug's own meter: watts now, watt-hours since the meter last
+          # reset, and mains voltage (a brown-out shows here before anything
+          # else complains).
+          refreshInterval = 15000;
+          mappings = [
+            {
+              field = "apower";
+              label = "Power";
+              format = "float";
+              suffix = " W";
+            }
+            {
+              field = "aenergy.total";
+              label = "Energy";
+              format = "float";
+              suffix = " Wh";
+            }
+            {
+              field = "voltage";
+              label = "Voltage";
+              format = "float";
+              suffix = " V";
+            }
+          ];
         };
-      })
-      hl.monitoring.wallPower.plugs);
+      };
+    })
+    hl.monitoring.wallPower.plugs
+    ++ [
+      {
+        "Power" = {
+          icon = "shelly.png";
+          # uid "power" (monitoring.nix provisions the dashboard). Wall power at
+          # the plugs plus the CPU/GPU panels that attribute it.
+          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
+        };
+      }
+    ]
+  );
 
-  # One card per Nextcloud app instead of a single dashboard link. The app
-  # set mirrors the extraApps declaration in nextcloud.nix (calendar,
-  # contacts, tasks) plus the bundled Files app, so new cards belong there
-  # first. The list is split around ntfy.sh: Files, Calendar and ntfy carry a
-  # widget body while Contacts and Tasks are plain links, so the first row of
-  # the three-column Tools group stays visually even under useEqualHeights.
+  # One card per Nextcloud app instead of a single dashboard link. The app set
+  # mirrors the extraApps declaration in nextcloud.nix (calendar, contacts,
+  # tasks) plus the bundled Files app, so new cards belong there first.
+  #
+  # The Tools tab is one flat System group ordered by cluster - cloud, terminal,
+  # security, notifications, health, code, media - because a nested subgroup in
+  # a row-styled parent collapses into a single grid cell and crops its cards.
   systemServices =
     lib.optionals hl.nextcloud.enable [
       {
@@ -390,25 +388,6 @@
           };
         };
       }
-    ]
-    ++ lib.optionals hl.ntfy.enable [
-      {
-        "ntfy.sh" = {
-          icon = "ntfy.png";
-          href = "http://192.168.178.2:${toString ntfyPort}";
-          description = "Push Notifications";
-          siteMonitor = "http://127.0.0.1:${toString ntfyPort}";
-          # auth-default-access is read-write, so the topic needs no
-          # credentials for the widget to read the latest alert.
-          widget = {
-            type = "ntfy";
-            url = "http://127.0.0.1:${toString ntfyPort}";
-            topic = "homelab-alerts";
-          };
-        };
-      }
-    ]
-    ++ lib.optionals hl.nextcloud.enable [
       {
         "Tasks" = {
           icon = "mdi-clipboard-text";
@@ -449,7 +428,7 @@
     ++ lib.optionals hl.vaultwarden.enable [
       {
         "Vaultwarden" = {
-          # mdi-* via iconify, same family as the Infra/Rescue cards; the
+          # mdi-* via iconify, same family as the Infra/Access cards; the
           # .png names elsewhere have no local config icons/ dir and fall
           # back to the dashboard-icons CDN, which serves all of them.
           icon = "mdi-key-variant";
@@ -460,23 +439,73 @@
           siteMonitor = "${local config.services.vaultwarden.config.ROCKET_PORT}/alive";
         };
       }
-    ];
+    ]
+    ++ lib.optionals hl.ntfy.enable [
+      {
+        "ntfy.sh" = {
+          icon = "ntfy.png";
+          href = "http://192.168.178.2:${toString ntfyPort}";
+          description = "Push Notifications";
+          siteMonitor = "http://127.0.0.1:${toString ntfyPort}";
+          # auth-default-access is read-write, so the topic needs no
+          # credentials for the widget to read the latest alert.
+          widget = {
+            type = "ntfy";
+            url = "http://127.0.0.1:${toString ntfyPort}";
+            topic = "homelab-alerts";
+          };
+        };
+      }
+    ]
+    ++ healthServices
+    ++ codeServices
+    ++ mediaServices;
 
-  # Emergency access: Intel AMT from each vantage (LAN, WAN via FRITZ!Box
-  # DNAT, IPv6), the router on LAN with MyFRITZ!Net as its off-LAN
-  # fallback, and the tailnet admin console for route and DNS recovery.
-  # Convenience links only: the dashboard runs on the m920q itself, so
-  # with the host down these vanish and the phone's pinned browser
+  # Access: every path to the machine and its management engine. The router is
+  # the same FRITZ!Box over LAN and AVM cloud; AMT is the out-of-band fallback
+  # from three vantages; Tailscale is the tailnet admin console for route and
+  # DNS recovery. Convenience links only: the dashboard runs on the m920q
+  # itself, so with the host down these vanish and the phone's pinned browser
   # bookmarks (AMT over IPv4 and IPv6) are the authoritative path. Power
-  # control is deliberately not a card - the HTTP relay was removed on
-  # purpose and the phone issues
-  # "ssh m920q desktop-power on|off|status" from a termux widget instead.
-  rescueServices = [
+  # control is deliberately not a card - the HTTP relay was removed on purpose
+  # and the phone issues "ssh m920q desktop-power on|off|status" from a termux
+  # widget instead.
+  accessServices = [
     {
-      # The three AMT vantage points share one heading: WAN through the
-      # FRITZ!Box DNAT, IPv6 direct, and plain HTTP on the LAN. As a nested
-      # group they read as one "reach the machine's management engine" control
-      # instead of three sibling chips.
+      # Router: the same FRITZ!Box reached two ways - the LAN address, and the
+      # AVM cloud fallback for when only an internet link is available.
+      "Router" = [
+        {
+          "Fritz!Box" = {
+            icon = "fritzbox.png";
+            href = "http://192.168.178.1";
+            description = "Router (LAN)";
+            siteMonitor = "http://192.168.178.1";
+            # No credentials: the widget reads AVM's status interface, which
+            # needs "allow access for applications" plus UPnP status
+            # transmission in the router's network settings. http stays on
+            # purpose - the TLS handshake against this router is slow.
+            widget = {
+              type = "fritzbox";
+              url = "http://192.168.178.1";
+            };
+          };
+        }
+        {
+          "MyFRITZ!" = {
+            icon = "mdi-cloud";
+            # Off-LAN fallback for the LAN address above: the Fritz!Box is only
+            # a 192.168.178.x address, which needs the subnet route, while
+            # MyFRITZ!Net works from any network with just an internet link.
+            href = "https://myfritz.net/";
+            description = "Router (cloud)";
+          };
+        }
+      ];
+    }
+    {
+      # AMT: three vantage points, one heading. The WAN path runs through the
+      # FRITZ!Box DNAT, IPv6 is direct, and the LAN endpoint is plain HTTP.
       "AMT" = [
         {
           "IPv4 (WAN)" = {
@@ -512,32 +541,6 @@
       ];
     }
     {
-      "Fritz!Box" = {
-        icon = "fritzbox.png";
-        href = "http://192.168.178.1";
-        description = "Router";
-        siteMonitor = "http://192.168.178.1";
-        # No credentials: the widget reads AVM's status interface, which
-        # needs "allow access for applications" plus UPnP status
-        # transmission in the router's network settings. http stays on
-        # purpose - the TLS handshake against this router is slow.
-        widget = {
-          type = "fritzbox";
-          url = "http://192.168.178.1";
-        };
-      };
-    }
-    {
-      "MyFRITZ!" = {
-        icon = "mdi-cloud";
-        # Off-LAN fallback for the LAN router card above: the Fritz!Box is
-        # only a 192.168.178.x address, which needs the subnet route, while
-        # MyFRITZ!Net works from any network with just an internet link.
-        href = "https://myfritz.net/";
-        description = "Router via AVM cloud";
-      };
-    }
-    {
       "Tailscale" = {
         icon = "tailscale.png";
         href = "https://login.tailscale.com/login?next_url=%2Fadmin%2Fmachines%3Frefreshed%3Dtrue";
@@ -548,11 +551,11 @@
 
   # Personal health data, not infrastructure: the Garmin pipeline feeds sleep,
   # stress, body battery, heart rate and activity metrics into InfluxDB and its
-  # Grafana dashboard, so it gets its own tab rather than sitting in Monitoring.
+  # Grafana dashboard. Folded into the Tools tab's health cluster.
   healthServices = lib.optionals hl.garmin.enable [
     {
       "Garmin Stats" = {
-        icon = "grafana.png";
+        icon = "garmin.png";
         # uid "garmin-stats" (monitoring.nix provisions the dashboard).
         href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
         description = "Sleep, stress, heart rate, steps";
@@ -633,26 +636,31 @@
   ];
 
   allServices =
-    lib.optionals (rescueServices != []) [{"Rescue" = rescueServices;}]
+    lib.optionals (accessServices != []) [{"Access" = accessServices;}]
     ++ lib.optionals (infraServices != []) [{"Infrastructure" = infraServices;}]
-    ++ lib.optionals (powerServices != []) [{"Wall power" = powerServices;}]
-    ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
+    ++ lib.optionals (powerServices != []) [{"Power" = powerServices;}]
     ++ lib.optionals (monitoringServices != []) [{"Monitoring" = monitoringServices;}]
     ++ lib.optionals (networkServices != []) [{"Network" = networkServices;}]
-    ++ lib.optionals (healthServices != []) [{"Health" = healthServices;}]
-    ++ lib.optionals (systemServices != []) [{"System" = systemServices;}]
-    ++ lib.optionals (codeServices != []) [{"Code" = codeServices;}];
+    ++ lib.optionals (systemServices != []) [{"System" = systemServices;}];
 
-  # Group arrangement: one tab per concern, horizontal rows inside a tab.
-  # Tab names are the only navigation on the page, so a group without a tab
-  # would surface on every one of them - each entry below is assigned.
+  # Group arrangement: one tab per concern, horizontal rows inside a tab. Tab
+  # names are the only navigation on the page, so a group without a tab would
+  # surface on every one of them - each entry below is assigned.
+  #
+  # The default tab is the first key of the rendered layout, and the YAML
+  # generator sorts keys alphabetically, so the first tab is whichever group
+  # name sorts first - not the first entry here. "Access" is named to sort
+  # ahead of every other group and carry the Home tab; keep that property when
+  # adding or renaming groups, or the dashboard opens on the wrong tab.
   groupLayout = {
-    Rescue = {
+    Access = {
       tab = "Home";
       icon = "mdi-lifebuoy";
-      # Nested AMT group: three vantage points, one heading. The parent has no
-      # row style, so the subgroup renders as a stacked column like the rest of
-      # Rescue.
+      # Router: LAN and cloud paths to the same FRITZ!Box.
+      Router = {
+        icon = "fritzbox.png";
+      };
+      # AMT: three vantage points, one heading.
       AMT = {
         icon = "mdi-chip";
       };
@@ -663,15 +671,9 @@
       style = "row";
       columns = 4;
     };
-    "Wall power" = {
+    Power = {
       tab = "Home";
       icon = "mdi-power-plug";
-      style = "row";
-      columns = 2;
-    };
-    Media = {
-      tab = "Media";
-      icon = "mdi-play";
       style = "row";
       columns = 3;
     };
@@ -680,12 +682,6 @@
       icon = "mdi-chart-line";
       style = "row";
       columns = 4;
-      # Grafana dashboard deep links, nested under the Monitoring group so the
-      # flat row keeps only the Grafana and Prometheus service cards.
-      Dashboards = {
-        style = "row";
-        columns = 4;
-      };
     };
     Network = {
       tab = "Home";
@@ -693,21 +689,9 @@
       style = "row";
       columns = 3;
     };
-    Health = {
-      tab = "Health";
-      icon = "mdi-heart-pulse";
-      style = "row";
-      columns = 2;
-    };
     System = {
       tab = "Tools";
       icon = "mdi-cog";
-      style = "row";
-      columns = 3;
-    };
-    Code = {
-      tab = "Tools";
-      icon = "mdi-github";
       style = "row";
       columns = 3;
     };
@@ -869,17 +853,11 @@ in {
       # No `bookmarks` attribute: the module default is an empty list, and the
       # previous Quick Links group duplicated the Grafana and Nextcloud
       # service cards outright.
-      # Header contents, left to right: greeting on the left, clock, weather and
-      # search right-aligned. Host gauges moved into the Infrastructure cards
-      # (PrometheusMetric), so nothing here reads /proc and the service keeps the
-      # upstream ProtectiveProcSubset=pid hardening.
+      # Header contents: clock, weather and search, all right-aligned. Host
+      # gauges moved into the Infrastructure cards (PrometheusMetric), so
+      # nothing here reads /proc and the service keeps the upstream
+      # ProtectiveProcSubset=pid hardening.
       widgets = [
-        {
-          greeting = {
-            text_size = "2xl";
-            text = "Welcome";
-          };
-        }
         {
           datetime = {
             text_size = "xl";
