@@ -109,7 +109,13 @@
       notify() { :; }
     ''}
 
-    if out=$("$tailscale" ping --c=3 --timeout=5s "$peer" 2>&1); then
+    # `tailscale ping` exits non-zero whenever no direct path is established,
+    # even when every pong arrived over DERP - and a phone on cellular or
+    # behind CGNAT is routinely DERP-only. The exit code therefore means "no
+    # direct path", not "unreachable"; judge reachability by whether a pong
+    # came back at all, and keep the ping only to report the path taken.
+    out=$("$tailscale" ping --c=3 --timeout=5s "$peer" 2>&1) || true
+    if printf '%s' "$out" | ${pkgs.gnugrep}/bin/grep -q 'pong from'; then
       path=$(printf '%s' "$out" | ${pkgs.gnugrep}/bin/grep -oE 'via .* in [0-9.]+ms' || printf '%s' "$out")
       if [ "$down_since" -ne 0 ]; then
         duration=$(($now - down_since))
