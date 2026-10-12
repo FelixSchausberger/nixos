@@ -39,22 +39,24 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # auto-cpufreq dynamically scales CPU frequency based on load.
+    # auto-cpufreq applies a governor and an energy-performance preference per
+    # power source. Its config schema is [charger] and [battery], and the AC
+    # branch ("charger") is the one an always-on host always runs in. A section
+    # under any other name is ignored, and the tool then falls back to its
+    # performance-on-AC default, which keeps idle clocks and voltage high and
+    # defeats the efficiency intent of the profiles above.
     services.auto-cpufreq = {
       enable = true;
       settings = {
+        charger = {
+          governor = "powersave";
+          energy_performance_preference = "power";
+          turbo = "auto";
+        };
         battery = {
           governor = "powersave";
+          energy_performance_preference = "power";
           turbo = "off";
-        };
-        charge.threshold = 80;
-        performance = {
-          governor = "powersave";
-          turbo = "auto";
-        };
-        balanced = {
-          governor = "powersave";
-          turbo = "auto";
         };
       };
     };
