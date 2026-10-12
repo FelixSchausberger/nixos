@@ -17,14 +17,10 @@
     "prevent-rebuild"
     "safe-deletion"
   ];
-  github_mcp_command = "github-mcp-server";
-  github_mcp_enabled = true;
-  github_mcp_exists = true;
   has_behaviors = true;
   has_mcp_servers = true;
-  mcp_server_count = 3;
+  mcp_server_count = 2;
   mcp_server_names = [
-    "github"
     "nix-language-server"
     "nixos"
   ];

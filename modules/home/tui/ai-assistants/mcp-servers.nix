@@ -1,25 +1,8 @@
 {
   pkgs,
   lib,
-  config,
   ...
-}: let
-  # github-mcp-server reads the token at runtime from the sops-rendered
-  # file. Passing it through MCP config env is not portable: opencode V1's
-  # variable resolver throws on the {file:...} reference while building the
-  # system prompt (killing every CLI run), and a plain env var ties the
-  # server to the spawning shell. The wrapper serves every harness
-  # (opencode V1/V2, Claude Code, the systemd web service) identically.
-  github-mcp-server-wrapped = pkgs.writeShellApplication {
-    name = "github-mcp-server";
-    runtimeInputs = [pkgs.coreutils];
-    text = ''
-      GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.sops.secrets."github/token".path})"
-      export GITHUB_PERSONAL_ACCESS_TOKEN
-      exec ${pkgs.github-mcp-server}/bin/github-mcp-server "$@"
-    '';
-  };
-in {
+}: {
   # Legacy: Keep ai-assistants.mcpServers.definitions for Claude Code compatibility
   # Claude Code doesn't integrate with programs.mcp, so it needs its own format
   options.ai-assistants.mcpServers = {
@@ -69,14 +52,6 @@ in {
       enable = true;
 
       # Define MCP servers globally
-      # NOTE: no github server here on purpose. opencode V1.18.30 throws
-      # "TypeError: undefined is not an object (evaluating 'a.name')"
-      # in SystemPrompt.environment while mapping github-mcp-server 1.12.1's
-      # tool list (any V1 session dies before the model call). The regression
-      # was hidden while the server failed to start (missing stdio arg) and
-      # surfaced once #245 made it start correctly. V2 and Claude keep the
-      # server: V2 via the github entry added in v2.nix, Claude via the
-      # legacy definition below.
       servers = {
         nix-language-server = {
           command = "${pkgs.mcp-language-server}/bin/mcp-language-server";
@@ -97,22 +72,12 @@ in {
 
     # Provide MCP packages globally for all AI assistants
     home.packages = [
-      github-mcp-server-wrapped
       pkgs.mcp-nixos
       pkgs.mcp-language-server
     ];
 
     # Legacy definitions for Claude Code (which doesn't use programs.mcp)
     ai-assistants.mcpServers.definitions = {
-      github = {
-        package = github-mcp-server-wrapped;
-        command = "github-mcp-server";
-        # stdio is mandatory from v0.22 on; see programs.mcp.servers.github.
-        args = ["stdio"];
-        enabled = true;
-        description = "GitHub repository operations and API access";
-      };
-
       nix-language-server = {
         package = pkgs.mcp-language-server;
         command = "mcp-language-server";
@@ -123,7 +88,7 @@ in {
           "nixd"
         ];
         enabled = true;
-        description = "Semantic Nix code navigation (go to definition, find references, rename, diagnostics, hover)";
+        description = "Semantic Nix code navigation (go to definition, find references, diagnostics, hover)";
       };
 
       nixos = {
