@@ -82,60 +82,7 @@
             };
           };
         };
-
-        # Context7 MCP configuration
-        "mcp" = {
-          "servers" = {
-            "Context7" = {
-              "type" = "stdio";
-              "command" = "npx";
-              "args" = [
-                "-y"
-                "@upstash/context7-mcp@latest"
-              ];
-            };
-            "nixos" = {
-              "type" = "stdio";
-              "command" = "nix";
-              "args" = [
-                "shell"
-                "nixpkgs#uv"
-                "--command"
-                "uvx"
-                "mcp-nixos@0.3.1"
-              ];
-            };
-            "terraform-registry" = {
-              "command" = "npx";
-              "args" = [
-                "-y"
-                "terraform-mcp-server"
-              ];
-            };
-            "gcp" = {
-              "command" = "sh";
-              "args" = [
-                "-c"
-                "npx -y gcp-mcp"
-              ];
-            };
-            "github" = {
-              "type" = "stdio";
-              "command" = "npx";
-              "args" = [
-                "-y"
-                "@modelcontextprotocol/server-github"
-              ];
-              "env" = {
-                "GITHUB_PERSONAL_ACCESS_TOKEN" = "${config.sops.secrets."github/token".path}";
-              };
-            };
-          };
-        };
       };
-
-      # https://github.com/utensils/mcp-nixos
-      "nixos"."command" = "nix run github:utensils/mcp-nixos --";
 
       "python" = {
         "editor" = {
