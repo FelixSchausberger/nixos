@@ -661,7 +661,13 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "links": [
+            {
+              "title": "Logs",
+              "url": "/d/logs?var-host=${__field.labels.host}&from=${__from}&to=${__to}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -748,7 +754,13 @@
                 "value": null
               }
             ]
-          }
+          },
+          "links": [
+            {
+              "title": "Logs",
+              "url": "/d/logs?var-host=${__field.labels.host}&from=${__from}&to=${__to}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -836,7 +848,13 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "links": [
+            {
+              "title": "Logs",
+              "url": "/d/logs?var-host=${__field.labels.host}&from=${__from}&to=${__to}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -923,7 +941,13 @@
                 "value": null
               }
             ]
-          }
+          },
+          "links": [
+            {
+              "title": "Logs",
+              "url": "/d/logs?var-host=${__field.labels.host}&from=${__from}&to=${__to}"
+            }
+          ]
         },
         "overrides": []
       },

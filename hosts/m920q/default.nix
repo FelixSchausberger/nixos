@@ -751,6 +751,13 @@ in {
         desktop = "192.168.178.11";
       };
     };
+    # Loki log aggregation. The desktop is the only remote host that ships its
+    # journal here over the LAN, and Loki is unauthenticated, so the firewall
+    # rule is scoped to that host instead of opened fleet-wide.
+    logging = {
+      enable = true;
+      clientSources = [inputs.self.lib.hosts.desktop.ip];
+    };
     # Garmin health-data pipeline: InfluxDB store + fetcher + Grafana
     # dashboard. Calendar overlay rides on Nextcloud (calendar.enable
     # defaults to nextcloud.enable).

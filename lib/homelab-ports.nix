@@ -8,4 +8,5 @@
   adguard = 3000; # modules/system/homelab/adguardhome.nix
   nextcloud = 8081; # modules/system/homelab/nextcloud.nix
   homepage = 3002; # modules/system/homelab/homepage.nix
+  loki = 3100; # modules/system/homelab/logging.nix
 }

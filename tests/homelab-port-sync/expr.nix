@@ -15,6 +15,7 @@ in {
   adguard_port = config.modules.system.homelab.adguardhome.port == ports.adguard;
   nextcloud_port = config.modules.system.homelab.nextcloud.port == ports.nextcloud;
   homepage_port = config.modules.system.homelab.homepage.port == ports.homepage;
+  loki_port = config.modules.system.homelab.logging.lokiPort == ports.loki;
 
   # Verify caddy-proxy actually reads the correct port values into its config.
   # The extraConfig string contains reverse_proxy directives with the port numbers.

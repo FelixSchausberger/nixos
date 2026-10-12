@@ -1,0 +1,49 @@
+#pretty
+{
+  alloy_aggregator_config = ''
+    loki.relabel "journal" {
+      forward_to = []
+    
+      rule {
+        source_labels = ["__journal__systemd_unit"]
+        target_label  = "unit"
+      }
+    
+      rule {
+        source_labels = ["__journal_priority_keyword"]
+        target_label  = "level"
+      }
+    }
+    
+    loki.source.journal "journal" {
+      forward_to    = [loki.write.loki.receiver]
+      relabel_rules = loki.relabel.journal.rules
+      labels        = {host = "m920q"}
+      max_age       = "24h"
+    }
+    
+    loki.write "loki" {
+      endpoint {
+        url = "http://127.0.0.1:3100/loki/api/v1/push"
+      }
+    }
+  '';
+  alloy_aggregator_enabled = true;
+  desktop_alloy_enabled = true;
+  desktop_loki_enabled = false;
+  desktop_ship_endpoint = "http://m920q:3100";
+  firewall_extra_input_rules = "ip saddr 192.168.178.3 tcp dport 3100 accept";
+  grafana_datasources = [
+    "prometheus"
+    "loki"
+    "garmin_influxdb"
+  ];
+  logs_dashboard_provisioned = true;
+  loki_client_sources = [
+    "192.168.178.3"
+  ];
+  loki_enabled = true;
+  loki_http_listen_address = "0.0.0.0";
+  loki_port = 3100;
+  loki_retention = "30d";
+}
