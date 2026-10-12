@@ -6,7 +6,7 @@
 }:
 buildGoModule rec {
   pname = "adguard-exporter";
-  version = "unstable-2026-08-04";
+  version = "1.4.4";
 
   # AdGuard Home 0.107 (nixpkgs's latest) has no native /metrics endpoint;
   # this exporter scrapes the AdGuard REST API instead.
@@ -19,8 +19,7 @@ buildGoModule rec {
 
   vendorHash = "sha256-yhUsU4sUir62QLtfiP4GAcOo+pK4Nrw91QfCFOy4I10=";
 
-  # Upstream publishes tagged releases. The pinned commit is the v1.4.4 tag's
-  # tree, so the first bump only replaces the date label with the real version.
+  # Upstream publishes tagged releases; nix-update follows the release feed.
   passthru.updateScript = nix-update-script {extraArgs = ["--flake"];};
 
   meta = with lib; {
