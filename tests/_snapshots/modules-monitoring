@@ -152,6 +152,7 @@
     "node-desktop"
     "postgres"
     "otel"
+    "comin"
     "vitals"
     "fritz"
     "nextcloud-exporter"
