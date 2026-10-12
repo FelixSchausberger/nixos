@@ -24,11 +24,15 @@ const DEFAULTS = {
 }
 
 // Event type -> notification shape. Priority is ntfy's 1..5 scale.
+// `session.idle` is deprecated but still emitted; `session.execution.succeeded`
+// is the signal the V2 client itself treats as "turn complete", so both map to
+// the same `done` kind and the per-session cooldown collapses the duplicate.
 const EVENTS = {
   "permission.asked": {kind: "approval", title: "OpenCode needs approval", priority: "4", tag: "warning"},
   "question.asked": {kind: "question", title: "OpenCode has a question", priority: "4", tag: "question"},
   "session.error": {kind: "error", title: "OpenCode error", priority: "4", tag: "rotating_light"},
   "session.idle": {kind: "done", title: "OpenCode finished", priority: "3", tag: "white_check_mark"},
+  "session.execution.succeeded": {kind: "done", title: "OpenCode finished", priority: "3", tag: "white_check_mark"},
 }
 
 export default {
@@ -77,9 +81,14 @@ export default {
         const spec = EVENTS[event?.type]
         if (!spec) continue
 
-        const properties = event?.properties ?? {}
+        // V2 events carry their fields under `data` (see the schema's
+        // Event.ephemeral: { id, type, data, ... }); the V1 `properties`
+        // shape is kept as a fallback so one export can serve both entry
+        // points. Reading only `properties` yields {} under V2 and silently
+        // drops every event, which is why the phone received nothing.
+        const payload = event?.data ?? event?.properties ?? {}
         const sessionID =
-          typeof properties.sessionID === "string" ? properties.sessionID : properties.info?.id
+          typeof payload.sessionID === "string" ? payload.sessionID : payload.info?.id
         if (!sessionID) continue
 
         try {
