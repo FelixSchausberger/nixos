@@ -4,7 +4,13 @@
   pkgs,
   hostConfig,
   ...
-}: {
+}: let
+  # A stable machine-id, derived from the hostname: stable and unique per host,
+  # disclosing nothing beyond the (already public) hostname. One file feeds both
+  # /etc and the initrd so the two can never diverge.
+  machineId = builtins.substring 0 32 (builtins.hashString "sha256" "machine-id:${hostConfig.hostName}");
+  machineIdFile = pkgs.writeText "machine-id" machineId;
+in {
   imports = [
     inputs.impermanence.nixosModules.impermanence
   ];
@@ -56,26 +62,31 @@
     };
   };
 
-  # A stable machine-id. Under an ephemeral root systemd regenerates
-  # /etc/machine-id every boot, so journald writes each boot into a fresh
-  # /var/log/journal/<machine-id>/ directory and `journalctl` reads only the
-  # current one: `journalctl -b -1` finds nothing and an incident's logs look
-  # lost after a reboot even though /var/log persists. Other sd-id128 consumers
-  # (DHCP DUID, application state) churn the same way.
+  # A stable machine-id. systemd requires it to exist at the initrd -> host
+  # transition and be immutable from then on (machine-id(5)); the root here is
+  # ephemeral (rolled back to @blank by hosts/boot-zfs.nix), so /etc has no
+  # machine-id when the initrd's PID1 starts. Without one it generates a random
+  # id, and journald then writes each boot into a fresh
+  # /var/log/journal/<machine-id>/ directory: `journalctl` reads only the one
+  # matching /etc, so `journalctl -b -1` finds nothing and an incident's logs
+  # look lost after a reboot even though /var/log persists. Other sd-id128
+  # consumers (DHCP DUID, application state) churn the same way.
   #
   # Declared as an /etc entry, not an impermanence `files` bind mount: the bind
   # mount is known to break systemd-machine-id-commit.service, which refuses a
   # transient id that is "not on a temporary file system"
-  # (nix-community/impermanence#229). Activation restores this symlinked entry
-  # from the store on every boot - in the initrd here, before stage-2 systemd -
-  # so PID1 finds it and never generates a transient id.
+  # (nix-community/impermanence#229). mode = "0444" makes setup-etc.pl copy it
+  # as a regular file (a symlink would defeat the commit check's mount-point
+  # test).
   #
-  # Derived from the hostname: stable and unique per host, disclosing nothing
-  # beyond the (already public) hostname.
+  # The same file is seeded into the initrd because the stage-2 /etc activation
+  # runs after the initrd already needs the id; this is the same shape nixpkgs
+  # uses for networking.hostId (/etc/hostid in initrd.systemd.contents).
   environment.etc."machine-id" = {
     mode = "0444";
-    text = builtins.substring 0 32 (builtins.hashString "sha256" "machine-id:${hostConfig.hostName}");
+    source = machineIdFile;
   };
+  boot.initrd.systemd.contents."/etc/machine-id".source = machineIdFile;
 
   environment.persistence."/per" = {
     hideMounts = true;

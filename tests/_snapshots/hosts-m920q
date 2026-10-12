@@ -16,6 +16,8 @@
   immich_enabled = true;
   is_gui = true;
   jellyfin_enabled = true;
+  machine_id_in_initrd = true;
+  machine_id_readonly = true;
   maintenance_enabled = true;
   navidrome_enabled = true;
   networkd_enabled = true;
