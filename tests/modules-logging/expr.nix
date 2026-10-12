@@ -29,7 +29,13 @@ in
   # The desktop ships to the aggregator and runs no store of its own.
   assert dl.shipEndpoint == "http://m920q:3100";
   assert !desktop.config.services.loki.enable;
-  assert desktop.config.services.alloy.enable; {
+  assert desktop.config.services.alloy.enable;
+  # Alloy must not be a DynamicUser: its state directory would land under
+  # /var/lib/private, which the persistence tree cannot provide at the 0700
+  # systemd demands.
+  assert !m920q.config.systemd.services.alloy.serviceConfig.DynamicUser;
+  assert m920q.config.systemd.services.alloy.serviceConfig.User == "alloy";
+  assert m920q.config.users.users.alloy.isSystemUser; {
     loki_enabled = m920q.config.services.loki.enable;
     loki_port = ml.lokiPort;
     loki_http_listen_address =
