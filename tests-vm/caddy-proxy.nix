@@ -140,6 +140,10 @@
             type = lib.types.bool;
             default = true;
           };
+          backgroundWallpaper = lib.mkOption {
+            type = lib.types.str;
+            default = inputs.self.lib.wallpapers.default;
+          };
         };
       };
     };
@@ -217,7 +221,7 @@
     machine.succeed("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/ | grep -q '200'")
 
     # 7. Test the Homepage wallpaper static route serves the real image
-    machine.succeed("curl -s -o /tmp/wallpaper.jpg -H 'Host: m920q.test.local' http://127.0.0.1/bg/appa_blurred.jpg")
+    machine.succeed("curl -s -o /tmp/wallpaper.jpg -H 'Host: m920q.test.local' http://127.0.0.1/bg/solar-system.jpg")
     magic = machine.succeed("od -An -tx1 -N3 /tmp/wallpaper.jpg | tr -d ' \\n'")
     assert magic == "ffd8ff", f"wallpaper route did not serve a JPEG: {magic!r}"
   '';

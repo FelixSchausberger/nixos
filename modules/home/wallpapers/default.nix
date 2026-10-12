@@ -1,35 +1,35 @@
 {
   config,
   lib,
+  inputs,
   ...
-}: {
+}: let
+  # Filenames come from lib/wallpapers.nix so the dashboard background
+  # (homepage.nix) resolves the same set without a second hardcoded list.
+  inherit (inputs.self.lib) wallpapers;
+in {
   options.wallpapers = {
     enable = lib.mkEnableOption "centralized wallpaper management" // {default = true;};
 
     defaultWallpaper = lib.mkOption {
       type = lib.types.str;
-      default = "solar-system";
+      inherit (wallpapers) default;
+      defaultText = lib.literalExpression "inputs.self.lib.wallpapers.default";
       description = "Default wallpaper name";
       example = "solar-system";
     };
 
     available = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = {
-        solar-system = "solar-system.jpg";
-        the-whale = "the-whale.jpg";
-        appa = "appa.jpg";
-      };
+      default = wallpapers.available;
+      defaultText = lib.literalExpression "inputs.self.lib.wallpapers.available";
       description = "Available wallpapers mapping name to filename";
     };
 
     availableBlurred = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = {
-        solar-system = "solar-system_blurred.jpg";
-        the-whale = "the-whale_blurred.jpg";
-        appa = "appa_blurred.jpg";
-      };
+      default = wallpapers.blurred;
+      defaultText = lib.literalExpression "inputs.self.lib.wallpapers.blurred";
       description = "Available blurred wallpapers mapping name to filename";
     };
 

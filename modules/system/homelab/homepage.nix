@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -22,21 +23,107 @@
   jellyfinPort = 8096;
   ntfyPort = 2586;
 
-  # Build services YAML from enabled homelab services
-  # Remote wake for the gaming PC lives on the router, not here:
-  # Fritz!Box Heimnetz → computer → "Computer starten" (or MyFRITZ!App
-  # when off-LAN). The Moonlight / Steam Link apps handle wake + presence
-  # on the LAN themselves. The Fritz!Box card under Rescue links there.
-  infraServices = [
+  # Crisp wallpaper the dashboard paints behind the cards. The name is an
+  # option (default = the window manager's wallpaper) resolved against
+  # lib/wallpapers.nix; caddy-proxy.nix serves the same file at /bg/<file>.
+  # The *_blurred variant is deliberately not used: its soft frame exists for
+  # the niri overview, not the dashboard.
+  backgroundFile =
+    inputs.self.lib.wallpapers.available.${cfg.backgroundWallpaper}
+    or (throw "modules.system.homelab.homepage.backgroundWallpaper '${cfg.backgroundWallpaper}' is not in lib/wallpapers.nix (have: ${builtins.concatStringsSep ", " (builtins.attrNames inputs.self.lib.wallpapers.available)})");
+
+  # The GitHub widgets read the existing sops github/token (the same secret the
+  # git client and nix netrc use). It is declared by modules/system/sops-common.nix,
+  # so presence is the gate rather than homepage.enable alone: a host without
+  # sops has no token and the repository card is dropped instead of rendering a
+  # placeholder that never resolves.
+  githubAvailable = config.sops.secrets ? "github/token";
+  githubHeaders = {
+    Accept = "application/vnd.github+json";
+    Authorization = "Bearer {{HOMEPAGE_VAR_GITHUB_TOKEN}}";
+    User-Agent = "homepage";
+  };
+
+  # Host gauges for the Infrastructure cards. Each host's own node_exporter is
+  # scraped into the local Prometheus (jobs "node" for m920q's loopback and
+  # "node-desktop" for the gaming PC over the LAN), so one PromQL query per
+  # block reads the same numbers the resources widget used to show locally.
+  # PrometheusMetric renders at most four blocks, hence CPU, memory, root-disk
+  # free space and uptime. A powered-off host returns an empty vector, so its
+  # blocks read "-" and the card's site-monitor dot turns red; the desktop is
+  # intentionally excluded from the NodeExporterDown rule.
+  mkHostMetrics = host: [
+    {
+      label = "CPU";
+      query = ''100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle",host="${host}"}[5m])))'';
+      format = {
+        type = "number";
+        options.maximumFractionDigits = 0;
+        suffix = "%";
+      };
+    }
+    {
+      label = "Memory";
+      query = ''100 * (1 - node_memory_MemAvailable_bytes{host="${host}"} / node_memory_MemTotal_bytes{host="${host}"})'';
+      format = {
+        type = "number";
+        options.maximumFractionDigits = 0;
+        suffix = "%";
+      };
+    }
+    {
+      label = "Disk";
+      # One mountpoint only: the widget renders the first series of the result,
+      # so the pseudo-filesystem filter keeps the size floor meaningful.
+      query = ''node_filesystem_avail_bytes{host="${host}",mountpoint="/",fstype!~"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs"}'';
+      format.type = "bytes";
+    }
+    {
+      label = "Uptime";
+      query = ''time() - node_boot_time_seconds{host="${host}"}'';
+      format.type = "duration";
+    }
+  ];
+
+  hostWidget = host: {
+    type = "prometheusmetric";
+    url = local hl.monitoring.prometheusPort;
+    refreshInterval = 30000;
+    metrics = mkHostMetrics host;
+  };
+
+  # Build services YAML from enabled homelab services.
+  #
+  # One card per monitored host. The m920q's node_exporter answers on loopback
+  # only and stands in for the host itself: if it stops answering, the
+  # monitoring stack is blind, which is the condition this card reveals. The
+  # desktop is a separate scrape job (an intentional power-off is not an
+  # incident), so its card simply goes quiet when the PC sleeps.
+  #
+  # Remote wake for the gaming PC lives on the router, not here: Fritz!Box
+  # Heimnetz → computer → "Computer starten" (or MyFRITZ!App when off-LAN). The
+  # Moonlight / Steam Link apps handle wake + presence on the LAN themselves.
+  # The Fritz!Box card under Rescue links there.
+  infraServices = lib.optionals hl.monitoring.enable [
     {
       "M920q" = {
         icon = "mdi-server";
         href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
-        description = "Homelab Server";
-        # node_exporter answers on loopback only and stands in for the host
-        # itself: if it stops answering, the monitoring stack is blind, which
-        # is the condition this card exists to reveal.
+        description = "Homelab server";
         siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
+        widget = hostWidget config.networking.hostName;
+      };
+    }
+    {
+      "Desktop" = {
+        icon = "mdi-desktop-tower";
+        # No web UI runs on the gaming PC; node_exporter's landing page is the
+        # only thing that answers while it is up, and the dot going red is the
+        # real "it is off" signal.
+        href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
+        description = "Gaming PC";
+        siteMonitor = "http://${inputs.self.lib.hosts.desktop.ip}:9100/metrics";
+        widget = hostWidget "desktop";
       };
     }
   ];
@@ -143,51 +230,47 @@
         };
       };
     }
-    # Grafana deep links, not bookmarks: the no-bookmarks note below
-    # records why a link row was dropped before, and these cards belong
-    # to the Grafana entry above rather than to a new group. All wear
-    # the Grafana icon so they read as "opens in Grafana" instead of as
-    # second Fritz cards.
+    # The provisioned Grafana dashboards, nested under one heading so the flat
+    # Monitoring row keeps only the two service entry points and the dashboard
+    # links read as children of Grafana. All wear the Grafana icon for the same
+    # reason. Garmin is personal health data and lives under Health instead.
     {
-      "Fritz!Exporter" = {
-        icon = "grafana.png";
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
-        description = "Router metrics";
-      };
-    }
-    {
-      "Garmin Stats" = {
-        icon = "grafana.png";
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
-        description = "Cycling stats";
-      };
-    }
-    {
-      "Config Health" = {
-        icon = "grafana.png";
-        # uid "config-health" (monitoring.nix provisions the dashboard). Shows
-        # NixOS generation size per deploy and the vitals host health score.
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
-        description = "NixOS & host health";
-      };
-    }
-    {
-      "Nix Telemetry" = {
-        icon = "grafana.png";
-        # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
-        # build and substitution timings from Determinate Nix OTel traces.
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
-        description = "Build & eval timing";
-      };
-    }
-    {
-      "Power" = {
-        icon = "grafana.png";
-        # uid "power" (monitoring.nix provisions the dashboard). Wall power at
-        # the plugs plus the CPU/GPU panels that attribute it.
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
-        description = "Wall, CPU & GPU power";
-      };
+      "Dashboards" = [
+        {
+          "Fritz!Exporter" = {
+            icon = "grafana.png";
+            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
+            description = "Router metrics";
+          };
+        }
+        {
+          "Config Health" = {
+            icon = "grafana.png";
+            # uid "config-health" (monitoring.nix provisions the dashboard). Shows
+            # NixOS generation size per deploy and the vitals host health score.
+            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+            description = "NixOS & host health";
+          };
+        }
+        {
+          "Nix Telemetry" = {
+            icon = "grafana.png";
+            # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
+            # build and substitution timings from Determinate Nix OTel traces.
+            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
+            description = "Build & eval timing";
+          };
+        }
+        {
+          "Power" = {
+            icon = "grafana.png";
+            # uid "power" (monitoring.nix provisions the dashboard). Wall power at
+            # the plugs plus the CPU/GPU panels that attribute it.
+            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
+            description = "Wall, CPU & GPU power";
+          };
+        }
+      ];
     }
   ];
 
@@ -259,7 +342,9 @@
   # One card per Nextcloud app instead of a single dashboard link. The app
   # set mirrors the extraApps declaration in nextcloud.nix (calendar,
   # contacts, tasks) plus the bundled Files app, so new cards belong there
-  # first.
+  # first. The list is split around ntfy.sh: Files, Calendar and ntfy carry a
+  # widget body while Contacts and Tasks are plain links, so the first row of
+  # the three-column Tools group stays visually even under useEqualHeights.
   systemServices =
     lib.optionals hl.nextcloud.enable [
       {
@@ -305,20 +390,6 @@
           };
         };
       }
-      {
-        "Contacts" = {
-          icon = "mdi-account-multiple";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/contacts/";
-          description = "Address Book";
-        };
-      }
-      {
-        "Tasks" = {
-          icon = "mdi-clipboard-text";
-          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/tasks/";
-          description = "To-dos";
-        };
-      }
     ]
     ++ lib.optionals hl.ntfy.enable [
       {
@@ -334,6 +405,22 @@
             url = "http://127.0.0.1:${toString ntfyPort}";
             topic = "homelab-alerts";
           };
+        };
+      }
+    ]
+    ++ lib.optionals hl.nextcloud.enable [
+      {
+        "Tasks" = {
+          icon = "mdi-clipboard-text";
+          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/tasks/";
+          description = "To-dos";
+        };
+      }
+      {
+        "Contacts" = {
+          icon = "mdi-account-multiple";
+          href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/contacts/";
+          description = "Address Book";
         };
       }
     ]
@@ -386,35 +473,43 @@
   # "ssh m920q desktop-power on|off|status" from a termux widget instead.
   rescueServices = [
     {
-      "AMT (IPv4)" = {
-        icon = "mdi-chip";
-        href = "https://116.204.198.109:16993";
-        description = "Intel AMT via FRITZ!Box, works from any vantage";
-        # The light covers the host-side AMT chain (DNAT -> socat -> LMS ->
-        # ME), the only part a local dashboard can probe: the ME demands
-        # unsafe TLS renegotiation that Node's TLS stack refuses, so the WAN
-        # WS-Man endpoint is unmonitorable from here. The Fritz rule plus
-        # ME TLS end to end is verified from outside (check-host) instead.
-        siteMonitor = "http://192.168.178.10:16992/";
-      };
-    }
-    {
-      "AMT (IPv6)" = {
-        icon = "mdi-chip";
-        href = "https://[2a02:1748:dd4d:9990::10]:16993";
-        description = "Intel AMT direct, outside the home LAN only";
-      };
-    }
-    {
-      "AMT (LAN)" = {
-        icon = "mdi-chip";
-        # Plain HTTP on the LAN endpoint: no ME legacy-TLS negotiation for
-        # the browser to reject, and the phone reaches it through the
-        # advertised 192.168.178.0/24 subnet route.
-        href = "http://192.168.178.10:16992/index.htm";
-        description = "Intel AMT direct on the home LAN";
-        siteMonitor = "http://192.168.178.10:16992/";
-      };
+      # The three AMT vantage points share one heading: WAN through the
+      # FRITZ!Box DNAT, IPv6 direct, and plain HTTP on the LAN. As a nested
+      # group they read as one "reach the machine's management engine" control
+      # instead of three sibling chips.
+      "AMT" = [
+        {
+          "IPv4 (WAN)" = {
+            icon = "mdi-chip";
+            href = "https://116.204.198.109:16993";
+            description = "Intel AMT via FRITZ!Box, works from any vantage";
+            # The light covers the host-side AMT chain (DNAT -> socat -> LMS ->
+            # ME), the only part a local dashboard can probe: the ME demands
+            # unsafe TLS renegotiation that Node's TLS stack refuses, so the WAN
+            # WS-Man endpoint is unmonitorable from here. The Fritz rule plus
+            # ME TLS end to end is verified from outside (check-host) instead.
+            siteMonitor = "http://192.168.178.10:16992/";
+          };
+        }
+        {
+          "IPv6" = {
+            icon = "mdi-chip";
+            href = "https://[2a02:1748:dd4d:9990::10]:16993";
+            description = "Intel AMT direct, outside the home LAN only";
+          };
+        }
+        {
+          "LAN" = {
+            icon = "mdi-chip";
+            # Plain HTTP on the LAN endpoint: no ME legacy-TLS negotiation for
+            # the browser to reject, and the phone reaches it through the
+            # advertised 192.168.178.0/24 subnet route.
+            href = "http://192.168.178.10:16992/index.htm";
+            description = "Intel AMT direct on the home LAN";
+            siteMonitor = "http://192.168.178.10:16992/";
+          };
+        }
+      ];
     }
     {
       "Fritz!Box" = {
@@ -451,6 +546,92 @@
     }
   ];
 
+  # Personal health data, not infrastructure: the Garmin pipeline feeds sleep,
+  # stress, body battery, heart rate and activity metrics into InfluxDB and its
+  # Grafana dashboard, so it gets its own tab rather than sitting in Monitoring.
+  healthServices = lib.optionals hl.garmin.enable [
+    {
+      "Garmin Stats" = {
+        icon = "grafana.png";
+        # uid "garmin-stats" (monitoring.nix provisions the dashboard).
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
+        description = "Sleep, stress, heart rate, steps";
+      };
+    }
+  ];
+
+  # The configuration repository itself. Homepage ships no GitHub widget (only
+  # Gitea/GitLab), so this drives customapi against the REST API: the latest
+  # Actions run on main plus the open pull request and issue counts. The counts
+  # come from the search API because repos.open_issues_count folds pull
+  # requests into issues. Unauthenticated GitHub is capped at 60 requests/hour
+  # per IP, below what a polling widget needs, hence the sops token.
+  codeServices = lib.optionals (cfg.enable && githubAvailable) [
+    {
+      "NixOS Repo" = {
+        icon = "si-github";
+        href = "https://github.com/FelixSchausberger/nixos";
+        description = "Configuration repository";
+        widgets = [
+          {
+            type = "customapi";
+            url = "https://api.github.com/repos/FelixSchausberger/nixos/actions/workflows/ci.yml/runs?per_page=1&branch=main";
+            refreshInterval = 300000;
+            headers = githubHeaders;
+            mappings = [
+              {
+                field = "workflow_runs.0.conclusion";
+                label = "CI";
+                # A run in progress has a null conclusion; "pending" keeps the
+                # card readable instead of showing an empty field.
+                remap = [
+                  {
+                    value = "success";
+                    to = "passing";
+                  }
+                  {
+                    value = "failure";
+                    to = "failing";
+                  }
+                  {
+                    any = true;
+                    to = "pending";
+                  }
+                ];
+              }
+            ];
+          }
+          {
+            type = "customapi";
+            url = "https://api.github.com/search/issues?q=repo:FelixSchausberger/nixos+is:pr+is:open";
+            refreshInterval = 300000;
+            headers = githubHeaders;
+            mappings = [
+              {
+                field = "total_count";
+                label = "Open PRs";
+                format = "number";
+              }
+            ];
+          }
+          {
+            type = "customapi";
+            url = "https://api.github.com/search/issues?q=repo:FelixSchausberger/nixos+is:issue+is:open";
+            refreshInterval = 300000;
+            headers = githubHeaders;
+            mappings = [
+              {
+                field = "total_count";
+                label = "Open issues";
+                format = "number";
+              }
+            ];
+          }
+        ];
+      };
+    }
+  ];
+
   allServices =
     lib.optionals (rescueServices != []) [{"Rescue" = rescueServices;}]
     ++ lib.optionals (infraServices != []) [{"Infrastructure" = infraServices;}]
@@ -458,7 +639,9 @@
     ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
     ++ lib.optionals (monitoringServices != []) [{"Monitoring" = monitoringServices;}]
     ++ lib.optionals (networkServices != []) [{"Network" = networkServices;}]
-    ++ lib.optionals (systemServices != []) [{"System" = systemServices;}];
+    ++ lib.optionals (healthServices != []) [{"Health" = healthServices;}]
+    ++ lib.optionals (systemServices != []) [{"System" = systemServices;}]
+    ++ lib.optionals (codeServices != []) [{"Code" = codeServices;}];
 
   # Group arrangement: one tab per concern, horizontal rows inside a tab.
   # Tab names are the only navigation on the page, so a group without a tab
@@ -467,6 +650,12 @@
     Rescue = {
       tab = "Home";
       icon = "mdi-lifebuoy";
+      # Nested AMT group: three vantage points, one heading. The parent has no
+      # row style, so the subgroup renders as a stacked column like the rest of
+      # Rescue.
+      AMT = {
+        icon = "mdi-chip";
+      };
     };
     Infrastructure = {
       tab = "Home";
@@ -491,6 +680,12 @@
       icon = "mdi-chart-line";
       style = "row";
       columns = 4;
+      # Grafana dashboard deep links, nested under the Monitoring group so the
+      # flat row keeps only the Grafana and Prometheus service cards.
+      Dashboards = {
+        style = "row";
+        columns = 4;
+      };
     };
     Network = {
       tab = "Home";
@@ -498,9 +693,21 @@
       style = "row";
       columns = 3;
     };
+    Health = {
+      tab = "Health";
+      icon = "mdi-heart-pulse";
+      style = "row";
+      columns = 2;
+    };
     System = {
       tab = "Tools";
       icon = "mdi-cog";
+      style = "row";
+      columns = 3;
+    };
+    Code = {
+      tab = "Tools";
+      icon = "mdi-github";
       style = "row";
       columns = 3;
     };
@@ -525,6 +732,7 @@
     ++ lib.optional hl.immich.enable "HOMEPAGE_VAR_IMMICH_API_KEY=${config.sops.placeholder."immich/api-key"}"
     ++ lib.optional hl.jellyfin.enable "HOMEPAGE_VAR_JELLYFIN_API_KEY=${config.sops.placeholder."jellyfin/api-key"}"
     ++ lib.optional hl.navidrome.enable "HOMEPAGE_VAR_NAVIDROME_TOKEN=${config.sops.placeholder."navidrome/token"}"
+    ++ lib.optional (cfg.enable && githubAvailable) "HOMEPAGE_VAR_GITHUB_TOKEN=${config.sops.placeholder."github/token"}"
   );
 in {
   options.modules.system.homelab.homepage = {
@@ -538,6 +746,16 @@ in {
       type = lib.types.port;
       default = 8445;
       description = "Tailscale Serve HTTPS port terminating TLS for the Homepage dashboard";
+    };
+    backgroundWallpaper = lib.mkOption {
+      type = lib.types.str;
+      default = inputs.self.lib.wallpapers.default;
+      defaultText = lib.literalExpression "inputs.self.lib.wallpapers.default";
+      description = ''
+        Wallpaper shown behind the dashboard, by name in lib/wallpapers.nix.
+        Defaults to the window manager's wallpaper; the *_blurred overview
+        variant is never used for the dashboard.
+      '';
     };
   };
 
@@ -651,28 +869,15 @@ in {
       # No `bookmarks` attribute: the module default is an empty list, and the
       # previous Quick Links group duplicated the Grafana and Nextcloud
       # service cards outright.
-      # Header contents, left to right: greeting and host gauges on the left,
-      # clock, weather and search right-aligned. Setting resources.cpu is what
-      # makes the upstream module relax ProcSubset so /proc stays readable.
+      # Header contents, left to right: greeting on the left, clock, weather and
+      # search right-aligned. Host gauges moved into the Infrastructure cards
+      # (PrometheusMetric), so nothing here reads /proc and the service keeps the
+      # upstream ProtectiveProcSubset=pid hardening.
       widgets = [
         {
           greeting = {
             text_size = "2xl";
             text = "Welcome";
-          };
-        }
-        {
-          resources = {
-            label = "m920q";
-            cpu = true;
-            memory = true;
-            disk = [
-              "/"
-              "/per"
-              "/per/mnt/data"
-            ];
-            uptime = true;
-            network = "eno1";
           };
         }
         {
@@ -726,12 +931,20 @@ in {
         # Glass cards over the wallpaper background below - cardBlur alone
         # would be invisible against a flat colour.
         cardBlur = "md";
+        # A powered-off host leaves its PrometheusMetric blocks empty; hide the
+        # fetch-error text so that reads as "no data", not a broken widget.
+        hideErrors = true;
+        # Tailnet-only dashboard: keep crawlers out of it.
+        disableIndexing = true;
+        # The version/update footer is noise on a private dashboard.
+        hideVersion = true;
         # Wallpaper served by the caddy proxy (the module's config directory is
         # read-only, so the file ships from modules/home/wallpapers instead).
-        # opacity blends the image towards the theme colour: appa_blurred is
-        # bright, and the light card text needs that darkening to stay legible.
+        # backgroundFile is the crisp variant of backgroundWallpaper; opacity
+        # blends the image towards the theme colour so the light card text
+        # stays legible.
         background = {
-          image = "https://${hl.caddyProxy.tailnetDomain}/bg/appa_blurred.jpg";
+          image = "https://${hl.caddyProxy.tailnetDomain}/bg/${backgroundFile}";
           opacity = 60;
         };
         target = "_blank";
