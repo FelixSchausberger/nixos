@@ -37,10 +37,12 @@ in {
       has_peer_monitor_timer =
         builtins.hasAttr "tailscale-peer-monitor" configs.m920q.config.systemd.timers;
       peer_monitor_peer = configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.peer;
-      # Deliverability watch: probe pairs peer reachability with the ntfy
-      # subscriber gauge so a wedged phone cannot pass as healthy.
-      peer_monitor_subscriber_metrics =
-        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.subscriberMetricsUrl;
+      # Detection budget: interval x threshold must stay inside a minute, or
+      # the alert arrives after the outage it reports.
+      peer_monitor_interval_sec =
+        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.intervalSec;
+      peer_monitor_failure_threshold =
+        configs.m920q.config.modules.system.homelab.tailscale.peerMonitor.failureThreshold;
       # Routing: external topic leads, local topic is the publish-failure
       # fallback.
       peer_monitor_primary_file =

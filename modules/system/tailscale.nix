@@ -8,62 +8,24 @@
 
   ntfySend = import ../../lib/ntfy-send.nix {inherit pkgs lib;};
 
-  # Deliverability probe: ntfy's subscriber gauge says whether anyone still
-  # listens. A peer can answer pings while its MagicDNS stub and push
-  # subscriptions are wedged (observed 2026-09-23: the phone's WireGuard
-  # socket kept answering with no tun interface, and the monitor reported
-  # "reachable" while nothing could be delivered), so reachability alone is a
-  # false all-clear. Anomalies alert on a cooldown; a later healthy reading
-  # closes the incident. Empty when subscriberMetricsUrl is unset.
-  deliveryProbe = lib.optionalString (cfg.peerMonitor.subscriberMetricsUrl != null) ''
-    if metrics=$(${pkgs.curl}/bin/curl -sf --max-time 5 ${lib.escapeShellArg cfg.peerMonitor.subscriberMetricsUrl}); then
-      subs=$(${pkgs.gawk}/bin/awk '$1 ~ /^ntfy_subscribers/ { sum += $2; found = 1 } END { if (found) print sum + 0; else print "missing" }' <<< "$metrics")
-      delivery_suffix=" ntfy_subscribers=''${subs}"
-      if [ "$subs" = "missing" ]; then
-        delivery_zero_streak=0
-        if [ $((now - delivery_alert_at)) -ge 600 ]; then
-          msg="subscriber gauge missing from ${cfg.peerMonitor.subscriberMetricsUrl} - deliverability probe is blind"
-          echo "$ts $msg" >&2
-          notify "deliverability probe blind" "high" "$msg"
-          delivery_alert_at=$now
-          delivery_alerted=1
-        fi
-      elif [ "$subs" -eq 0 ]; then
-        # Two consecutive zero-reads (~2 min at the default interval) before
-        # alerting: an ntfy restart reconnects its subscribers within ~90s,
-        # and a lone zero-read is also what a deploy looks like (both
-        # observed 2026-09-23); a wedged peer stays at zero indefinitely.
-        # Deliberately no automatic force-stop/relaunch: killing the app
-        # takes the tunnel down and no shell uid verb brings the VPN service
-        # back unattended (it is not exported), so recovery needs a human
-        # with the phone.
-        delivery_zero_streak=$((delivery_zero_streak + 1))
-        if [ "$delivery_zero_streak" -ge 2 ] && [ $((now - delivery_alert_at)) -ge 600 ]; then
-          msg="peer $peer reachable but ntfy subscribers=0 for ''${delivery_zero_streak} probes - nothing is being delivered. Recovery: unlock the phone, open Tailscale and let it connect"
-          echo "$ts $msg" >&2
-          notify "deliverability broken" "urgent" "$msg"
-          delivery_alert_at=$now
-          delivery_alerted=1
-        fi
-      else
-        delivery_zero_streak=0
-        if [ "$delivery_alerted" -ne 0 ]; then
-          msg="peer $peer reachable, ntfy subscribers=$subs - delivery restored"
-          echo "$ts $msg"
-          notify "deliverability restored" "default" "$msg"
-          delivery_alerted=0
-        fi
-      fi
-    else
-      delivery_suffix=" ntfy_subscribers=?"
-      echo "$ts ntfy metrics unreachable (${cfg.peerMonitor.subscriberMetricsUrl})" >&2
-    fi
-  '';
-
   # Probes a peer and records reachability transitions in the journal, so an
   # outage can be timestamped after the fact (e.g. a phone that vanishes while
   # commuting). State lives in /run (tmpfs) because only transitions matter;
   # losing it on reboot at worst re-reports one down interval.
+  #
+  # A failed ping is classified against the control plane's own view of the
+  # peer, because the two fail independently: an Android client can stay
+  # Online for hours while its process is frozen and the VpnService stops
+  # answering (observed 2026-10-13: 9318 s of unanswered pings with
+  # Online=true). "wedged" therefore means the peer still has internet but its
+  # tunnel data path is dead and the app has to be reopened; "offline" means
+  # the control plane lost it too, so it has no internet or the client is not
+  # running. The alert names which, so the recovery step is unambiguous.
+  #
+  # Delivery is not probed: the phone subscribes to the external topic
+  # (alertNtfyPrimaryUrlFile), whose subscriber count this host's ntfy cannot
+  # see, and no publish-side signal proves a push was rendered - only a
+  # phone-side ack could, and there is none to read.
   peerMonitorScript = pkgs.writeShellScript "tailscale-peer-monitor" ''
     set -eu
 
@@ -77,10 +39,6 @@
 
     down_since=0
     fail_count=0
-    delivery_alerted=0
-    delivery_alert_at=0
-    delivery_zero_streak=0
-    delivery_suffix=""
     if [ -f "$state_file" ]; then
       # shellcheck disable=SC1090
       . "$state_file" || true
@@ -109,6 +67,18 @@
       notify() { :; }
     ''}
 
+    # The control plane's own view of the peer, read only when a ping failed,
+    # to tell a frozen app from a peer that is genuinely gone (see the block
+    # comment above). JSON, not the status table: the table truncates and its
+    # columns are not a stable interface.
+    classify() {
+      "$tailscale" status --json 2>/dev/null | ${pkgs.jq}/bin/jq -r --arg p "$peer" '
+        ([(.Peer // {})[] | select((.DNSName // "") | startswith($p + "."))] | first) as $v
+        | if $v == null then "unknown"
+          elif $v.Online then "wedged"
+          else "offline" end' 2>/dev/null || echo unknown
+    }
+
     # `tailscale ping` exits non-zero whenever no direct path is established,
     # even when every pong arrived over DERP - and a phone on cellular or
     # behind CGNAT is routinely DERP-only. The exit code therefore means "no
@@ -124,15 +94,24 @@
         notify "recovered" "default" "$msg"
         down_since=0
       else
-        ${deliveryProbe}
-        echo "$ts peer $peer reachable ($path)$delivery_suffix"
+        echo "$ts peer $peer reachable ($path)"
       fi
       fail_count=0
     else
       fail_count=$((fail_count + 1))
       if [ "$down_since" -eq 0 ] && [ "$fail_count" -ge "$threshold" ]; then
         down_since=$now
-        msg="peer $peer unreachable ($fail_count consecutive failed probes)"
+        case "$(classify)" in
+          wedged)
+            msg="peer $peer unreachable ($fail_count consecutive failed probes): the control plane still lists it Online, so it has internet but the app is frozen or its VpnService stopped. Open Tailscale on the phone to restore the tunnel."
+            ;;
+          offline)
+            msg="peer $peer unreachable ($fail_count consecutive failed probes): the control plane lists it Offline too, so it has no internet or the client is not running."
+            ;;
+          *)
+            msg="peer $peer unreachable ($fail_count consecutive failed probes); the control plane view could not be read."
+            ;;
+        esac
         echo "$ts $msg" >&2
         notify "unreachable" "urgent" "$msg"
       else
@@ -140,8 +119,7 @@
       fi
     fi
 
-    printf 'down_since=%s\nfail_count=%s\ndelivery_alerted=%s\ndelivery_alert_at=%s\ndelivery_zero_streak=%s\n' \
-      "$down_since" "$fail_count" "$delivery_alerted" "$delivery_alert_at" "$delivery_zero_streak" > "$state_file"
+    printf 'down_since=%s\nfail_count=%s\n' "$down_since" "$fail_count" > "$state_file"
   '';
 in {
   options.modules.system.homelab.tailscale = {
@@ -194,8 +172,13 @@ in {
       };
       intervalSec = lib.mkOption {
         type = lib.types.ints.positive;
-        default = 60;
-        description = "Seconds between connectivity probes.";
+        default = 30;
+        description = ''
+          Seconds between connectivity probes. With failureThreshold=2 the
+          default detects an outage inside a minute, which is the point: the
+          phone's client drops for minutes to hours upstream, so the alert
+          must not wait longer than the outage it reports.
+        '';
       };
       failureThreshold = lib.mkOption {
         type = lib.types.ints.positive;
@@ -227,18 +210,6 @@ in {
           Empty makes the local topic (alertNtfyUrl) the only channel.
         '';
       };
-      subscriberMetricsUrl = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        example = "http://127.0.0.1:2586/metrics";
-        description = ''
-          ntfy /metrics endpoint probed after each successful peer ping. When
-          the peer answers but the subscriber count is 0 (or the gauge is
-          missing), alert that nothing is being delivered: a wedged peer can
-          stay reachable at the WireGuard level while DNS and push
-          subscriptions are dead. null disables the deliverability probe.
-        '';
-      };
     };
   };
 
@@ -251,10 +222,6 @@ in {
       {
         assertion = !cfg.peerMonitor.enable || cfg.peerMonitor.peer != "";
         message = "modules.system.homelab.tailscale.peerMonitor.peer must be set when peerMonitor.enable is true";
-      }
-      {
-        assertion = cfg.peerMonitor.subscriberMetricsUrl == null || cfg.peerMonitor.subscriberMetricsUrl != "";
-        message = "modules.system.homelab.tailscale.peerMonitor.subscriberMetricsUrl must be null or a non-empty URL";
       }
     ];
 
