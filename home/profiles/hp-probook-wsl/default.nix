@@ -55,15 +55,22 @@
     git.enable = true;
   };
 
-  # Interactive homelab access always uses mosh: roaming-friendly, survives
-  # suspend and network changes. mosh reads ~/.ssh/config for the bootstrap
-  # connection, so keys and host aliases apply unchanged. Plain ssh stays
-  # available for scripts and scp.
+  # Interactive homelab access: mosh, then the Zellij web attach. mosh is
+  # roaming-friendly (survives suspend and network changes) and reads
+  # ~/.ssh/config for the bootstrap connection, so keys and host aliases apply
+  # unchanged. It has no connect timeout but exits 1 itself after 15s without
+  # any server state (mosh's stmclient.cc "Timed out waiting for server..."
+  # path), which is exactly what a UDP-filtered network produces; `zr` then
+  # takes over and carries its own TCP 443 reconnect loop. Plain ssh stays
+  # available for scripts, scp and a raw shell when Zellij itself is broken.
   programs.fish.functions.m920q = {
     body = ''
-      command mosh m920q $argv
+      if not command mosh m920q $argv
+        echo "m920q: mosh could not reach the homelab over UDP, attaching through the Zellij web transport" >&2
+        zr
+      end
     '';
-    description = "Interactive mosh session to m920q homelab";
+    description = "Homelab session: mosh, falling back to the Zellij web attach";
   };
 
   # WSL-specific home configuration
