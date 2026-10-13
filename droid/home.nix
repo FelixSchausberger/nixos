@@ -23,7 +23,20 @@ in {
   home.enableNixpkgsReleaseCheck = false;
 
   programs = {
-    fish.enable = true;
+    fish = {
+      enable = true;
+
+      # sshd runs the login shell as `fish -c <cmd>` for `ssh pixel <cmd>`:
+      # that reads config.fish but skips ~/.profile and the nix-on-droid
+      # session init, so the profile never lands on PATH and non-interactive
+      # sessions cannot find sshd-start, git, or the rest of the toolchain.
+      # Adding it here keeps both modes in agreement.
+      shellInit = ''
+        if not contains -- $HOME/.nix-profile/bin $PATH
+          set -gx PATH $HOME/.nix-profile/bin $PATH
+        end
+      '';
+    };
 
     # Host aliases come from the fleet registry so `ssh m920q` works on the
     # phone, whose own account is nix-on-droid (a bare `ssh m920q` would try
