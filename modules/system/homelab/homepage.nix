@@ -94,6 +94,47 @@
     metrics = mkHostMetrics host;
   };
 
+  # Composite health score per monitored host (journald + systemd + procfs, not
+  # just the node_exporter gauges). m920q's daemon is scraped on loopback (job
+  # "vitals"); the desktop runs no monitoring stack and publishes the same
+  # series through its node exporter textfile collector (job "node-desktop").
+  # Both carry a host label, so each card selects its own host's series.
+  mkVitalsMetrics = host: [
+    {
+      label = "Score";
+      query = ''vitals_health_score{host="${host}",type="smoothed"}'';
+      format = {
+        type = "number";
+        options.maximumFractionDigits = 0;
+      };
+    }
+    {
+      label = "Errors";
+      query = ''vitals_issues{host="${host}",severity="error"}'';
+      format.type = "number";
+    }
+    {
+      label = "Warnings";
+      query = ''vitals_issues{host="${host}",severity="warning"}'';
+      format.type = "number";
+    }
+    {
+      label = "Load";
+      query = ''vitals_load_average{host="${host}"}'';
+      format = {
+        type = "number";
+        options.maximumFractionDigits = 2;
+      };
+    }
+  ];
+
+  vitalsWidget = host: {
+    type = "prometheusmetric";
+    url = local hl.monitoring.prometheusPort;
+    refreshInterval = 30000;
+    metrics = mkVitalsMetrics host;
+  };
+
   # Build services YAML from enabled homelab services.
   #
   # One card per monitored host. The m920q's node_exporter answers on loopback
@@ -107,12 +148,14 @@
   # Moonlight / Steam Link apps handle wake + presence on the LAN themselves.
   # The Fritz!Box card under Router links there.
   #
-  # The Vitals card adds the composite health score (journald + systemd +
-  # procfs, not just the node_exporter gauges) as a third card in the same row.
-  # It reads the same Prometheus the host gauges use, and its site monitor
-  # doubles as the per-user daemon's liveness dot.
-  infraServices =
-    lib.optionals hl.monitoring.enable [
+  # The Vitals cards add the composite health score (journald + systemd +
+  # procfs, not just the node_exporter gauges), one per host beside its gauges.
+  # Both read the same Prometheus the host gauges use; m920q's card keeps a
+  # site monitor (its daemon runs as a per-user unit beside the dashboard)
+  # while the desktop has none, because it is off most of the time and the
+  # missing series already reads "-".
+  infraServices = lib.optionals hl.monitoring.enable (
+    [
       {
         "M920q" = {
           icon = "mdi-server";
@@ -122,23 +165,10 @@
           widget = hostWidget config.networking.hostName;
         };
       }
-      {
-        "Desktop" = {
-          icon = "mdi-desktop-tower";
-          # No web UI runs on the gaming PC, and it is deliberately off most of
-          # the time. A siteMonitor is a binary up/down dot that logs a proxy
-          # error on every poll while it is off, and Homepage has no way to show
-          # a neutral "off" state; the Prometheus widget below formats a missing
-          # series as "-", so the card goes quiet instead of red.
-          href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
-          description = "Gaming PC";
-          widget = hostWidget "desktop";
-        };
-      }
     ]
     ++ lib.optionals (config.services.vitals.enable or false) [
       {
-        "Vitals" = {
+        "Vitals (M920q)" = {
           icon = "mdi-heart-pulse";
           # No vitals web UI exists; the deep-dive surface is the Grafana
           # dashboard that charts the same series.
@@ -146,42 +176,34 @@
           description = "Composite host health";
           # The daemon runs as a per-user unit, so this dot is its liveness.
           siteMonitor = "${local vitalsPort}/health";
-          widget = {
-            type = "prometheusmetric";
-            url = local hl.monitoring.prometheusPort;
-            refreshInterval = 30000;
-            metrics = [
-              {
-                label = "Score";
-                query = ''vitals_health_score{host="${config.networking.hostName}",type="smoothed"}'';
-                format = {
-                  type = "number";
-                  options.maximumFractionDigits = 0;
-                };
-              }
-              {
-                label = "Errors";
-                query = ''vitals_issues{host="${config.networking.hostName}",severity="error"}'';
-                format.type = "number";
-              }
-              {
-                label = "Warnings";
-                query = ''vitals_issues{host="${config.networking.hostName}",severity="warning"}'';
-                format.type = "number";
-              }
-              {
-                label = "Load";
-                query = ''vitals_load_average{host="${config.networking.hostName}"}'';
-                format = {
-                  type = "number";
-                  options.maximumFractionDigits = 2;
-                };
-              }
-            ];
-          };
+          widget = vitalsWidget config.networking.hostName;
         };
       }
-    ];
+    ]
+    ++ [
+      {
+        "Desktop" = {
+          icon = "mdi-desktop-tower";
+          # No web UI runs on the gaming PC, and it is deliberately off most
+          # of the time. A siteMonitor is a binary up/down dot that logs a
+          # proxy error on every poll while it is off, and Homepage has no way
+          # to show a neutral "off" state; the Prometheus widget below formats
+          # a missing series as "-", so the card goes quiet instead of red.
+          href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
+          description = "Gaming PC";
+          widget = hostWidget "desktop";
+        };
+      }
+      {
+        "Vitals (Desktop)" = {
+          icon = "mdi-heart-pulse";
+          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+          description = "Composite host health";
+          widget = vitalsWidget "desktop";
+        };
+      }
+    ]
+  );
 
   mediaServices =
     lib.optionals hl.immich.enable [

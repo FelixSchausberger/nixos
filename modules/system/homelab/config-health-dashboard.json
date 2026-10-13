@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "NixOS generation size (emit-deploy-metrics.sh) and the vitals host health score. Deploy panels are point-in-time (a generation is recorded only when it is activated), so they update once per deploy; the vitals panels are continuous.",
+  "description": "NixOS generation size (emit-deploy-metrics.sh) and the per-host vitals health scores. Deploy panels are point-in-time (a generation is recorded only when it is activated), so they update once per deploy; the vitals panels are continuous.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -695,7 +695,7 @@
       "targets": [
         {
           "expr": "vitals_health_score",
-          "legendFormat": "{{type}}",
+          "legendFormat": "{{host}} {{type}}",
           "refId": "A"
         }
       ],
@@ -788,7 +788,7 @@
       "targets": [
         {
           "expr": "vitals_issues",
-          "legendFormat": "{{severity}}",
+          "legendFormat": "{{host}} {{severity}}",
           "refId": "A"
         }
       ],
@@ -882,7 +882,7 @@
       "targets": [
         {
           "expr": "vitals_resource_usage",
-          "legendFormat": "{{type}}",
+          "legendFormat": "{{host}} {{type}}",
           "refId": "A"
         }
       ],
@@ -975,7 +975,7 @@
       "targets": [
         {
           "expr": "vitals_load_average",
-          "legendFormat": "load1",
+          "legendFormat": "{{host}}",
           "refId": "A"
         }
       ],
