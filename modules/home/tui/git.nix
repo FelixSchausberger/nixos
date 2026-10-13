@@ -43,12 +43,12 @@ in {
           User git
           IdentityFile ~/.ssh/id_ed25519
 
-      # Pixel 9a via Termux sshd over Tailscale (MagicDNS short name
-      # resolves via 100.100.100.100; port 8022 is Termux sshd default).
-      # Key auth: ssh-copy-id -p 8022 u0_a397@pixel
+      # Pixel 9a over the tailnet: sshd runs inside the nix-on-droid
+      # environment (see droid/default.nix), listening on 8022, and the
+      # MagicDNS short name resolves through 100.100.100.100.
       Host pixel
           HostName pixel-9a
-          User u0_a397
+          User nix-on-droid
           Port 8022
           IdentityFile ~/.ssh/id_ed25519
 
