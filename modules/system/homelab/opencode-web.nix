@@ -18,6 +18,8 @@
 }: let
   cfg = config.modules.system.homelab.opencodeWeb;
   hl = config.modules.system.homelab;
+
+  tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
 in {
   options.modules.system.homelab.opencodeWeb = {
     enable = lib.mkEnableOption "Tailscale Serve exposure for the opencode web UI";
@@ -53,29 +55,11 @@ in {
       }
     ];
 
-    systemd.services.tailscale-serve-opencode-web = {
+    systemd.services.tailscale-serve-opencode-web = tailscaleServe {
+      name = "tailscale-serve-opencode-web";
       description = "Expose opencode web UI via Tailscale Serve";
-      after = ["tailscaled.service"];
-      wants = ["tailscaled.service"];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        TimeoutStartSec = 30;
-        Restart = "on-failure";
-        RestartSec = 30;
-        ExecStart = "${pkgs.writeShellScript "tailscale-serve-opencode-setup" ''
-          ${pkgs.tailscale}/bin/tailscale serve --bg \
-            --https ${toString cfg.httpsPort} \
-            http://127.0.0.1:${toString cfg.port}
-        ''}";
-      };
-      # Fail loudly and retry when tailscaled is not yet connected; never
-      # swallow the error into a green "active (exited)" state. Re-serve
-      # whenever tailscaled comes back up.
-      upholds = ["tailscaled.service"];
-      unitConfig.StartLimitBurst = 5;
-      unitConfig.StartLimitIntervalSec = 300;
+      inherit (cfg) httpsPort;
+      upstreamPort = cfg.port;
     };
   };
 }

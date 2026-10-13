@@ -9,6 +9,8 @@
   hl = config.modules.system.homelab;
   inherit (lib) mkIf;
 
+  tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
+
   # Loopback OTLP receiver of the collector below; spans never leave the host.
   otlpEndpoint = "http://127.0.0.1:4318";
 
@@ -780,12 +782,29 @@ in {
     };
 
     # The Fritz exporter opens a TCP connection to the router (192.168.178.1)
-    # on start; started before the LAN is configured it fails once and only
-    # recovers on the restart timer. Ordering it after network-online removes
-    # that boot-time failure.
+    # on start, and Alertmanager resolves a private advertise address for its
+    # gossip mesh. Both need the LAN. Ordering after network-online.target is
+    # not sufficient on its own: that target carries only Wants= (not
+    # Requires=), so it also activates when systemd-networkd-wait-online times
+    # out, and these units then start against a dead network. The restart
+    # budget is what carries them across the outage, so it is sized for a slow
+    # boot rather than a permanent outage: the nixpkgs defaults (RestartSec
+    # 100ms, five restarts per 10s) exhaust in under a second, while 60
+    # attempts at 10s give ten minutes of cover and still exhaust on
+    # start-limit-hit when the failure is not transient, keeping a real
+    # breakage visible to `systemctl is-failed` and vitals.
     systemd.services.prometheus-fritz-exporter = mkIf cfg.fritzbox.enable {
       after = ["network-online.target"];
       wants = ["network-online.target"];
+      serviceConfig.RestartSec = "10s";
+      unitConfig.StartLimitBurst = 60;
+      unitConfig.StartLimitIntervalSec = 900;
+    };
+
+    systemd.services.alertmanager = mkIf cfg.alerting.enable {
+      serviceConfig.RestartSec = "10s";
+      unitConfig.StartLimitBurst = 60;
+      unitConfig.StartLimitIntervalSec = 900;
     };
 
     services.grafana = {
@@ -1048,36 +1067,14 @@ in {
     # with the node certificate and needs no firewall change. The gate
     # mirrors the other serve units: without caddyProxy.tailnetDomain there
     # is no tailnet name to serve on.
-    systemd.services.tailscale-serve-prometheus = mkIf hl.caddyProxy.enable {
+    systemd.services.tailscale-serve-prometheus = mkIf hl.caddyProxy.enable (tailscaleServe {
+      name = "tailscale-serve-prometheus";
       description = "Expose Prometheus UI via Tailscale Serve";
-      after = [
-        "tailscaled.service"
-        "prometheus.service"
-      ];
-      wants = [
-        "tailscaled.service"
-        "prometheus.service"
-      ];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        TimeoutStartSec = 30;
-        Restart = "on-failure";
-        RestartSec = 30;
-        ExecStart = "${pkgs.writeShellScript "tailscale-serve-prometheus-setup" ''
-          ${pkgs.tailscale}/bin/tailscale serve --bg \
-            --https ${toString cfg.prometheusHttpsPort} \
-            http://127.0.0.1:${toString cfg.prometheusPort}
-        ''}";
-      };
-      # Fail loudly and retry when tailscaled is not yet connected; never
-      # swallow the error into a green "active (exited)" state. Re-serve
-      # whenever tailscaled comes back up.
-      upholds = ["tailscaled.service"];
-      unitConfig.StartLimitBurst = 5;
-      unitConfig.StartLimitIntervalSec = 300;
-    };
+      httpsPort = cfg.prometheusHttpsPort;
+      upstreamPort = cfg.prometheusPort;
+      after = ["prometheus.service"];
+      wants = ["prometheus.service"];
+    });
 
     users.groups.netdev = {};
 
