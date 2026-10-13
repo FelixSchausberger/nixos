@@ -387,6 +387,7 @@
             };
             hosts = import ./lib/hosts.nix;
             homelabPorts = import ./lib/homelab-ports.nix;
+            sshKeys = import ./lib/ssh-keys.nix;
             wallpapers = import ./lib/wallpapers.nix;
 
             inherit (defaults.system) user;
