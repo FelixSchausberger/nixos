@@ -17,6 +17,7 @@
     "Access/Tailscale icon=tailscale.png href=https://login.tailscale.com/login?next_url=%2Fadmin%2Fmachines%3Frefreshed%3Dtrue"
     "Infrastructure/M920q icon=mdi-server href=http://192.168.178.2:3001 monitor widget=prometheusmetric"
     "Infrastructure/Desktop icon=mdi-desktop-tower href=http://192.168.178.3:9100/ widget=prometheusmetric"
+    "Infrastructure/Vitals icon=mdi-heart-pulse href=https://m920q.tailf2f0ca.ts.net/grafana/d/config-health monitor widget=prometheusmetric"
     "Power/desktop icon=mdi-power-plug href=http://192.168.178.11/ monitor widget=customapi"
     "Power/m920q icon=mdi-power-plug href=http://192.168.178.12/ monitor widget=customapi"
     "Power/Power icon=shelly.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/power"
