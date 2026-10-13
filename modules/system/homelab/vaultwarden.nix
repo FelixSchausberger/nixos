@@ -22,6 +22,8 @@
 }: let
   inherit (inputs.self.lib) defaults;
 
+  tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
+
   cfg = config.modules.system.homelab.vaultwarden;
   hl = config.modules.system.homelab;
 
@@ -145,35 +147,13 @@ in {
         "d ${dataFolder} 0700 vaultwarden vaultwarden -"
       ];
 
-      systemd.services.tailscale-serve-vaultwarden = {
+      systemd.services.tailscale-serve-vaultwarden = tailscaleServe {
+        name = "tailscale-serve-vaultwarden";
         description = "Expose vaultwarden via Tailscale Serve";
-        after = [
-          "tailscaled.service"
-          "vaultwarden.service"
-        ];
-        wants = [
-          "tailscaled.service"
-          "vaultwarden.service"
-        ];
-        wantedBy = ["multi-user.target"];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          TimeoutStartSec = 30;
-          Restart = "on-failure";
-          RestartSec = 30;
-          ExecStart = "${pkgs.writeShellScript "tailscale-serve-vaultwarden-setup" ''
-            ${pkgs.tailscale}/bin/tailscale serve --bg \
-              --https ${toString cfg.httpsPort} \
-              http://127.0.0.1:${toString config.services.vaultwarden.config.ROCKET_PORT}
-          ''}";
-        };
-        # Fail loudly and retry when tailscaled is not yet connected; re-serve
-        # whenever tailscaled comes back up. Same shape as the sibling
-        # tailscale-serve-* units.
-        upholds = ["tailscaled.service"];
-        unitConfig.StartLimitBurst = 5;
-        unitConfig.StartLimitIntervalSec = 300;
+        inherit (cfg) httpsPort;
+        upstreamPort = config.services.vaultwarden.config.ROCKET_PORT;
+        after = ["vaultwarden.service"];
+        wants = ["vaultwarden.service"];
       };
     })
 

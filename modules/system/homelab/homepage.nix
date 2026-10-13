@@ -9,6 +9,8 @@
   hl = config.modules.system.homelab;
   inherit (lib) mkIf;
 
+  tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
+
   # Loopback URL for probes. The dashboard runs on the m920q itself, so site
   # monitors and widgets reach services over 127.0.0.1 instead of going out
   # through the tailnet name the card links to. Probes are HTTP only: the
@@ -912,36 +914,14 @@ in {
     # tailnet: https://<tailnetDomain>:<httpsPort>/. The gate mirrors
     # allowedHosts below: caddyProxy.tailnetDomain is the only tailnet name
     # this module knows, so without it there is nothing to serve on.
-    systemd.services.tailscale-serve-homepage = mkIf hl.caddyProxy.enable {
+    systemd.services.tailscale-serve-homepage = mkIf hl.caddyProxy.enable (tailscaleServe {
+      name = "tailscale-serve-homepage";
       description = "Expose Homepage dashboard via Tailscale Serve";
-      after = [
-        "tailscaled.service"
-        "homepage-dashboard.service"
-      ];
-      wants = [
-        "tailscaled.service"
-        "homepage-dashboard.service"
-      ];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        TimeoutStartSec = 30;
-        Restart = "on-failure";
-        RestartSec = 30;
-        ExecStart = "${pkgs.writeShellScript "tailscale-serve-homepage-setup" ''
-          ${pkgs.tailscale}/bin/tailscale serve --bg \
-            --https ${toString cfg.httpsPort} \
-            http://127.0.0.1:${toString cfg.port}
-        ''}";
-      };
-      # Fail loudly and retry when tailscaled is not yet connected; never
-      # swallow the error into a green "active (exited)" state. Re-serve
-      # whenever tailscaled comes back up.
-      upholds = ["tailscaled.service"];
-      unitConfig.StartLimitBurst = 5;
-      unitConfig.StartLimitIntervalSec = 300;
-    };
+      inherit (cfg) httpsPort;
+      upstreamPort = cfg.port;
+      after = ["homepage-dashboard.service"];
+      wants = ["homepage-dashboard.service"];
+    });
 
     sops.templates."homepage/env" = {
       content = widgetEnv;
