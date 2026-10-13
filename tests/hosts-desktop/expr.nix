@@ -128,6 +128,15 @@ in {
   vitals_daemon_default_target =
     builtins.elem "default.target"
     config.home-manager.users.schausberger.systemd.user.services.vitals-daemon.Unit.After;
+  # The desktop runs no monitoring stack, so its score is exported through the
+  # node exporter textfile collector that the m920q Prometheus already scrapes.
+  vitals_textfile_enabled = config.services.vitals.textfile.enable;
+  vitals_textfile_collector =
+    builtins.any (flag: builtins.match "--collector.textfile.directory=.*" flag != null)
+    config.services.prometheus.exporters.node.extraFlags;
+  vitals_metrics_timer =
+    builtins.elem "timers.target"
+    config.systemd.timers."vitals-metrics".wantedBy;
 
   # Test: node exporter for the m920q scrape (job "node-desktop"), and the
   # udev rule that makes energy_uj readable so its built-in rapl collector
