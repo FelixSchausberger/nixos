@@ -103,7 +103,7 @@
   # Remote wake for the gaming PC lives on the router, not here: Fritz!Box
   # Heimnetz → computer → "Computer starten" (or MyFRITZ!App when off-LAN). The
   # Moonlight / Steam Link apps handle wake + presence on the LAN themselves.
-  # The Fritz!Box card under Rescue links there.
+  # The Fritz!Box card under Router links there.
   infraServices = lib.optionals hl.monitoring.enable [
     {
       "M920q" = {
@@ -482,13 +482,13 @@
 
   # Access: every path to the machine and its management engine. The router is
   # the same FRITZ!Box over LAN and AVM cloud; AMT is the out-of-band fallback
-  # from three vantages; Tailscale is the tailnet admin console for route and
+  # from two vantages; Tailscale is the tailnet admin console for route and
   # DNS recovery. Convenience links only: the dashboard runs on the m920q
-  # itself, so with the host down these vanish and the phone's pinned browser
-  # bookmarks (AMT over IPv4 and IPv6) are the authoritative path. Power
-  # control is deliberately not a card - the HTTP relay was removed on purpose
-  # and the phone issues "ssh m920q desktop-power on|off|status" from a termux
-  # widget instead.
+  # itself, so with the host down these vanish and the phone's saved AMT URL
+  # (the IPv4 WAN endpoint) is the authoritative path. Power control is
+  # deliberately not a card - the HTTP relay was removed on purpose and the
+  # phone issues "ssh m920q desktop-power on|off|status" from a termux widget
+  # instead.
   accessServices = [
     {
       # Router: the same FRITZ!Box reached two ways - the LAN address, and the
@@ -531,8 +531,11 @@
       ];
     }
     {
-      # AMT: three vantage points, one heading. The WAN path runs through the
-      # FRITZ!Box DNAT, IPv6 is direct, and the LAN endpoint is plain HTTP.
+      # AMT: the ME's management UI, reachable two ways. The WAN path runs
+      # through the FRITZ!Box DNAT; on the home LAN only HTTPS answers, since
+      # the ME's plain 16992 listener serves the host's LMS relay alone. The
+      # UI offers no console: SOL and KVM need a redirection client (the
+      # amtterm-m920q function, TLS on 16995), so no card can launch them.
       "AMT" = [
         {
           "IPv4 (WAN)" = {
@@ -548,22 +551,14 @@
           };
         }
         {
-          "IPv6" = {
-            icon = "mdi-chip";
-            href = "https://[2a02:1748:dd4d:9990::10]:16993";
-            description = "Intel AMT direct, outside the home LAN only";
-          };
-        }
-        {
           "LAN" = {
             icon = "mdi-chip";
-            # Plain HTTP on the LAN endpoint: no ME legacy-TLS negotiation for
-            # the browser to reject, and the phone reaches it through the
-            # advertised 192.168.178.0/24 subnet route.
-            href = "http://192.168.178.10:16992/index.htm";
+            # HTTPS on the LAN endpoint: the ME answers 16993 on the wire,
+            # while its plain 16992 listener serves only the host's LMS relay,
+            # so a LAN browser must use TLS. The ME's legacy renegotiation is
+            # one browsers still allow.
+            href = "https://192.168.178.10:16993";
             description = "Intel AMT direct on the home LAN";
-            # Same ME HTTP endpoint as the WAN card, so no siteMonitor here
-            # either: Node cannot parse the ME's HTTP response.
           };
         }
       ];
@@ -688,7 +683,7 @@
       Router = {
         icon = "fritzbox.png";
       };
-      # AMT: three vantage points, one heading.
+      # AMT: WAN and LAN paths to the management UI.
       AMT = {
         icon = "mdi-chip";
       };
