@@ -18,10 +18,12 @@
   local = port: "http://127.0.0.1:${toString port}";
 
   # Ports with no module option behind them: jellyfin.nix follows the nixpkgs
-  # default and ntfy.nix hardcodes its own listener, so each number is pinned
-  # once here instead of repeated per URL.
+  # default, ntfy.nix hardcodes its own listener, and vitals-daemon runs as a
+  # per-user service with its own config.toml, so each number is pinned once
+  # here instead of repeated per URL.
   jellyfinPort = 8096;
   ntfyPort = 2586;
+  vitalsPort = 8080;
 
   # Crisp wallpaper the dashboard paints behind the cards. The name is an
   # option (default = the window manager's wallpaper) resolved against
@@ -104,30 +106,82 @@
   # Heimnetz → computer → "Computer starten" (or MyFRITZ!App when off-LAN). The
   # Moonlight / Steam Link apps handle wake + presence on the LAN themselves.
   # The Fritz!Box card under Router links there.
-  infraServices = lib.optionals hl.monitoring.enable [
-    {
-      "M920q" = {
-        icon = "mdi-server";
-        href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
-        description = "Homelab server";
-        siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
-        widget = hostWidget config.networking.hostName;
-      };
-    }
-    {
-      "Desktop" = {
-        icon = "mdi-desktop-tower";
-        # No web UI runs on the gaming PC, and it is deliberately off most of
-        # the time. A siteMonitor is a binary up/down dot that logs a proxy
-        # error on every poll while it is off, and Homepage has no way to show
-        # a neutral "off" state; the Prometheus widget below formats a missing
-        # series as "-", so the card goes quiet instead of red.
-        href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
-        description = "Gaming PC";
-        widget = hostWidget "desktop";
-      };
-    }
-  ];
+  #
+  # The Vitals card adds the composite health score (journald + systemd +
+  # procfs, not just the node_exporter gauges) as a third card in the same row.
+  # It reads the same Prometheus the host gauges use, and its site monitor
+  # doubles as the per-user daemon's liveness dot.
+  infraServices =
+    lib.optionals hl.monitoring.enable [
+      {
+        "M920q" = {
+          icon = "mdi-server";
+          href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
+          description = "Homelab server";
+          siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
+          widget = hostWidget config.networking.hostName;
+        };
+      }
+      {
+        "Desktop" = {
+          icon = "mdi-desktop-tower";
+          # No web UI runs on the gaming PC, and it is deliberately off most of
+          # the time. A siteMonitor is a binary up/down dot that logs a proxy
+          # error on every poll while it is off, and Homepage has no way to show
+          # a neutral "off" state; the Prometheus widget below formats a missing
+          # series as "-", so the card goes quiet instead of red.
+          href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
+          description = "Gaming PC";
+          widget = hostWidget "desktop";
+        };
+      }
+    ]
+    ++ lib.optionals (config.services.vitals.enable or false) [
+      {
+        "Vitals" = {
+          icon = "mdi-heart-pulse";
+          # No vitals web UI exists; the deep-dive surface is the Grafana
+          # dashboard that charts the same series.
+          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+          description = "Composite host health";
+          # The daemon runs as a per-user unit, so this dot is its liveness.
+          siteMonitor = "${local vitalsPort}/health";
+          widget = {
+            type = "prometheusmetric";
+            url = local hl.monitoring.prometheusPort;
+            refreshInterval = 30000;
+            metrics = [
+              {
+                label = "Score";
+                query = ''vitals_health_score{host="${config.networking.hostName}",type="smoothed"}'';
+                format = {
+                  type = "number";
+                  options.maximumFractionDigits = 0;
+                };
+              }
+              {
+                label = "Errors";
+                query = ''vitals_issues{host="${config.networking.hostName}",severity="error"}'';
+                format.type = "number";
+              }
+              {
+                label = "Warnings";
+                query = ''vitals_issues{host="${config.networking.hostName}",severity="warning"}'';
+                format.type = "number";
+              }
+              {
+                label = "Load";
+                query = ''vitals_load_average{host="${config.networking.hostName}"}'';
+                format = {
+                  type = "number";
+                  options.maximumFractionDigits = 2;
+                };
+              }
+            ];
+          };
+        };
+      }
+    ];
 
   mediaServices =
     lib.optionals hl.immich.enable [
