@@ -773,10 +773,6 @@ in {
         # Same secret file as the maintenance fallback, but inverted order:
         # here the external topic leads (see the option description).
         alertNtfyPrimaryUrlFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
-        # Deliverability watch: the phone has answered pings while its DNS
-        # and ntfy subscription were wedged, so pair reachability with the
-        # subscriber gauge (both live on this host's ntfy instance).
-        subscriberMetricsUrl = "http://127.0.0.1:2586/metrics";
       };
     };
     ssh.enable = true;
