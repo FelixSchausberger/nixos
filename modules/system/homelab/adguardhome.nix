@@ -82,7 +82,32 @@
           # failing every lookup.
           cache_enabled = true;
           cache_optimistic = true;
+          # Validate DNSSEC where the upstreams publish it: AdGuard answers
+          # SERVFAIL for a domain with a broken signature instead of resolving
+          # it, which is the point. Both DoH upstreams validate.
+          enable_dnssec = true;
         };
+
+        # Blocklists owned by the flake rather than the admin UI. The live
+        # configuration carried eleven heavily overlapping lists that no
+        # repository change could reproduce; two curated ones cover ads and
+        # trackers with far less redundancy, and both are AdGuard-published so
+        # they stay current. AdGuard merges declared settings over the web UI
+        # on start, so filters must be edited here now, not in the UI.
+        filters = [
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt";
+            name = "AdGuard DNS filter";
+            id = 1;
+          }
+          {
+            enabled = true;
+            url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_34.txt";
+            name = "HaGeZi's Normal Blocklist";
+            id = 34;
+          }
+        ];
         querylog.enabled = true;
         querylog.interval = "7d";
         querylog.size_memory = 1000;
