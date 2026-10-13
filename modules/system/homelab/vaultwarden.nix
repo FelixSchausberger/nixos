@@ -148,11 +148,11 @@ in {
       systemd.services.tailscale-serve-vaultwarden = {
         description = "Expose vaultwarden via Tailscale Serve";
         after = [
-          "tailscale.service"
+          "tailscaled.service"
           "vaultwarden.service"
         ];
         wants = [
-          "tailscale.service"
+          "tailscaled.service"
           "vaultwarden.service"
         ];
         wantedBy = ["multi-user.target"];
@@ -171,7 +171,7 @@ in {
         # Fail loudly and retry when tailscaled is not yet connected; re-serve
         # whenever tailscaled comes back up. Same shape as the sibling
         # tailscale-serve-* units.
-        upholds = ["tailscale.service"];
+        upholds = ["tailscaled.service"];
         unitConfig.StartLimitBurst = 5;
         unitConfig.StartLimitIntervalSec = 300;
       };

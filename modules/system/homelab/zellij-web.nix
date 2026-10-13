@@ -81,11 +81,11 @@ in {
       description = "Zellij web server for remote terminal sessions";
       after = [
         "network.target"
-        "tailscale.service"
+        "tailscaled.service"
         "user@${toString uid}.service"
       ];
       wants = [
-        "tailscale.service"
+        "tailscaled.service"
         "user@${toString uid}.service"
       ];
       wantedBy = ["multi-user.target"];
@@ -131,11 +131,11 @@ in {
     systemd.services.tailscale-serve-zellij-web = {
       description = "Expose Zellij web server via Tailscale Serve";
       after = [
-        "tailscale.service"
+        "tailscaled.service"
         "zellij-web.service"
       ];
       wants = [
-        "tailscale.service"
+        "tailscaled.service"
         "zellij-web.service"
       ];
       wantedBy = ["multi-user.target"];
@@ -154,7 +154,7 @@ in {
       # Fail loudly and retry when tailscaled is not yet connected; never
       # swallow the error into a green "active (exited)" state. Re-serve
       # whenever tailscaled comes back up.
-      upholds = ["tailscale.service"];
+      upholds = ["tailscaled.service"];
       unitConfig.StartLimitBurst = 5;
       unitConfig.StartLimitIntervalSec = 300;
     };
