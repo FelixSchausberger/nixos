@@ -29,5 +29,8 @@
   vitals_daemon_default_target = true;
   vitals_enabled = true;
   vitals_headless = true;
+  vitals_metrics_timer = true;
+  vitals_textfile_collector = true;
+  vitals_textfile_enabled = true;
   wm_count = 1;
 }

@@ -187,9 +187,13 @@ in {
   # Vitals health monitoring, same daemon+CLI as m920q in headless mode:
   # headless=true binds the user daemon to default.target, because
   # graphical-session.target only exists while an on-demand session runs.
+  # This host runs no monitoring stack, so the score is exported through the
+  # node exporter textfile collector, which the m920q Prometheus already
+  # scrapes (job "node-desktop"); m920q scrapes its own daemon on loopback.
   services.vitals = {
     enable = true;
     headless = true;
+    textfile.enable = true;
   };
 
   # Log shipping: journald goes to the m920q Loki over the LAN, resolved by
@@ -223,8 +227,10 @@ in {
 
   # Node exporter scraped by the m920q Prometheus (job "node-desktop",
   # firewall 9100 above). Collector list mirrors the node exporter in
-  # modules/system/homelab/monitoring.nix; no textfile collector here — the
-  # maintenance health-check only writes GC metrics when the directory exists.
+  # modules/system/homelab/monitoring.nix. The textfile collector is enabled
+  # by services.vitals.textfile, which carries this host's health score to
+  # the m920q Prometheus; the maintenance health-check's GC metric is written
+  # only where that directory exists.
   # hwmon carries the amdgpu power1_average series (GPU watts) unprivileged.
   services.prometheus.exporters.node = {
     enable = true;
