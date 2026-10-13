@@ -38,9 +38,15 @@
   );
 
   # Without a wake lock Android suspends the app and the listening socket dies
-  # with it; the lock is released when this foreground sshd exits.
+  # with it; the lock is released when this foreground sshd exits. nix-on-droid
+  # has no service manager and its boot receiver only resets shell counters, so
+  # this is started by hand after an app launch or reboot; it is idempotent so a
+  # repeat run (or a shell hook) is harmless.
   sshdStart = pkgs.writeScriptBin "sshd-start" ''
     #!${pkgs.runtimeShell}
+    if (exec 3<>/dev/tcp/127.0.0.1/${toString sshdPort}) 2>/dev/null; then
+      exit 0
+    fi
     if command -v termux-wake-lock >/dev/null 2>&1; then
       termux-wake-lock
     fi
@@ -75,7 +81,15 @@ in {
     # Ask Tailscale's resolver first so `ssh m920q` resolves to the tailnet
     # address instead of forcing the raw 100.x IP; keep public DNS as a fallback
     # for when Tailscale is down. mkForce: the networking module owns this file.
+    # `options`: with the tunnel down the first nameserver is a blackhole, and
+    # glibc's default budget is seconds per attempt and two attempts per server,
+    # so every lookup stalls past the fetch timeout and `nix-on-droid switch`
+    # dies on input downloads (observed: "Resolving timed out after 5000 ms").
+    # One second, one attempt per server degrades to the public resolvers in
+    # about a second instead of hanging, and is ample for a healthy tailnet
+    # resolver that answers in milliseconds.
     etc."resolv.conf".text = lib.mkForce ''
+      options timeout:1 attempts:1
       nameserver 100.100.100.100
       nameserver 1.1.1.1
       nameserver 8.8.8.8
