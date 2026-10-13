@@ -277,6 +277,13 @@ in {
     };
     wait-online = {
       extraArgs = ["--interface=eno1"];
+      # The onboard NIC can spend over two minutes negotiating carrier at a
+      # cold boot. The 120s default then times out, and because a failed
+      # systemd-networkd-wait-online does not block network-online.target, that
+      # target still fires while the LAN is down and its consumers
+      # (fritz-exporter, alertmanager, nextcloud, vaultwarden) start against a
+      # dead network. Hold the gate until the link is actually routable.
+      timeout = 300;
     };
   };
 

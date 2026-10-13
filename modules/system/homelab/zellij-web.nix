@@ -21,6 +21,8 @@
 }: let
   cfg = config.modules.system.homelab.zellijWeb;
 
+  tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
+
   user = inputs.self.lib.user;
   homeDir = "/home/${user}";
   # Must match the primary user's UID in system/core/users.nix.
@@ -128,35 +130,13 @@ in {
       };
     };
 
-    systemd.services.tailscale-serve-zellij-web = {
+    systemd.services.tailscale-serve-zellij-web = tailscaleServe {
+      name = "tailscale-serve-zellij-web";
       description = "Expose Zellij web server via Tailscale Serve";
-      after = [
-        "tailscaled.service"
-        "zellij-web.service"
-      ];
-      wants = [
-        "tailscaled.service"
-        "zellij-web.service"
-      ];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        TimeoutStartSec = 30;
-        Restart = "on-failure";
-        RestartSec = 30;
-        ExecStart = "${pkgs.writeShellScript "tailscale-serve-zellij-setup" ''
-          ${pkgs.tailscale}/bin/tailscale serve --bg \
-            --https ${toString cfg.httpsPort} \
-            http://127.0.0.1:${toString cfg.port}
-        ''}";
-      };
-      # Fail loudly and retry when tailscaled is not yet connected; never
-      # swallow the error into a green "active (exited)" state. Re-serve
-      # whenever tailscaled comes back up.
-      upholds = ["tailscaled.service"];
-      unitConfig.StartLimitBurst = 5;
-      unitConfig.StartLimitIntervalSec = 300;
+      inherit (cfg) httpsPort;
+      upstreamPort = cfg.port;
+      after = ["zellij-web.service"];
+      wants = ["zellij-web.service"];
     };
   };
 }
