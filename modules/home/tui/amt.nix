@@ -9,6 +9,10 @@
   ];
 
   sops.secrets."amt/password" = {};
+  # The AMT CA certificate (public) verifies the ME's TLS certificate. The ME
+  # serves SOL only on the TLS port 16995; the unencrypted 16994 is closed, so
+  # every SOL session runs over TLS.
+  sops.secrets."amt/tls_ca_crt" = {};
 
   # Best practice: password travels via AMT_PASSWORD env only, never as -p
   # argv (visible in ps). amttool takes host first (amttool HOST info),
@@ -27,14 +31,18 @@
       '';
     };
     amtterm-m920q = {
-      description = "AMT SOL to m920q (reads password from sops)";
+      description = "AMT SOL to m920q over TLS (reads password and CA from sops)";
       body = ''
         if not test -f ${config.sops.secrets."amt/password".path}
             echo "AMT password not found at ${config.sops.secrets."amt/password".path}" >&2
             return 1
         end
+        if not test -f ${config.sops.secrets."amt/tls_ca_crt".path}
+            echo "AMT CA certificate not found at ${config.sops.secrets."amt/tls_ca_crt".path}" >&2
+            return 1
+        end
         env AMT_PASSWORD=(cat ${config.sops.secrets."amt/password".path}) \
-          ${pkgs.amtterm}/bin/amtterm -u admin 192.168.178.10 $argv
+          ${pkgs.amtterm}/bin/amtterm -C ${config.sops.secrets."amt/tls_ca_crt".path} -u admin 192.168.178.10 $argv
       '';
     };
   };
@@ -51,11 +59,16 @@
     }
     amtterm-m920q() {
       local pw_file="${config.sops.secrets."amt/password".path}"
+      local ca_file="${config.sops.secrets."amt/tls_ca_crt".path}"
       if [[ ! -f "$pw_file" ]]; then
         echo "AMT password not found at $pw_file" >&2
         return 1
       fi
-      AMT_PASSWORD="$(cat "$pw_file")" ${pkgs.amtterm}/bin/amtterm -u admin 192.168.178.10 "$@"
+      if [[ ! -f "$ca_file" ]]; then
+        echo "AMT CA certificate not found at $ca_file" >&2
+        return 1
+      fi
+      AMT_PASSWORD="$(cat "$pw_file")" ${pkgs.amtterm}/bin/amtterm -C "$ca_file" -u admin 192.168.178.10 "$@"
     }
   '';
 }
