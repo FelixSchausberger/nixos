@@ -76,21 +76,17 @@ in {
   '';
 
   environment = {
-    # nix-on-droid hardcodes /etc/resolv.conf to public resolvers, which cannot
-    # resolve the tailnet's MagicDNS names (*.ts.net is not published publicly).
-    # Ask Tailscale's resolver first so `ssh m920q` resolves to the tailnet
-    # address instead of forcing the raw 100.x IP; keep public DNS as a fallback
-    # for when Tailscale is down. mkForce: the networking module owns this file.
-    # `options`: with the tunnel down the first nameserver is a blackhole, and
-    # glibc's default budget is seconds per attempt and two attempts per server,
-    # so every lookup stalls past the fetch timeout and `nix-on-droid switch`
-    # dies on input downloads (observed: "Resolving timed out after 5000 ms").
-    # One second, one attempt per server degrades to the public resolvers in
-    # about a second instead of hanging, and is ample for a healthy tailnet
-    # resolver that answers in milliseconds.
+    # Public resolvers only. The phone runs Tailscale with "Use Tailscale DNS"
+    # off: the app's MagicDNS resolver (100.100.100.100) answered nothing while
+    # Android routed every app query to it, so leaving it first in this file
+    # only bought a stall. Without it the tailnet names come from
+    # networking.hosts below. `options`: glibc's default budget is seconds per
+    # attempt and two attempts per server, which stalls past the fetch timeout
+    # (observed: "Resolving timed out after 5000 ms"); one second, one attempt
+    # per server bounds any future stall. mkForce: the networking module owns
+    # this file.
     etc."resolv.conf".text = lib.mkForce ''
       options timeout:1 attempts:1
-      nameserver 100.100.100.100
       nameserver 1.1.1.1
       nameserver 8.8.8.8
     '';
@@ -128,6 +124,15 @@ in {
       sshdStart
     ];
   };
+
+  # Fleet names for `ssh m920q` and friends: with Tailscale DNS off the
+  # MagicDNS resolver answers nothing, and Public DNS does not know tailnet
+  # names, so the tailnet addresses come from the host registry here instead of
+  # from a resolver. Only the phone needs this; every other fleet host resolves
+  # through its own DNS.
+  networking.hosts = lib.mapAttrs' (name: host: lib.nameValuePair host.tailnetIp [name]) (
+    lib.filterAttrs (_: host: host ? tailnetIp) inputs.self.lib.hosts
+  );
 
   # sshd-start needs the app to hold a wake lock, which is what this command
   # does; the Android app implements it, so it costs nothing to enable.
