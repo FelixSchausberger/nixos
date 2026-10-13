@@ -432,12 +432,15 @@ in {
           ]
           ++ lib.optionals config.modules.system.homelab.navidrome.enable [
             {
-              # ping.view answers 200 without credentials, and the prefixed
-              # path pins the BaseURL that Subsonic clients must be
-              # configured with (an unprefixed /rest 302s into the SPA and
-              # looks like an outage on the phone).
+              # Probe the prefixed SPA path, not the Subsonic API: navidrome
+              # answers /rest/ping.view with HTTP 200 but logs a warning for
+              # every unauthenticated call (missing parameter 'u', then invalid
+              # login), and it has no unauthenticated health endpoint. The
+              # prefixed path still pins the BaseURL clients must use - with
+              # BaseURL unset this path 302s into the root SPA and the probe
+              # fails, which is the outage the phone sees.
               targets = [
-                "http://127.0.0.1:${toString config.modules.system.homelab.navidrome.port}/navidrome/rest/ping.view"
+                "http://127.0.0.1:${toString config.modules.system.homelab.navidrome.port}/navidrome/app/"
               ];
               labels.app = "navidrome";
               labels.host = localHost;
@@ -776,6 +779,15 @@ in {
       environment.OTEL_EXPORTER_OTLP_ENDPOINT = otlpEndpoint;
     };
 
+    # The Fritz exporter opens a TCP connection to the router (192.168.178.1)
+    # on start; started before the LAN is configured it fails once and only
+    # recovers on the restart timer. Ordering it after network-online removes
+    # that boot-time failure.
+    systemd.services.prometheus-fritz-exporter = mkIf cfg.fritzbox.enable {
+      after = ["network-online.target"];
+      wants = ["network-online.target"];
+    };
+
     services.grafana = {
       enable = true;
       settings = {
@@ -1039,11 +1051,11 @@ in {
     systemd.services.tailscale-serve-prometheus = mkIf hl.caddyProxy.enable {
       description = "Expose Prometheus UI via Tailscale Serve";
       after = [
-        "tailscale.service"
+        "tailscaled.service"
         "prometheus.service"
       ];
       wants = [
-        "tailscale.service"
+        "tailscaled.service"
         "prometheus.service"
       ];
       wantedBy = ["multi-user.target"];
@@ -1062,7 +1074,7 @@ in {
       # Fail loudly and retry when tailscaled is not yet connected; never
       # swallow the error into a green "active (exited)" state. Re-serve
       # whenever tailscaled comes back up.
-      upholds = ["tailscale.service"];
+      upholds = ["tailscaled.service"];
       unitConfig.StartLimitBurst = 5;
       unitConfig.StartLimitIntervalSec = 300;
     };

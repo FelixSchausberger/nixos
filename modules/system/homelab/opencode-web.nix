@@ -55,8 +55,8 @@ in {
 
     systemd.services.tailscale-serve-opencode-web = {
       description = "Expose opencode web UI via Tailscale Serve";
-      after = ["tailscale.service"];
-      wants = ["tailscale.service"];
+      after = ["tailscaled.service"];
+      wants = ["tailscaled.service"];
       wantedBy = ["multi-user.target"];
       serviceConfig = {
         Type = "oneshot";
@@ -73,7 +73,7 @@ in {
       # Fail loudly and retry when tailscaled is not yet connected; never
       # swallow the error into a green "active (exited)" state. Re-serve
       # whenever tailscaled comes back up.
-      upholds = ["tailscale.service"];
+      upholds = ["tailscaled.service"];
       unitConfig.StartLimitBurst = 5;
       unitConfig.StartLimitIntervalSec = 300;
     };

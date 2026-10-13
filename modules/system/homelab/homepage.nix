@@ -50,7 +50,7 @@
   # block reads the same numbers the resources widget used to show locally.
   # PrometheusMetric renders at most four blocks, hence CPU, memory, root-disk
   # free space and uptime. A powered-off host returns an empty vector, so its
-  # blocks read "-" and the card's site-monitor dot turns red; the desktop is
+  # blocks read "-" (the desktop's graceful "off" state) and the desktop is
   # intentionally excluded from the NodeExporterDown rule.
   mkHostMetrics = host: [
     {
@@ -117,12 +117,13 @@
     {
       "Desktop" = {
         icon = "mdi-desktop-tower";
-        # No web UI runs on the gaming PC; node_exporter's landing page is the
-        # only thing that answers while it is up, and the dot going red is the
-        # real "it is off" signal.
+        # No web UI runs on the gaming PC, and it is deliberately off most of
+        # the time. A siteMonitor is a binary up/down dot that logs a proxy
+        # error on every poll while it is off, and Homepage has no way to show
+        # a neutral "off" state; the Prometheus widget below formats a missing
+        # series as "-", so the card goes quiet instead of red.
         href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
         description = "Gaming PC";
-        siteMonitor = "http://${inputs.self.lib.hosts.desktop.ip}:9100/metrics";
         widget = hostWidget "desktop";
       };
     }
@@ -277,7 +278,12 @@
         icon = "mdi-power-plug";
         href = "http://${ip}/";
         description = "Wall power (Shelly plug)";
-        siteMonitor = "http://${ip}/rpc/Shelly.GetDeviceInfo";
+        # Homepage probes a siteMonitor with HEAD first. Every Shelly RPC path
+        # answers HEAD with 405 plus an illegal 18-byte body, which Node's HTTP
+        # parser rejects (HPE_CLOSED_CONNECTION), so an RPC target logged a
+        # proxy error on each poll; an RPC path is not monitorable. The plug's
+        # web UI root answers HEAD with a conformant 200, so it is the target.
+        siteMonitor = "http://${ip}/";
         widget = {
           type = "customapi";
           url = "http://${ip}/rpc/Switch.GetStatus?id=0";
@@ -533,12 +539,12 @@
             icon = "mdi-chip";
             href = "https://116.204.198.109:16993";
             description = "Intel AMT via FRITZ!Box, works from any vantage";
-            # The light covers the host-side AMT chain (DNAT -> socat -> LMS ->
-            # ME), the only part a local dashboard can probe: the ME demands
-            # unsafe TLS renegotiation that Node's TLS stack refuses, so the WAN
-            # WS-Man endpoint is unmonitorable from here. The Fritz rule plus
-            # ME TLS end to end is verified from outside (check-host) instead.
-            siteMonitor = "http://192.168.178.10:16992/";
+            # No siteMonitor: the only host-side probe target is the ME's plain
+            # HTTP on 192.168.178.10:16992, whose response Node's HTTP parser
+            # rejects (HPE_INVALID_CONSTANT - the ME does not speak conformant
+            # HTTP), so Homepage logged a proxy 500 on every poll. The Fritz
+            # rule plus ME TLS end to end is verified from outside
+            # (check-host) instead.
           };
         }
         {
@@ -556,7 +562,8 @@
             # advertised 192.168.178.0/24 subnet route.
             href = "http://192.168.178.10:16992/index.htm";
             description = "Intel AMT direct on the home LAN";
-            siteMonitor = "http://192.168.178.10:16992/";
+            # Same ME HTTP endpoint as the WAN card, so no siteMonitor here
+            # either: Node cannot parse the ME's HTTP response.
           };
         }
       ];
@@ -837,11 +844,11 @@ in {
     systemd.services.tailscale-serve-homepage = mkIf hl.caddyProxy.enable {
       description = "Expose Homepage dashboard via Tailscale Serve";
       after = [
-        "tailscale.service"
+        "tailscaled.service"
         "homepage-dashboard.service"
       ];
       wants = [
-        "tailscale.service"
+        "tailscaled.service"
         "homepage-dashboard.service"
       ];
       wantedBy = ["multi-user.target"];
@@ -860,7 +867,7 @@ in {
       # Fail loudly and retry when tailscaled is not yet connected; never
       # swallow the error into a green "active (exited)" state. Re-serve
       # whenever tailscaled comes back up.
-      upholds = ["tailscale.service"];
+      upholds = ["tailscaled.service"];
       unitConfig.StartLimitBurst = 5;
       unitConfig.StartLimitIntervalSec = 300;
     };
