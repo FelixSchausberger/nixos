@@ -149,6 +149,16 @@ in {
           wallpaperDir = config.wallpapers.wallpaperPath;
           wallpaperNames = lib.attrNames config.wallpapers.available;
           rotateScript = pkgs.writeShellScript "rotate-wallpapers" ''
+            # awww only paints into a live Wayland session. A headless host, or
+            # a host between sessions, still fires this timer, and awww then
+            # prints a WAYLAND_DISPLAY warning plus a missing-socket error on
+            # every tick; there is nothing to rotate into, so exit before
+            # invoking it.
+            runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+            if ! compgen -G "$runtime_dir"/*awww-daemon.sock >/dev/null 2>&1; then
+              exit 0
+            fi
+
             # Array of wallpaper names
             names=(${lib.concatStringsSep " " wallpaperNames})
             # Pick random name

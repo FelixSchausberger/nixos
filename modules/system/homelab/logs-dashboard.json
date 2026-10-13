@@ -47,6 +47,7 @@
         "y": 1
       },
       "id": 1,
+      "description": "Journald lines that read like errors or warnings. Three benign info lines are excluded because they merely contain the searched words: ntfy's hourly 'Server stats' (emails_received_failure=0), Grafana's feature-flag 'flag evaluation succeeded' (ErrorCode/ErrorMessage fields), and the backup job's rclone table header ('Elapsed time').",
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
@@ -64,7 +65,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{host=~\"$host\"} |~ \"(?i)error|warn|fail|crit|emerg|alert\"",
+          "expr": "{host=~\"$host\"} |~ \"(?i)error|warn|fail|crit|emerg|alert\" !~ \"emails_received_failure|flag evaluation|Elapsed time\"",
           "queryType": "range",
           "refId": "A"
         }

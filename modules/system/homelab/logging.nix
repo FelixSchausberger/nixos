@@ -157,6 +157,11 @@ in {
     })
     (mkIf alloyEnabled {
       services.alloy.enable = true;
+      # Alloy posts an anonymous usage report to stats.grafana.org every two
+      # hours. This host's AdGuard resolves that domain to 0.0.0.0, so each
+      # attempt fails the TLS handshake and logs a warn line; reporting is
+      # optional telemetry, so it is switched off rather than left warning.
+      services.alloy.extraFlags = ["--disable-reporting"];
       # The upstream module runs Alloy as a DynamicUser, whose state directory is
       # /var/lib/private/alloy under a /var/lib/private that systemd requires to
       # be mode 0700. Persisting a path inside it fights that setup: the parent
