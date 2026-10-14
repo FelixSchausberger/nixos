@@ -190,6 +190,12 @@ in {
       enable32Bit = true;
     };
 
+    # trippy traces with raw sockets and Linux has no unprivileged tracing mode
+    # (that is macOS-only), so the wrapper grants CAP_NET_RAW and `trip` runs
+    # without sudo. security.wrappers installs it into /run/wrappers/bin, which
+    # precedes the profile bins on PATH, so no package entry is needed.
+    programs.trippy.enable = true;
+
     # Ensure configuration repo is in persistent location for ZFS impermanence
     system.activationScripts.checkConfigLocation =
       lib.mkIf (lib.hasAttr "persistence" config.environment)
