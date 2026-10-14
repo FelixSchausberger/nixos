@@ -180,7 +180,7 @@ in {
             "zjstatus-hints" = {
               _children = [
                 # Bound the keybind hints so they cannot overrun the bar.
-                # zellij-indicator-felix assumes the same cap when budgeting
+                # zellij-indicator-v2 assumes the same cap when budgeting
                 # adaptive tab-name lengths.
                 {max_length = ["40"];}
               ];
