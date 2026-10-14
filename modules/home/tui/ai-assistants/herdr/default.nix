@@ -91,11 +91,17 @@ in {
     '';
 
     # herdr ships a built-in catppuccin theme, so it needs no generated palette
-    # to match the fleet. The theme leads the file; contributed command
-    # bindings follow, separated by a blank line.
+    # to match the fleet. The file is a read-only store symlink, and herdr
+    # writes `onboarding = false` back to it when its first-run setup finishes:
+    # the write fails with "failed to save onboarding setting: Read-only file
+    # system" and the setup prompt (including its integration-install offer)
+    # returns on every launch. Declaring the value skips that setup entirely.
+    # Bare key/value pairs must precede the first table header in TOML, so
+    # onboarding leads the file, then the theme, then the contributed command
+    # bindings.
     xdg.configFile."herdr/config.toml".text =
       lib.concatStringsSep "\n" (
-        ["[theme]" ''name = "catppuccin"'']
+        ["onboarding = false" "" "[theme]" ''name = "catppuccin"'']
         ++ lib.concatMap (key: [""] ++ renderCommandKey key) config.tui.herdr.commandKeys
       )
       + "\n";
