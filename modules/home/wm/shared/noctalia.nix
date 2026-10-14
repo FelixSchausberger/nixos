@@ -69,6 +69,12 @@ in {
       };
     };
 
+    # Noctalia handles SIGTERM (logs its shutdown, releases the logind inhibit)
+    # but the process never exits, so systemd waits out the default 90s stop
+    # timeout on every shutdown. A shell has no state to flush, so cap it: the
+    # stall is what makes an unattended poweroff look like it failed.
+    systemd.user.services.noctalia.Service.TimeoutStopSec = 5;
+
     # Niri-side integration per upstream compositor guide.
     # programs.niri.settings merges with modules/home/wm/niri/default.nix.
     # Single definition block: niri-flake declares settings as one
