@@ -1,209 +1,24 @@
-{
-  pkgs,
-  config,
-  lib,
-  ...
-}: let
-  # Shared config source rendered into both the V1 and V2 harnesses.
-  shared = import ./shared.nix {inherit config lib pkgs;};
-  inherit (shared) model webPort;
-
-  # V1 groups permission effects per tool; derive the bash map from the
-  # canonical ordered rule list so the two harnesses cannot drift.
-  v1BashPermissions = lib.listToAttrs (
-    map (rule: lib.nameValuePair rule.resource rule.effect) (
-      builtins.filter (rule: rule.action == "shell") shared.permissionRules
-    )
-  );
-in {
-  programs.opencode = {
-    enable = true;
-
-    # PATH-prefixed with the rm shim so every bash tool call from the shared
-    # server (TUI and web sessions alike) deletes to the rip2 graveyard.
-    package = config.ai-assistants.safeRm.wrap (pkgs.symlinkJoin {
-      name = "opencode-wrapped";
-      paths = [pkgs.opencode];
-      buildInputs = [pkgs.makeWrapper];
-      postBuild = ''
-        # Pin the legacy database unconditionally. A stray OpenCode 2 run wrote
-        # the v2 schema into the canonical opencode.db, defeating the nixpkgs
-        # wrapper's only-if-absent workaround; setting OPENCODE_DB here keeps v1
-        # on the file holding all sessions regardless of what else writes into
-        # the shared ~/.local/share/opencode directory.
-        #
-        # --unset OPENCODE_CONFIG_DIR: a leaked export pointing at the V2
-        # config dir makes V1 refuse to start ("V2 permissions are not
-        # supported by OpenCode V1"). The V2 wrapper scopes that variable to
-        # its own process tree; V1 always reads its own config dir.
-        #
-        # --unset GITHUB_TOKEN: a shell-exported GitHub PAT would shadow the
-        # device-flow credential in auth.json, and the Copilot API rejects
-        # PATs outright ("Personal Access Tokens are not supported for this
-        # endpoint").
-        #
-        # NODE_EXTRA_CA_CERTS points Bun at the system bundle; TLS verification
-        # stays on. An earlier NODE_TLS_REJECT_UNAUTHORIZED=0 here was a
-        # workaround for TLS interception by an ESET SSL filter whose custom CA
-        # has since been retired from this fleet.
-        wrapProgram $out/bin/opencode \
-          --set OPENCODE_DB "opencode-stable.db" \
-          --unset OPENCODE_CONFIG_DIR \
-          --unset GITHUB_TOKEN \
-          --set NODE_EXTRA_CA_CERTS "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-      '';
-      meta.mainProgram = "opencode";
-    });
-
-    # Enable programs.mcp integration - HM module correctly transforms command+args+env
-    enableMcpIntegration = true;
-
-    extraPackages = with pkgs; [
-      mcp-nixos
-      mcp-language-server
-      # Typst toolchain (documents, slides, CVs)
-      typst
-      typstyle
-      tinymist
-      # Formatters
-      alejandra
-      rustfmt
-      taplo
-    ];
-
-    context = shared.combinedRules;
-
-    skills = shared.sharedSkills;
-
-    settings = {
-      inherit model;
-      small_model = model;
-      # Hide unused providers from the model list. ollama-cloud is
-      # auto-detected from the OLLAMA_API_KEY environment, hidden here as a
-      # guard alongside the removed export below. github-copilot is guarded
-      # because the login shell exports GITHUB_TOKEN and opencode
-      # synthesizes the provider from that PAT on launches that bypass the
-      # wrappers; the company tool is reserved for IntelliJ/CLI. Zen's
-      # gateway id is "opencode" (distinct from the "opencode-go"
-      # subscription provider) and stays listed so its *-free models remain
-      # selectable.
-      disabled_providers = ["ollama-cloud" "github-copilot"];
-      agent = {
-        explore.model = model;
-        general.model = model;
-        title.model = model;
-        summary.model = model;
-        compaction.model = model;
-      };
-      # tokenscope is server-side only (debugging tool, no TUI pane).
-      # Quota stays in tui.plugin for the compact status line.
-      # zellij-indicator-felix: vendored fork of opencode-zellij-indicator
-      # @0.7.0 (last V1-API release; 2.0.0 targets opencode 2) with session
-      # titles truncated at ingestion - zjstatus has no per-name truncation
-      # and full auto-generated titles overflow the tab bar. Relative path
-      # resolves from ~/.config/opencode/opencode.json.
-      plugin = [
-        # Pinned to the4.x line: npm `latest` is5.x, which peers
-        # @opencode/plugin 2.0.16 and has no OpenCode 1 support.
-        "@slkiser/opencode-quota@4"
-        "@ramtinj95/opencode-tokenscope@latest"
-        "./plugins/zellij-indicator-felix"
-      ];
-      permission.bash = v1BashPermissions;
-      formatter = shared.formatters;
-    };
-
-    # The shared server on webPort is V2's managed service when
-    # ai-assistants.opencodeV2 is enabled (see v2.nix); this V1 web service is
-    # the fallback for hosts without it. Both must never race for the port.
-    web = {
-      enable = !config.ai-assistants.opencodeV2.enable;
-      extraArgs = [
-        "--port"
-        (toString webPort)
-        # Loopback only: remote access goes through Tailscale Serve (TLS,
-        # tailnet-only). See modules/system/homelab/opencode-web.nix.
-        "--hostname"
-        "127.0.0.1"
-      ];
-    };
-
-    tui = {
-      # Same major pin as settings.plugin: this entry installs separately.
-      plugin = ["@slkiser/opencode-quota@4"];
-      # Attention is the event source for desktop notifications (questions,
-      # permissions, errors, completed turns); it is disabled by default.
-      # The TUI emits OSC 9 (forced by OPENTUI_NOTIFICATION_PROTOCOL in
-      # zellij.nix) and zellij re-encodes it as a host bell.
-      attention.enabled = true;
-    };
-  };
-
+{config, ...}: {
   # Attach a TUI client to the shared server instead of letting bare `opencode`
-  # start its own throwaway instance, so the TUI, the web UI and the other
-  # clients share one session store. V2 discovers the registered service (URL
-  # and password) itself; V1 needs the explicit URL.
+  # start its own throwaway instance, so the TUI, the web UI and every other
+  # client share one session store. The launcher resolves the registered
+  # service (URL and password) itself.
   programs.fish.functions.oc = {
     description = "Attach to the shared opencode server (same sessions as the web UI)";
-    body =
-      if config.ai-assistants.opencodeV2.enable
-      then ''
-        opencode2 $argv
-      ''
-      else ''
-        opencode attach "http://127.0.0.1:${toString webPort}" $argv
-      '';
+    body = ''
+      opencode2 $argv
+    '';
   };
 
-  # Set API keys from sops secrets at login time
-  # home.sessionVariables can't read file contents — it stores the secret path string
+  # Exported for gh and the git credential helper; the opencode launcher unsets
+  # it for its own process tree, because opencode synthesizes a github-copilot
+  # provider from a PAT that the Copilot API rejects (see v2.nix).
+  # home.sessionVariables cannot read file contents - it stores the secret path.
   programs.fish.loginShellInit = ''
     if test -f ${config.sops.secrets."github/token".path}
       set -gx GITHUB_TOKEN (cat ${config.sops.secrets."github/token".path})
     end
   '';
-
-  # Vendored fork of opencode-zellij-indicator@0.7.0 with title truncation
-  # (provenance in its package.json). Deployed as a plugin package directory;
-  # referenced above via a relative path from the global opencode.json.
-  xdg.configFile."opencode/plugins/zellij-indicator-felix".source =
-    ./zellij-indicator-felix;
-
-  xdg.configFile."opencode/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
-
-  # TokenScope slash command: invokes the plugin tool and prints the report verbatim.
-  # Required by @ramtinj95/opencode-tokenscope; plugin alone does not register /tokenscope.
-  xdg.configFile."opencode/command/tokenscope.md".text = ''
-    ---
-    description: Analyze token usage across the current session with detailed breakdowns by category
-    ---
-
-    Call the tokenscope tool directly without delegating to other agents.
-    Leave sessionID unset unless the user explicitly asked to analyze a different session.
-    Then read the exact unique report path returned by TokenScope.
-    Return that file verbatim without additional text or formatting.
-  '';
-
-  # TokenScope feature flags. Stable user override read once at startup.
-  xdg.configFile."opencode/tokenscope-config.json".text = builtins.toJSON {
-    enableContextBreakdown = true;
-    enableToolSchemaEstimation = true;
-    enableCacheEfficiency = true;
-    enableSubagentAnalysis = true;
-    enableDetailedSubagentCostBreakdown = false;
-    enableSkillAnalysis = true;
-  };
-
-  # Quota display policy: active OpenCode Go subscription provides remote
-  # quota via the official usage API, so toasts/sidebar/reset notifications
-  # are enabled and pinned to opencode-go. Compact status line stays on the
-  # home row only. The shared shape lives in shared.nix; V1 adds no other
-  # provider because its registry's Zen entry needs a Console sign-in this
-  # machine does not have.
-  xdg.configFile."opencode/opencode-quota/quota-toast.json".text = builtins.toJSON (
-    shared.quotaToast
-    // {enabledProviders = ["opencode-go"];}
-  );
 
   sops.secrets = {
     "ollama/api-key" = {};

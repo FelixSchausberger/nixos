@@ -39,11 +39,11 @@
   # both harnesses. Paid opencode-go models stay one /model switch away.
   model = "opencode/mimo-v2.6-flash-free";
 
-  # Port of the shared OpenCode server: the V2 managed service when
-  # ai-assistants.opencodeV2 is enabled, V1's programs.opencode.web otherwise.
-  # Both bind loopback only; Tailscale Serve terminates TLS in front of it.
-  # Consumers: the `oc` function, the zellij-web seed pane, the nixvim
-  # integration and the homepage card monitor.
+  # Port of the shared OpenCode server: the ai-assistants.opencode managed
+  # service (modules/home/tui/ai-assistants/opencode/v2.nix). It binds loopback
+  # only; Tailscale Serve terminates TLS in front of it. Consumers: the `oc`
+  # function, the zellij-web seed pane, the nixvim integration and the homepage
+  # card monitor.
   webPort = 4096;
 
   formatters = {
@@ -60,11 +60,10 @@
     };
   };
 
-  # Quota display policy, rendered by each harness as
+  # Quota display policy, rendered as
   # <config-root>/opencode-quota/quota-toast.json (the path the quota plugin
-  # reads). The provider list is deliberately not shared: it differs per
-  # harness because the two run different plugin majors with different
-  # provider registries.
+  # reads). The provider list is not shared with this source: it is host- and
+  # registry-specific, so v2.nix pins it to the Go subscription.
   quotaToast = {
     formatStyle = "singleWindow";
     percentDisplayMode = "remaining";
@@ -165,11 +164,10 @@
     }
   ];
 
-  # The V2 array appends the primary-checkout edit deny after this agent's own
-  # edit allow: agent rules are appended after global rules and the last match
-  # wins, so without it the subagent's allow would bypass the global guard.
-  # V1 reads the legacy permission map, which cannot express path-scoped edit
-  # rules; the guard is V2-only (see permissionRules above).
+  # The permissions array appends the primary-checkout edit deny after this
+  # agent's own edit allow: agent rules are appended after global rules and the
+  # last match wins, so without it the subagent's allow would bypass the global
+  # guard (see permissionRules above).
   codeSimplifierBody = ''
     You are a code simplification specialist.
 
@@ -199,19 +197,6 @@
     description: Simplifies recently modified code while preserving exact behavior
     mode: subagent
     model: ${model}
-    permission:
-      edit: allow
-      bash: deny
-    ---
-
-    ${codeSimplifierBody}
-  '';
-
-  codeSimplifierAgentV2 = ''
-    ---
-    description: Simplifies recently modified code while preserving exact behavior
-    mode: subagent
-    model: ${model}
     permissions:
       - action: edit
         resource: "*"
@@ -236,6 +221,5 @@ in {
     quotaToast
     permissionRules
     codeSimplifierAgent
-    codeSimplifierAgentV2
     ;
 }

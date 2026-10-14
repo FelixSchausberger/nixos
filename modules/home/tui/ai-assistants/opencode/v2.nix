@@ -5,23 +5,24 @@
   inputs,
   ...
 }: let
-  cfg = config.ai-assistants.opencodeV2;
+  cfg = config.ai-assistants.opencode;
   system = pkgs.stdenv.hostPlatform.system;
 
-  # Render the V2 config from the same source as V1, so the two harnesses cannot
-  # drift (see shared.nix). The isolated config directory + the shim's
-  # OPENCODE_CONFIG_DIR exist because V2 otherwise loads the V1 `plugin` list
-  # by union, and the V1-only plugins (the vendored indicator especially) have
-  # no V2 entrypoint: their load failure aborts plugin generation and blocks
-  # agent registration, leaving `build` missing.
+  # Single source for the harness: model, agent rules, permissions, formatters,
+  # skills and quota policy. shared.nix is V2-native, so there is no second
+  # renderer to keep in sync.
   shared = import ./shared.nix {inherit config lib pkgs;};
 
+  # The config root is kept out of the canonical ~/.config/opencode on purpose:
+  # that directory still holds imperative leftovers from the retired V1 tree
+  # (node_modules, bun.lock, tui.json, stray service-prod.json) which this
+  # module no longer manages and must not resurrect. Moving the V2 tree into
+  # the canonical location is a separate change.
   v2ConfigDir = "opencode-v2/opencode";
 
-  # Reuse the single programs.mcp.servers source, reshaped into V2's
-  # mcp.servers form (command array + environment). File-backed env values
-  # become the {file:path} token V2 substitutes at config load, mirroring the
-  # V1 integration's renderEnv behavior.
+  # programs.mcp.servers reshaped into V2's mcp.servers form (command array +
+  # environment). File-backed env values become the {file:path} token V2
+  # substitutes at config load.
   v2McpEnv = lib.mapAttrs (
     _: value:
       if lib.isAttrs value && value ? file
@@ -39,7 +40,7 @@
 
   # V2 takes skill directories as path entries. Assemble the repo + typst skills
   # into one directory so a single entry covers them all.
-  combinedSkills = pkgs.runCommand "opencode-v2-skills" {} (
+  combinedSkills = pkgs.runCommand "opencode-skills" {} (
     lib.concatStringsSep "\n" (
       ["mkdir -p $out"]
       ++ lib.mapAttrsToList (name: path: "ln -s ${path} $out/${name}") shared.sharedSkills
@@ -53,18 +54,22 @@
     formatter = shared.formatters;
     skills = [combinedSkills];
     mcp.servers = v2McpServers;
-    # Server-side plugins the isolated V2 config loads. The V1 plugin list
-    # does not run under V2 (no V2 entrypoint, see above), so only the V2
-    # build of the quota plugin is listed: @slkiser/opencode-quota 5 peers
-    # @opencode/plugin 2.0.16 and renders its sidebar/toast surfaces through
-    # the V2 API. Pinned to the major because npm `latest` already moved to
-    # a release that dropped OpenCode 1, and the same jump could strand V2.
-    # The Zellij indicator is a CLI plugin and lives in cli.json instead.
-    # ntfy-mobile is added only where mobilePush is enabled; it is referenced
-    # by absolute path and kept outside the auto-discovered plugins/ directory
-    # so only the server role, which owns the event stream, loads it.
+    # Server-side package plugins. @slkiser/opencode-quota 5 peers
+    # @opencode/plugin 2.x and renders its sidebar/toast surfaces through the
+    # V2 API; the major is pinned because npm `latest` tracks a release that
+    # dropped V2's predecessor. opencode-tokenscope-v2 is the V2 port of
+    # TokenScope - the upstream @ramtinj95 package is V1-only - and registers
+    # both the `tokenscope` tool and the /tokenscope command itself, so no
+    # command file is deployed for it. The Zellij indicator is a CLI plugin and
+    # lives in cli.json instead. ntfy-mobile is added only where mobilePush is
+    # enabled; it is referenced by absolute path and kept outside the
+    # auto-discovered plugins/ directory so only the server role, which owns
+    # the event stream, loads it.
     plugins =
-      ["@slkiser/opencode-quota@5"]
+      [
+        "@slkiser/opencode-quota@5"
+        "@cheesecodestudio/opencode-tokenscope-v2"
+      ]
       ++ lib.optional cfg.mobilePush.enable {
         package = "${config.xdg.configHome}/${v2ConfigDir}/ntfy-mobile";
         options =
@@ -81,27 +86,24 @@
       };
   };
 
-  # The V2 terminal client owns a global cli.json. The patched indicator fork
-  # is referenced by absolute path and deliberately sits outside the
-  # auto-discovered plugins/ directory so the server role never loads it.
-  # The theme/session/diff settings mirror the stray V2 cli.json that an
-  # unisolated opencode2 run wrote into the V1 config directory; V1 itself
-  # never reads cli.json, so they exist only for the V2 TUI.
+  # The terminal client owns a global cli.json, which only the client role
+  # reads. The patched indicator fork is referenced by absolute path and
+  # deliberately sits outside the auto-discovered plugins/ directory so the
+  # server role never loads it.
   indicatorV2Dir = "${config.xdg.configHome}/${v2ConfigDir}/indicator-v2";
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
-    # CLI-only plugins, loaded by the terminal client and never by the
-    # server role. Only the Zellij indicator remains here: the status-line
-    # plugin was removed because its 1s heartbeat re-render exhausts the
-    # opentui TextBuffer handle pool and freezes the TUI. An A/B test with
-    # two concurrent `-c` sessions (full config vs. quota surfaces off vs.
-    # no status-line) crashed both status-line arms with
-    # "Failed to create TextBuffer" ~4:14 after start while the arm without
-    # the plugin survived the whole window, matching 19 historical crashes
-    # that all began with the plugin's introduction in 1b6dda9. The render
-    # leak itself is upstream (opentui #1493); until it is fixed the plugin
-    # must not come back.
+    # CLI-only plugins, loaded by the terminal client and never by the server
+    # role. Only the Zellij indicator remains here: the status-line plugin was
+    # removed because its 1s heartbeat re-render exhausts the opentui
+    # TextBuffer handle pool and freezes the TUI. An A/B test with two
+    # concurrent `-c` sessions (full config vs. quota surfaces off vs. no
+    # status-line) crashed both status-line arms with "Failed to create
+    # TextBuffer" ~4:14 after start while the arm without the plugin survived
+    # the whole window, matching 19 historical crashes that all began with the
+    # plugin's introduction in 1b6dda9. The render leak itself is upstream
+    # (opentui #1493); until it is fixed the plugin must not come back.
     plugins = [
       indicatorV2Dir
     ];
@@ -111,10 +113,10 @@
       scrollbar = false;
       thinking = "show";
     };
-    # Native attention is V2's notification path: system notifications
-    # plus sound for permission/question/error/done events. Per-event
-    # enablement is not configurable; notifications fire only when the
-    # terminal is unfocused, while sounds play regardless of focus.
+    # Native attention: system notifications plus sound for
+    # permission/question/error/done events. Per-event enablement is not
+    # configurable; notifications fire only when the terminal is unfocused,
+    # while sounds play regardless of focus.
     attention = {
       notifications = true;
       sound = true;
@@ -122,62 +124,60 @@
     animations = true;
   };
 
-  # The upstream V2 flake installs both bin/opencode and bin/opencode2 plus a
-  # share/zsh/site-functions/_opencode completion. Adding the package directly
-  # to home.packages collides with V1's `opencode` in home-manager-path
-  # (buildEnv rejects the duplicate subpaths). Expose only an `opencode2`
-  # entry point through a thin exec shim; the C launcher resolves its
-  # `.opencode-wrapped` payload from its own store directory, so exec by
-  # absolute path is required.
+  # The upstream flake ships one launcher that resolves its `.opencode-wrapped`
+  # payload from its own store directory, so it must be exec'd by absolute path.
+  # Both process families - the TUI and the shared systemd server - run through
+  # this script, so everything set here reaches every bash tool call the server
+  # executes.
   #
-  # OPENCODE_CONFIG_DIR is the only config-root override upstream V2 honors
-  # (packages/util/src/global.ts falls back to $XDG_CONFIG_HOME/opencode).
-  # Without it opencode2 reads the V1 ~/.config/opencode, whose `plugin` list
-  # is V1-only: those plugins ship no ./server entrypoint, their load failure
-  # aborts plugin generation and blocks agent registration, leaving the TUI
-  # without modes or a working model picker. XDG_CONFIG_HOME is deliberately
-  # not used: it would leak into every child process (bash tool calls, LSPs)
-  # spawned from opencode2 sessions. Launch opencode2 only through this PATH
-  # shim: `nix shell`, an absolute store path, or anything else that skips it
-  # starts opencode2 without the variable and silently falls back to the V1
-  # config above.
+  # OPENCODE_CONFIG_DIR pins the config root. Upstream falls back to
+  # $XDG_CONFIG_HOME/opencode, which is the retired V1 directory; XDG_CONFIG_HOME
+  # itself is deliberately not used because it would leak into every child
+  # process (bash tool calls, LSPs).
   #
-  # GITHUB_TOKEN is unset for the reason documented on the V1 wrapper
-  # (default.nix): the login shell exports a GitHub PAT and opencode
-  # synthesizes a github-copilot provider from it that the Copilot API
+  # GITHUB_TOKEN is unset because the login shell exports a GitHub PAT, from
+  # which opencode synthesizes a github-copilot provider that the Copilot API
   # rejects; the company tool is reserved for IntelliJ/CLI. gh authenticates
-  # through hosts.yml, so no part of the V2 tree needs the variable.
-  # Upstream builds `bin/opencode` and symlinks `bin/opencode2` at it; the exec
-  # shim below is the only entry point this module exposes.
+  # through hosts.yml, so nothing in this tree needs the variable.
   #
   # PATH carries the rip-backed rm shim and RIP_GRAVEYARD pins the graveyard, so
   # deletions made by assistant bash tool calls stay restorable
-  # (modules/home/tui/ai-assistants/safe-rm.nix). The V1 package received these
-  # from ai-assistants.safeRm.wrap; the V2 shim injects them instead of wrapping
-  # the package, because the upstream C launcher resolves its `.opencode-wrapped`
-  # payload from its own store directory and a second wrapper would sit between
-  # it and that payload. Both process families run through this shim - the TUI
-  # and the shared systemd server - so one injection covers every bash tool call
-  # the server executes on their behalf.
-  opencode2Package = inputs.opencode-v2.packages.${system}.opencode;
+  # (modules/home/tui/ai-assistants/safe-rm.nix). Env injection rather than
+  # ai-assistants.safeRm.wrap: a wrapper would sit between the C launcher and
+  # its payload.
+  opencodePackage = inputs.opencode-v2.packages.${system}.opencode;
 
-  opencode2 = pkgs.writeShellScriptBin "opencode2" ''
+  launcher = pkgs.writeShellScript "opencode-launcher" ''
     exec env -u GITHUB_TOKEN \
       OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" \
       RIP_GRAVEYARD="${config.ai-assistants.safeRm.graveyard.path}" \
       PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" \
-      ${opencode2Package}/bin/opencode2 "$@"
+      ${opencodePackage}/bin/opencode2 "$@"
+  '';
+
+  # Both entry points resolve to the same launcher. Upstream builds `opencode`
+  # and symlinks `opencode2` at it; the distinction is kept only because `oc`
+  # and muscle memory use `opencode2` while the nixvim integration and other
+  # tools invoke `opencode`.
+  opencode = pkgs.runCommand "opencode" {} ''
+    mkdir -p $out/bin
+    ln -s ${launcher} $out/bin/opencode
+    ln -s ${launcher} $out/bin/opencode2
   '';
 in {
-  options.ai-assistants.opencodeV2 = {
-    enable = lib.mkEnableOption "OpenCode 2 beta (opencode2) with a config rendered from the shared source";
+  options.ai-assistants.opencode = {
+    package = lib.mkOption {
+      type = lib.types.package;
+      readOnly = true;
+      description = "Launcher package exposing opencode and opencode2 with the fleet config root, graveyard path and rm shim applied";
+    };
 
     # Server-side push for the phone-facing server. Enabled only on the host
     # whose server the phone can reach (see the Tailscale Serve target in
     # modules/system/homelab/opencode-web.nix); the per-host loopback servers
     # the desktop, WSL and nvim clients attach to stay silent.
     mobilePush = {
-      enable = lib.mkEnableOption "ntfy push notifications for the phone-facing OpenCode 2 server";
+      enable = lib.mkEnableOption "ntfy push notifications for the phone-facing OpenCode server";
       ntfyUrl = lib.mkOption {
         type = lib.types.str;
         default = "http://127.0.0.1:2586";
@@ -201,21 +201,22 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    home.packages = [opencode2];
+  config = {
+    ai-assistants.opencode.package = opencode;
 
-    # The shared server every V2 client attaches to; default.nix disables V1's
-    # programs.opencode.web for this host so the two never race for the port.
-    # `serve --service` registers itself as the user's background service, so
-    # the TUI, `oc` and the nixvim integration discover this exact URL and
-    # password instead of auto-starting a second server on a random port. Only
-    # the loopback bind and the fixed port are pinned here, for the Tailscale
-    # Serve target in modules/system/homelab/opencode-web.nix. PATH mirrors the
-    # V1 launcher: the server hands its environment to every bash tool it runs,
-    # so the user profile must stay resolvable under systemd.
+    home.packages = [opencode];
+
+    # The shared server every client attaches to. `serve --service` registers
+    # itself as the user's background service, so the TUI, `oc` and the nixvim
+    # integration discover this exact URL and password instead of auto-starting
+    # a second server on a random port. Only the loopback bind and the fixed
+    # port are pinned here, for the Tailscale Serve target in
+    # modules/system/homelab/opencode-web.nix. PATH must stay resolvable under
+    # systemd because the server hands its environment to every bash tool it
+    # runs; the launcher prefixes the rm shim onto it.
     systemd.user.services.opencode-web = {
       Unit = {
-        Description = "OpenCode 2 shared server (API and web UI)";
+        Description = "OpenCode shared server (API and web UI)";
         After = ["network.target"];
       };
       Service = {
@@ -224,7 +225,7 @@ in {
         # systemd rejects a Type=simple unit with more than one ("more than
         # one ExecStart= setting"). The option coerces the string into a
         # one-element list, which is exactly what the unit needs.
-        ExecStart = "${opencode2}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
+        ExecStart = "${opencode}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
         Environment = [
           "PATH=${config.home.profileDirectory}/bin:/run/wrappers/bin:/run/current-system/sw/bin"
         ];
@@ -234,19 +235,16 @@ in {
       Install.WantedBy = ["default.target"];
     };
 
-    # Belt and braces for launches that bypass the exec shim above (`nix
-    # shell`, an absolute store path, any tool that inherits a bare PATH):
-    # without the variable opencode2 silently unions the V1 config, whose
-    # V1-only plugin list aborts V2 plugin generation. Exporting it for the
-    # whole session is safe because the V1 wrapper unsets it for its own
-    # process tree (default.nix) and V1 itself never reads it.
+    # Belt and braces for launches that bypass the launcher (`nix shell`, an
+    # absolute store path, any tool that inherits a bare PATH): without the
+    # variable they read the retired ~/.config/opencode instead of this tree.
     home.sessionVariables.OPENCODE_CONFIG_DIR = "${config.xdg.configHome}/${v2ConfigDir}";
 
     xdg.configFile = {
       "${v2ConfigDir}/opencode.jsonc".text = builtins.toJSON v2Config;
       "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
       "${v2ConfigDir}/AGENTS.md".text = shared.combinedRules;
-      "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgentV2;
+      "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
       # Quota policy from shared.nix, scoped to the Go subscription. The Zen
       # gateway (provider id `opencode`, synonym `opencode-zen`) is excluded
       # deliberately: only free models bill against it, and neither the quota

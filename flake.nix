@@ -167,19 +167,16 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # OpenCode 2 beta, pinned to a tag for reproducibility. The flake builds
-    # packages/cli as the `opencode2` binary (distinct from V1's `opencode`).
-    # Beta: server and plugin APIs may change, and its data store
-    # (`opencode.db`) is separate from V1's (`opencode-stable.db`).
+    # OpenCode, pinned to a tag for reproducibility. The flake builds
+    # packages/cli as the `opencode2` binary; the fleet ships one harness, so
+    # nothing here depends on a V1 build being present.
     #
     # Tag, not a floating rev: only the v2 lineage ships the `packages/cli`
-    # build the shim depends on (V1's nix track builds `packages/opencode`,
-    # and the `2.0` branch is a stale exploration snapshot without the
-    # opencode2 symlink). The shim (`OPENCODE_CONFIG_DIR`) requires 2.0.9:
-    # earlier v2 builds compute the global config root purely from
-    # XDG_CONFIG_HOME and always union the V1 config dir, whose V1-only
-    # `plugin` list aborts V2 plugin generation and leaves the TUI without
-    # agents or a model picker. Bumps stay tag-only.
+    # build the launcher depends on (the `2.0` branch is a stale exploration
+    # snapshot without the opencode2 symlink). The launcher
+    # (`OPENCODE_CONFIG_DIR`) requires 2.0.9: earlier v2 builds compute the
+    # global config root purely from XDG_CONFIG_HOME, ignoring the override and
+    # reading a config root this module does not manage. Bumps stay tag-only.
     #
     # v2.0.23 repaired the packaging defects that needed an overrideAttrs in
     # the v2 module until then: nix/opencode.nix now generates shell

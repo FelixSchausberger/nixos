@@ -6,7 +6,6 @@
   # HM host modules get nixvim's helpers from config.lib; the lib module arg
   # is plain Nixpkgs lib without the nixvim extension.
   inherit (config.lib.nixvim) mkRaw;
-  v2 = config.ai-assistants.opencodeV2.enable;
 in {
   programs.nixvim = {
     plugins.opencode = {
@@ -29,24 +28,18 @@ in {
       };
 
       # Connect to the same shared server as the oc function and the web UI
-      # instead of spawning an instance from inside Neovim. On V2 the URL and
-      # the basic-auth password come from the running service registration
-      # (lua/config/opencode_server.lua); V1 has no authentication, so the
-      # fixed URL is all it needs.
-      settings.server =
-        if v2
-        then {
-          url = mkRaw ''require("config.opencode_server").url()'';
-          password = mkRaw ''require("config.opencode_server").password()'';
-        }
-        else {
-          url = "http://127.0.0.1:4096";
-        };
+      # instead of spawning an instance from inside Neovim. The URL and the
+      # basic-auth password come from the running service registration
+      # (lua/config/opencode_server.lua).
+      settings.server = {
+        url = mkRaw ''require("config.opencode_server").url()'';
+        password = mkRaw ''require("config.opencode_server").password()'';
+      };
     };
 
-    # The unwrapped nixpkgs opencode would shadow the wrapped package
-    # (OPENCODE_DB pin and wrapper environment) on nvim's PATH prefix.
-    dependencies.opencode.package = config.programs.opencode.package;
+    # The unwrapped nixpkgs opencode would shadow the fleet launcher (config
+    # root, graveyard path and rm shim) on nvim's PATH prefix.
+    dependencies.opencode.package = config.ai-assistants.opencode.package;
 
     # Editor integration: ask with context, pick sessions/prompts, and send
     # ranges or lines from the buffer.

@@ -9,19 +9,14 @@
   # the on-demand niri projector session (see ./niri.nix). The full desktop app
   # suite is deliberately not imported here.
 
-  # OpenCode 2 beta (opencode2). Enabled here because the shared `homelab`
-  # Zellij session and the remote (phone) attach path live on m920q, so the
-  # V2 parallel-agent workflow must run on this host. See
-  # modules/home/tui/ai-assistants/opencode/v2.nix.
-  ai-assistants.opencodeV2 = {
+  # Push session events to the phone over the self-hosted ntfy instance. Scoped
+  # to m920q because it is the only host whose server the phone can reach - the
+  # shared `homelab` Zellij session and the remote attach path live here - while
+  # the per-host loopback servers on desktop and WSL stay silent. The harness
+  # itself takes no option; see modules/home/tui/ai-assistants/opencode/v2.nix.
+  ai-assistants.opencode.mobilePush = {
     enable = true;
-    # Push session events to the phone over the self-hosted ntfy instance.
-    # Scoped to this host because it is the only one whose server the phone can
-    # reach; the per-host loopback servers on desktop and WSL stay silent.
-    mobilePush = {
-      enable = true;
-      clickBase = "https://m920q.tailf2f0ca.ts.net:8444";
-    };
+    clickBase = "https://m920q.tailf2f0ca.ts.net:8444";
   };
 
   features = {
