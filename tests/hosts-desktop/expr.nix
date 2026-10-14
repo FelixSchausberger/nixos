@@ -4,6 +4,14 @@
   inherit (flake.nixosConfigurations.desktop) config;
 
   hasAssertionWithMessage = message: builtins.any (assertion: (assertion.message or "") == message) config.assertions;
+
+  # Matches a hook whose command vector ends up invoking `shutdown` (paths are
+  # absolute because Moonshine resolves hook programs with `which` against the
+  # unit PATH and silently drops unresolvable ones).
+  hasShutdownHook = hooks:
+    builtins.any
+    (cmd: builtins.match ".*/shutdown.*" (builtins.concatStringsSep " " cmd) != null)
+    hooks;
 in {
   # Test: Host name is set correctly
   hostname = config.networking.hostName;
@@ -52,6 +60,25 @@ in {
     builtins.any
     (cmd: builtins.match ".*/tmp/.X11-unix" cmd != null)
     config.systemd.services.moonshine.serviceConfig.ExecStartPre;
+
+  # Power hooks (modules.system.moonshine.powerOff): a stream start cancels a
+  # pending power-off and a stream end schedules one. The commands must be
+  # absolute paths (Moonshine resolves hook programs with `which` against the
+  # unit PATH and silently drops unresolvable ones) and run through the
+  # NOPASSWD sudo rule a headless host without a login session needs.
+  moonshine_power_off_enabled = config.modules.system.moonshine.powerOff.enable;
+  steam_tile_power_hooks = let
+    tile = builtins.head (builtins.filter (app: app.title == "Steam") config.services.moonshine.settings.application);
+  in
+    hasShutdownHook tile.pre_command && hasShutdownHook tile.post_command;
+  scanner_power_hooks = let
+    scan = builtins.head config.services.moonshine.settings.application_scanner;
+  in
+    hasShutdownHook scan.pre_command && hasShutdownHook scan.post_command;
+  desktop_shutdown_sudo_nopasswd =
+    builtins.any
+    (rule: builtins.any (cmd: cmd.command == "/run/current-system/sw/bin/shutdown" && builtins.elem "NOPASSWD" cmd.options) rule.commands)
+    config.security.sudo.extraRules;
 
   # GLideN64 renders fullscreen at its configured resolution (640x480 default)
   # without scaling to the window, so N64 tiles must route through the

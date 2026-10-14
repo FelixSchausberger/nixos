@@ -23,6 +23,32 @@
   # "No boxart defined" warning per launch). Round app icon shipped by the
   # Steam client itself; verified present at this path in the nixpkgs build.
   steamBoxart = "${pkgs.steam}/share/icons/hicolor/256x256/apps/steam.png";
+
+  # Each streaming session is a power-state transition: pre_command (systemd
+  # ExecStartPre on the session's transient unit) cancels a pending power-off
+  # and post_command (ExecStopPost) schedules one. That is the entire idle
+  # mechanism: no polling timer and no activity probe, because Moonshine
+  # already signals session start and end. A game switch starts a new session,
+  # cancelling the previous session's timer.
+  #
+  # Absolute paths are mandatory: Moonshine resolves hook programs with `which`
+  # against the unit PATH (the nixpkgs module replaces it with xwayland + the
+  # configured extraPackages) and silently drops a hook it cannot resolve.
+  # `shutdown -c` exits 0 even when nothing is scheduled, so the ExecStartPre
+  # cannot fail the launch. Both calls run through the host's NOPASSWD sudo
+  # rule (a headless host has no login session for polkit to authorize).
+  applyPowerHooks = app:
+    if !cfg.powerOff.enable
+    then app
+    else let
+      cancel = ["/run/current-system/sw/bin/sudo" "-n" "/run/current-system/sw/bin/shutdown" "-c"];
+      arm = ["/run/current-system/sw/bin/sudo" "-n" "/run/current-system/sw/bin/shutdown" "+${toString cfg.powerOff.delayMinutes}"];
+    in
+      app
+      // {
+        pre_command = (app.pre_command or []) ++ [cancel];
+        post_command = (app.post_command or []) ++ [arm];
+      };
 in {
   options.modules.system.moonshine = {
     enable = lib.mkEnableOption "Moonshine game streaming server (Moonlight protocol)";
@@ -41,6 +67,16 @@ in {
         Lets other modules (e.g. emulation.nix) contribute launchers without
         touching the Steam entry.
       '';
+    };
+
+    powerOff = {
+      enable = lib.mkEnableOption "power off the host after a streaming session ends (a new session cancels the pending power-off)";
+
+      delayMinutes = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 15;
+        description = "Minutes without an active streaming session before the host powers off";
+      };
     };
   };
 
@@ -79,32 +115,35 @@ in {
         compositor.keyboard.layout = "de";
 
         application =
-          [
-            {
-              title = "Steam";
-              boxart = "${steamBoxart}";
-              command = [
-                "/run/current-system/sw/bin/steam"
-                "steam://open/bigpicture"
-              ];
-              # Steam cold start exceeds the 2s upstream default (observed
-              # session-launch timeout in the journal); allow 20s.
-              launch_timeout_secs = 20;
-              # Journal logging keeps failed session launches diagnosable
-              # (the default discards all application output).
-              stdout = "journal";
-              stderr = "journal";
-              pre_command = [
-                ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
-              ];
-            }
-          ]
-          ++ cfg.extraApplications;
+          map applyPowerHooks
+          (
+            [
+              {
+                title = "Steam";
+                boxart = "${steamBoxart}";
+                command = [
+                  "/run/current-system/sw/bin/steam"
+                  "steam://open/bigpicture"
+                ];
+                # Steam cold start exceeds the 2s upstream default (observed
+                # session-launch timeout in the journal); allow 20s.
+                launch_timeout_secs = 20;
+                # Journal logging keeps failed session launches diagnosable
+                # (the default discards all application output).
+                stdout = "journal";
+                stderr = "journal";
+                pre_command = [
+                  ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
+                ];
+              }
+            ]
+            ++ cfg.extraApplications
+          );
 
         # Per-game tiles straight in Moonlight: launch titles directly instead
         # of navigating Big Picture on touch. Upstream default scanner with
         # NixOS paths; same single-instance shutdown guard as above.
-        application_scanner = [
+        application_scanner = map applyPowerHooks [
           {
             type = "steam";
             library = "$HOME/.local/share/Steam";
