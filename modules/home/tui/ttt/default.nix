@@ -314,4 +314,16 @@ in {
       ${pkgs.coreutils}/bin/install -D -m 0644 ${tttRegistryFile} "$registry"
     fi
   '';
+
+  # TTT opens as a tab in the herdr workspace through its herdr-plugin; prefix+e
+  # is already herdr's edit_scrollback default, so the editor takes
+  # prefix+shift+e.
+  tui.herdr.commandKeys = lib.mkAfter [
+    {
+      key = "prefix+shift+e";
+      type = "plugin_action";
+      command = "ttt.editor.open";
+      description = "Open TTT editor";
+    }
+  ];
 }
