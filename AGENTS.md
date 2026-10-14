@@ -131,15 +131,18 @@ in this repository: `repo-audit` (flake audit, `.opencode/skills/`) and
 
 ## AI Assistant Configuration
 
-Configuration lives in `modules/home/tui/ai-assistants/opencode/`: `shared.nix`
-holds the values both harnesses need (model, permissions, formatters, skills,
-behavior context, agent text), `default.nix` renders the V1 config, and `v2.nix`
-renders the opt-in OpenCode 2 beta config (`ai-assistants.opencodeV2.enable`)
-into `~/.config/opencode-v2/opencode/`. V2 is isolated because it loads the V1
-plugin list by union and V1-only plugins have no V2 entrypoint; its credentials
-are database-backed, so `opencode2 auth login <provider>` is needed once.
+Configuration lives in `modules/home/tui/ai-assistants/opencode/`:
+`shared.nix` is the single source for the harness (model, permissions,
+formatters, skills, behavior context, agent text); `default.nix` holds the
+harness-agnostic shell integration (`oc`, the GitHub token export, sops
+secrets); `v2.nix` renders the config for `ai-assistants.opencode`
+(`mobilePush` is its only host-scoped option) into
+`~/.config/opencode-v2/opencode/`. The config root deliberately sits outside the
+canonical `~/.config/opencode`, which still holds unmanaged leftovers from the
+retired V1 tree. Credentials are database-backed, so `opencode auth login
+<provider>` is needed once.
 
-Launch `opencode2` through the PATH shim only: `nix shell` or an absolute store
-path skips `OPENCODE_CONFIG_DIR`, and the process silently falls back to the V1
-config, whose V1-only plugins abort V2's plugin generation and leave every
-registry (model picker included) empty.
+Launch OpenCode through the launcher only: it is exposed as both `opencode` and
+`opencode2`, and it is what pins the config root, the graveyard and the rm shim.
+`nix shell` or an absolute store path skips it and the process silently reads
+the retired config root instead.

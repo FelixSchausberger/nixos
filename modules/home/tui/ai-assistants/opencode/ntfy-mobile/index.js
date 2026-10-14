@@ -8,9 +8,9 @@
 // nvim clients attach to their own loopback servers and never publish. See
 // modules/system/homelab/opencode-web.nix.
 //
-// Event names follow the V2 event stream used by the Herdr integration
-// (opencode/herdr-agent-state.js). Child (subagent) sessions are skipped so one
-// turn does not fan out into several pushes.
+// Event names follow the V2 event stream, the same stream the herdr
+// agent-state integration consumes. Child (subagent) sessions are skipped so
+// one turn does not fan out into several pushes.
 import { readFileSync } from "node:fs"
 
 // Plugin.define from @opencode/plugin is an identity helper, and a

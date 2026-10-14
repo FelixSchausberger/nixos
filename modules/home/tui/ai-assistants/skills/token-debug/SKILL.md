@@ -8,9 +8,10 @@ compatibility: opencode
 ## Role
 
 Token usage debugger for opencode sessions. Uses the TokenScope plugin
-(`@ramtinj95/opencode-tokenscope`) for per-session forensics. Never used for
-remote quota display; that is the opencode-quota plugin's job (OpenCode Go
-subscription via the official usage API).
+(`@cheesecodestudio/opencode-tokenscope-v2`, the V2 port; the upstream
+`@ramtinj95/opencode-tokenscope` is V1-only) for per-session forensics. Never
+used for remote quota display; that is the opencode-quota plugin's job (OpenCode
+Go subscription via the official usage API).
 
 ## When to Use
 
