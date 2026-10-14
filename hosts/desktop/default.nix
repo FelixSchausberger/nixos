@@ -141,13 +141,20 @@ in {
     watchdogKernelModules = ["sp5100_tco"];
   };
 
-  # Allow remote power off from m920q without password prompt
+  # Passwordless power control for the headless host, which has no login
+  # session for polkit to authorize against: poweroff is the m920q's
+  # `desktop-power off` action, shutdown is Moonshine's stream hooks (a stream
+  # end schedules `shutdown +15`, a new stream cancels it with `shutdown -c`).
   security.sudo.extraRules = [
     {
       users = [inputs.self.lib.user];
       commands = [
         {
           command = "/run/current-system/sw/bin/poweroff";
+          options = ["NOPASSWD"];
+        }
+        {
+          command = "/run/current-system/sw/bin/shutdown";
           options = ["NOPASSWD"];
         }
       ];
@@ -180,7 +187,12 @@ in {
   # per-stream compositor always launches the primary Steam instance
   # (Steam is single-instance per user; a running desktop Steam would
   # steal the steam:// URL and break the stream — upstream issue #134).
-  modules.system.moonshine.enable = true;
+  # powerOff schedules the idle shutdown once a stream (or the game inside it)
+  # ends, so a wake-for-gaming session never leaves the ~52 W desktop idling.
+  modules.system.moonshine = {
+    enable = true;
+    powerOff.enable = true;
+  };
   modules.system.gaming.enable = true;
   modules.system.emulation.enable = true;
 

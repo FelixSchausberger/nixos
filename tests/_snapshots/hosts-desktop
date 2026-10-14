@@ -4,6 +4,7 @@
   amd_gpu_enabled = true;
   amd_gpu_variant = "desktop";
   auto_start_session = false;
+  desktop_shutdown_sudo_nopasswd = true;
   emulator_tiles_use_gamescope = true;
   fzero_gx_forces_fullscreen = true;
   fzero_gx_uses_gamescope = true;
@@ -18,12 +19,15 @@
   is_gui = true;
   maintenance_enabled = true;
   monitoring_enabled = true;
+  moonshine_power_off_enabled = true;
   moonshine_x11_socket_guard = true;
   node_exporter_enabled = true;
   qmk_enabled = true;
   rapl_energy_readable = true;
   rom_tiles_have_boxart = true;
+  scanner_power_hooks = true;
   session_on_demand_enabled = true;
+  steam_tile_power_hooks = true;
   user_exists = true;
   uwsm_disabled = true;
   vitals_daemon_default_target = true;
