@@ -2788,11 +2788,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1791467078,
-        "narHash": "sha256-oEs6KKJt6R6X/rO7a6C3lFgmpK622r937n7GZab1Qhc=",
+        "lastModified": 1791979138,
+        "narHash": "sha256-rBbSJCbFUAvNUb4zTkfM+/B0BXoO+nGNkZX7SFTbKvY=",
         "owner": "FelixSchausberger",
         "repo": "vitals",
-        "rev": "352b3a0d8fbd834ecf678ca457104cfd57cdc925",
+        "rev": "b1fa4deab0b4ee13182cb0ceed3f4daaf18347e3",
         "type": "github"
       },
       "original": {
