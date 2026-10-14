@@ -108,6 +108,12 @@ in {
     };
 
     graveyard = {
+      path = lib.mkOption {
+        type = lib.types.path;
+        readOnly = true;
+        description = "Directory holding the persistent rip graveyard shared by assistant shells and interactive restores";
+      };
+
       maxAgeDays = lib.mkOption {
         type = lib.types.int;
         default = 30;
@@ -132,6 +138,7 @@ in {
     ai-assistants.safeRm = {
       package = shimPackage;
       wrap = wrapWithSafeRm;
+      graveyard.path = graveyard;
     };
 
     home.packages = [pkgs.rip2];
