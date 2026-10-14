@@ -149,10 +149,24 @@
   # through hosts.yml, so no part of the V2 tree needs the variable.
   # Upstream builds `bin/opencode` and symlinks `bin/opencode2` at it; the exec
   # shim below is the only entry point this module exposes.
+  #
+  # PATH carries the rip-backed rm shim and RIP_GRAVEYARD pins the graveyard, so
+  # deletions made by assistant bash tool calls stay restorable
+  # (modules/home/tui/ai-assistants/safe-rm.nix). The V1 package received these
+  # from ai-assistants.safeRm.wrap; the V2 shim injects them instead of wrapping
+  # the package, because the upstream C launcher resolves its `.opencode-wrapped`
+  # payload from its own store directory and a second wrapper would sit between
+  # it and that payload. Both process families run through this shim - the TUI
+  # and the shared systemd server - so one injection covers every bash tool call
+  # the server executes on their behalf.
   opencode2Package = inputs.opencode-v2.packages.${system}.opencode;
 
   opencode2 = pkgs.writeShellScriptBin "opencode2" ''
-    exec env -u GITHUB_TOKEN OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" ${opencode2Package}/bin/opencode2 "$@"
+    exec env -u GITHUB_TOKEN \
+      OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" \
+      RIP_GRAVEYARD="${config.ai-assistants.safeRm.graveyard.path}" \
+      PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" \
+      ${opencode2Package}/bin/opencode2 "$@"
   '';
 in {
   options.ai-assistants.opencodeV2 = {
