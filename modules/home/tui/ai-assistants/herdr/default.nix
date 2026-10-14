@@ -4,13 +4,74 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  # One [[keys.command]] block per contributed binding, rendered from the
+  # structured option below. Tools own their own key next to their own config
+  # instead of editing this module's config string. Optional fields are omitted
+  # rather than emitted empty: herdr rejects an unknown or blank value and falls
+  # back to a safe default with a startup warning.
+  renderCommandKey = key: let
+    fields =
+      ["key" "type" "command"]
+      ++ lib.optionals (key.description != null) ["description"]
+      ++ lib.optionals (key.width != null) ["width"]
+      ++ lib.optionals (key.height != null) ["height"];
+  in
+    ["[[keys.command]]"]
+    ++ map (field: "${field} = ${builtins.toJSON key.${field}}") fields;
+in {
   options.tui.herdr = {
     enable =
       lib.mkEnableOption "herdr terminal multiplexer for AI agents"
       // {
         default = true;
       };
+
+    # herdr's only extension point for third-party tools without a plugin is a
+    # custom command keybinding, and a keybinding's target may not exist yet when
+    # this module renders the config. Contribute them here so a tool stays
+    # self-contained.
+    commandKeys = lib.mkOption {
+      default = [];
+      description = ''
+        [[keys.command]] entries appended to herdr/config.toml, in the order the
+        contributing modules are merged.
+      '';
+      type = lib.types.listOf (lib.types.submodule {
+        options = {
+          key = lib.mkOption {
+            type = lib.types.str;
+            description = "Keybinding string, for example prefix+shift+e.";
+          };
+          type = lib.mkOption {
+            type = lib.types.enum ["popup" "pane" "shell" "plugin_action"];
+            description = ''
+              popup and pane run a shell command and close when it exits,
+              shell runs detached, plugin_action invokes an installed plugin.
+            '';
+          };
+          command = lib.mkOption {
+            type = lib.types.str;
+            description = "Command line for a shell/popup/pane binding, or a plugin action id.";
+          };
+          description = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Label shown in the keybind help panel (prefix+?).";
+          };
+          width = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Popup width in terminal cells or as a percentage, for example \"95%\".";
+          };
+          height = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Popup height in terminal cells or as a percentage.";
+          };
+        };
+      });
+    };
   };
 
   config = lib.mkIf config.tui.herdr.enable {
@@ -30,18 +91,13 @@
     '';
 
     # herdr ships a built-in catppuccin theme, so it needs no generated palette
-    # to match the fleet. TTT opens as a tab in the current workspace through
-    # its plugin action; prefix+e is already herdr's edit_scrollback default,
-    # so the editor takes prefix+shift+e.
-    xdg.configFile."herdr/config.toml".text = ''
-      [theme]
-      name = "catppuccin"
-
-      [[keys.command]]
-      key = "prefix+shift+e"
-      type = "plugin_action"
-      command = "ttt.editor.open"
-      description = "Open TTT editor"
-    '';
+    # to match the fleet. The theme leads the file; contributed command
+    # bindings follow, separated by a blank line.
+    xdg.configFile."herdr/config.toml".text =
+      lib.concatStringsSep "\n" (
+        ["[theme]" ''name = "catppuccin"'']
+        ++ lib.concatMap (key: [""] ++ renderCommandKey key) config.tui.herdr.commandKeys
+      )
+      + "\n";
   };
 }

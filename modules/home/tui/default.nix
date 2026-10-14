@@ -12,6 +12,7 @@ in {
     ./editors # Shared language data + default-editor policy (nvedit -> Neovim)
     ./nixvim # Neovim configuration (nixvim): LSP, format-on-save, treesitter
     ./ttt # Terminal Text Tool: the terminal IDE herdr opens as its editor pane
+    ./tuicr # Code review TUI: reviews local diffs and forge PRs, exports to GitHub/GitLab via CLI
     ./yazi # Blazing fast terminal file manager written in Rust, based on async I/O
     ./bluetui.nix # Bluetooth TUI management tool (kept separate due to config)
     ./ai-assistants # AI coding assistants (Claude Code, OpenCode) with shared MCP servers and behaviors
