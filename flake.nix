@@ -173,10 +173,7 @@
     #
     # Tag, not a floating rev: only the v2 lineage ships the `packages/cli`
     # build the launcher depends on (the `2.0` branch is a stale exploration
-    # snapshot without the opencode2 symlink). The launcher
-    # (`OPENCODE_CONFIG_DIR`) requires 2.0.9: earlier v2 builds compute the
-    # global config root purely from XDG_CONFIG_HOME, ignoring the override and
-    # reading a config root this module does not manage. Bumps stay tag-only.
+    # snapshot without the opencode2 symlink). Bumps stay tag-only.
     #
     # v2.0.23 repaired the packaging defects that needed an overrideAttrs in
     # the v2 module until then: nix/opencode.nix now generates shell

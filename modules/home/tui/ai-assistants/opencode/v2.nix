@@ -13,28 +13,24 @@
   # renderer to keep in sync.
   shared = import ./shared.nix {inherit config lib pkgs;};
 
-  # The config root is kept out of the canonical ~/.config/opencode on purpose:
-  # that directory still holds imperative leftovers from the retired V1 tree
-  # (node_modules, bun.lock, tui.json, stray service-prod.json) which this
-  # module no longer manages and must not resurrect. Moving the V2 tree into
-  # the canonical location is a separate change.
-  v2ConfigDir = "opencode-v2/opencode";
+  # The canonical config root.
+  configDir = "opencode";
 
   # programs.mcp.servers reshaped into V2's mcp.servers form (command array +
   # environment). File-backed env values become the {file:path} token V2
   # substitutes at config load.
-  v2McpEnv = lib.mapAttrs (
+  mcpEnv = lib.mapAttrs (
     _: value:
       if lib.isAttrs value && value ? file
       then "{file:${value.file}}"
       else value
   );
 
-  v2McpServers =
+  mcpServers =
     lib.mapAttrs (_name: server: {
       type = "local";
       command = [server.command] ++ (server.args or []);
-      environment = v2McpEnv (server.env or {});
+      environment = mcpEnv (server.env or {});
     })
     config.programs.mcp.servers;
 
@@ -47,7 +43,7 @@
     )
   );
 
-  v2Config = {
+  opencodeConfig = {
     "$schema" = "https://opencode.ai/config.json";
     inherit (shared) model;
     permissions = shared.permissionRules;
@@ -56,7 +52,7 @@
     # shim (see agentShell above).
     shell = "${agentShell}/bin/bash";
     skills = [combinedSkills];
-    mcp.servers = v2McpServers;
+    mcp.servers = mcpServers;
     # Server-side package plugins. @slkiser/opencode-quota 5 peers
     # @opencode/plugin 2.x and renders its sidebar/toast surfaces through the
     # V2 API; the major is pinned because npm `latest` tracks a release that
@@ -74,7 +70,7 @@
         "@cheesecodestudio/opencode-tokenscope-v2"
       ]
       ++ lib.optional cfg.mobilePush.enable {
-        package = "${config.xdg.configHome}/${v2ConfigDir}/ntfy-mobile";
+        package = "${config.xdg.configHome}/${configDir}/ntfy-mobile";
         options =
           {
             url = cfg.mobilePush.ntfyUrl;
@@ -93,7 +89,7 @@
   # reads. The patched indicator fork is referenced by absolute path and
   # deliberately sits outside the auto-discovered plugins/ directory so the
   # server role never loads it.
-  indicatorV2Dir = "${config.xdg.configHome}/${v2ConfigDir}/indicator-v2";
+  indicatorDir = "${config.xdg.configHome}/${configDir}/indicator-v2";
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
@@ -108,7 +104,7 @@
     # plugin's introduction in 1b6dda9. The render leak itself is upstream
     # (opentui #1493); until it is fixed the plugin must not come back.
     plugins = [
-      indicatorV2Dir
+      indicatorDir
     ];
     diffs.wrap = "word";
     session = {
@@ -130,13 +126,7 @@
   # The upstream flake ships one launcher that resolves its `.opencode-wrapped`
   # payload from its own store directory, so it must be exec'd by absolute path.
   # Both process families - the TUI and the shared systemd server - run through
-  # this script, so everything set here reaches every bash tool call the server
-  # executes.
-  #
-  # OPENCODE_CONFIG_DIR pins the config root. Upstream falls back to
-  # $XDG_CONFIG_HOME/opencode, which is the retired V1 directory; XDG_CONFIG_HOME
-  # itself is deliberately not used because it would leak into every child
-  # process (bash tool calls, LSPs).
+  # this script.
   #
   # GITHUB_TOKEN is unset because the login shell exports a GitHub PAT, from
   # which opencode synthesizes a github-copilot provider that the Copilot API
@@ -171,7 +161,6 @@
 
   launcher = pkgs.writeShellScript "opencode-launcher" ''
     exec env -u GITHUB_TOKEN \
-      OPENCODE_CONFIG_DIR="${config.xdg.configHome}/${v2ConfigDir}" \
       RIP_GRAVEYARD="${config.ai-assistants.safeRm.graveyard.path}" \
       PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" \
       ${opencodePackage}/bin/opencode2 "$@"
@@ -257,16 +246,23 @@ in {
       Install.WantedBy = ["default.target"];
     };
 
-    # Belt and braces for launches that bypass the launcher (`nix shell`, an
-    # absolute store path, any tool that inherits a bare PATH): without the
-    # variable they read the retired ~/.config/opencode instead of this tree.
-    home.sessionVariables.OPENCODE_CONFIG_DIR = "${config.xdg.configHome}/${v2ConfigDir}";
-
     xdg.configFile = {
-      "${v2ConfigDir}/opencode.jsonc".text = builtins.toJSON v2Config;
-      "${v2ConfigDir}/cli.json".text = builtins.toJSON cliConfig;
-      "${v2ConfigDir}/AGENTS.md".text = shared.combinedRules;
-      "${v2ConfigDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
+      "${configDir}/opencode.jsonc".text = builtins.toJSON opencodeConfig;
+      "${configDir}/cli.json".text = builtins.toJSON cliConfig;
+      "${configDir}/AGENTS.md".text = shared.combinedRules;
+      "${configDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
+      # TokenScope reads this from the canonical $XDG_CONFIG_HOME/opencode
+      # rather than the plugin host, so declaring it here keeps the fleet's
+      # flags explicit instead of inheriting the plugin's defaults. The schema
+      # is partial: unlisted keys fall back to the plugin's own defaults.
+      "${configDir}/tokenscope-config.json".text = builtins.toJSON {
+        enableContextBreakdown = true;
+        enableToolSchemaEstimation = true;
+        enableCacheEfficiency = true;
+        enableSubagentAnalysis = true;
+        enableDetailedSubagentCostBreakdown = false;
+        enableSkillAnalysis = true;
+      };
       # Quota policy from shared.nix, scoped to the Go subscription. The Zen
       # gateway (provider id `opencode`, synonym `opencode-zen`) is excluded
       # deliberately: only free models bill against it, and neither the quota
@@ -274,13 +270,13 @@ in {
       # percentage - only balance, spend and a budget percent that needs a
       # USD monthly limit. A balance row is useless when nothing is planned
       # to be spent, so no Zen rows are rendered.
-      "${v2ConfigDir}/opencode-quota/quota-toast.json".text = builtins.toJSON (
+      "${configDir}/opencode-quota/quota-toast.json".text = builtins.toJSON (
         shared.quotaToast
         // {enabledProviders = ["opencode-go"];}
       );
-      "${v2ConfigDir}/indicator-v2".source = ./zellij-indicator-v2;
+      "${configDir}/indicator-v2".source = ./zellij-indicator-v2;
       # Server-side push plugin; listed above only when mobilePush is enabled.
-      "${v2ConfigDir}/ntfy-mobile".source = ./ntfy-mobile;
+      "${configDir}/ntfy-mobile".source = ./ntfy-mobile;
     };
   };
 }
