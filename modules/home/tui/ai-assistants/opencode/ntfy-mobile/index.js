@@ -11,6 +11,13 @@
 // Event names follow the V2 event stream, the same stream the herdr
 // agent-state integration consumes. Child (subagent) sessions are skipped so
 // one turn does not fan out into several pushes.
+//
+// Scoping is per *server*, and cannot be per *client*: nothing in the V2 API,
+// the event payload, or the session tables records which client a turn came
+// from, so a phone-originated turn cannot be told apart from one run on the
+// desktop against the same server. `finished` therefore exists as the blunt
+// instrument - turn off the `done` push when its noise outweighs its value -
+// and the needs-attention kinds stay on, since those are what a push is for.
 import { readFileSync } from "node:fs"
 
 // Plugin.define from @opencode/plugin is an identity helper, and a
@@ -21,6 +28,8 @@ const DEFAULTS = {
   url: "http://127.0.0.1:2586",
   topic: "opencode",
   cooldownMs: 10000,
+  debounceMs: 15000,
+  finished: true,
 }
 
 // Event type -> notification shape. Priority is ntfy's 1..5 scale.
@@ -42,6 +51,7 @@ export default {
     const topicUrl = `${String(opt.url).replace(/\/+$/, "")}/${opt.topic}`
     const controller = new AbortController()
     const recent = new Map()
+    const timers = new Map()
 
     const token = () => {
       if (!opt.tokenFile) return undefined
@@ -54,7 +64,31 @@ export default {
     }
 
     const publish = async (sessionID, spec, body) => {
+      if (spec.kind === "done" && !opt.finished) return
       const key = `${sessionID}:${spec.kind}`
+
+      // A turn emits the `done` signal once per completed step, plus the
+      // deprecated session.idle, spread across the whole turn. The cooldown
+      // below is leading-edge, so it only collapses signals arriving inside its
+      // window and a multi-minute turn produced one push per step. `done`
+      // therefore takes the trailing edge instead: restart the timer and
+      // publish once the turn has been quiet.
+      if (spec.kind === "done") {
+        clearTimeout(timers.get(key))
+        timers.set(
+          key,
+          setTimeout(() => {
+            timers.delete(key)
+            void send(sessionID, spec, body, key)
+          }, Number(opt.debounceMs)),
+        )
+        return
+      }
+
+      await send(sessionID, spec, body, key)
+    }
+
+    const send = async (sessionID, spec, body, key) => {
       const now = Date.now()
       if ((recent.get(key) ?? 0) + Number(opt.cooldownMs) > now) return
       recent.set(key, now)
@@ -101,6 +135,10 @@ export default {
       }
     })()
 
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+      for (const timer of timers.values()) clearTimeout(timer)
+      timers.clear()
+    }
   },
 }
