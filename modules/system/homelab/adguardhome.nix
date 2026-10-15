@@ -39,14 +39,16 @@
       }
     ];
 
-    # AdGuard directly serves LAN clients on port 53 (IPv4).
-    # systemd-resolved handles local m920q resolution and IPv6 LAN DNS,
-    # forwarding to AdGuard on 127.0.0.1:53.
-    # FallbackDNS kicks in for the m920q itself when AdGuard is unreachable.
+    # AdGuard is the single LAN resolver for IPv4 and IPv6; systemd-resolved
+    # stays local-only (127.0.0.53) and forwards the m920q's own lookups to
+    # AdGuard on 127.0.0.1:53. The LAN IPv6 address is in AdGuard's bind_hosts
+    # below, so the router's RA RDNSS (which points IPv6 clients at this host)
+    # lands on AdGuard directly instead of a second stub resolver - one
+    # resolver, so v4 and v6 clients get identical answers.
+    # FallbackDNS covers the m920q itself when AdGuard is unreachable.
     services.resolved.settings.Resolve = {
       DNS = "127.0.0.1:53";
       FallbackDNS = "1.1.1.1 9.9.9.9";
-      DNSStubListenerExtra = "fd50:5bc:d390:0:ea6a:64ff:fe9f:a050";
     };
 
     services.adguardhome = {
@@ -71,9 +73,18 @@
             "9.9.9.9"
             "1.1.1.1"
           ];
-          # Tailnet IP exposes AdGuard to roaming Tailscale clients, which use it
-          # as the tailnet DNS server with public resolvers as fallback.
-          bind_hosts = ["127.0.0.1" "192.168.178.2" "100.105.37.12"];
+          # LAN faces: 192.168.178.2 (IPv4) and the ULA (IPv6, the address the
+          # router's RA advertises as RDNSS), so every LAN client reaches
+          # AdGuard directly. The tailnet IP exposes AdGuard to roaming
+          # Tailscale clients, which use it as the tailnet DNS server with
+          # public resolvers as fallback. 127.0.0.1 is the host's own path
+          # through resolved.
+          bind_hosts = [
+            "127.0.0.1"
+            "192.168.178.2"
+            "fd50:5bc:d390:0:ea6a:64ff:fe9f:a050"
+            "100.105.37.12"
+          ];
           port = 53;
           # AdGuard schema v34 reads cache settings as flat cache_* keys under
           # dns; a nested "caching:" block is ignored, which is why defaults
