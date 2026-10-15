@@ -26,6 +26,13 @@ in {
 
   # Impermanence can leave cleanup paths transiently unavailable for tmpfiles jobs.
   # Treat CANTCREAT as non-fatal for setup/clean phases.
+  #
+  # The excludes below exist for the impermanence bind mounts. /tmp and
+  # /var/tmp stay excluded from --clean only: an excluded prefix is skipped by
+  # the create phases too (setup, resetup), which would leave every /tmp
+  # tmpfiles rule in the tree without effect - niri's /tmp/.X11-unix, the
+  # desktop's nix-build TMPDIR. /tmp is ephemeral on these hosts, so the
+  # age-based clean pass has nothing to reclaim there.
   systemd.services.systemd-tmpfiles-clean = {
     serviceConfig = {
       ExecStart = lib.mkForce [
@@ -42,7 +49,7 @@ in {
     serviceConfig = {
       ExecStart = lib.mkForce [
         ""
-        "${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --boot --exclude-prefix=/dev --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd --exclude-prefix=/tmp --exclude-prefix=/var/tmp"
+        "${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --boot --exclude-prefix=/dev --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd"
       ];
       SuccessExitStatus = lib.mkAfter [
         "CANTCREAT"
@@ -54,7 +61,7 @@ in {
     serviceConfig = {
       ExecStart = lib.mkForce [
         ""
-        "${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --exclude-prefix=/dev --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd --exclude-prefix=/tmp --exclude-prefix=/var/tmp"
+        "${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --exclude-prefix=/dev --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd"
       ];
       SuccessExitStatus = lib.mkAfter [
         "CANTCREAT"

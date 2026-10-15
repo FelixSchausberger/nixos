@@ -5,6 +5,12 @@
 
   hasAssertionWithMessage = message: builtins.any (assertion: (assertion.message or "") == message) config.assertions;
 
+  # Tokens of a systemd argv list, for exact-argument checks.
+  argvTokens = cmd:
+    builtins.filter builtins.isString (
+      builtins.split " " (builtins.concatStringsSep " " cmd)
+    );
+
   # Matches a hook whose command vector ends up invoking `shutdown` (paths are
   # absolute because Moonshine resolves hook programs with `which` against the
   # unit PATH and silently drops unresolvable ones).
@@ -52,14 +58,22 @@ in {
   has_gaming_gui_assertion = hasAssertionWithMessage "modules.system.gaming.enable requires hostConfig.isGui = true";
   has_steam_gamemode_assertion = hasAssertionWithMessage "modules.system.steam.enable requires programs.gamemode.enable for GAMEMODERUN integration";
 
-  # Moonshine XWayland socket guard (Sep 2026: every session failed with
-  # "Could not find a free socket for the XServer" because persistence.nix
-  # neuters the /tmp tmpfiles rule; the unit must create /tmp/.X11-unix
-  # itself via ExecStartPre on every start)
-  moonshine_x11_socket_guard =
+  # Moonshine XWayland socket dir (Sep 2026: every session failed with
+  # "Could not find a free socket for the XServer"). The directory is created
+  # by the system tmpfiles rule, which only works while the persistence
+  # overrides leave /tmp in scope for the create phases.
+  x11_socket_tmpfiles_rule =
     builtins.any
-    (cmd: builtins.match ".*/tmp/.X11-unix" cmd != null)
-    config.systemd.services.moonshine.serviceConfig.ExecStartPre;
+    (rule: builtins.match "d /tmp/.X11-unix .*" rule != null)
+    config.systemd.tmpfiles.rules;
+
+  # The rule only runs if the create-phase jobs leave /tmp in scope.
+  tmpfiles_setup_keeps_tmp =
+    !(
+      builtins.elem "--exclude-prefix=/tmp" (
+        argvTokens config.systemd.services.systemd-tmpfiles-setup.serviceConfig.ExecStart
+      )
+    );
 
   # Power hooks (modules.system.moonshine.powerOff): a stream start cancels a
   # pending power-off and a stream end schedules one. The commands must be
