@@ -17,6 +17,11 @@
   ai-assistants.opencode.mobilePush = {
     enable = true;
     clickBase = "https://m920q.tailf2f0ca.ts.net:8444";
+    # Off: a "finished" push cannot be scoped to the phone, so it fires for
+    # desktop turns too. The needs-attention kinds (approval, question, error)
+    # still push. Flip this to true for phone-turn pings at the cost of
+    # desktop-turn ones.
+    finished = false;
   };
 
   features = {
