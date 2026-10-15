@@ -168,16 +168,18 @@
     # it creates cannot write to directories it doesn't own.
     # A static user sidesteps both problems, matching the pattern used by rustdesk.nix.
     systemd.services.adguardhome = {
-      # Startup is ordered after tailscaled so the static bind_hosts
-      # (e.g. 100.105.37.12) are assigned before AdGuard binds them.
-      # FreeBind= cannot cover the remaining race: it exists only for
-      # [Socket] units, and AdGuard binds its own sockets directly.
+      # Startup is ordered after the tailnet is actually usable, not merely
+      # after tailscaled.service starts: bind_hosts include the node's tailnet
+      # address, which exists only once the backend is Running. The target
+      # wraps `tailscale wait` for exactly this. FreeBind= cannot cover the
+      # race: it exists only for [Socket] units, and AdGuard binds its own
+      # sockets directly.
       after = [
         "network.target"
-        "tailscaled.service"
+        "tailscale-online.target"
       ];
       wants = [
-        "tailscaled.service"
+        "tailscale-online.target"
       ];
       serviceConfig = {
         DynamicUser = lib.mkForce false;
