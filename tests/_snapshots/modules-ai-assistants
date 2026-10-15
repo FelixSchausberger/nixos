@@ -32,4 +32,10 @@
   prevent_rebuild_enabled = true;
   prevent_rebuild_exists = true;
   prevent_rebuild_priority = 10;
+  store_archive_dir_is_default = true;
+  store_cache_max_age_days = 14;
+  store_dry_run = true;
+  store_enabled = true;
+  store_keep_days = 180;
+  store_max_gib = 1;
 }
