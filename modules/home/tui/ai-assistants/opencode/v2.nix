@@ -52,6 +52,9 @@
     inherit (shared) model;
     permissions = shared.permissionRules;
     formatter = shared.formatters;
+    # Agent tool calls and the terminal run this shell, so they inherit the rm
+    # shim (see agentShell above).
+    shell = "${agentShell}/bin/bash";
     skills = [combinedSkills];
     mcp.servers = v2McpServers;
     # Server-side package plugins. @slkiser/opencode-quota 5 peers
@@ -140,12 +143,31 @@
   # rejects; the company tool is reserved for IntelliJ/CLI. gh authenticates
   # through hosts.yml, so nothing in this tree needs the variable.
   #
-  # PATH carries the rip-backed rm shim and RIP_GRAVEYARD pins the graveyard, so
-  # deletions made by assistant bash tool calls stay restorable
-  # (modules/home/tui/ai-assistants/safe-rm.nix). Env injection rather than
-  # ai-assistants.safeRm.wrap: a wrapper would sit between the C launcher and
-  # its payload.
+  # PATH carries the rip-backed rm shim and RIP_GRAVEYARD pins the graveyard
+  # (modules/home/tui/ai-assistants/safe-rm.nix). It reaches this process and
+  # anything it spawns directly, but NOT agent tool calls: opencode builds the
+  # tool shell's PATH from the login shell environment, so a prefix here is
+  # invisible to them. agentShell below is what covers the tools.
   opencodePackage = inputs.opencode-v2.packages.${system}.opencode;
+
+  # The shell opencode uses for agent tool calls. It must be one that resolves
+  # `rm` to the graveyard shim, which the fleet's shell functions cannot do:
+  # modules/home/shells defines `rm` as an interactive-only convenience that
+  # falls back to the real rm whenever it is not interactive, precisely so it
+  # never breaks automation. The shim therefore has to be on PATH instead, and
+  # only a shell we own can put it there for tool calls alone.
+  #
+  # Named `bash`: opencode inspects the shell name to choose its command
+  # dialect, and discovering the fleet's login shell already selects bash.
+  agentShell = pkgs.writeTextFile {
+    name = "opencode-agent-shell";
+    executable = true;
+    destination = "/bin/bash";
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      exec env PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" ${pkgs.bash}/bin/bash "$@"
+    '';
+  };
 
   launcher = pkgs.writeShellScript "opencode-launcher" ''
     exec env -u GITHUB_TOKEN \
