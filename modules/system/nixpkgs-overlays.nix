@@ -100,18 +100,6 @@ _: {
         }
       );
 
-      # The nixos-unstable channel removed buildGo125Module when Go 1.25 hit
-      # end-of-life (26.11pre1074753). sops-nix's module resolves its install
-      # helper from the consuming host's package set
-      # (config.sops.package default is (pkgs.callPackage ../.. {})
-      # .sops-install-secrets with hardcoded buildGo125Module), so the alias
-      # throw hits every deployment regardless of sops-nix input follows.
-      # Map the removed alias onto the current buildGoModule; the Go 1.25
-      # source code builds under the channel's newer Go. Walker dependency
-      # elephant is fixed at flake-level via a nested input follow instead
-      # (its package set bypasses this overlay entirely).
-      buildGo125Module = prev.buildGoModule;
-
       # udiskie 2.7.0's pytest cache test (`test_cache.py`
       # `TestPasswordCache::test_is_valid`) throws
       # "ValueError: bytes length not a multiple of item size" on this
@@ -121,5 +109,10 @@ _: {
         doCheck = false;
       });
     })
+
+    # sops-nix's install helper resolves buildGo125Module from the consuming
+    # host's package set; the VM tests build from a bare package set and need
+    # the same alias.
+    (import ../../lib/build-go125-alias.nix)
   ];
 }
