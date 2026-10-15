@@ -46,7 +46,7 @@ in {
     '';
     influxPort = lib.mkOption {
       type = lib.types.port;
-      default = 8087;
+      default = inputs.self.lib.homelabPorts.garminInflux;
       description = "InfluxDB HTTP port for the GarminStats database (loopback only)";
     };
     calendar = {

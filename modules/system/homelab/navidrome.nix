@@ -1,4 +1,5 @@
 {
+  inputs,
   config,
   lib,
   ...
@@ -23,7 +24,7 @@ in {
 
     port = mkOption {
       type = types.port;
-      default = 4533;
+      default = inputs.self.lib.homelabPorts.navidrome;
       description = "HTTP port for Navidrome web UI and Subsonic API";
     };
 

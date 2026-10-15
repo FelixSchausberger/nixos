@@ -1,4 +1,5 @@
 {
+  inputs,
   config,
   lib,
   pkgs,
@@ -15,7 +16,7 @@ in {
     };
     port = lib.mkOption {
       type = lib.types.port;
-      default = 8081;
+      default = inputs.self.lib.homelabPorts.nextcloud;
       description = "HTTP port for Nextcloud web UI";
     };
     host = lib.mkOption {

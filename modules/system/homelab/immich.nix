@@ -1,4 +1,5 @@
 {
+  inputs,
   config,
   lib,
   pkgs,
@@ -51,7 +52,7 @@ in {
     };
     port = lib.mkOption {
       type = lib.types.port;
-      default = 2283;
+      default = inputs.self.lib.homelabPorts.immich;
       description = "HTTP port for Immich web UI";
     };
     host = lib.mkOption {

@@ -9,7 +9,7 @@
     enable = lib.mkEnableOption "AdGuard Home DNS ad-blocker";
     port = lib.mkOption {
       type = lib.types.port;
-      default = 3000;
+      default = inputs.self.lib.homelabPorts.adguard;
       description = "Admin UI HTTP port";
     };
     exporterPort = lib.mkOption {

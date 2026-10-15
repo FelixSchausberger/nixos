@@ -1,26 +1,20 @@
-# Test: homelab port defaults match the canonical lib/homelab-ports.nix
+# Test: the canonical homelab ports reach the reverse proxy through the module
+# options.
 #
-# Catches port drift between the VM test stubs (tests-vm/caddy-proxy.nix)
-# and the actual module defaults. If a homelab module changes its default
-# port, this test and the caddy-proxy test both reference homelabPorts
-# so they stay in sync automatically.
+# lib/homelab-ports.nix is the default source for both the service modules and
+# the VM test stubs, so comparing the evaluated defaults against it would only
+# restate the definition. What is worth pinning is that caddy-proxy consumes
+# the module options instead of carrying its own copies of the numbers: a route
+# built from a hardcoded port would stop matching here.
 {flake, ...}: let
   inherit (flake.nixosConfigurations.m920q) config;
   ports = flake.lib.homelabPorts;
+  vhost = config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig;
+  routesTo = port:
+    builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString port}.*" vhost != null;
 in {
-  # Each attribute verifies the evaluated module default matches the canonical value.
-  immich_port = config.modules.system.homelab.immich.port == ports.immich;
-  navidrome_port = config.modules.system.homelab.navidrome.port == ports.navidrome;
-  grafana_port = config.modules.system.homelab.monitoring.grafanaPort == ports.grafana;
-  adguard_port = config.modules.system.homelab.adguardhome.port == ports.adguard;
-  nextcloud_port = config.modules.system.homelab.nextcloud.port == ports.nextcloud;
-  homepage_port = config.modules.system.homelab.homepage.port == ports.homepage;
-  loki_port = config.modules.system.homelab.logging.lokiPort == ports.loki;
-
-  # Verify caddy-proxy actually reads the correct port values into its config.
-  # The extraConfig string contains reverse_proxy directives with the port numbers.
-  caddy_config_has_immich_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.immich}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
-  caddy_config_has_navidrome_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.navidrome}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
-  caddy_config_has_adguard_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.adguard}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
-  caddy_config_has_nextcloud_port = builtins.match ".*reverse_proxy http://127\\.0\\.0\\.1:${toString ports.nextcloud}.*" config.services.caddy.virtualHosts."m920q.tailf2f0ca.ts.net".extraConfig != null;
+  caddy_config_has_immich_port = routesTo ports.immich;
+  caddy_config_has_navidrome_port = routesTo ports.navidrome;
+  caddy_config_has_adguard_port = routesTo ports.adguard;
+  caddy_config_has_nextcloud_port = routesTo ports.nextcloud;
 }
