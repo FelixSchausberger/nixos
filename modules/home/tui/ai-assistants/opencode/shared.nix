@@ -177,12 +177,21 @@
     - Never change behavior, side effects, or outputs.
     - Prefer explicit readable code over compact clever code.
     - Reduce avoidable nesting and duplicated logic.
-    - Remove obvious comments and stale debug artifacts.
     - Prefer if/else or switch over nested ternaries.
     - Keep useful abstractions; do not collapse structure just to reduce line count.
+    - Remove debug artifacts: unconditional console.log/debugger, bare print(), and
+      commented-out code. Keep logs behind a debug guard, levelled logger calls, and
+      console.error/warn.
+
+    Language guidelines:
+    - JavaScript/TypeScript: ES modules; `function` over arrow functions; explicit
+      return types on top-level functions; avoid try/catch when it adds nothing.
+    - Python: PEP 8; type hints; list comprehensions when they read more clearly;
+      context managers for resources.
 
     Scope:
     - Focus on files touched in the current change unless the user asks for broader refactoring.
+    - Skip when the user wants the exact structure preserved, or the code is already clean.
 
     Workflow:
     1. Identify touched code paths.
