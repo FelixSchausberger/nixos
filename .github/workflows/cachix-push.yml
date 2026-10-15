@@ -14,14 +14,35 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  # The warmed fleet is the key set of nixosConfigurations (flake.nix
+  # lib.deployedHosts), so promoting or retiring a host automatically changes
+  # the matrix instead of silently leaving a host unwarmed.
+  deployed-hosts:
+    name: Resolve the deployed host list
+    runs-on: ubuntu-26.04
+    outputs:
+      hosts: ${{ steps.list.outputs.hosts }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Setup Nix
+        uses: ./.github/actions/nix-setup
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Read lib.deployedHosts
+        id: list
+        run: echo "hosts=$(nix eval --json '.#lib.deployedHosts')" >> "$GITHUB_OUTPUT"
   build-and-push:
     name: Build and push ${{ matrix.host }}
+    needs: deployed-hosts
     runs-on: ubuntu-26.04
     timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
-        host: [desktop, hp-probook-wsl, m920q]
+        host: ${{ fromJSON(needs.deployed-hosts.outputs.hosts) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

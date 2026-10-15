@@ -358,7 +358,7 @@
 
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} (
-      {...}: {
+      {config, ...}: {
         systems = ["x86_64-linux"];
 
         imports = [
@@ -383,6 +383,12 @@
             homelabPorts = import ./lib/homelab-ports.nix;
             sshKeys = import ./lib/ssh-keys.nix;
             wallpapers = import ./lib/wallpapers.nix;
+
+            # Deployed fleet, as the key set of nixosConfigurations
+            # (hosts/default.nix). CI warm-up matrices, the deploy recipes and
+            # the cache push read this instead of keeping copies of the list:
+            # promoting or retiring a host edits hosts/default.nix only.
+            deployedHosts = builtins.attrNames config.flake.nixosConfigurations;
 
             inherit (defaults.system) user;
             inherit (defaults) personalInfo;
