@@ -102,12 +102,10 @@
         }).deferred-maintenance;
       # VM tests build from this flake's pkgs (no host overlays applied). The
       # monitoring test imports sops-nix, so it needs the buildGo125Module
-      # alias mapping (see modules/system/nixpkgs-overlays.nix).
+      # alias mapping (see lib/build-go125-alias.nix).
       test-monitoring-alerting = let
         vmPkgs = pkgs.appendOverlays [
-          (_final: prev: {
-            buildGo125Module = prev.buildGoModule;
-          })
+          (import ../lib/build-go125-alias.nix)
         ];
       in
         (import ../tests-vm {
