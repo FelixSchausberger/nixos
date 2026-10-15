@@ -254,10 +254,15 @@ in {
         "Mod+Shift+P".action.power-off-monitors = {};
 
         # ===== LOCK SCREEN =====
-        "Super+Alt+L".action.spawn = [
-          "loginctl"
-          "lock-session"
-        ];
+        # Full-layer shells subscribe to logind's Lock signal themselves, so
+        # the signal path works for them. The custom/wayle stacks have no
+        # subscriber: loginctl only records the request, and niri sets
+        # LockedHint once an ext-session-lock client takes over, so the locker
+        # must be spawned directly.
+        "Super+Alt+L".action.spawn =
+          if fullShell
+          then ["loginctl" "lock-session"]
+          else ["cthulock"];
 
         # ===== IDLE INHIBITOR =====
         # (stasis-toggle bind appended below; stasis only runs on
