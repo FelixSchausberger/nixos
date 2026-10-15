@@ -280,8 +280,16 @@ in {
         serviceConfig = {
           Type = "oneshot";
           ExecStart = "${pkgs.writeShellScript "tailscale-watchdog" ''
-            if ! ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1; then
-              echo "tailscale status failed; restarting tailscaled" >&2
+            # An expired node key fails the status check as well, but only an
+            # interactive login clears it: restarting there just mints a new
+            # auth URL under whoever is copying the current one, and the
+            # tailscale-up that follows then blocks the unit until shutdown.
+            state=$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null \
+              | ${pkgs.jq}/bin/jq -r '.BackendState // empty' 2>/dev/null)
+            if [ "$state" = "NeedsLogin" ]; then
+              echo "tailscale needs interactive login; not restarting tailscaled" >&2
+            elif ! ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1; then
+              echo "tailscale status failed (state ''${state:-unknown}); restarting tailscaled" >&2
               ${pkgs.systemd}/bin/systemctl restart tailscaled
               sleep 15
               # Re-establish the tailnet from the daemon's persisted config
