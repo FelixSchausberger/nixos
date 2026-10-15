@@ -32,95 +32,11 @@
         ]}
       '';
     });
-in {
-  environment.systemPackages =
-    (with pkgs; [
-      # Essential recovery tools
-      gparted
-      testdisk
-      ddrescue
-      cryptsetup
-      zfs
 
-      # Network tools
-      curl
-      wget
-      rsync
-      openssh
-
-      # Filesystem tools
-      ntfs3g
-      exfat
-      e2fsprogs
-      btrfs-progs
-
-      # Hardware tools
-      pciutils
-      usbutils
-      hdparm
-      smartmontools
-
-      # System tools
-      htop
-      iotop
-      tree
-      file
-
-      # Development basics
-      git
-      vim
-
-      # Workstation + collaboration
-      firefox
-      vscode
-      discord
-
-      # Development toolchains
-      docker
-      docker-compose
-      nodejs
-      python3
-      go
-
-      # Terminal utilities
-      tmux
-      fzf
-      ripgrep
-      fd
-      bat
-      eza
-
-      # Media & graphics
-      vlc
-      gimp
-
-      # Office & archives
-      libreoffice
-      p7zip
-      unzip
-
-      # Installation tools
-      nh
-    ])
-    ++ [
-      nixos-wizard-patched
-    ];
-
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "yes";
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-    };
-  };
-
-  system.activationScripts.recoveryTools = ''
-    mkdir -p /usr/local/bin
-
-    # Create generic recovery script that auto-detects systems
-    cat > /usr/local/bin/nixos-recover << 'EOF'
-    #!/usr/bin/env bash
+  # Recovery helpers are store packages on PATH: diffable, visible to
+  # `nix why-depends`, and carrying a real shebang. The ISO shell reaches them
+  # through the system profile.
+  nixosRecoverScript = pkgs.writeShellScriptBin "nixos-recover" ''
     set -e
 
     echo "NixOS Recovery Tool"
@@ -231,14 +147,9 @@ in {
         echo "Usage: nixos-recover"
         echo "This tool auto-detects and mounts NixOS installations for recovery."
     fi
-    EOF
+  '';
 
-    chmod +x /usr/local/bin/nixos-recover
-
-    # Installation info script
-    cat > /usr/local/bin/nixos-install-info << 'EOF'
-    #!/usr/bin/env bash
-
+  nixosInstallInfoScript = pkgs.writeShellScriptBin "nixos-install-info" ''
     echo "NixOS Installation Information"
     echo "=============================="
     echo
@@ -249,25 +160,107 @@ in {
     echo "  2. Export GitHub token:"
     echo "     export NIX_CONFIG=\"access-tokens = github.com=YOUR_TOKEN\""
     echo "  3. Test install (specify your hostname):"
-    echo "     sudo nixos-rebuild test --flake .#hp-probook-vmware"
-    echo "     (or: nh os test .#hp-probook-vmware)"
+    echo "     sudo nixos-rebuild test --flake .#<hostname>"
+    echo "     (or: nh os test .#<hostname>)"
     echo "  4. Reboot into your new system"
     echo
     echo "Alternative: Install via SSH from dev machine"
     echo "  ssh root@<this-ip> and run the same commands"
     echo
     echo "Available hosts:"
-    echo "  • desktop           - Desktop PC with AMD RX 6700XT"
-    echo "  • surface           - Surface tablet/laptop"
-    echo "  • portable          - Portable/recovery with ZFS"
-    echo "  • hp-probook-vmware - VMware VM"
+    echo "  desktop           - Desktop workstation (Niri)"
+    echo "  m920q             - ThinkCentre homelab server"
+    echo "  hp-probook-wsl    - WSL2 environment"
+    echo "  surface           - Surface tablet (legacy, opt-in)"
+    echo "  hp-probook-vmware - VMware VM (legacy, opt-in)"
     echo
     echo "Documentation:"
     echo "  https://github.com/FelixSchausberger/nixos/wiki/Installation"
-    EOF
-
-    chmod +x /usr/local/bin/nixos-install-info
   '';
+in {
+  environment.systemPackages =
+    (with pkgs; [
+      # Essential recovery tools
+      gparted
+      testdisk
+      ddrescue
+      cryptsetup
+      zfs
+
+      # Network tools
+      curl
+      wget
+      rsync
+      openssh
+
+      # Filesystem tools
+      ntfs3g
+      exfat
+      e2fsprogs
+      btrfs-progs
+
+      # Hardware tools
+      pciutils
+      usbutils
+      hdparm
+      smartmontools
+
+      # System tools
+      htop
+      iotop
+      tree
+      file
+
+      # Development basics
+      git
+      vim
+
+      # Workstation + collaboration
+      firefox
+      vscode
+      discord
+
+      # Development toolchains
+      docker
+      docker-compose
+      nodejs
+      python3
+      go
+
+      # Terminal utilities
+      tmux
+      fzf
+      ripgrep
+      fd
+      bat
+      eza
+
+      # Media & graphics
+      vlc
+      gimp
+
+      # Office & archives
+      libreoffice
+      p7zip
+      unzip
+
+      # Installation tools
+      nh
+    ])
+    ++ [
+      nixos-wizard-patched
+      nixosRecoverScript
+      nixosInstallInfoScript
+    ];
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "yes";
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+    };
+  };
 
   networking = {
     networkmanager.enable = true;
