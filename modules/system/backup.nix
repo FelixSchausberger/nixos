@@ -169,8 +169,6 @@ in {
             wants = importUnits;
             preStart = ''
               set -eu
-              # Abort any broken partial receive before starting sync
-              ${pkgs.zfs}/bin/zfs receive -A ${cmd.target} 2>/dev/null || true
               # Fail fast when the target pool is absent (e.g. USB backup drive
               # not imported): the ancestor walk below strips path components,
               # but a bare pool name contains no slash so %/* is a no-op and an
@@ -194,6 +192,16 @@ in {
                 exit 1
               fi
             '';
+            # Abort a broken partial receive before the sync starts. The abort
+            # needs the receive delegation, which the syncoid module grants in
+            # its own ExecStartPre entries and revokes in ExecStopPost, so this
+            # runs after them: mkAfter appends behind its `-+` allow commands,
+            # and the `+` here carries the privilege the delegation check
+            # requires. A failing abort is non-fatal; the sync that follows
+            # reports the real problem.
+            serviceConfig.ExecStartPre = lib.mkAfter [
+              "-+${pkgs.zfs}/bin/zfs receive -A ${cmd.target}"
+            ];
             serviceConfig.WorkingDirectory = "-/";
           }
       )
