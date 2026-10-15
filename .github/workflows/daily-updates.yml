@@ -24,6 +24,7 @@ jobs:
     outputs:
       decision: ${{ steps.classify.outputs.decision }}
       base_sha: ${{ steps.base.outputs.sha }}
+      hosts: ${{ steps.hosts.outputs.hosts }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,6 +36,12 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Setup Nix
         uses: ./.github/actions/nix-setup
+      # The fleet is the key set of nixosConfigurations (flake.nix
+      # lib.deployedHosts): the cache-coverage scan and the warm-up matrix
+      # below both read it, so a promoted host cannot be missed.
+      - name: Resolve the deployed host list
+        id: hosts
+        run: echo "hosts=$(nix eval --json '.#lib.deployedHosts')" >> "$GITHUB_OUTPUT"
       - name: Update lock and snapshots
         run: |
           set -o pipefail
@@ -113,7 +120,7 @@ jobs:
           HEAVY='(^|/)[0-9a-z]{32}-(freecad|krita|blender|prusa-slicer|inkscape)-|(^|/)[0-9a-z]{32}-linux-[0-9]'
           gap=0
           heavy=0
-          for host in desktop hp-probook-wsl m920q; do
+          for host in $(nix eval --raw '.#lib.deployedHosts' --apply 'hs: builtins.concatStringsSep " " hs'); do
             output=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1 || true)
             built=$(printf '%s\n' "$output" | awk '/derivations will be built/{f=1;next} /paths will be fetched/{f=0} f' | grep -E '^[[:space:]]+/nix/store/' || true)
             count=$(printf '%s\n' "$built" | grep -cE '^[[:space:]]+/nix/store/' || true)
@@ -176,7 +183,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        host: [desktop, hp-probook-wsl, m920q]
+        host: ${{ fromJSON(needs.update-flake.outputs.hosts) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
