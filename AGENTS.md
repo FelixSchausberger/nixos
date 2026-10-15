@@ -136,13 +136,12 @@ Configuration lives in `modules/home/tui/ai-assistants/opencode/`:
 formatters, skills, behavior context, agent text); `default.nix` holds the
 harness-agnostic shell integration (`oc`, the GitHub token export, sops
 secrets); `v2.nix` renders the config for `ai-assistants.opencode`
-(`mobilePush` is its only host-scoped option) into
-`~/.config/opencode-v2/opencode/`. The config root deliberately sits outside the
-canonical `~/.config/opencode`, which still holds unmanaged leftovers from the
-retired V1 tree. Credentials are database-backed, so `opencode auth login
+(`mobilePush` is its only host-scoped option) into the canonical
+`~/.config/opencode/`. Credentials are database-backed, so `opencode auth login
 <provider>` is needed once.
 
 Launch OpenCode through the launcher only: it is exposed as both `opencode` and
-`opencode2`, and it is what pins the config root, the graveyard and the rm shim.
-`nix shell` or an absolute store path skips it and the process silently reads
-the retired config root instead.
+`opencode2`. `nix shell` or an absolute store path skips it and loses the
+graveyard wiring; agent tool calls are covered separately by the `shell`
+wrapper the config sets, because opencode builds the tool PATH from the login
+shell rather than from its own environment.
