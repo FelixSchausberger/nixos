@@ -44,6 +44,8 @@
   tailscale_routes = [
     "192.168.178.0/24"
   ];
+  trippy_wrapper_capabilities = "cap_net_raw+p";
+  trippy_wrapper_program = "trip";
   wm_count = 1;
   zellij_web_enabled = true;
 }
