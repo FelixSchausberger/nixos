@@ -94,4 +94,11 @@ in {
     config.environment.systemPackages;
   power_relay_service_absent = !(config.systemd.services ? "power-relay");
   power_relay_option_absent = !(config.modules.system.homelab ? powerRelay);
+
+  # Test: trippy's privilege grant. The wrapper is the only reason `trip` can
+  # trace without sudo - the plain package cannot open a raw socket on Linux -
+  # so pin both the capability it carries and the wrapper name the PATH
+  # precedence in hosts/shared.nix depends on.
+  trippy_wrapper_program = config.security.wrappers.trip.program or null;
+  trippy_wrapper_capabilities = config.security.wrappers.trip.capabilities or null;
 }
