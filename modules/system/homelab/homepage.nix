@@ -850,7 +850,7 @@ in {
     enable = lib.mkEnableOption "Homepage dashboard — live service status overview";
     port = lib.mkOption {
       type = lib.types.port;
-      default = 3002;
+      default = inputs.self.lib.homelabPorts.homepage;
       description = "Homepage dashboard HTTP port";
     };
     httpsPort = lib.mkOption {

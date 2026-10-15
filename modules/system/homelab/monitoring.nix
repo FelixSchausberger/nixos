@@ -235,7 +235,7 @@ in {
     enable = lib.mkEnableOption "Prometheus + node_exporter + Grafana monitoring stack";
     grafanaPort = lib.mkOption {
       type = lib.types.port;
-      default = 3001;
+      default = inputs.self.lib.homelabPorts.grafana;
       description = "Grafana HTTP port (default 3001 to avoid conflict with AdGuard Home on 3000)";
     };
     prometheusPort = lib.mkOption {
