@@ -10,6 +10,7 @@
 # there stay on loopback; log lines do not carry store paths the way spans do,
 # but they are treated with the same default of not leaving the LAN/tailnet.
 {
+  inputs,
   config,
   lib,
   ...
@@ -64,7 +65,7 @@ in {
     enable = lib.mkEnableOption "Loki log aggregation (store, query, Grafana datasource)";
     lokiPort = lib.mkOption {
       type = lib.types.port;
-      default = 3100;
+      default = inputs.self.lib.homelabPorts.loki;
       description = "Loki HTTP port (loopback, tailnet, and the clientSources list)";
     };
     clientSources = lib.mkOption {
