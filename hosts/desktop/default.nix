@@ -301,14 +301,14 @@ in {
     monitoring = {
       enable = true;
       alerts = true;
-      ntfyUrl = "http://m920q:2586/homelab-alerts";
+      ntfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
     };
   };
 
   # Pull-based GitOps: converge to main automatically, alert on downgrades
   modules.system.comin = {
     enable = true;
-    alertNtfyUrl = "http://m920q:2586/homelab-alerts";
+    alertNtfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
   };
 
   # Same bless-driven cleanup as m920q (systemd-boot boot counting + reactivation
