@@ -2,6 +2,7 @@
 # Delivers alerts from Grafana, smartd, ZED, and health checks to the ntfy phone app.
 {
   config,
+  inputs,
   lib,
   ...
 }: let
@@ -17,7 +18,11 @@ in {
       enable = true;
 
       settings = {
-        base-url = "http://m920q:2586";
+        # Clients that use AdGuard for DNS resolve the fleet name to their own
+        # loopback (NixOS maps the hostname to 127.0.0.2 and AdGuard serves that
+        # hosts file to the LAN), so the advertised URL is the tailnet IP: no
+        # DNS involved, and reachable from the LAN and the tailnet alike.
+        base-url = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586";
         listen-http = "0.0.0.0:2586";
 
         # Prometheus gauge with the current subscriber count, served on the

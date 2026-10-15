@@ -68,7 +68,7 @@ in {
       monitoring = {
         enable = true;
         alerts = true;
-        ntfyUrl = "http://m920q:2586/homelab-alerts";
+        ntfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
       };
     };
   };
