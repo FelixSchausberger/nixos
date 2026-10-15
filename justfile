@@ -391,7 +391,8 @@ guard-build:
 build-push-cache:
     #!/usr/bin/env bash
     set -euo pipefail
-    HOSTS="desktop hp-probook-wsl m920q"
+    # Fleet from the flake (the key set of nixosConfigurations).
+    HOSTS="$(nix eval --raw '.#lib.deployedHosts' --apply 'hs: builtins.concatStringsSep " " hs')"
     PATHS=()
     for host in $HOSTS; do
       echo "Building $host toplevel..."
