@@ -20,7 +20,6 @@
   maintenance_enabled = true;
   monitoring_enabled = true;
   moonshine_power_off_enabled = true;
-  moonshine_x11_socket_guard = true;
   node_exporter_enabled = true;
   power_hooks_use_sudo_wrapper = true;
   qmk_enabled = true;
@@ -29,6 +28,7 @@
   scanner_power_hooks = true;
   session_on_demand_enabled = true;
   steam_tile_power_hooks = true;
+  tmpfiles_setup_keeps_tmp = true;
   user_exists = true;
   uwsm_disabled = true;
   vitals_daemon_default_target = true;
@@ -38,4 +38,5 @@
   vitals_textfile_collector = true;
   vitals_textfile_enabled = true;
   wm_count = 1;
+  x11_socket_tmpfiles_rule = true;
 }
