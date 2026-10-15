@@ -5,7 +5,6 @@
 # compositor, so no local session or monitor is needed. The tty1 getty stays
 # enabled as the console of last resort.
 {
-  config,
   inputs,
   lib,
   pkgs,
@@ -121,15 +120,6 @@ in {
     # datasets, so fstab-generated units fail whenever they start before
     # zfs-mount.service (USB pool enumeration timing varies per boot).
     zfs.extraPools = ["dpool" "bpool"];
-
-    # xpadneo: advanced Xbox One/Series wireless driver. It is a kernel module,
-    # so it only takes effect through the system kernel (extraModulePackages
-    # plus kernelModules) and must be built for boot.kernelPackages; a
-    # home.packages entry installs the .ko into a user profile where nothing
-    # loads it. hid_xpadneo replaces hid-generic for Xbox pads connected locally
-    # or through the Steam Controller puck's Bluetooth side.
-    extraModulePackages = [config.boot.kernelPackages.xpadneo];
-    kernelModules = ["hid_xpadneo"];
   };
 
   # fwupd metadata refresh intermittently exits with auth errors during activation,
