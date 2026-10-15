@@ -75,6 +75,7 @@
           {
             url = cfg.mobilePush.ntfyUrl;
             topic = cfg.mobilePush.topic;
+            finished = cfg.mobilePush.finished;
           }
           // lib.optionalAttrs (cfg.mobilePush.clickBase != "") {
             clickBase = cfg.mobilePush.clickBase;
@@ -203,6 +204,16 @@ in {
         type = lib.types.str;
         default = "";
         description = "URL a tapped notification opens; the web UI origin (its Tailscale Serve address)";
+      };
+      finished = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Push when a turn finishes. This cannot be narrowed to phone-originated
+          turns: neither the API, the event payload, nor the session tables
+          record which client a turn came from, so a turn started on the
+          desktop is indistinguishable from one started on the phone.
+        '';
       };
       tokenFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
