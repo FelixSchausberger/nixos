@@ -160,7 +160,9 @@
         - Restore: `rip -u` (last deletion), `rip -u <path>`, or `rip -su` (everything deleted from the current directory)
         - The shim strips all rm-style flags; never rely on rm semantics
         - `sudo rm` bypasses the shim and deletes irreversibly — avoid it
-        - Permanent deletion is a deliberate act: `rip -d`
+        - `rip -d` (`--decompose`) destroys the ENTIRE graveyard, not one path;
+          never pass it with operands. Space comes back from the
+          graveyard-prune timer, which ages entries out on its own.
       '';
       enabled = true;
       description = "rm is shimmed to rip; deletions restorable from the graveyard";
