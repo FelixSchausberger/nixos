@@ -79,6 +79,14 @@ in {
     builtins.any
     (rule: builtins.any (cmd: cmd.command == "/run/current-system/sw/bin/shutdown" && builtins.elem "NOPASSWD" cmd.options) rule.commands)
     config.security.sudo.extraRules;
+  # The hooks must call the setuid wrapper: the profile's sudo is the plain
+  # package, refuses to start at all, and its failure aborts every launch
+  # (2026-10-15: no tile started on the desktop until this was pinned).
+  power_hooks_use_sudo_wrapper = let
+    tile = builtins.head (builtins.filter (app: app.title == "Steam") config.services.moonshine.settings.application);
+    usesWrapper = hooks: builtins.any (cmd: builtins.elem "${config.security.wrapperDir}/sudo" cmd) hooks;
+  in
+    usesWrapper tile.pre_command && usesWrapper tile.post_command;
 
   # GLideN64 renders fullscreen at its configured resolution (640x480 default)
   # without scaling to the window, so N64 tiles must route through the

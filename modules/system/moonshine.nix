@@ -33,16 +33,18 @@
   #
   # Absolute paths are mandatory: Moonshine resolves hook programs with `which`
   # against the unit PATH (the nixpkgs module replaces it with xwayland + the
-  # configured extraPackages) and silently drops a hook it cannot resolve.
-  # `shutdown -c` exits 0 even when nothing is scheduled, so the ExecStartPre
-  # cannot fail the launch. Both calls run through the host's NOPASSWD sudo
-  # rule (a headless host has no login session for polkit to authorize).
+  # configured extraPackages) and silently drops a hook it cannot resolve. Both
+  # calls also run through the setuid wrapper in security.wrapperDir, not the
+  # profile's sudo: that is the plain package, which refuses to start without
+  # the setuid bit, and a hook that fails aborts the launch. (`shutdown -c`
+  # itself is safe to call with nothing scheduled.)
   applyPowerHooks = app:
     if !cfg.powerOff.enable
     then app
     else let
-      cancel = ["/run/current-system/sw/bin/sudo" "-n" "/run/current-system/sw/bin/shutdown" "-c"];
-      arm = ["/run/current-system/sw/bin/sudo" "-n" "/run/current-system/sw/bin/shutdown" "+${toString cfg.powerOff.delayMinutes}"];
+      sudo = "${config.security.wrapperDir}/sudo";
+      cancel = [sudo "-n" "/run/current-system/sw/bin/shutdown" "-c"];
+      arm = [sudo "-n" "/run/current-system/sw/bin/shutdown" "+${toString cfg.powerOff.delayMinutes}"];
     in
       app
       // {
