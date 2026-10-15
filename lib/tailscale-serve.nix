@@ -3,18 +3,20 @@
 # opencode-web, homepage and prometheus serve units, which differ only in the
 # port pair and the backing unit their upstream needs.
 #
-# `tailscale serve` requires tailscaled to be connected, and ordering after
+# `tailscale serve` requires the tailnet to be usable, and ordering after
 # tailscaled.service covers only process start, not backend connectivity: a
 # cold boot can leave the LAN without carrier for minutes, during which
 # tailscaled reports NoState and the setup script fails. The unit therefore
-# retries until the tailnet is reachable. The budget is sized for a slow boot
-# rather than a permanent outage: 20 attempts at 30s give ten minutes of
-# cover, beyond the 161s link delay that wedged every serve unit on
-# 2026-10-13 (the previous five-attempts-per-300s budget covered 150s), while
-# still exhausting on start-limit-hit when the failure is not transient, which
-# is what keeps a real breakage visible to `systemctl is-failed` and vitals.
-# Failing loudly is preserved: the unit is green only once
-# `tailscale serve` has succeeded.
+# orders after tailscale-online.target, which the tailscale package backs with
+# `tailscale wait` and which completes only once the backend is Running and
+# the node has its tailnet address (m920q: 161s link delay on 2026-10-13
+# wedged every serve unit).
+#
+# The retry budget bounds the wait: `tailscale wait` is cut off by this unit's
+# TimeoutStartSec, and 20 attempts at 30s cover a slow boot while still
+# exhausting on start-limit-hit when the failure is permanent, which is what
+# keeps a real breakage visible to `systemctl is-failed` and vitals. The unit
+# is green only once `tailscale serve` has succeeded.
 {pkgs}: {
   # systemd unit name, e.g. "tailscale-serve-homepage"; also names the setup
   # script in the store.
@@ -30,8 +32,8 @@
   wants ? [],
 }: {
   inherit description;
-  after = ["tailscaled.service"] ++ after;
-  wants = ["tailscaled.service"] ++ wants;
+  after = ["tailscale-online.target"] ++ after;
+  wants = ["tailscale-online.target"] ++ wants;
   wantedBy = ["multi-user.target"];
   serviceConfig = {
     Type = "oneshot";
