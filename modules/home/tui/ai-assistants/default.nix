@@ -9,5 +9,6 @@
     # ./claude-code
     ./opencode
     ./opencode/v2.nix
+    ./opencode/store-maintenance.nix
   ];
 }

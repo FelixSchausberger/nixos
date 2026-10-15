@@ -6,6 +6,7 @@
   # Get shared definitions
   mcpServers = homeConfig.ai-assistants.mcpServers.definitions;
   behaviors = homeConfig.ai-assistants.behaviors.definitions;
+  store = homeConfig.ai-assistants.opencode.store;
 in {
   # Test: MCP server definitions exist
   has_mcp_servers = builtins.length (builtins.attrNames mcpServers) > 0;
@@ -39,4 +40,14 @@ in {
   # Test: additional-context behavior
   additional_context_exists = builtins.hasAttr "additional-context" behaviors;
   additional_context_enabled = behaviors.additional-context.enabled or false;
+
+  # Test: session store maintenance defaults. The size budget is the only
+  # trigger and the destructive path ships disabled, so both are pinned here.
+  store_enabled = store.enable;
+  store_max_gib = store.maxStoreGib;
+  store_keep_days = store.keepDays;
+  store_cache_max_age_days = store.cacheMaxAgeDays;
+  store_dry_run = store.dryRun;
+  store_archive_dir_is_default =
+    builtins.match ".*/opencode/archive/pruned" store.archiveDir != null;
 }
