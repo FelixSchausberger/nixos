@@ -25,6 +25,11 @@ sessionTarget: {
   shellKeepsStasis =
     !(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"]);
 
+  # Nothing subscribes to logind's Lock signal on these shells (niri sets
+  # LockedHint only once an ext-session-lock client takes over), so the idle
+  # lock spawns the locker directly instead of signalling logind.
+  lockCmd = "cthulock";
+
   # RUNE configuration content
   runeConfig = let
     dpmsCmd =
@@ -51,7 +56,7 @@ sessionTarget: {
 
       lock_screen:
         timeout 300
-        command "loginctl lock-session"
+        command "${lockCmd}"
         notification "Locking in 10s"
         notify_seconds_before 10
       end
