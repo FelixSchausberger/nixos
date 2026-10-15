@@ -452,6 +452,14 @@
               fi
             ''}
 
+            # A failed restore has to reach systemd: the ntfy alert leaves over
+            # the same network that just failed, and `systemctl --failed` plus
+            # the vitals health score are what an operator sees first.
+            if [[ "$networkd_ok" -ne 1 ]]; then
+              echo "ERROR: the network was not restored to a healthy state" >&2
+              exit 1
+            fi
+
             echo "=== maintenance window finished at $(date) ==="
           '';
           serviceConfig = {

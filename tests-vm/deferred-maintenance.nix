@@ -72,8 +72,10 @@ _: {
     # 3. Corrupt network configuration file to trigger safety gate
     machine.succeed("rm -f /etc/systemd/network/10-eth1.network && echo '[Match]\nName=eth1' > /etc/systemd/network/10-eth1.network")
 
-    # 4. Run maintenance again - should detect missing IP/gateway and abort networkd restart safely
-    machine.succeed("systemctl restart network-maintenance.service")
+    # 4. Run maintenance again - should detect missing IP/gateway, abort the
+    #    networkd restart safely, and fail the unit so `systemctl --failed`
+    #    and the vitals score report it.
+    machine.fail("systemctl restart network-maintenance.service")
     maint_log2 = machine.succeed(
         "journalctl -u network-maintenance.service --since='-5min' --quiet"
     )
