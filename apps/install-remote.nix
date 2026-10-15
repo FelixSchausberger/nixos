@@ -23,11 +23,7 @@ in {
     ];
     # SC2029 (info) fires on the deliberate client-side expansions inside the
     # SSH command strings (--flake .#$HOSTNAME, the constant repo URL).
-    checkPhase = ''
-      runHook preCheck
-      "${pkgs.shellcheck}/bin/shellcheck" -S warning "$target"
-      runHook postCheck
-    '';
+    excludeShellChecks = ["SC2029"];
     text = ''
       if [[ $# -lt 2 ]]; then
           echo "Usage: nix run .#install-remote HOSTNAME TARGET_IP" >&2
