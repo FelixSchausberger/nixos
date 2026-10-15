@@ -157,6 +157,17 @@ in {
         regular sshd keeps handling non-tailnet connections.
       '';
     };
+    relayServerPort = lib.mkOption {
+      type = lib.types.nullOr lib.types.port;
+      default = null;
+      description = ''
+        Port the relay server (DERP) this node runs for the tailnet binds to.
+        null leaves it at the daemon default. Kept out of extraSetFlags unless
+        set: the nixpkgs module only creates the tailscaled-set oneshot when
+        extraSetFlags is non-empty, and a bare `tailscale set` there can fail
+        while a node still awaits interactive login.
+      '';
+    };
     udpGROInterface = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -234,8 +245,11 @@ in {
       port = 41641;
       # Tailscale SSH has no dedicated upstream option; `tailscale set --ssh`
       # (via the tailscaled-set oneshot) enables it for already-registered
-      # nodes without needing authKeyFile.
-      extraSetFlags = lib.optionals cfg.openSSH ["--ssh"];
+      # nodes without needing authKeyFile. The relay port rides the same
+      # oneshot, and only when a host sets it.
+      extraSetFlags =
+        lib.optionals cfg.openSSH ["--ssh"]
+        ++ lib.optionals (cfg.relayServerPort != null) ["--relay-server-port=${toString cfg.relayServerPort}"];
       # Enables IP forwarding sysctls and correct rpfilter rules for subnet routing.
       # rpfilter fix prevents asymmetric routes from dropping subnet-routed packets.
       useRoutingFeatures = lib.mkIf (cfg.advertiseRoutes != [] || cfg.exitNode) "server";
