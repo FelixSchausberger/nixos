@@ -769,10 +769,12 @@ in {
       # Automated re-login: authKeyFile enables nixpkgs' tailscaled-autoconnect,
       # which runs `up` with the key only while the backend is in
       # NeedsLogin/NeedsMachineAuth/Stopped, so a healthy node never touches it.
-      # Replaces the restart-based tailscale-watchdog (deleted with this change):
-      # the key minted 2026-10-15 is reusable but expires after 90 days, after
-      # which a needed re-login degrades back to interactive login at the console.
+      # The reusable key is minted 2026-10-15 and carries the admin console's
+      # 90-day limit; authKeyExpires drives the daily rotation reminder, and a
+      # key left unrotated degrades re-login back to the console.
       authKeyFile = config.sops.secrets."tailscale/auth-key".path;
+      authKeyExpires = "2027-01-14";
+      authKeyExpiryNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
       # Tailscale SSH for phone/Termux access: tailscaled authenticates
       # tailnet clients by device identity, no key management needed.
       openSSH = true;
