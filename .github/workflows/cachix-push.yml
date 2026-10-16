@@ -56,10 +56,42 @@ jobs:
         uses: ./.github/actions/build-host
         with:
           host: ${{ matrix.host }}
+  # The portable ISO's outPath depends on content (nixpkgs rev + build date),
+  # not the commit, so a push that leaves the ISO closure unchanged evals to
+  # the path already in the cache. Rebuilding and re-pushing the multi-GB
+  # artifact is then pure runner minutes (~35) plus the Cachix drain window
+  # that run #419 raced against; query the cache instead and build only when
+  # this commit's ISO is genuinely absent.
+  iso-cache-state:
+    name: Check the cache for the portable ISO
+    runs-on: ubuntu-26.04
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Setup Nix
+        uses: ./.github/actions/nix-setup
+      - name: Compare the evaluated ISO against the cache
+        id: check
+        run: |
+          out=$(nix eval --raw '.#installer-iso-portable' --apply 'p: toString p.outPath')
+          echo "iso outPath: $out"
+          if nix path-info --store https://felixschausberger.cachix.org "$out" >/dev/null 2>&1; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
   # The portable recovery ISO is the USB rescue artifact (see hosts/portable).
-  # Build it on every main push so it never rots into an unbootable state.
+  # Build it whenever the cache does not hold this commit's exact ISO, so it
+  # never rots into an unbootable state while identical pushes skip the
+  # rebuild-and-push entirely.
   build-portable-iso:
     name: Build and push installer-iso-portable
+    needs: iso-cache-state
+    if: needs.iso-cache-state.outputs.build == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 300
     steps:
