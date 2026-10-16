@@ -552,6 +552,9 @@ in {
   # the repo is public, so the secondary ntfy URL lives in a sops secret.
   sops.secrets."ntfy/secondary-url" = {};
 
+  # Tailscale auth key for tailscaled-autoconnect's automated re-login.
+  sops.secrets."tailscale/auth-key" = {};
+
   modules.system = {
     # Unattended hang recovery. The hardware watchdog resets a wedged kernel;
     # detectable lockups become panics that reboot (panic=30); and if systemd
@@ -763,6 +766,13 @@ in {
     };
     tailscale = {
       enable = true;
+      # Automated re-login: authKeyFile enables nixpkgs' tailscaled-autoconnect,
+      # which runs `up` with the key only while the backend is in
+      # NeedsLogin/NeedsMachineAuth/Stopped, so a healthy node never touches it.
+      # Replaces the restart-based tailscale-watchdog (deleted with this change):
+      # the key minted 2026-10-15 is reusable but expires after 90 days, after
+      # which a needed re-login degrades back to interactive login at the console.
+      authKeyFile = config.sops.secrets."tailscale/auth-key".path;
       # Tailscale SSH for phone/Termux access: tailscaled authenticates
       # tailnet clients by device identity, no key management needed.
       openSSH = true;

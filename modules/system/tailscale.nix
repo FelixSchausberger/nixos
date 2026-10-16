@@ -260,49 +260,9 @@ in {
         };
       };
 
-      # Self-healing watchdog: if tailscaled is up but has not authenticated /
-      # joined the tailnet, restart the service to re-establish connectivity.
-      # Protects against a single transient failure (stale state, brief network
-      # outage at boot) stranding the host unreachable via Tailscale.
-      timers.tailscale-watchdog = {
-        description = "Ensure Tailscale stays connected";
-        wantedBy = ["timers.target"];
-        after = ["tailscaled.service"];
-        timerConfig = {
-          OnBootSec = "5min";
-          OnUnitActiveSec = "10min";
-          RandomizedDelaySec = "30s";
-        };
-      };
-
-      services.tailscale-watchdog = {
-        description = "Restart tailscaled if the tailnet link is down";
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${pkgs.writeShellScript "tailscale-watchdog" ''
-            # An expired node key fails the status check as well, but only an
-            # interactive login clears it: restarting there just mints a new
-            # auth URL under whoever is copying the current one, and the
-            # tailscale-up that follows then blocks the unit until shutdown.
-            state=$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null \
-              | ${pkgs.jq}/bin/jq -r '.BackendState // empty' 2>/dev/null)
-            if [ "$state" = "NeedsLogin" ]; then
-              echo "tailscale needs interactive login; not restarting tailscaled" >&2
-            elif ! ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1; then
-              echo "tailscale status failed (state ''${state:-unknown}); restarting tailscaled" >&2
-              ${pkgs.systemd}/bin/systemctl restart tailscaled
-              sleep 15
-              # Re-establish the tailnet from the daemon's persisted config
-              # (routes/DNS/exit-node are held by tailscaled, not the CLI).
-              ${pkgs.tailscale}/bin/tailscale up || echo "tailscale reconnection failed" >&2
-            fi
-          ''}";
-        };
-      };
-
       # Peer reachability probe: records every transition in the journal so a
-      # later outage can be dated without relying on the user's memory. Kept
-      # separate from the watchdog, which only acts on the local daemon.
+      # later outage can be dated without relying on the user's memory. It
+      # probes a peer, not this host's own daemon state.
       services.tailscale-peer-monitor = lib.mkIf cfg.peerMonitor.enable {
         description = "Probe tailnet peer ${cfg.peerMonitor.peer} and log reachability transitions";
         after = ["tailscaled.service"];
