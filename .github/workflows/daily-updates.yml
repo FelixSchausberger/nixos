@@ -2,12 +2,16 @@ name: Daily Dependency Updates
 on:
   workflow_dispatch:
   schedule:
-    # Poll every 6h: hosts converge via comin, so moving flake.lock is the
-    # whole job. A PR is opened only once the candidate closure is
-    # substitutable - either cache.nixos.org/Hydra already covered it, or,
-    # after a 24h grace, the gap is built here and pushed to
-    # felixschausberger.cachix.org so no host ever compiles it.
-    - cron: "0 */6 * * *"
+    # Once daily at 07:00 CEST. A PR is opened only once the candidate
+    # closure is substitutable - either cache.nixos.org/Hydra already
+    # covered it, or, after a 24h grace, the gap is built here and pushed
+    # to felixschausberger.cachix.org so no host ever compiles - so polling
+    # more often mostly yields wait/skip while each merge still costs a
+    # full-fleet warm-up. One bump per day gives that warm-up a clean
+    # runway: a lock bump landing while the previous one's warm-up is still
+    # running gets its queued run superseded, and hosts then compile the
+    # delta locally instead of pulling it from the cache.
+    - cron: "0 5 * * *"
 # Parallel triggers (cron + on-demand update-system.sh) would race the same
 # PR branch; serialize instead of cancelling an in-flight lock refresh.
 concurrency:
