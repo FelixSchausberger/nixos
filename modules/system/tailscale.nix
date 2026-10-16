@@ -121,6 +121,42 @@
 
     printf 'down_since=%s\nfail_count=%s\n' "$down_since" "$fail_count" > "$state_file"
   '';
+
+  # Daily rotation nudge for the auth key. The key is read only while the
+  # backend needs login, so an expired key breaks nothing on a healthy node -
+  # which is exactly why it must be surfaced weeks before: the failure mode
+  # is a console-only re-login discovered during an outage, not a visible
+  # breakage. Days are rounded to nearest so the expiry day itself reads 0.
+  authKeyExpiryScript = pkgs.writeShellScript "tailscale-auth-key-expiry" ''
+    set -eu
+
+    date=${pkgs.coreutils}/bin/date
+    expires=$("$date" -d "${cfg.authKeyExpires}" +%s)
+    days=$(( (expires - $("$date" +%s) + 43200) / 86400 ))
+
+    if [ "$days" -gt 14 ]; then
+      echo "tailscale auth key expires in $days days (on ${cfg.authKeyExpires}); no action yet"
+      exit 0
+    fi
+
+    prio=high
+    if [ "$days" -le 3 ]; then
+      prio=urgent
+    fi
+    ${lib.optionalString (cfg.authKeyExpiryNtfyUrl != null) ''
+      ${ntfySend {primary = cfg.authKeyExpiryNtfyUrl;}}
+      ntfy_send "Tailscale auth key expiry" "$prio" "tailscale,rotating_light" \
+        "The m920q tailscale auth key expires in $days day(s) (on ${cfg.authKeyExpires}). Rotate: mint a reusable key in the admin console, sops-edit secrets/secrets.yaml (tailscale/auth-key), bump authKeyExpires in hosts/m920q/default.nix; comin deploys it."
+    ''}
+    echo "tailscale auth key expires in $days day(s) (on ${cfg.authKeyExpires})" >&2
+
+    # An expired key removes the host's only automated re-login path, so the
+    # standing red state in systemctl --failed / vitals is the point.
+    if [ "$days" -le 0 ]; then
+      echo "tailscale auth key expired; automated re-login will fail until rotated" >&2
+      exit 1
+    fi
+  '';
 in {
   options.modules.system.homelab.tailscale = {
     enable = lib.mkEnableOption "Tailscale VPN";
@@ -128,6 +164,29 @@ in {
       type = lib.types.nullOr lib.types.str;
       default = null;
       description = "Path to sops-decrypted Tailscale auth key for automated login";
+    };
+    authKeyExpires = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "2027-01-14";
+      description = ''
+        ISO date (YYYY-MM-DD) the key at authKeyFile expires, as shown in the
+        Tailscale admin console. Purely informational to tailscale itself: it
+        drives the tailscale-auth-key-expiry reminder, nothing else. Bump it
+        in the same commit as the rotated key so the git history doubles as
+        the rotation log. Requires authKeyFile when set.
+      '';
+    };
+    authKeyExpiryNtfyUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Local ntfy topic URL receiving the auth-key expiry reminder. The local
+        topic is enough here: the reminder is not outage traffic, and once the
+        key has expired the failing unit reaches the phone through the
+        ServiceFailed rule and the maintenance monitoring channel anyway.
+        Null keeps the reminder journal-only.
+      '';
     };
     advertiseRoutes = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -223,6 +282,14 @@ in {
         assertion = !cfg.peerMonitor.enable || cfg.peerMonitor.peer != "";
         message = "modules.system.homelab.tailscale.peerMonitor.peer must be set when peerMonitor.enable is true";
       }
+      {
+        assertion = cfg.authKeyExpires == null || builtins.match "[0-9]{4}-[0-9]{2}-[0-9]{2}" cfg.authKeyExpires != null;
+        message = "modules.system.homelab.tailscale.authKeyExpires must be an ISO date (YYYY-MM-DD)";
+      }
+      {
+        assertion = cfg.authKeyExpires == null || cfg.authKeyFile != null;
+        message = "modules.system.homelab.tailscale.authKeyExpires needs authKeyFile: a reminder about a key that is not wired rotates nothing";
+      }
     ];
 
     services.tailscale = {
@@ -283,6 +350,28 @@ in {
           OnBootSec = "2min";
           OnUnitActiveSec = "${toString cfg.peerMonitor.intervalSec}s";
           RandomizedDelaySec = "10s";
+        };
+      };
+
+      # Rotation nudge for the auth key (see authKeyExpiryScript). Mid-morning
+      # on purpose: the reminder is user-facing phone traffic, not maintenance
+      # work that must dodge the daytime, so it does not ride the 04:00
+      # maintenance window.
+      services.tailscale-auth-key-expiry = lib.mkIf (cfg.authKeyFile != null && cfg.authKeyExpires != null) {
+        description = "Warn before the Tailscale auth key expires";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${authKeyExpiryScript}";
+        };
+      };
+
+      timers.tailscale-auth-key-expiry = lib.mkIf (cfg.authKeyFile != null && cfg.authKeyExpires != null) {
+        description = "Daily Tailscale auth key expiry check";
+        wantedBy = ["timers.target"];
+        timerConfig = {
+          OnCalendar = "*-*-* 11:00:00";
+          Persistent = true;
+          RandomizedDelaySec = "10min";
         };
       };
     };
