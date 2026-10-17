@@ -135,6 +135,9 @@ in {
           default_config = {};
           http = {
             server_port = cfg.port;
+            # Tailnet-only UI: Serve connects from loopback, so HA binds loopback
+            # as well and the firewall stays the only LAN defence in depth.
+            server_host = "127.0.0.1";
             # The Tailscale Serve front terminates TLS and reaches HA from
             # 127.0.0.1; trusting it keeps client IPs and secure cookies intact.
             use_x_forwarded_for = true;
