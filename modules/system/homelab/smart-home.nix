@@ -146,15 +146,13 @@ in {
             use_x_forwarded_for = true;
             trusted_proxies = ["127.0.0.1"];
           };
-          # The broker above, loopback bound. HA 2026.10 schemas the broker
-          # config as a list whose entries use the `broker` key; a dict, or a
-          # list of `host` entries, is rejected at validation.
-          mqtt = [
-            {
-              broker = "127.0.0.1";
-              port = 1883;
-            }
-          ];
+          # The broker config must be a dict with the broker key: HA 2026.10
+          # validates the mqtt section with the same schema the config flow
+          # uses, so neither a host key nor a list of broker dicts works.
+          mqtt = {
+            broker = "127.0.0.1";
+            port = 1883;
+          };
         };
       };
     };
