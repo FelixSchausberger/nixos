@@ -130,7 +130,10 @@ in {
       # --- Home Assistant: publishes the MQTT discovery data Zigbee2MQTT emits
       home-assistant = {
         enable = true;
-        extraComponents = ["mqtt"];
+        # Both components below are compiled into the HA python env; shelly is
+        # listed because the LAN Shelly plugs trigger discovery requests, and
+        # a missing module turns those into an error loop.
+        extraComponents = ["mqtt" "shelly"];
         config = {
           default_config = {};
           http = {
@@ -197,14 +200,16 @@ in {
       );
     };
 
-    # Tailscale Serve fronts. Root-served UIs cannot ride a path-stripped
-    # Caddy route, so each gets its own Serve port on the node certificate. (Both live in the
-    # systemd.services group above.)
-
     # State directories survive reboots on the impermanence host. The tmpfiles
     # rules create them under the mount source directly so the ordering
     # against the impermanence bind mounts cannot shadow them (the same
     # workaround as jellyfin.nix).
+    #
+    # Home Assistant migrates the http section of configuration.yaml into
+    # /var/lib/hass/.storage/http on first boot and ignores the YAML afterwards
+    # (its fallback logic rebinds the API to the default addresses whenever an
+    # integration section fails validation). Future http option changes
+    # therefore require moving that store file aside before restarting.
     systemd.tmpfiles.rules =
       [
         "d /per/var/lib/hass 0700 hass hass -"
