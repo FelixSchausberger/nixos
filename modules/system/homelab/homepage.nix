@@ -413,6 +413,32 @@
   # columns = 1, so each nested subgroup spans the page (a nested subgroup in a
   # row parent otherwise collapses into a single grid cell and crops its cards),
   # and each band lays its own cards out in a row.
+  # Smart home: Home Assistant is the control surface for every integration
+  # (Zigbee lights included, Samsung appliances via its SmartThings cloud
+  # integration), and the Zigbee2MQTT frontend is where pairing happens. Both
+  # are root-served Tailscale Serve UIs like the Terminal band.
+  smartHomeServices =
+    lib.optionals hl.smartHome.enable [
+      {
+        "Home Assistant" = {
+          icon = "mdi-home-assistant";
+          href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.smartHome.httpsPort}/";
+          description = "Home automation";
+          siteMonitor = local hl.smartHome.port;
+        };
+      }
+    ]
+    ++ lib.optionals (hl.smartHome.enable && hl.smartHome.coordinatorUrl != null) [
+      {
+        "Zigbee2MQTT" = {
+          icon = "mdi-zigbee";
+          href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.smartHome.frontendHttpsPort}/";
+          description = "Mesh control";
+          siteMonitor = local hl.smartHome.frontendPort;
+        };
+      }
+    ];
+
   cloudServices = lib.optionals hl.nextcloud.enable [
     {
       "Files" = {
@@ -555,6 +581,7 @@
     ++ lib.optionals (terminalServices != []) [{"Terminal" = terminalServices;}]
     ++ lib.optionals (utilityServices != []) [{"Utilities" = utilityServices;}]
     ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
+    ++ lib.optionals (smartHomeServices != []) [{"Smart home" = smartHomeServices;}]
     ++ lib.optionals (nixServices != []) [{"Nix" = nixServices;}]
     ++ lib.optionals (healthServices != []) [{"Health" = healthServices;}];
 
@@ -812,6 +839,10 @@
       Media = {
         style = "row";
         columns = 3;
+      };
+      "Smart home" = {
+        style = "row";
+        columns = 2;
       };
       Nix = {
         style = "row";

@@ -76,6 +76,20 @@ in {
   zellij_web_https_port = config.modules.system.homelab.zellijWeb.httpsPort;
   zellij_web_tailnet_domain = config.modules.system.homelab.zellijWeb.tailnetDomain;
   zellij_web_linger = config.users.users.schausberger.linger;
+
+  smart_home_enabled = config.modules.system.homelab.smartHome.enable;
+  # Until the SLZB-MR4U has a reserved LAN address, zigbee2mqtt stays disabled
+  # while the broker and Home Assistant already run.
+  smart_home_zigbee_enabled = config.services.zigbee2mqtt.enable;
+  smart_home_coordinator_url = config.modules.system.homelab.smartHome.coordinatorUrl;
+  smart_home_ha_port = config.modules.system.homelab.smartHome.port;
+  smart_home_z2m_frontend_port = config.modules.system.homelab.smartHome.frontendPort;
+  smart_home_mosquitto = let
+    l = builtins.head config.services.mosquitto.listeners;
+  in {
+    only_listener = builtins.length config.services.mosquitto.listeners == 1;
+    inherit (l) address omitPasswordAuth acl;
+  };
   zellij_web_service_exec_start =
     config.systemd.services.zellij-web.serviceConfig.ExecStart;
   zellij_web_home_sharing =
