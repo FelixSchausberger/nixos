@@ -146,13 +146,11 @@ in {
             use_x_forwarded_for = true;
             trusted_proxies = ["127.0.0.1"];
           };
-          # The broker config must be a dict with the broker key: HA 2026.10
-          # validates the mqtt section with the same schema the config flow
-          # uses, so neither a host key nor a list of broker dicts works.
-          mqtt = {
-            broker = "127.0.0.1";
-            port = 1883;
-          };
+          # No mqtt section: HA 2026.10 removed the mqtt YAML import, and any
+          # leftover keys fail integration setup, which retrains the HTTP
+          # config trial and re-binds the API to the default addresses.
+          # The MQTT integration is added once in the UI (broker
+          # 127.0.0.1:1883, the local mosquitto above, no credentials).
         };
       };
     };
