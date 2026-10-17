@@ -137,17 +137,20 @@ in {
             server_port = cfg.port;
             # Tailnet-only UI: Serve connects from loopback, so HA binds loopback
             # as well and the firewall stays the only LAN defence in depth.
-            server_host = "127.0.0.1";
+            server_host = ["127.0.0.1"];
             # The Tailscale Serve front terminates TLS and reaches HA from
             # 127.0.0.1; trusting it keeps client IPs and secure cookies intact.
             use_x_forwarded_for = true;
             trusted_proxies = ["127.0.0.1"];
           };
-          # The broker above, loopback bound.
-          mqtt = {
-            host = "127.0.0.1";
-            port = 1883;
-          };
+          # The broker above, loopback bound. HA 2026.10 schemas the broker
+          # config as a list of brokers; a plain dict is rejected at validation.
+          mqtt = [
+            {
+              host = "127.0.0.1";
+              port = 1883;
+            }
+          ];
         };
       };
     };
