@@ -37,6 +37,7 @@
     "System/Media/Immich icon=immich.png href=https://m920q.tailf2f0ca.ts.net monitor widget=immich"
     "System/Media/Navidrome icon=navidrome.png href=https://m920q.tailf2f0ca.ts.net/navidrome monitor widget=navidrome"
     "System/Media/Jellyfin icon=jellyfin.png href=http://192.168.178.2:8096 monitor widget=jellyfin"
+    "System/Smart home/Home Assistant icon=mdi-home-assistant href=https://m920q.tailf2f0ca.ts.net:8448/ monitor"
     "System/Nix/NixOS Repo icon=si-github href=https://github.com/FelixSchausberger/nixos widgets=customapi,customapi,customapi"
     "System/Nix/Config Health icon=nixos.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/config-health"
     "System/Nix/Nix Telemetry icon=nixos.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/nix-otel"
@@ -54,6 +55,19 @@
   opencode_web_serve_exec_start = "/nix/store/<hash>/tailscale-serve-opencode-web-setup";
   opencode_web_tailnet_domain = "m920q.tailf2f0ca.ts.net";
   prometheus_port = 9090;
+  smart_home_coordinator_url = null;
+  smart_home_enabled = true;
+  smart_home_ha_port = 8123;
+  smart_home_mosquitto = {
+    acl = [
+      "pattern readwrite #"
+    ];
+    address = "127.0.0.1";
+    omitPasswordAuth = true;
+    only_listener = true;
+  };
+  smart_home_z2m_frontend_port = 8085;
+  smart_home_zigbee_enabled = false;
   tailscale_enabled = true;
   zellij_web_enabled = true;
   zellij_web_home_sharing = "on";
