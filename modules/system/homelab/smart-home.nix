@@ -144,10 +144,11 @@ in {
             trusted_proxies = ["127.0.0.1"];
           };
           # The broker above, loopback bound. HA 2026.10 schemas the broker
-          # config as a list of brokers; a plain dict is rejected at validation.
+          # config as a list whose entries use the `broker` key; a dict, or a
+          # list of `host` entries, is rejected at validation.
           mqtt = [
             {
-              host = "127.0.0.1";
+              broker = "127.0.0.1";
               port = 1883;
             }
           ];
