@@ -16,6 +16,7 @@
     ./ntfy.nix
     ./opencode-web.nix
     ./samba.nix
+    ./smart-home.nix
     ./ssh-hardened.nix
     ./vaultwarden.nix
     ./zellij-web.nix

@@ -8,5 +8,7 @@
   adguard = 3000; # modules/system/homelab/adguardhome.nix
   nextcloud = 8081; # modules/system/homelab/nextcloud.nix
   homepage = 3002; # modules/system/homelab/homepage.nix
+  homeAssistant = 8123; # modules/system/homelab/smart-home.nix
+  zigbee2mqtt = 8085; # modules/system/homelab/smart-home.nix
   loki = 3100; # modules/system/homelab/logging.nix
 }

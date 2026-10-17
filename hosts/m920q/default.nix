@@ -756,6 +756,12 @@ in {
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
     homepage.enable = true;
+    smartHome = {
+      enable = true;
+      # coordinatorUrl stays unset until the SLZB-MR4U is wired to the LAN with
+      # a reserved address last; zigbee2mqtt stays off until then and only the
+      # broker plus Home Assistant run (see the module's option comment).
+    };
     ntfy.enable = true;
     samba.enable = true;
     vaultwarden = {
