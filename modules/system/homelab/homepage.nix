@@ -675,6 +675,24 @@
         description = "Tailnet admin console";
       };
     }
+    {
+      # NextDNS is the phone's DNS resolver: strict Android Private DNS with
+      # Tailscale DNS deliberately off, so a wedged tunnel costs tailnet
+      # reachability instead of the phone's internet. Its rewrite mapping
+      # m920q.tailf2f0ca.ts.net to the registry tailnetIp (lib/hosts.nix) is
+      # what keeps every Tailscale Serve URL resolvable from Android; a stale
+      # rewrite silently breaks mobile access to all served UIs.
+      "NextDNS" = {
+        icon = "nextdns.png";
+        href = "https://my.nextdns.io/b99bc7";
+        description = "Phone DNS resolver (tailnet-name rewrites)";
+        widget = {
+          type = "nextdns";
+          profile = "b99bc7";
+          key = "{{HOMEPAGE_VAR_NEXTDNS_API_KEY}}";
+        };
+      };
+    }
   ];
 
   # Personal health data, not infrastructure: the Garmin pipeline feeds sleep,
@@ -875,6 +893,7 @@
     ++ lib.optional hl.jellyfin.enable "HOMEPAGE_VAR_JELLYFIN_API_KEY=${config.sops.placeholder."jellyfin/api-key"}"
     ++ lib.optional hl.navidrome.enable "HOMEPAGE_VAR_NAVIDROME_TOKEN=${config.sops.placeholder."navidrome/token"}"
     ++ lib.optional (cfg.enable && githubAvailable) "HOMEPAGE_VAR_GITHUB_TOKEN=${config.sops.placeholder."github/token"}"
+    ++ lib.optional cfg.enable "HOMEPAGE_VAR_NEXTDNS_API_KEY=${config.sops.placeholder."nextdns/api-key"}"
   );
 in {
   options.modules.system.homelab.homepage = {
@@ -953,6 +972,13 @@ in {
       after = ["homepage-dashboard.service"];
       wants = ["homepage-dashboard.service"];
     });
+
+    # The NextDNS account API key backs the dashboard's NextDNS widget, which
+    # reads analytics only. The key itself grants account-level API access
+    # (profiles are mutable through the API), so it lives in sops and is
+    # exposed to Homepage solely as a rendered environment variable; the
+    # dashboard is its only consumer, hence the declaration here.
+    sops.secrets."nextdns/api-key" = {};
 
     sops.templates."homepage/env" = {
       content = widgetEnv;

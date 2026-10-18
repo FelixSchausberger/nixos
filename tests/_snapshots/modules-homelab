@@ -15,6 +15,7 @@
     "Access/AMT/IPv4 (WAN) icon=mdi-chip href=https://116.204.198.109:16993"
     "Access/AMT/LAN icon=mdi-chip href=https://192.168.178.10:16993"
     "Access/Tailscale icon=tailscale.png href=https://login.tailscale.com/login?next_url=%2Fadmin%2Fmachines%3Frefreshed%3Dtrue"
+    "Access/NextDNS icon=nextdns.png href=https://my.nextdns.io/b99bc7 widget=nextdns"
     "Infrastructure/M920q icon=mdi-server href=http://192.168.178.2:3001 monitor widget=prometheusmetric"
     "Infrastructure/Vitals (M920q) icon=mdi-heart-pulse href=https://m920q.tailf2f0ca.ts.net/grafana/d/config-health monitor widget=prometheusmetric"
     "Infrastructure/Desktop icon=mdi-desktop-tower href=http://192.168.178.3:9100/ widget=prometheusmetric"
