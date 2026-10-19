@@ -204,7 +204,37 @@ in {
     # Hide informational spam (ACPI AE_ALREADY_EXISTS flood, ~56 lines) so a
     # real hang point is visible on console/SOL photos. Errors still journaled.
     "loglevel=3"
+    # Crash forensics: stream kernel printk to the desktop over UDP
+    # netconsole. console=ttyS0 cannot serve as a kernel console here (the
+    # ME/AMT UART hangs early boot, see above), so netconsole is this box's
+    # only kernel-console path. It transmits from printk context via
+    # netpoll, which keeps working after userspace and disk I/O are gone -
+    # exactly the window a panic, soft lockup, or missed watchdog pet leaves
+    # before the iTCO_wdt hard-reset wipes the evidence (two unlogged deaths
+    # in Oct 2026, empty pstore after each). The destination MAC is pinned in
+    # the param because no ARP can run at panic time. Best effort by nature:
+    # the receiver lives on the desktop, which is not always on; a death
+    # while it is off still surfaces through the unclean-shutdown alert,
+    # just without a kernel trace. Streams err-level and above
+    # (loglevel=3 above); a reboot applies the param.
+    "netconsole=6666@${hostInfo.ip}/eno1,6666@${inputs.self.lib.hosts.desktop.ip}/${inputs.self.lib.hosts.desktop.lanMac}"
   ];
+
+  # Loaded after network-online rather than via boot.kernelModules: the NIC
+  # spends over two minutes negotiating carrier at cold boot, so an early
+  # load would fail to bind eno1 and stay dead for the whole boot. The
+  # netconsole= param above applies when the module finally loads.
+  systemd.services.netconsole-load = {
+    description = "Load netconsole for kernel printk streaming to the desktop";
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.kmod}/bin/modprobe netconsole";
+    };
+  };
 
   # A getty on the AMT serial console: recover a text login via Serial-over-LAN
   # with no monitor attached. Works independently of the GUI/tty1 config.
