@@ -4,7 +4,7 @@
   pkgs,
   ...
 }: let
-  browserCommon = import ./firefox-common.nix {inherit lib pkgs;};
+  browserCommon = import ./common.nix {inherit lib pkgs;};
 in {
   imports = [
     inputs.zen-browser.homeModules.beta # More stable, less frequent updates
