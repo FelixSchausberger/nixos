@@ -448,6 +448,15 @@ in {
   fileSystems."/per".neededForBoot = true;
   fileSystems."/home".neededForBoot = true;
 
+  # Shutdown-time stamp storage for the maintenance module's unclean-shutdown
+  # detector (modules.system.maintenance.monitoring.detectUncleanShutdown).
+  # Declared here, not in the module, because the impermanence module is not
+  # loaded in VM-test machines that import maintenance.nix, where the
+  # environment.persistence option does not exist.
+  environment.persistence."/per".directories = [
+    "/var/lib/crash-detect"
+  ];
+
   services = {
     geoclue2.enable = lib.mkForce false;
 
@@ -588,6 +597,12 @@ in {
       monitoring = {
         enable = true;
         alerts = true;
+        # Crash forensics: pages when a boot ended without reaching
+        # shutdown.target. The box has died unlogged before (Sep/Oct 2026:
+        # wtmp "crash" marks, empty pstore after every death), and the
+        # watchdog/deadman recovery resets hide the cause by design - this
+        # makes the death at least countable.
+        detectUncleanShutdown = true;
         # Out-of-band safety net: an external ntfy topic (in a secret, the
         # topic name is password-equivalent) that receives a health alert
         # only when publishing to the local topic fails, because ntfy state
