@@ -17,8 +17,9 @@
     youtube-nonstop
   ];
 in {
-  # Shared browser configuration for Firefox and Zen
+  # Shared browser configuration for Zen
   # Contains common settings, extensions, and search engines
+  # A Firefox consumer of this config is archived at the archive/firefox tag
 
   inherit extensions;
 
