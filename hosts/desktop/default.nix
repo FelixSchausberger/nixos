@@ -174,6 +174,7 @@ in {
     27036
   ];
   networking.firewall.allowedUDPPorts = [
+    6666 # m920q kernel netconsole stream (netconsole-receiver below)
     27031
     27032
     27033
@@ -181,6 +182,26 @@ in {
     27035
     27036
   ];
+
+  # Crash forensics receiver for the m920q: its only UART is the ME/AMT
+  # virtual port (registering it as a kernel console hangs early boot), so
+  # this stands in as its serial console - a netconsole UDP stream of kernel
+  # printk, appended here while this host is up. Best effort: the desktop is
+  # woken on demand while the m920q is always on, so a death while this host
+  # is off leaves the stream uncaptured. The log stays small: it only
+  # carries err-level and above kernel output, which is quiet outside
+  # failures. /var/log is on the persistent root (no impermanence here).
+  systemd.services.netconsole-receiver = {
+    description = "UDP receiver for the m920q kernel netconsole stream";
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    wantedBy = ["multi-user.target"];
+    serviceConfig = {
+      ExecStart = "${pkgs.socat}/bin/socat -u UDP-RECV:6666,reuseaddr OPEN:/var/log/netconsole-m920q.log,append";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+  };
 
   # Moonshine game streaming for remote access via Moonlight.
   # Headless-first: no local session or Steam autostart, so Moonshine's
