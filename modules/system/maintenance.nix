@@ -35,6 +35,17 @@
           password-equivalent. Empty disables the secondary publish.
         '';
       };
+
+      # Crash forensics: on every boot, judge from a shutdown-time stamp
+      # whether the previous boot reached shutdown.target. Its absence means
+      # the boot died without any local trace - kernel panic, hardware
+      # watchdog reset, or power loss - and pages through the same ntfy
+      # routing as the other health alerts. Recovery machinery (watchdog,
+      # deadman, boot counting) brings the host back but destroys the
+      # evidence; this makes the death at least countable.
+      detectUncleanShutdown = lib.mkEnableOption ''
+        alerting when the previous boot ended without a clean shutdown
+      '';
     };
 
     # Deferred restarts of network daemons during a nightly window. Hosts set
@@ -149,6 +160,31 @@
             if [[ $failed_services -gt 0 ]]; then
               echo "WARNING: $failed_services failed services detected"
               ${pkgs.systemd}/bin/systemctl --failed --no-legend
+            fi
+
+            # Crash forensics: a clean shutdown stamps clean-shutdown (the
+            # ExecStop of clean-shutdown-marker). Judged once per boot - the
+            # /run flag stops later runs of this hourly check from re-reading
+            # the consumed stamp. A missing stamp while the arming stamp is
+            # in place means the previous boot never reached shutdown.target:
+            # kernel panic, hardware watchdog reset (an iTCO_wdt reset leaves
+            # no panic record), or power loss. The arming stamp exists so the
+            # first boot after deployment - before any clean shutdown has
+            # stamped - stays silent instead of paging.
+            stamp_dir=/var/lib/crash-detect
+            if [[ ! -f /run/unclean-shutdown-checked ]]; then
+              : > /run/unclean-shutdown-checked
+              if [[ ! -f $stamp_dir/armed ]]; then
+                ${pkgs.coreutils}/bin/mkdir -p $stamp_dir
+                : > $stamp_dir/armed
+              elif [[ ! -f $stamp_dir/clean-shutdown ]]; then
+                echo "WARNING: previous boot ended without a clean shutdown (crash, watchdog reset, or power loss)"
+                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ntfy_send "Unclean Shutdown on $host" "high" "warning" "Previous boot ended without reaching shutdown.target (panic, watchdog reset, or power loss). Correlate: journalctl -b -1, netconsole receiver log, wall power."
+            ''}
+              else
+                ${pkgs.coreutils}/bin/rm -f $stamp_dir/clean-shutdown
+              fi
             fi
 
             # A loaded timer with no next elapse never fires again. Automated
@@ -327,6 +363,26 @@
             Type = "oneshot";
             User = "root";
             Group = "root";
+          };
+        };
+
+        # Crash forensics: stamps a file at every clean shutdown, consumed by
+        # the boot-time check in system-health-check. A plain unit already
+        # carries the default Conflicts=shutdown.target and
+        # Before=shutdown.target, so ExecStop runs during teardown of every
+        # clean shutdown (reboot, poweroff, halt). restartIfChanged=false: a
+        # restart during a switch would run ExecStop mid-runtime and stamp a
+        # "clean shutdown" while the system keeps running, masking a later
+        # death.
+        clean-shutdown-marker = lib.mkIf (config.modules.system.maintenance.monitoring.enable && config.modules.system.maintenance.monitoring.detectUncleanShutdown) {
+          description = "Stamp clean shutdowns for the unclean-shutdown detector";
+          wantedBy = ["multi-user.target"];
+          restartIfChanged = false;
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = "${pkgs.coreutils}/bin/true";
+            ExecStop = "${pkgs.coreutils}/bin/touch /var/lib/crash-detect/clean-shutdown";
           };
         };
 
