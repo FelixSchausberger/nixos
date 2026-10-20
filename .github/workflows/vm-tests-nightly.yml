@@ -7,10 +7,8 @@
 # morning, they do not gate merges.
 #
 # The test list is derived from the flake's test-* packages, so a workflow edit
-# is never needed for new tests. The registry of record is still hand-maintained
-# in two places that must stay in sync: the test attrset in tests-vm/default.nix
-# and its packages.test-* mapping in flake-parts/packages.nix; a forgotten
-# packages.nix entry means the test silently never runs.
+# is never needed for new tests. The registry of record is the attrset in
+# tests-vm/default.nix; flake-parts/packages.nix auto-maps it to packages.test-*.
 #
 # Note: GitHub runners lack KVM, so QEMU runs under TCG emulation and each
 # test takes 15-30 minutes. The matrix keeps wall time at the slowest test.
