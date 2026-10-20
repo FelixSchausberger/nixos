@@ -180,7 +180,7 @@
               elif [[ ! -f $stamp_dir/clean-shutdown ]]; then
                 echo "WARNING: previous boot ended without a clean shutdown (crash, watchdog reset, or power loss)"
                 ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "Unclean Shutdown on $host" "high" "warning" "Previous boot ended without reaching shutdown.target (panic, watchdog reset, or power loss). Correlate: journalctl -b -1, netconsole receiver log, wall power."
+              ntfy_send "Unclean Shutdown on $host" "high" "warning" "Previous boot ended without reaching shutdown.target (panic, watchdog reset, or power loss). Correlate: Grafana logs (unit=netconsole-receiver), journalctl -b -1, wall power."
             ''}
               else
                 ${pkgs.coreutils}/bin/rm -f $stamp_dir/clean-shutdown

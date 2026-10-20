@@ -70,6 +70,10 @@ in {
     ../../modules/system/stylix-catppuccin.nix
     ../../modules/system/wsl-integration.nix
     ../../modules/system/tailscale.nix
+    # Direct import, not the homelab tree: this host ships its journal to
+    # the homelab Loki (homelab.logging.shipEndpoint below) but runs none of
+    # the other homelab services.
+    ../../modules/system/homelab/logging.nix
     ../../modules/system/nixpkgs-overlays.nix # Disable flaky python-lsp-server/scipy checks
     ../../modules/vitals.nix
   ];
@@ -205,6 +209,13 @@ in {
       # nameserver (removed from admin console), so MagicDNS only answers
       # *.ts.net and everything else falls back to local DHCP resolvers.
       homelab.tailscale.enable = true;
+      # Ship this host's journal to the homelab Loki (m920q) over the
+      # tailnet - the only stable path for a roaming laptop, and trusted on
+      # the aggregator's firewall, so no clientSources entry is needed. The
+      # journal and the Alloy cursor both persist on this host, so a boot
+      # after being off replays at most the 24h backlog Alloy's max_age
+      # admits instead of reflooding Loki.
+      homelab.logging.shipEndpoint = "http://m920q:3100";
       maintenance = {
         enable = true;
         monitoring = {
