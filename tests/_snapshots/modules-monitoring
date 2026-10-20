@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 19;
+  rule_count = 20;
   rules = [
     {
       alert = "NextcloudDown";
@@ -138,6 +138,11 @@
       alert = "CpuTemperature";
       expr = "node_thermal_zone_temp{type=\"x86_pkg_temp\"} >= 90";
       priority = "urgent";
+    }
+    {
+      alert = "VitalsScoreLow";
+      expr = "vitals_health_score{type=\"raw\"} < 60";
+      priority = "high";
     }
     {
       alert = "PostgresDown";
