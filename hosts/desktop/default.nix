@@ -186,18 +186,22 @@ in {
   # Crash forensics receiver for the m920q: its only UART is the ME/AMT
   # virtual port (registering it as a kernel console hangs early boot), so
   # this stands in as its serial console - a netconsole UDP stream of kernel
-  # printk, appended here while this host is up. Best effort: the desktop is
-  # woken on demand while the m920q is always on, so a death while this host
-  # is off leaves the stream uncaptured. The log stays small: it only
-  # carries err-level and above kernel output, which is quiet outside
-  # failures. /var/log is on the persistent root (no impermanence here).
+  # printk. Lines go to this service's journal output, which keeps the trace
+  # reboot-independent twice over: /var/log/journal persists here while the
+  # m920q is down, and the fleet Alloy ships the journal to the m920q Loki
+  # with a persisted cursor, replaying the backlog once that host is back -
+  # the trace ends up queryable in Grafana next to every other journal line
+  # (host="desktop", unit="netconsole-receiver.service"). A backlog older
+  # than Alloy's 24h max_age would stay journal-only. Best effort at the
+  # front: the desktop is woken on demand, so a death while this host is off
+  # still surfaces only through the m920q's unclean-shutdown alert.
   systemd.services.netconsole-receiver = {
     description = "UDP receiver for the m920q kernel netconsole stream";
     after = ["network-online.target"];
     wants = ["network-online.target"];
     wantedBy = ["multi-user.target"];
     serviceConfig = {
-      ExecStart = "${pkgs.socat}/bin/socat -u UDP-RECV:6666,reuseaddr OPEN:/var/log/netconsole-m920q.log,append";
+      ExecStart = "${pkgs.socat}/bin/socat -u UDP-RECV:6666,reuseaddr -";
       Restart = "on-failure";
       RestartSec = "5s";
     };
