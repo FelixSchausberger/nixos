@@ -20,12 +20,10 @@
   local = port: "http://127.0.0.1:${toString port}";
 
   # Ports with no module option behind them: jellyfin.nix follows the nixpkgs
-  # default, ntfy.nix hardcodes its own listener, and vitals-daemon runs as a
-  # per-user service with its own config.toml, so each number is pinned once
-  # here instead of repeated per URL.
+  # default and ntfy.nix hardcodes its own listener, so each number is pinned
+  # once here instead of repeated per URL.
   jellyfinPort = 8096;
   ntfyPort = 2586;
-  vitalsPort = 8080;
 
   # Crisp wallpaper the dashboard paints behind the cards. The name is an
   # option (default = the window manager's wallpaper) resolved against
@@ -52,10 +50,9 @@
   # scraped into the local Prometheus (jobs "node" for m920q's loopback and
   # "node-desktop" for the gaming PC over the LAN), so one PromQL query per
   # block reads the same numbers the resources widget used to show locally.
-  # PrometheusMetric renders at most four blocks, hence CPU, memory, root-disk
-  # free space and uptime. A powered-off host returns an empty vector, so its
-  # blocks read "-" (the desktop's graceful "off" state) and the desktop is
-  # intentionally excluded from the NodeExporterDown rule.
+  # A powered-off host returns an empty vector, so its blocks read "-" (the
+  # desktop's graceful "off" state) and the desktop is intentionally excluded
+  # from the NodeExporterDown rule.
   mkHostMetrics = host: [
     {
       label = "CPU";
@@ -89,16 +86,9 @@
     }
   ];
 
-  hostWidget = host: {
-    type = "prometheusmetric";
-    url = local hl.monitoring.prometheusPort;
-    refreshInterval = 30000;
-    metrics = mkHostMetrics host;
-  };
-
-  # Composite health score per monitored host (journald + systemd + procfs, not
-  # just the node_exporter gauges). m920q's daemon is scraped on loopback (job
-  # "vitals"); the desktop runs no monitoring stack and publishes the same
+  # Composite health metrics per monitored host (journald + systemd + procfs,
+  # not just the node_exporter gauges). m920q's daemon is scraped on loopback
+  # (job "vitals"); the desktop runs no monitoring stack and publishes the same
   # series through its node exporter textfile collector (job "node-desktop").
   # Both carry a host label, so each card selects its own host's series.
   mkVitalsMetrics = host: [
@@ -130,11 +120,28 @@
     }
   ];
 
-  vitalsWidget = host: {
+  # One widget per host folds the resource view and the health view into a
+  # single card: prometheusmetric renders at most four blocks, so the card
+  # carries CPU and memory from the node_exporter gauges plus the composite
+  # health score and error count from vitals. Disk, uptime, warnings and load
+  # stay in Grafana, which charts the same series the card reads; the Score
+  # block is relabelled "Health" so it reads self-describing next to the
+  # gauges.
+  hostVitalsMetrics = host: let
+    hostMetrics = mkHostMetrics host;
+    vitalsMetrics = mkVitalsMetrics host;
+  in [
+    (builtins.elemAt hostMetrics 0)
+    (builtins.elemAt hostMetrics 1)
+    (builtins.elemAt vitalsMetrics 0 // {label = "Health";})
+    (builtins.elemAt vitalsMetrics 1)
+  ];
+
+  hostVitalsWidget = host: {
     type = "prometheusmetric";
     url = local hl.monitoring.prometheusPort;
     refreshInterval = 30000;
-    metrics = mkVitalsMetrics host;
+    metrics = hostVitalsMetrics host;
   };
 
   # Build services YAML from enabled homelab services.
@@ -150,62 +157,36 @@
   # Moonlight / Steam Link apps handle wake + presence on the LAN themselves.
   # The Fritz!Box card under Router links there.
   #
-  # The Vitals cards add the composite health score (journald + systemd +
-  # procfs, not just the node_exporter gauges), one per host beside its gauges.
-  # Both read the same Prometheus the host gauges use; m920q's card keeps a
-  # site monitor (its daemon runs as a per-user unit beside the dashboard)
+  # Each card folds the resource gauges and the health view into one widget
+  # (see hostVitalsMetrics); the deep-dive surface for both is the Grafana
+  # dashboard charting the same series. m920q's card keeps a site monitor on
+  # its node_exporter, whose silence would mean a blind monitoring stack,
   # while the desktop has none, because it is off most of the time and the
   # missing series already reads "-".
-  infraServices = lib.optionals hl.monitoring.enable (
-    [
-      {
-        "M920q" = {
-          icon = "mdi-server";
-          href = "http://192.168.178.2:${toString hl.monitoring.grafanaPort}";
-          description = "Homelab server";
-          siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
-          widget = hostWidget config.networking.hostName;
-        };
-      }
-    ]
-    ++ lib.optionals (config.services.vitals.enable or false) [
-      {
-        "Vitals (M920q)" = {
-          icon = "mdi-heart-pulse";
-          # No vitals web UI exists; the deep-dive surface is the Grafana
-          # dashboard that charts the same series.
-          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
-          description = "Composite host health";
-          # The daemon runs as a per-user unit, so this dot is its liveness.
-          siteMonitor = "${local vitalsPort}/health";
-          widget = vitalsWidget config.networking.hostName;
-        };
-      }
-    ]
-    ++ [
-      {
-        "Desktop" = {
-          icon = "mdi-desktop-tower";
-          # No web UI runs on the gaming PC, and it is deliberately off most
-          # of the time. A siteMonitor is a binary up/down dot that logs a
-          # proxy error on every poll while it is off, and Homepage has no way
-          # to show a neutral "off" state; the Prometheus widget below formats
-          # a missing series as "-", so the card goes quiet instead of red.
-          href = "http://${inputs.self.lib.hosts.desktop.ip}:9100/";
-          description = "Gaming PC";
-          widget = hostWidget "desktop";
-        };
-      }
-      {
-        "Vitals (Desktop)" = {
-          icon = "mdi-heart-pulse";
-          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
-          description = "Composite host health";
-          widget = vitalsWidget "desktop";
-        };
-      }
-    ]
-  );
+  infraServices = lib.optionals hl.monitoring.enable [
+    {
+      "M920q" = {
+        icon = "mdi-server";
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+        description = "Homelab server";
+        siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
+        widget = hostVitalsWidget config.networking.hostName;
+      };
+    }
+    {
+      "Desktop" = {
+        icon = "mdi-desktop-tower";
+        # No web UI runs on the gaming PC, and it is deliberately off most
+        # of the time. A siteMonitor is a binary up/down dot that logs a
+        # proxy error on every poll while it is off, and Homepage has no way
+        # to show a neutral "off" state; the Prometheus widget below formats
+        # a missing series as "-", so the card goes quiet instead of red.
+        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+        description = "Gaming PC";
+        widget = hostVitalsWidget "desktop";
+      };
+    }
+  ];
 
   mediaServices =
     lib.optionals hl.immich.enable [
