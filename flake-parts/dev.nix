@@ -41,6 +41,29 @@
         };
       })
       // {
+        # The daemon's Prometheus vocabulary is a contract with the homepage
+        # cards, the health dashboard and the alert rules; an upstream rename
+        # silently empties those surfaces otherwise. The daemon source is the
+        # single emitter (the textfile export copies its /metrics response), so
+        # every metric name the consumers query must appear there. Builds under
+        # `nix flake check`/CI; the eval-only namaka step does not run it.
+        vitals-consumer-contract = pkgs.runCommand "vitals-consumer-contract" {} ''
+          consumers=$(${pkgs.gnugrep}/bin/grep -ohE 'vitals_[a-z_]+' \
+            ${../modules/system/homelab/homepage.nix} \
+            ${../modules/system/homelab/config-health-dashboard.json} \
+            ${../modules/system/homelab/monitoring.nix} | ${pkgs.coreutils}/bin/sort -u)
+          emitted=$(${pkgs.gnugrep}/bin/grep -ohE 'vitals_[a-z_]+' \
+            ${inputs.vitals.outPath}/daemon/src/bin/daemon.rs | ${pkgs.coreutils}/bin/sort -u)
+          missing=$(${pkgs.coreutils}/bin/comm -23 \
+            <(printf '%s\n' "$consumers") <(printf '%s\n' "$emitted"))
+          if [ -n "$missing" ]; then
+            echo "ERROR: consumers query vitals metrics the pinned daemon does not emit:" >&2
+            printf '%s\n' "$missing" >&2
+            exit 1
+          fi
+          touch $out
+        '';
+
         # Unit test for the comin post-deploy downgrade detector; also runs as
         # a prek hook on changes to tools/scripts/detect-downgrades.sh.
         detect-downgrades = pkgs.runCommand "detect-downgrades-unit-test" {} ''
