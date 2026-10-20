@@ -20,10 +20,12 @@
       type = lib.types.package;
       default = pkgs.spotify-player.override {
         # Enable all modern features
-        withFuzzySearch = true; # fzf feature for fuzzy search
-        withNotifications = true; # notify feature for desktop notifications
-        withImageSupport = true; # image feature for album art (Kitty protocol)
+        withFuzzy = true; # fzf feature for fuzzy search
+        withNotify = true; # notify feature for desktop notifications
+        withImage = true; # image feature for album art (Kitty protocol)
         withDaemon = true; # daemon feature for background operation
+        withStreaming = true; # streaming playback
+        withMediaControl = true; # MPRIS media control integration
       };
       description = "The spotify-player package to use";
     };

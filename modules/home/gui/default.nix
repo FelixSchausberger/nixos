@@ -17,6 +17,10 @@
     oculante # Minimalistic image viewer
   ];
 
+  # Terminal Spotify client; the module is self-gated and ships the
+  # playerctld integration plus an optional background daemon.
+  modules.home.tui.spotify-player.enable = true;
+
   # MIME type associations for oculante (from oculante.nix)
   xdg = {
     enable = true;
