@@ -6,6 +6,12 @@
 # auto-deploy via comin. Failures are advisory — investigate in the
 # morning, they do not gate merges.
 #
+# The test list is derived from the flake's test-* packages, so a workflow edit
+# is never needed for new tests. The registry of record is still hand-maintained
+# in two places that must stay in sync: the test attrset in tests-vm/default.nix
+# and its packages.test-* mapping in flake-parts/packages.nix; a forgotten
+# packages.nix entry means the test silently never runs.
+#
 # Note: GitHub runners lack KVM, so QEMU runs under TCG emulation and each
 # test takes 15-30 minutes. The matrix keeps wall time at the slowest test.
 name: VM Tests (Nightly)
@@ -20,8 +26,28 @@ concurrency:
   group: vm-tests-nightly
   cancel-in-progress: true
 jobs:
+  # attrNames does not force the derivation values, so this stays cheaper than
+  # the drvPath-forcing package eval ci.yml runs.
+  list-tests:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    outputs:
+      tests: ${{ steps.discover.outputs.tests }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Nix
+        uses: ./.github/actions/nix-setup
+      - name: Discover VM tests
+        id: discover
+        run: |
+          tests=$(nix eval --json .#packages.x86_64-linux \
+            --apply 'ps: builtins.filter (n: builtins.match "test-.+" n != null) (builtins.attrNames ps)' \
+            | jq -c 'map(sub("^test-"; ""))')
+          echo "tests=$tests" >> "$GITHUB_OUTPUT"
   vm-test:
     name: ${{ matrix.test }}
+    needs: list-tests
     runs-on: ubuntu-26.04
     # TCG emulation is slow; two concurrent tests per job keep the hosted
     # runner within memory/disk limits (the shared Nix config caps at 2).
@@ -29,12 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test:
-          - caddy-proxy
-          - zfs-backup
-          - streaming-services
-          - deferred-maintenance
-          - monitoring-alerting
+        test: ${{ fromJSON(needs.list-tests.outputs.tests) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,4 +66,18 @@ jobs:
       # A cached success from an identical lock means the test already ran
       # for this exact input; nothing changed, so skipping is correct.
       - name: Build and run VM test (${{ matrix.test }})
-        run: nix build ".#packages.x86_64-linux.test-${{ matrix.test }}" -L
+        # pipefail keeps the step red on build failure; tee keeps the full
+        # build output, including the VM serial console, in a file.
+        run: |
+          set -o pipefail
+          nix build ".#packages.x86_64-linux.test-${{ matrix.test }}" -L | tee "$RUNNER_TEMP/vm-test.log"
+      - name: Upload VM test log
+        # A hung test dies at the 60-minute timeout with the interesting
+        # serial-console output buried in a truncated runner log; the artifact
+        # preserves it.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-test-${{ matrix.test }}-log
+          path: ${{ runner.temp }}/vm-test.log
+          if-no-files-found: error
