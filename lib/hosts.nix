@@ -7,7 +7,7 @@
 # it to resolve fleet names while it runs with Tailscale DNS disabled.
 {
   desktop = {
-    wms = ["niri"]; # Default WM; COSMIC/Hyprland available via specialisation
+    wms = ["niri"]; # Default WM (the cosmic module stays available in hosts/lib.nix)
     isGui = true;
     description = "Desktop workstation/gaming host with Niri WM; streams headless via Moonshine";
     ip = "192.168.178.3";

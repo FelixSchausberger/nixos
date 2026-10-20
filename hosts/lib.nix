@@ -1,8 +1,6 @@
 # Host helper library for resolving configured window managers into module imports.
 let
   availableWMs = {
-    hyprland = ../modules/system/wm/hyprland.nix;
-    gnome = ../modules/system/wm/gnome.nix;
     cosmic = ../modules/system/wm/cosmic.nix;
     niri = ../modules/system/wm/niri.nix;
   };

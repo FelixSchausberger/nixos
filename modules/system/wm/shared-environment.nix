@@ -42,23 +42,8 @@
     wlr.enable = true;
 
     config = lib.mkMerge [
-      # Hyprland configuration (highest priority)
-      (lib.mkIf (builtins.elem "hyprland" hostConfig.wms && config.programs.hyprland.enable) {
-        common.default = lib.mkForce ["hyprland" "gtk"];
-        hyprland = {
-          default = ["hyprland" "gtk"];
-          "org.freedesktop.impl.portal.FileChooser" = ["gtk"];
-          "org.freedesktop.impl.portal.AppChooser" = ["gtk"];
-          "org.freedesktop.impl.portal.Print" = ["gtk"];
-          "org.freedesktop.impl.portal.Settings" = ["gtk"];
-          "org.freedesktop.impl.portal.Screenshot" = ["hyprland"];
-          "org.freedesktop.impl.portal.ScreenCast" = ["hyprland"];
-          "org.freedesktop.impl.portal.Inhibit" = ["hyprland"];
-        };
-      })
-
-      # Niri configuration (medium priority, only if Hyprland is not active)
-      (lib.mkIf (builtins.elem "niri" hostConfig.wms && config.programs.niri.enable && !config.programs.hyprland.enable) {
+      # Niri configuration
+      (lib.mkIf (builtins.elem "niri" hostConfig.wms && config.programs.niri.enable) {
         common.default = ["gnome" "wlr" "gtk"];
         niri = {
           default = ["gnome" "wlr" "gtk"];
@@ -70,11 +55,6 @@
           "org.freedesktop.impl.portal.ScreenCast" = ["wlr"];
           "org.freedesktop.impl.portal.Inhibit" = ["gnome"];
         };
-      })
-
-      # GNOME configuration (lowest priority, only if no other WM is active)
-      (lib.mkIf (builtins.elem "gnome" hostConfig.wms && !config.programs.hyprland.enable && !config.programs.niri.enable) {
-        common.default = ["gnome" "gtk"];
       })
     ];
 
