@@ -6,7 +6,6 @@
     ./safe-rm.nix
     ./herdr
     ./obsidian-skills.nix
-    # ./claude-code
     ./opencode
     ./opencode/v2.nix
     ./opencode/store-maintenance.nix
