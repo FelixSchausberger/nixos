@@ -19,6 +19,13 @@ repos:
         entry: yamlfmt
         language: system
         types: [yaml]
+        # sops rewrites secrets/*.yaml with its own 4-space indentation on
+        # every `sops edit`, while yamlfmt's 2-space style would churn the
+        # whole file (ciphertext included) on every --all-files hook run -
+        # formatting noise that folds itself into unrelated PRs. Excluding
+        # ^secrets/ leaves that file's formatting to sops; the ensure-sops
+        # hook still validates its encryptedness.
+        exclude: ^secrets/
   # Re-enable once prek updates to use native-tls or updated webpki-roots
   # - repo: https://github.com/pre-commit/pre-commit-hooks
   #   rev: v5.0.0
