@@ -187,7 +187,10 @@ in {
   };
 
   boot.kernelParams = lib.mkAfter [
-    "zfs.zfs_arc_max=8589934592"
+    # 6 GiB on a 16 GiB host: steady ARC residency is ~4 GiB, and the
+    # headroom above it must absorb Immich ML bursts without pushing
+    # immich/HA/jellyfin into swap (observed 2026-10 with an 8 GiB cap).
+    "zfs.zfs_arc_max=6442450944"
     "zfs.zfs_arc_min=536870912"
     # Do NOT add "console=ttyS0,115200n8" here. The ttyS0 UART on this board
     # is the ME/AMT virtual serial (PCI 00:16.3), not the physical COM port,

@@ -91,9 +91,12 @@ in {
     };
 
     # ML inference runs during photo analysis, not during normal browsing.
+    # Sized at ~2x the worker's steady RSS (~1-2G); a larger ceiling lets an
+    # ML burst together with the ZFS ARC exceed 16G and swap out
+    # latency-sensitive services (observed 2026-10).
     systemd.services.immich-machine-learning.serviceConfig = {
-      MemoryMax = "6G";
-      MemoryHigh = "5G";
+      MemoryMax = "4G";
+      MemoryHigh = "3G";
       CPUQuota = "200%";
     };
 
