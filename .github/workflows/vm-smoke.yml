@@ -1,0 +1,50 @@
+# Pull-request boot gate.
+#
+# The nightly suite runs after comin has already converged the fleet, so a
+# merge that breaks a system closure is detected hours late and by then it is
+# deployed. This job moves a VM test in front of the merge instead: with the
+# "VM Smoke" check required in branch protection, auto-merge cannot land a
+# change that fails to boot the modules it imports.
+#
+# The check must report on every pull request - a required check that never
+# starts blocks the merge forever - so path filtering happens inside the job
+# (a docs-only change skips the expensive steps and still succeeds) instead of
+# in the pull_request trigger.
+#
+# deferred-maintenance is the fastest test in the suite (85 s wall on the
+# nightly runner) and exercises the base maintenance and security-hardening
+# modules every host imports.
+name: VM Smoke (PR)
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: vm-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    name: VM Smoke
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Detect relevant changes
+        id: changed
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          base="$(git merge-base "origin/${{ github.base_ref }}" HEAD)"
+          if git diff --name-only "$base" HEAD | grep -qE '(^|/)flake\.lock$|\.nix$'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup Nix
+        if: steps.changed.outputs.run == 'true'
+        uses: ./.github/actions/nix-setup
+      - name: Build and run VM test
+        if: steps.changed.outputs.run == 'true'
+        run: nix build .#packages.x86_64-linux.test-deferred-maintenance -L
