@@ -4,13 +4,12 @@
 # osConfig to pick the session target.
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
 }: let
   cfg = config.services.vitals;
-  daemon = inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.daemon;
+  nodeExporter = config.services.prometheus.exporters.node;
 in {
   options.services.vitals = {
     enable = lib.mkEnableOption "vitals health monitoring daemon";
@@ -44,7 +43,7 @@ in {
   config = lib.mkIf (cfg.enable && cfg.textfile.enable) {
     assertions = [
       {
-        assertion = config.services.prometheus.exporters.node.enable;
+        assertion = nodeExporter.enable;
         message = "services.vitals.textfile.enable needs the node exporter, whose textfile collector carries the score";
       }
     ];
@@ -58,25 +57,29 @@ in {
     ];
 
     systemd.tmpfiles.rules = [
-      "d ${cfg.textfile.directory} 0755 node-exporter node-exporter -"
+      "d ${cfg.textfile.directory} 0755 ${nodeExporter.user} ${nodeExporter.group} -"
     ];
 
     systemd.services.vitals-metrics = {
       description = "Write the vitals health score for the node exporter textfile collector";
       serviceConfig = {
         Type = "oneshot";
-        # Reads the whole system journal; same privilege as the maintenance check.
-        User = "root";
+        # The daemon owns journal access; this unit only copies its loopback
+        # /metrics response, so it runs as the exporter user that owns the
+        # collector directory instead of root.
+        User = nodeExporter.user;
+        Group = nodeExporter.group;
       };
       script = ''
         set -euo pipefail
         dir="${cfg.textfile.directory}"
         tmp="$(${pkgs.coreutils}/bin/mktemp "$dir/.vitals.XXXXXX")"
         trap '${pkgs.coreutils}/bin/rm -f "$tmp"' EXIT
-        # Every sample the daemon prints carries a millisecond timestamp; the
-        # textfile collector wants bare samples (as the deploy and GC emitters
-        # write them), so the trailing timestamp field is dropped.
-        ${daemon}/bin/vitals-daemon --once --format prometheus \
+        # The daemon's /metrics response is the same series a Prometheus scrape
+        # receives, so the textfile and scrape paths share one emitter. The
+        # textfile collector does not support timestamps, so each sample's
+        # trailing field is stripped.
+        ${pkgs.curl}/bin/curl -sf --max-time 30 http://127.0.0.1:8080/metrics \
           | ${pkgs.gnused}/bin/sed -E 's/[[:space:]][0-9]+$//' > "$tmp"
         ${pkgs.coreutils}/bin/chmod 0644 "$tmp"
         ${pkgs.coreutils}/bin/mv -f "$tmp" "$dir/vitals.prom"
