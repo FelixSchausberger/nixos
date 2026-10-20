@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }: {
   config = lib.mkIf config.services.postgresql.enable {
@@ -14,10 +13,13 @@
       requires = ["var-lib-postgresql.mount"];
     };
 
+    # No WAL archiving: the fleet runs no streaming standby and nothing
+    # replays archived segments (no PITR consumer either), while pg_wal
+    # recycles its own segments without one. Any archive_command would
+    # only pile dead files onto rpool (~1 GB/month measured on m920q by
+    # 2026-10). Reintroduce archiving together with the consumer that
+    # needs it, with a retention story attached.
     services.postgresql.settings = {
-      wal_level = "replica";
-      archive_mode = "on";
-      archive_command = "${pkgs.coreutils}/bin/cp %p /var/lib/postgresql/wal_archive/%f";
       max_wal_size = "2GB";
       min_wal_size = "512MB";
       checkpoint_completion_target = 0.9;
@@ -27,9 +29,5 @@
       maintenance_work_mem = "256MB";
       max_connections = "50";
     };
-
-    systemd.tmpfiles.rules = [
-      "d /per/var/lib/postgresql/wal_archive 0700 postgres postgres -"
-    ];
   };
 }
