@@ -7,10 +7,8 @@
   ...
 }: let
   supportedWms = [
-    "gnome"
     "cosmic"
     "niri"
-    "hyprland"
   ];
   invalidWms = builtins.filter (wm: !(builtins.elem wm supportedWms)) hostConfig.wms;
 
@@ -18,41 +16,18 @@
   firstWm =
     if hostConfig.wms != []
     then builtins.head hostConfig.wms
-    else "hyprland";
-
-  # Map WM names to proper session names
-  # sessionName =
-  #   if firstWm == "gnome"
-  #   then "gnome"
-  #   else if firstWm == "cosmic"
-  #   then "cosmic"
-  #   else "hyprland";
+    else "niri";
 
   # Command mapping for tuigreet sessions
   getSessionCommand = wm:
-    if wm == "gnome"
-    then "${pkgs.gnome-session}/bin/gnome-session --session=gnome"
-    else if wm == "cosmic"
+    if wm == "cosmic"
     then "cosmic-session"
     else if wm == "niri"
     then "${inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable}/bin/niri-session"
-    else "${pkgs.hyprland}/bin/Hyprland";
+    else builtins.throw "Unsupported window manager for greetd: ${wm}";
 
   # Auto-login command based on WM
   autoLoginCommand = getSessionCommand firstWm;
-  # Build tuigreet session list with all available WMs
-  # sessionsList = builtins.concatStringsSep "," (map (
-  #     wm: let
-  #       sessionCmd = getSessionCommand wm;
-  #       sessionLabel =
-  #         if wm == "gnome"
-  #         then "GNOME"
-  #         else if wm == "cosmic"
-  #         then "COSMIC"
-  #         else "Hyprland";
-  #     in "${sessionLabel}:${sessionCmd}"
-  #   )
-  #   hostConfig.wms);
 in
   # The gate must read the RESOLVED option (config.hostConfig): the specialArgs
   # hostConfig is the static lib/hosts.nix registry, which has no
@@ -105,30 +80,18 @@ in
 
       # Allow tuigreet to handle session selection
       # displayManager.defaultSession = sessionName;
-
-      gnome = lib.mkIf (builtins.elem "gnome" hostConfig.wms) {
-        core-apps.enable = true;
-      };
     };
 
     environment = {
-      systemPackages = with pkgs;
-        [
-          mesa
-          # Additional packages for theming
-          bibata-cursors
-          nerd-fonts.jetbrains-mono
-          catppuccin-papirus-folders
-        ]
-        ++ lib.optionals (builtins.elem "gnome" hostConfig.wms) [
-          gnome-session
-          gnome-shell
-        ]
-        ++ lib.optionals (builtins.elem "hyprland" hostConfig.wms) [
-          hyprland
-        ];
+      systemPackages = with pkgs; [
+        mesa
+        # Additional packages for theming
+        bibata-cursors
+        nerd-fonts.jetbrains-mono
+        catppuccin-papirus-folders
+      ];
 
-      # Use consistent environment variables from Hyprland configuration
+      # Consistent cursor theme variables for the Wayland session
       variables = {
         XCURSOR_THEME = "Bibata-Modern-Classic";
         XCURSOR_SIZE = "24";
@@ -150,9 +113,6 @@ in
       };
       usb-modeswitch.enable = true;
     };
-
-    # Enable GNOME keyring for all sessions that might need it
-    security.pam.services.greetd.enableGnomeKeyring = builtins.elem "gnome" hostConfig.wms;
 
     fonts.packages = with pkgs; [
       liberation_ttf

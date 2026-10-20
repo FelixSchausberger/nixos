@@ -13,7 +13,7 @@
   ...
 }: let
   # Compositors managed by UWSM (GNOME has its own session manager)
-  uwsmCompositors = ["hyprland" "niri" "cosmic"];
+  uwsmCompositors = ["niri" "cosmic"];
 
   # Check if any UWSM-managed compositor is enabled
   hasUwsmCompositor = builtins.any (wm: builtins.elem wm (hostConfig.wms or [])) uwsmCompositors;

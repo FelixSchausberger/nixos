@@ -244,11 +244,6 @@
       url = "github:lilyinstarlight/nixos-cosmic";
       inputs.rust-overlay.follows = "rust-overlay";
     };
-    hyprland.url = "github:hyprwm/Hyprland";
-    hyprland-plugins = {
-      url = "github:hyprwm/hyprland-plugins";
-      inputs.hyprland.follows = "hyprland";
-    };
     niri = {
       url = "github:epireyn/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";

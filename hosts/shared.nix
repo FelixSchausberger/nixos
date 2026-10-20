@@ -34,10 +34,7 @@ in {
           type = lib.types.listOf lib.types.str;
           default = [];
           description = "List of window managers/desktop environments to enable";
-          example = [
-            "gnome"
-            "hyprland"
-          ];
+          example = ["niri"];
         };
 
         isGui = lib.mkOption {
