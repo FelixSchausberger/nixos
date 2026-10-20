@@ -195,6 +195,16 @@
         "CPU package at {{ $value }} C; check cooling"
         ''node_thermal_zone_temp{type="x86_pkg_temp"} >= 90'')
     ]
+    ++ lib.optionals (config.services.vitals.enable or false) [
+      # Backstop for sub-threshold accumulation: each discrete failure above
+      # has its own rule, while the composite score is the only signal that
+      # sums many warnings which individually never cross a threshold. Reads
+      # the raw series, not the smoothed one: smoothing lags, and lag is the
+      # property this rule must not have.
+      (mkRuleFor "10m" "VitalsScoreLow" "high" "Host health score is low"
+        "The vitals health score is {{ $value | humanize }} (below 60); issues are accumulating across units and resources"
+        ''vitals_health_score{type="raw"} < 60'')
+    ]
     ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
       (mkRule "PostgresDown" "high" "PostgreSQL exporter is unreachable"
         "PostgreSQL exporter is unreachable"
