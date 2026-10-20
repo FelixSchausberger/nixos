@@ -209,13 +209,15 @@ review:
 test-vm NAME:
     nix build .#packages.x86_64-linux.test-{{NAME}} -L
 
-# Run all VM integration tests
+# Run all VM integration tests (names derived from tests-vm/default.nix)
 test-vm-all:
     #!/usr/bin/env bash
     set -euo pipefail
-    for test in caddy-proxy zfs-backup streaming-services deferred-maintenance monitoring-alerting; do
+    tests=$(nix eval --raw '.#packages.x86_64-linux' \
+        --apply 'ps: builtins.concatStringsSep " " (builtins.filter (n: builtins.match "test-.+" n != null) (builtins.attrNames ps))')
+    for test in $tests; do
         echo "=== Running VM Test: $test ==="
-        nix build ".#packages.x86_64-linux.test-$test" -L
+        nix build ".#packages.x86_64-linux.$test" -L
     done
 
 # Full validation: format, hooks, and tests
