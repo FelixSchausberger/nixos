@@ -316,12 +316,29 @@
 
             # Kernel update pending (deployed but not booted): reboot required. On
             # hosts with autoRebootForKernel the nightly window handles the reboot.
+            # The kernel path alone is not the full trigger space: boot.kernelParams
+            # changes ride the kernel-params file, leave the kernel store path
+            # untouched, and stay inert until a reboot. The file is a
+            # whitespace-separated kernel cmdline fragment; compare it
+            # word-deduplicated because module param assignment is last-wins:
+            # reordering alone changes nothing, but any added, removed, or
+            # changed word alerts (observed 2026-10: a ZFS ARC cap change sat
+            # deployed-and-inactive on m920q for weeks with the same kernel
+            # binary and no alert).
+            kernel_dirty=0
+            params_dirty=0
             if [[ "$(readlink -f /run/current-system/kernel 2>/dev/null)" != "$(readlink -f /run/booted-system/kernel 2>/dev/null)" ]]; then
+              kernel_dirty=1
+            fi
+            if [[ -f /run/current-system/kernel-params && -f /run/booted-system/kernel-params ]] && ! ${pkgs.diffutils}/bin/cmp -s <(${pkgs.gnugrep}/bin/grep -aoE '[^[:blank:][:cntrl:]]+' /run/current-system/kernel-params | ${pkgs.coreutils}/bin/sort -u) <(${pkgs.gnugrep}/bin/grep -aoE '[^[:blank:][:cntrl:]]+' /run/booted-system/kernel-params | ${pkgs.coreutils}/bin/sort -u); then
+              params_dirty=1
+            fi
+            if [[ $kernel_dirty -eq 1 || $params_dirty -eq 1 ]]; then
               echo "WARNING: kernel update deployed but not booted (reboot pending)"
               ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
               if [[ ! -f /run/reboot-pending-notified ]]; then
                 : > /run/reboot-pending-notified
-                ntfy_send "Reboot Pending on $host" "default" "warning" "Kernel update deployed but not booted. Run: sudo reboot"
+                ntfy_send "Reboot Pending on $host" "default" "warning" "Kernel or kernel-params change deployed but not booted. Run: sudo reboot"
               fi
             ''}
             fi

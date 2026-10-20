@@ -208,12 +208,24 @@ in {
         section "Reboot"
         current_kernel=$(readlink -f /run/current-system/kernel 2>/dev/null || echo "unknown")
         booted_kernel=$(readlink -f /run/booted-system/kernel 2>/dev/null || echo "unknown")
-        if [[ "$current_kernel" == "$booted_kernel" ]]; then
+        # boot.kernelParams changes leave the kernel path untouched but stay
+        # inert until a reboot, so the kernel-params file - a whitespace-
+        # separated kernel cmdline fragment, compared word-deduplicated
+        # because module param assignment is last-wins - belongs in this
+        # check alongside the kernel itself. The same rule backs the nightly
+        # maintenance Reboot Pending alert.
+        params_drift=0
+        if [[ -f /run/current-system/kernel-params && -f /run/booted-system/kernel-params ]] && ! ${pkgs.diffutils}/bin/cmp -s <(${pkgs.gnugrep}/bin/grep -aoE '[^[:blank:][:cntrl:]]+' /run/current-system/kernel-params | ${pkgs.coreutils}/bin/sort -u) <(${pkgs.gnugrep}/bin/grep -aoE '[^[:blank:][:cntrl:]]+' /run/booted-system/kernel-params | ${pkgs.coreutils}/bin/sort -u); then
+          params_drift=1
+        fi
+        if [[ "$current_kernel" == "$booted_kernel" && $params_drift -eq 0 ]]; then
           status_line ok "Kernel" "up to date ($booted_kernel)"
         elif [[ "$current_kernel" == "unknown" || "$booted_kernel" == "unknown" ]]; then
           status_line info "Kernel" "unavailable ($current_kernel vs $booted_kernel)"
-        else
+        elif [[ "$current_kernel" != "$booted_kernel" ]]; then
           status_line warn "Kernel" "reboot pending: running $booted_kernel -> deployed $current_kernel"
+        else
+          status_line warn "Kernel" "reboot pending: deployed kernel-params differ from booted"
         fi
 
         section "Current Generation"
