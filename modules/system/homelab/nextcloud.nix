@@ -6,6 +6,19 @@
   ...
 }: let
   cfg = config.modules.system.homelab.nextcloud;
+
+  # Obsidian's workspace.json is per-device UI state that every instance
+  # rewrites constantly, so keeping it in the desktop sync set churns
+  # "(conflicted copy ...)" renames whenever a client races a server-side
+  # change. Nextcloud Desktop loads .sync-exclude.lst from its folder sync
+  # root at discovery time (this account root is every client's sync root)
+  # and excluded entries stay per-device forever after. The mount-root
+  # copies cover connections rooted at an external mount instead.
+  syncExcludesFile = pkgs.writeText "sync-exclude.lst" ''
+    # Planted by the NixOS nextcloud module. Patterns match basenames at
+    # any depth below the sync root.
+    workspace.json
+  '';
 in {
   options.modules.system.homelab.nextcloud = {
     enable = lib.mkEnableOption "Nextcloud file sync and share server";
@@ -394,6 +407,34 @@ in {
         Persistent = true;
         RandomizedDelaySec = "1h";
       };
+    };
+
+    # The embedded store path keeps this unit restart-on-switch: any
+    # exclusion change re-installs the files on the next apply.
+    systemd.services.nextcloud-sync-excludes = {
+      description = "Install Nextcloud client sync exclusion lists";
+      after = ["nextcloud-setup.service"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = lib.concatStringsSep "\n" (
+        map
+        # External storage mounts hold foreign content owned by the user
+        # via ACLs; the copied file itself is owned by nextcloud so the
+        # scanner can read it.
+        (
+          p: ''
+            install -m0644 ${syncExcludesFile} "${p}/.sync-exclude.lst"
+            chown nextcloud:nextcloud "${p}/.sync-exclude.lst"
+          ''
+        )
+        (
+          ["${cfg.dataPath}/data/admin/files"]
+          ++ map (m: m.path) cfg.externalStorage
+        )
+      );
     };
 
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [cfg.port];
