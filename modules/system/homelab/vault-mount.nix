@@ -20,7 +20,7 @@
     export RCLONE_CONFIG_VAULT_TYPE=webdav
     export RCLONE_CONFIG_VAULT_URL=${cfg.url}
     export RCLONE_CONFIG_VAULT_VENDOR=nextcloud
-    export RCLONE_CONFIG_VAULT_USER=${cfg.user}
+    export RCLONE_CONFIG_VAULT_USER=${cfg.login}
     export RCLONE_CONFIG_VAULT_PASS=$(${pkgs.rclone}/bin/rclone obscure "$VAULT_APP_PASSWORD")
     # The backend config lives entirely in RCLONE_CONFIG_* env: point the
     # global config at /dev/null so pre-existing user configs can neither
@@ -72,6 +72,14 @@ in {
       type = lib.types.str;
       default = user;
       description = "Account that owns the mount and its credentials";
+    };
+
+    login = lib.mkOption {
+      type = lib.types.str;
+      # The vault lives under the admin account's WebDAV root, so the DAV
+      # login is admin even though the mount itself runs for the user.
+      default = "admin";
+      description = "Nextcloud account the WebDAV backend authenticates as";
     };
   };
 
