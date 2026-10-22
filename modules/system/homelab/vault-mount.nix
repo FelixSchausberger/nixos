@@ -51,9 +51,12 @@ in {
 
     url = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:8081/remote.php/dav/files/admin/Obsidian";
-      # Remote TUI hosts enter the tailnet Caddy address instead:
-      # https://m920q.tailf2f0ca.ts.net/nextcloud/remote.php/dav/files/admin/Obsidian
+      # The tailnet Caddy front door is the default everywhere (including
+      # the mount host itself): nextcloud's overwritewebroot bleeds the
+      # /nextcloud prefix into the WebDAV hrefs, so a bare-loopback URL to
+      # the nginx vhost lists an empty collection -- the shape behind
+      # vdirsyncer's ncDav is the one DAV href matching was built for.
+      default = "https://m920q.tailf2f0ca.ts.net/nextcloud/remote.php/dav/files/admin/Obsidian";
       description = "WebDAV URL of the Obsidian external storage mount";
     };
 
