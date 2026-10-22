@@ -17,28 +17,36 @@
   # starting. Writes land through vfs-cache with a short write-back so a
   # saved note reaches the server without waiting for an editor exit.
   vaultMountScript = pkgs.writeShellScript "vault-mount" ''
-    export RCLONE_CONFIG_VAULT_TYPE=webdav
-    export RCLONE_CONFIG_VAULT_URL=${cfg.url}
-    export RCLONE_CONFIG_VAULT_VENDOR=nextcloud
-    export RCLONE_CONFIG_VAULT_USER=${cfg.user}
-    export RCLONE_CONFIG_VAULT_PASS=$(${pkgs.rclone}/bin/rclone obscure "$VAULT_APP_PASSWORD")
-    # The backend config lives entirely in RCLONE_CONFIG_* env: point the
-    # global config at /dev/null so pre-existing user configs (an old
-    # root-owned rclone.conf in our case) can neither be loaded nor clash.
-    export RCLONE_CONFIG=/dev/null
-    exec ${pkgs.rclone}/bin/rclone mount vault: ${cfg.mountPath} \
-      --vfs-cache-mode writes \
-      --vfs-write-back 10s \
-      --dir-cache-time 60s
+        export RCLONE_CONFIG_VAULT_TYPE=webdav
+        export RCLONE_CONFIG_VAULT_URL=${cfg.url}
+        export RCLONE_CONFIG_VAULT_VENDOR=nextcloud
+        export RCLONE_CONFIG_VAULT_USER=${cfg.user}
+        export RCLONE_CONFIG_VAULT_PASS=$(${pkgs.rclone}/bin/rclone obscure "$VAULT_APP_PASSWORD")
+    <<<<<<< conflict 1 of 1
+    =======
+        # The backend config lives entirely in RCLONE_CONFIG_* env: point the
+        # global config at /dev/null so pre-existing user configs can neither
+        # be loaded nor clash.
+        export RCLONE_CONFIG=/dev/null
+    >>>>>>> conflict 1 of 1 ends
+        exec ${pkgs.rclone}/bin/rclone mount vault: ${cfg.mountPath} \
+          --allow-other \
+          --uid ${toString config.users.users.${cfg.user}.uid} \
+          --gid ${toString config.users.groups.users.gid} \
+          --chmod 0755 \
+          --vfs-cache-mode writes \
+          --vfs-write-back 10s \
+          --dir-cache-time 60s
   '';
 
   mountPrep = pkgs.writeShellScript "vault-mount-prep" ''
     mkdir -p ${cfg.mountPath}
+    chown ${user}:users ${cfg.mountPath}
     # Clear a stale fuse mount from a crashed unit so the new one binds.
-    ${pkgs.fuse3}/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
+    /run/wrappers/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
   '';
   unmountStale = pkgs.writeShellScript "vault-unmount" ''
-    ${pkgs.fuse3}/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
+    /run/wrappers/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
   '';
 in {
   options.modules.system.homelab.vaultMount = {
@@ -96,9 +104,9 @@ in {
       after = ["nginx.service" "network-online.target"];
       wantedBy = ["multi-user.target"];
       serviceConfig = {
+        # Runs as root: only root (or the setuid wrapper) can bind the fuse
+        # file system (see vaultMountScript).
         Type = "exec";
-        User = cfg.user;
-        Group = "users";
         EnvironmentFile = config.sops.templates."vault-mount/env".path;
         ExecStartPre = mountPrep;
         ExecStart = "${vaultMountScript}";
