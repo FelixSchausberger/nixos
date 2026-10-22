@@ -803,6 +803,7 @@ in {
       enable = true;
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
+    vaultMount.enable = true;
     homepage.enable = true;
     smartHome = {
       enable = true;
