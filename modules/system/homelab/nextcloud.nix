@@ -138,6 +138,12 @@ in {
       extraAppsEnable = true;
 
       phpOptions = {
+        # Disabling PHP's native session upload progress removes the
+        # confirmed stale-global-state RCE path of CVE-2026-109619
+        # (CERT-EU 2026-018). Nextcloud uploads go through chunked WebDAV,
+        # not PHP session upload progress, so nothing here needs it.
+        # Pool php.ini is where the PHP team says this must take effect.
+        "session.upload_progress.enabled" = "0";
         "opcache.memory_consumption" = "256";
         "opcache.max_accelerated_files" = "20000";
         "opcache.revalidate_freq" = "60";
