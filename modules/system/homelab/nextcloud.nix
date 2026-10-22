@@ -136,7 +136,10 @@ in {
       maxUploadSize = "16G";
       https = false;
       configureRedis = true;
-      autoUpdateApps.enable = true;
+      # Store apps are not part of this install (appstoreenabled=false and
+      # every extraApp rides the package), so the store updater has nothing
+      # to do: occ app:update --all aborts on each timer run otherwise.
+      autoUpdateApps.enable = false;
 
       extraApps = {
         # Apps follow the configured package version, so a Nextcloud major
