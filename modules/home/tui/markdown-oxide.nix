@@ -2,7 +2,9 @@
   config,
   pkgs,
   ...
-}: {
+}: let
+  vault = config.modules.home.tui.vault.path;
+in {
   # Install markdown-oxide package
   home.packages = with pkgs; [
     markdown-oxide
@@ -10,7 +12,7 @@
 
   # Shell alias for daily notes
   home.shellAliases = {
-    daily = "fish -c 'set -l today (date +%Y-%m-%d); set -l file /per/mnt/data/notes/work/magazino/daily/$today.md; mkdir -p (dirname $file); touch $file; ${config.home.homeDirectory}/.local/bin/nvedit $file'";
+    daily = "fish -c 'set -l today (date +%Y-%m-%d); set -l file ${vault}/work/magazino/daily/$today.md; mkdir -p (dirname $file); touch $file; ${config.home.homeDirectory}/.local/bin/nvedit $file'";
   };
 
   # Create configuration directory and file
@@ -42,7 +44,7 @@
       new_file_folder_path = ""
 
       # The folder for new daily notes
-      daily_notes_folder = "/per/mnt/data/notes/work/magazino/daily"
+      daily_notes_folder = "${vault}/work/magazino/daily"
 
       # Whether markdown links should include an extension or not
       include_md_extension_md_link = false
