@@ -74,12 +74,13 @@ in {
     services.nextcloud = {
       enable = true;
       hostName = "nextcloud.local";
-      # Pinned to nextcloud33 for the staged upgrade path on this pre-26.11
-      # install: NixOS requires one major version step at a time. After 33 has
-      # run successfully, bump to `pkgs.nextcloud34`; `occ upgrade` runs
-      # automatically during activation. nextcloud33 is removed from nixpkgs
-      # once unsupported upstream.
-      package = pkgs.nextcloud33;
+      # Nextcloud only upgrades one major version at a time and the NixOS
+      # module runs `occ upgrade` during activation, so this package stays
+      # one step behind the newest nixpkgs major: bump it once the target
+      # upgrade has completed successfully (occ status shows the new
+      # versionstring with needsDbUpgrade false). The instance is on 34;
+      # nixpkgs already packages 35 as the next staged step.
+      package = pkgs.nextcloud34;
       datadir = cfg.dataPath;
       config = {
         dbtype = "pgsql";
