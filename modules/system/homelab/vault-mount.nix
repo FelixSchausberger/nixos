@@ -30,7 +30,7 @@
       --allow-other \
       --uid ${toString config.users.users.${cfg.user}.uid} \
       --gid ${toString config.users.groups.users.gid} \
-      --chmod 0755 \
+      --umask 022 \
       --vfs-cache-mode writes \
       --vfs-write-back 10s \
       --dir-cache-time 60s
