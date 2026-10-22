@@ -220,7 +220,6 @@ in {
       notesApp = lib.mkOption {
         type = lib.types.enum [
           "obsidian"
-          "basalt"
         ];
         default = "obsidian";
         description = "Notes application for scratchpad";

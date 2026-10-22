@@ -59,7 +59,6 @@ in {
   };
 
   home.packages = with pkgs; [
-    basalt # Modern shell written in Rust with a focus on portability and performance
     cacert # CA certificates for TLS connections
     # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     circumflex # Terminal Hacker News browser (clx), reads article and comment threads in place
