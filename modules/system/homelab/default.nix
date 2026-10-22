@@ -18,6 +18,7 @@
     ./samba.nix
     ./smart-home.nix
     ./ssh-hardened.nix
+    ./vault-mount.nix
     ./vaultwarden.nix
     ./zellij-web.nix
   ];

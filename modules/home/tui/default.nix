@@ -20,6 +20,7 @@ in {
     ./git.nix # Distributed version control system
     ./jujutsu.nix # Git-compatible DVCS that is both simple and powerful
     ./markdown-oxide.nix # Markdown LSP server inspired by Obsidian
+    ./vault.nix # Vault access path for terminal tooling (DAV mount override)
     ./monitoring.nix # Modern system monitoring and performance tools
     ./nh.nix # Yet another Nix CLI helper - Modern replacement for nixos-rebuild
     ./newsboat.nix # Terminal feed reader used as the Hacker News reading queue

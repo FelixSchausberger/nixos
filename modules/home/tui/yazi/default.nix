@@ -4,7 +4,6 @@
   pkgs,
   ...
 }: let
-  defaults = import ../../../../lib/defaults.nix;
   yaziPackage = inputs.yazi.packages.${pkgs.stdenv.hostPlatform.system}.default;
   noteLauncher = pkgs.writeShellApplication {
     name = "yazi-notes";
@@ -31,7 +30,7 @@
       }
       trap cleanup EXIT
 
-      note_dir="''${NOTES_DIR:-${defaults.paths.obsidianVault}}"
+      note_dir="''${NOTES_DIR:-${config.modules.home.tui.vault.path}}"
       if [ "$#" -eq 0 ]; then
         set -- "$note_dir"
       fi
