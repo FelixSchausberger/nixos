@@ -22,6 +22,10 @@
     export RCLONE_CONFIG_VAULT_VENDOR=nextcloud
     export RCLONE_CONFIG_VAULT_USER=${cfg.user}
     export RCLONE_CONFIG_VAULT_PASS=$(${pkgs.rclone}/bin/rclone obscure "$VAULT_APP_PASSWORD")
+    # The backend config lives entirely in RCLONE_CONFIG_* env: point the
+    # global config at /dev/null so pre-existing user configs (an old
+    # root-owned rclone.conf in our case) can neither be loaded nor clash.
+    export RCLONE_CONFIG=/dev/null
     exec ${pkgs.rclone}/bin/rclone mount vault: ${cfg.mountPath} \
       --vfs-cache-mode writes \
       --vfs-write-back 10s \
@@ -31,6 +35,9 @@
   mountPrep = pkgs.writeShellScript "vault-mount-prep" ''
     mkdir -p ${cfg.mountPath}
     # Clear a stale fuse mount from a crashed unit so the new one binds.
+    ${pkgs.fuse3}/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
+  '';
+  unmountStale = pkgs.writeShellScript "vault-unmount" ''
     ${pkgs.fuse3}/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
   '';
 in {
@@ -95,7 +102,7 @@ in {
         EnvironmentFile = config.sops.templates."vault-mount/env".path;
         ExecStartPre = mountPrep;
         ExecStart = "${vaultMountScript}";
-        ExecStopPost = "${pkgs.fuse3}/bin/fusermount3 -uz ${cfg.mountPath}";
+        ExecStopPost = "${unmountStale}";
         Restart = "on-failure";
         RestartSec = "10s";
         Nice = 5;
