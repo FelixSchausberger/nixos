@@ -97,7 +97,11 @@ in {
       # Allow sambashare group full access + default ACL for new files
       "a+ ${dataPath} - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # Same ACLs on the Obsidian vault and Documents (Nextcloud-exposed dirs)
-      "a+ ${dataPath}/notes - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      # The vault is Nextcloud's external-storage target: point of write
+      # policy is the DAV protocol, so SMB keeps it read-only (every SMB
+      # write would bypass the etag machinery and surface as a blocked
+      # client sync later).
+      "a+ ${dataPath}/notes - - - - g:sambashare:rx,d:g:sambashare:rx"
       "a+ ${dataPath}/documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # projects root: own group gets full access, nextcloud only traverse
       # (x) so the projects/cad mount is reachable without exposing sibling
