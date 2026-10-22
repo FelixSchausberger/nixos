@@ -91,9 +91,9 @@ in {
       # module runs `occ upgrade` during activation, so this package stays
       # one step behind the newest nixpkgs major: bump it once the target
       # upgrade has completed successfully (occ status shows the new
-      # versionstring with needsDbUpgrade false). The instance is on 34;
-      # nixpkgs already packages 35 as the next staged step.
-      package = pkgs.nextcloud34;
+      # versionstring with needsDbUpgrade false). The instance is on 35,
+      # 34 having run clean;
+      package = pkgs.nextcloud35;
       datadir = cfg.dataPath;
       config = {
         dbtype = "pgsql";
