@@ -18,6 +18,7 @@
     ./samba.nix
     ./smart-home.nix
     ./ssh-hardened.nix
+    ./syncthing-vault.nix
     ./vault-mount.nix
     ./vaultwarden.nix
     ./zellij-web.nix

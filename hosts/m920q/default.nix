@@ -571,6 +571,12 @@ in {
   systemd.timers."zpool-trim".timerConfig.OnCalendar = lib.mkForce "Sun 13:20:00";
   systemd.timers.fstrim.timerConfig.OnCalendar = lib.mkForce "Sun 13:25:00";
   systemd.timers."nextcloud-cleanup".timerConfig.OnCalendar = lib.mkForce "Sun 13:30:00";
+  # Phone-originated vault edits arrive through the Syncthing P2P share
+  # (modules/system/homelab/syncthing-vault.nix) as direct server-side writes,
+  # writes, which are invisible to the Nextcloud external-storage file cache
+  # until the scan refreshes it; the 1h module default would hold desktop
+  # clients a stale vault for up to an hour after every phone save.
+  systemd.timers."nextcloud-scan-external".timerConfig.OnUnitActiveSec = lib.mkForce "5min";
 
   # AirPlay receiver renders into the on-demand niri session (waylandsink), so a
   # MacBook mirror appears as a fullscreen window over the desktop and
@@ -804,6 +810,7 @@ in {
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
     vaultMount.enable = true;
+    syncthingVault.enable = true;
     homepage.enable = true;
     smartHome = {
       enable = true;
