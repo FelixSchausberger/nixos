@@ -282,9 +282,13 @@ in {
       after = ["nextcloud-setup.service"];
       requires = ["nextcloud-setup.service"];
       wantedBy = ["multi-user.target"];
+      # Runs on a timer too: without one, an external-storage mount deleted
+      # through the web UI or the client stayed gone until the next reboot,
+      # silently 404ing every consumer of the mount (desktop sync pairs, the
+      # rclone WebDAV vault drive). The script is a no-op reconcile, so an
+      # interval run is cheap and self-heals exactly that failure mode.
       serviceConfig = {
         Type = "oneshot";
-        RemainAfterExit = true;
       };
       # Reconcile instead of rebuilding. The previous delete-all/create-all
       # cycle gave every mount a fresh storage signature on every run, which
@@ -372,6 +376,20 @@ in {
         ${scanPaths}
         echo "Scan complete."
       '';
+    };
+
+    # The mount reconcile is also a timer: without one, an external-storage
+    # mount deleted through the web UI or a client stayed gone until the next
+    # reboot, silently 404ing every consumer of the mount (desktop sync pairs
+    # and the rclone WebDAV vault drive). The script is a no-op reconcile, so
+    # the interval is cheap and self-heals exactly that failure mode.
+    systemd.timers.nextcloud-external-storage = {
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "10min";
+        OnUnitActiveSec = "15min";
+        RandomizedDelaySec = "5min";
+      };
     };
 
     systemd.timers.nextcloud-scan-external = {
