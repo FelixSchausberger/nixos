@@ -9,12 +9,13 @@
   defaults = inputs.self.lib.defaults;
   user = defaults.system.user;
 
-  # Syncthing ignore patterns are a per-device artifact: the file sits in the
-  # synced folder root and is never propagated to other devices
+  # The ignore list is a per-device artifact: the file sits in the synced
+  # folder root and is never propagated to other devices
   # (https://docs.syncthing.net/users/ignoring.html), so Nix owns it as a
-  # rewritten tmpfiles rule on this server. The same churn files the Nextcloud
-  # desktop clients exclude through <vault>/.sync-exclude.lst: the two lists
-  # must agree, or the client that sees a change resyncs it behind the other.
+  # symlink rule (see the tmpfiles rule below). The same churn files the
+  # Nextcloud desktop clients exclude through <vault>/.sync-exclude.lst; the
+  # two lists must agree, or whichever client sees a change resyncs it behind
+  # the other. The phone carries its own matching ignore entries.
   stignore = pkgs.writeText "obsidian-stignore" ''
     // Obsidian rewrites these on every app open; syncing them only makes conflicts
     .obsidian/workspace.json
@@ -106,8 +107,13 @@ in {
       openDefaultPorts = false;
     };
 
+    # L+ (symlink), not f+: on this systemd version f+ writes its argument
+    # as literal content, and ignore patterns span lines. The symlink target
+    # is a read-only store path, which is safe here: Syncthing only reads the
+    # file, it is a per-device artifact not synced anywhere, and the Nextcloud
+    # scan only resolves it to a few small text bytes if it syncs it through.
     systemd.tmpfiles.rules = [
-      "f+ ${defaults.paths.obsidianVault}/.stignore 0644 ${user} users - ${stignore}"
+      "L+ ${defaults.paths.obsidianVault}/.stignore - - - - ${stignore}"
     ];
 
     # Sync traffic is tailnet-only: the phone runs Tailscale, so the P2P
