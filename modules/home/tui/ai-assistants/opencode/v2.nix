@@ -129,10 +129,12 @@
   # Both process families - the TUI and the shared systemd server - run through
   # this script.
   #
-  # GITHUB_TOKEN is unset because the login shell exports a GitHub PAT, from
-  # which opencode synthesizes a github-copilot provider that the Copilot API
-  # rejects; the company tool is reserved for IntelliJ/CLI. gh authenticates
-  # through hosts.yml, so nothing in this tree needs the variable.
+  # GITHUB_TOKEN is unset defensively: opencode synthesizes a github-copilot
+  # provider from that variable, which the Copilot API rejects for the fleet's
+  # PAT; the company tool is reserved for IntelliJ/CLI. The login shell exports
+  # the PAT as GH_UPDATE_TOKEN instead, and gh authenticates through hosts.yml,
+  # so nothing in this tree needs GITHUB_TOKEN - the unset still covers values
+  # inherited from ssh sessions, CI or a manual export.
   #
   # PATH carries the rip-backed rm shim and RIP_GRAVEYARD pins the graveyard
   # (modules/home/tui/ai-assistants/safe-rm.nix). It reaches this process and
