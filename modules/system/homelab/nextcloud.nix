@@ -104,10 +104,6 @@ in {
         adminpassFile = config.sops.secrets."nextcloud/admin-password".path;
       };
 
-      # The SMTP password cannot ride in settings (that renders into the
-      # world-readable store), so it is passed as a systemd credential and
-      # read into config.php at service start.
-      secrets.mail_smtppassword = config.sops.secrets."nextcloud/app-password".path;
       settings = {
         trusted_domains =
           [
@@ -163,9 +159,8 @@ in {
         # Outgoing mail goes through Gmail over SSL on 465, authenticating as
         # the account itself. Gmail refuses plain password auth unless the
         # account has 2FA, so the password is a 16-character app password.
-        # The password is not a setting: it is handed to PHP through
-        # services.nextcloud.secrets, so the credential stays out of the
-        # world-readable store while still being declarative.
+        # The password is not a setting: it is a credential applied to
+        # config.php by nextcloud-mail-password, sourced from sops.
         mail_smtpmode = "smtp";
         mail_smtphost = "smtp.gmail.com";
         mail_smtpport = 465;
@@ -259,6 +254,27 @@ in {
       CPUQuota = "50%";
     };
 
+    # services.nextcloud.settings refuses mail_smtppassword because it would
+    # render into the world-readable store, and services.nextcloud.secrets
+    # makes the occ wrapper demand root to load a runtime credential. Writing
+    # the value into config.php once per activation instead keeps occ usable
+    # by the owning user while sops stays the source of truth.
+    systemd.services.nextcloud-mail-password = {
+      after = ["nextcloud-setup.service"];
+      requires = ["nextcloud-setup.service"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        User = "nextcloud";
+        Group = "nextcloud";
+      };
+      script = ''
+        ${lib.getExe config.services.nextcloud.occ} config:system:set mail_smtppassword \
+          --value "$(cat ${config.sops.secrets."nextcloud/app-password".path})"
+      '';
+    };
+
     systemd.services.nextcloud-update-plugins = {
       after = [
         "postgresql.service"
@@ -313,10 +329,14 @@ in {
       mode = "0440";
     };
 
-    # Gmail app password for outgoing mail, consumed by
-    # services.nextcloud.secrets.mail_smtppassword. The account has 2FA, so
-    # Gmail only accepts an app password for SMTP authentication.
-    sops.secrets."nextcloud/app-password" = {};
+    # Gmail app password for outgoing mail, applied to config.php by
+    # nextcloud-mail-password. The account has 2FA, so Gmail only accepts an
+    # app password for SMTP authentication.
+    sops.secrets."nextcloud/app-password" = {
+      owner = "nextcloud";
+      group = "nextcloud";
+      mode = "0440";
+    };
 
     # Published share link for the Homepage calendar widget: the token URL
     # is itself the credential (the calendar DAV backend requires auth,
