@@ -29,12 +29,16 @@
 
   # CalDAV/CardDAV clients and Nextcloud's service discovery probe the
   # .well-known endpoints at the site root; with Nextcloud served under a
-  # sub-path these must redirect into it.
+  # sub-path these must redirect into it. webfinger/nodeinfo are only served
+  # by Nextcloud's front controller, which also answers them with the
+  # X-NEXTCLOUD-WELL-KNOWN header the setup check looks for.
   mkWellKnownRedirects = path: ''
     redir /.well-known/carddav ${path}/remote.php/dav permanent
     redir /.well-known/caldav ${path}/remote.php/dav permanent
     redir /.well-known/host-meta ${path}/public.php?service=host-meta permanent
     redir /.well-known/host-meta.json ${path}/public.php?service=host-meta-json permanent
+    redir /.well-known/webfinger ${path}/index.php/.well-known/webfinger permanent
+    redir /.well-known/nodeinfo ${path}/index.php/.well-known/nodeinfo permanent
   '';
 
   # Homepage's background image, shipped for the browser to fetch. Homepage's
@@ -156,6 +160,10 @@ in {
             tls {
               get_certificate tailscale
             }
+            # Caddy is the TLS endpoint; the upstream only sees plain HTTP,
+            # so HSTS has to be set here. No preload: that is a
+            # browser-distributed commitment this host cannot recall.
+            header Strict-Transport-Security "max-age=15552000; includeSubDomains"
           ''
           + lib.optionalString cfg.navidrome (mkKeepRoute "navidrome" hl.navidrome.port)
           + lib.optionalString cfg.grafana (mkKeepRoute "grafana" hl.monitoring.grafanaPort)

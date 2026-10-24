@@ -117,6 +117,33 @@ in {
             config.modules.system.homelab.caddyProxy.tailnetDomain
           ];
 
+        # Caddy terminates TLS and proxies over loopback, so nginx and PHP-FPM
+        # present 127.0.0.1 as the peer for every request. Without
+        # trusted_proxies Nextcloud throttles that one shared address, which
+        # slows down every client at once, and rejects the X-Forwarded-*
+        # headers Caddy sends as spoofable. Trusting loopback is safe here:
+        # Caddy replaces (does not append) X-Forwarded-For for peers outside
+        # its own trusted_proxies, and nginx listens on loopback only, so no
+        # external client can reach the FastCGI hop with a forged header.
+        trusted_proxies = ["127.0.0.1"];
+
+        # Profile phone numbers are validated against this region when the
+        # user omits a country code.
+        default_phone_region = "AT";
+
+        # A single PHP pool serves this instance, so the ID only needs to be
+        # valid (0-511); it shards cache keys when several pools share one
+        # instance and the setup check reports its absence otherwise.
+        serverid = 1;
+
+        # Public profile pages stay off: this is a single-account file sync
+        # backend and a profile page would publish the account to the network.
+        profile.enabled = false;
+
+        # New accounts start with an empty home; the shipped skeleton files
+        # are noise on a personal instance.
+        skeletondirectory = "";
+
         # When Caddy serves Nextcloud at /nextcloud, these settings ensure
         # Nextcloud generates correct URLs and WebDAV paths. overwriteprotocol
         # forces HTTPS since Caddy terminates TLS and Nextcloud sees plain HTTP;
@@ -127,6 +154,22 @@ in {
         overwrite.cli.url =
           lib.mkIf config.modules.system.homelab.caddyProxy.enable
           "https://${config.modules.system.homelab.caddyProxy.tailnetDomain}/nextcloud/";
+
+        # Outgoing mail goes through Gmail over SSL on 465, authenticating as
+        # the account itself. Gmail refuses plain password auth unless the
+        # account has 2FA, so the password is a 16-character app password.
+        # The password is the one setting left out: services.nextcloud.settings
+        # is rendered into the world-readable nix store, so the credential is
+        # entered once in the admin UI and persists in config.php in the
+        # datadir.
+        mail_smtpmode = "smtp";
+        mail_smtphost = "smtp.gmail.com";
+        mail_smtpport = 465;
+        mail_smtpsecure = "ssl";
+        mail_smtpauth = true;
+        mail_smtpname = "fel.schausberger@gmail.com";
+        mail_from_address = "fel.schausberger";
+        mail_domain = "gmail.com";
 
         # Run maintenance (DB migrations, scans) outside active hours.
         maintenance_window_start = 1;
@@ -164,6 +207,9 @@ in {
         "opcache.memory_consumption" = "256";
         "opcache.max_accelerated_files" = "20000";
         "opcache.revalidate_freq" = "60";
+        # The 8 MB default fills up with Nextcloud's repeated strings (paths,
+        # app names), leaving no room to intern more.
+        "opcache.interned_strings_buffer" = "16";
       };
 
       poolSettings = {
