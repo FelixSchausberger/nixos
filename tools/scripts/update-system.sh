@@ -60,7 +60,15 @@ else
 	deadline=$(($(date +%s) + TIMEOUT_SECS))
 	before=$(gh_ run list --workflow="$WORKFLOW" -L 1 --json databaseId \
 		--jq 'first(.[]).databaseId' 2>/dev/null || echo 0)
-	gh_ workflow run "$WORKFLOW"
+	# Actions dispatch needs the fine-grained PAT (GH_UPDATE_TOKEN, exported by
+	# the fish login shell): the gh keyring token only carries `repo` scope and
+	# dispatch with it fails with "Your token has not been granted the required
+	# scope". Scoped to this call so every other gh call keeps the keyring.
+	if [[ -z "${GH_UPDATE_TOKEN:-}" ]]; then
+		echo "error: GH_UPDATE_TOKEN is unset; run from a login shell (it holds the fine-grained PAT from sops github/token)" >&2
+		exit 1
+	fi
+	GH_TOKEN="$GH_UPDATE_TOKEN" gh_ workflow run "$WORKFLOW"
 	echo "update: workflow dispatched on $REPO; waiting for the run to start"
 
 	run_id=""
