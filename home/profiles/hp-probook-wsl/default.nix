@@ -51,22 +51,26 @@
     git.enable = true;
   };
 
-  # Interactive homelab access: mosh, then the Zellij web attach. mosh is
-  # roaming-friendly (survives suspend and network changes) and reads
-  # ~/.ssh/config for the bootstrap connection, so keys and host aliases apply
-  # unchanged. It has no connect timeout but exits 1 itself after 15s without
-  # any server state (mosh's stmclient.cc "Timed out waiting for server..."
-  # path), which is exactly what a UDP-filtered network produces; `zr` then
-  # takes over and carries its own TCP 443 reconnect loop. Plain ssh stays
+  # Interactive homelab access: mosh over the LAN, then over the tailnet, then
+  # the Zellij web attach. The LAN alias carries a 3s ConnectTimeout
+  # (modules/home/tui/git.nix) because its RFC1918 address is unroutable off
+  # the home network, so the tailnet attempt costs one bounded stall and
+  # reaches m920q from anywhere. mosh is roaming-friendly (survives suspend and
+  # network changes) and reads ~/.ssh/config for the bootstrap connection, so
+  # keys and host aliases apply unchanged. Its stmclient "Timed out waiting for
+  # server..." path is what a UDP-filtered network produces; `zr` then takes
+  # over over HTTPS and carries its own reconnect loop. Plain ssh stays
   # available for scripts, scp and a raw shell when Zellij itself is broken.
   programs.fish.functions.m920q = {
     body = ''
-      if not command mosh m920q $argv
-        echo "m920q: mosh could not reach the homelab over UDP, attaching through the Zellij web transport" >&2
+      command mosh m920q $argv
+      or command mosh m920q-tail $argv
+      or begin
+        echo "m920q: mosh could not reach the homelab over the LAN or the tailnet, attaching through the Zellij web transport" >&2
         zr
       end
     '';
-    description = "Homelab session: mosh, falling back to the Zellij web attach";
+    description = "Homelab session: mosh over LAN or tailnet, falling back to the Zellij web attach";
   };
 
   # WSL-specific home configuration
