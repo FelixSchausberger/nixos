@@ -21,6 +21,12 @@
     .obsidian/workspace.json
     .obsidian/workspace-mobile.json
     .obsidian/workspaces.json
+    // The desktop and phone legitimately diverge in UI appearance, so these
+    // stay per-device rather than churning conflicts at every app open
+    .obsidian/appearance.json
+    .obsidian/hotkeys.json
+    // Conflict artifacts are per-device leftovers resolved by hand
+    (?d)*.sync-conflict-*
     // Desktop-client artifact kept for the Nextcloud sync pairs; not for the phone
     .sync-exclude.lst
     // Obsidian trash: local-only until deleted
