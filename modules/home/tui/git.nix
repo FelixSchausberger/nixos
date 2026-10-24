@@ -1,22 +1,44 @@
 {
   config,
   inputs,
+  lib,
   pkgs,
   ...
 }: let
   inherit (inputs.self.lib) personalInfo hosts user;
 
-  # Generate per-host SSH config entries from the canonical host registry
+  # Generate per-host SSH config entries from the canonical host registry.
+  #
+  # A LAN entry carries ConnectTimeout: its RFC1918 address is unroutable off
+  # the home network, and ssh otherwise waits for the TCP stack to give up, so
+  # the bound is what lets a caller chain a tailnet fallback (the m920q fish
+  # function on hp-probook-wsl) instead of hanging.
+  #
+  # Hosts that publish a tailnetIp also get a <name>-tail entry, dialled by IP:
+  # that is the only route off the LAN, and an IP needs no client-side MagicDNS
+  # wiring (which differs between bare metal and the WSL distro).
   hostSections = builtins.concatStringsSep "\n" (builtins.map (name: let
     h = hosts.${name};
     hostName =
       h.ip or name;
-  in ''
-    Host ${name}
-        HostName ${hostName}
-        User ${user}
-        IdentityFile ~/.ssh/id_ed25519
-  '') (builtins.attrNames hosts));
+
+    lanEntry =
+      ''
+        Host ${name}
+            HostName ${hostName}
+            User ${user}
+            IdentityFile ~/.ssh/id_ed25519
+      ''
+      + lib.optionalString (h ? ip) "    ConnectTimeout 3\n";
+
+    tailEntry = lib.optionalString (h ? tailnetIp) ''
+      Host ${name}-tail
+          HostName ${h.tailnetIp}
+          User ${user}
+          IdentityFile ~/.ssh/id_ed25519
+    '';
+  in
+    lanEntry + tailEntry) (builtins.attrNames hosts));
 in {
   home = {
     # Base SSH config managed by Home Manager (declarative)
