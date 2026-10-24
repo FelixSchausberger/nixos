@@ -810,7 +810,12 @@ in {
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
     vaultMount.enable = true;
-    syncthingVault.enable = true;
+    syncthingVault = {
+      enable = true;
+      # pixel-9a; device IDs are public certificate fingerprints, not secrets
+      # (pairing also requires the phone's private key and share acceptance).
+      phoneDeviceId = "4WLIL6A-FP3MZWP-ZEYMFMT-3HO3GD3-DYZU3RK-H3TF5W4-65VNEAE-76SJLQ7";
+    };
     homepage.enable = true;
     smartHome = {
       enable = true;
