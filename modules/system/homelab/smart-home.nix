@@ -111,14 +111,14 @@ in {
         enable = true;
         settings = {
           permit_join = false;
-          # Radio 1 of the SLZB-MR4U is the TI CC2674P10 running TI's zstack
-          # coordinator firmware; SLZB-OS serves that radio's serial port over
-          # TCP at the stick's reserved address. The adapter name lives under
-          # serial, matching the configuration schema, and MQTT discovery is on
-          # by the module default, which follows services.home-assistant.enable.
+          # The MR4U exposes its radios by chip family: 6638 is the EFR32MG26
+          # (EmberZNet 8.0.2) and 7638 the TI CC2674P10. The Ember radio carries
+          # the Zigbee network here, leaving the TI radio free for the later
+          # Thread/Matter path. SLZB-OS serves that serial port over TCP at the
+          # stick's reserved address; the adapter name lives under serial.
           serial = {
             port = cfg.coordinatorUrl;
-            adapter = "zstack";
+            adapter = "ember";
           };
           frontend = {
             enabled = true;
