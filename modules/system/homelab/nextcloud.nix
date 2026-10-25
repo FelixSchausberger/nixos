@@ -275,6 +275,26 @@ in {
       '';
     };
 
+    # Every local service authenticates from 127.0.0.1, so one client with a
+    # stale token would brute-force-throttle the whole loopback bucket and
+    # make unrelated clients fail with HTTP 429. Nextcloud keeps the allow-list
+    # in app config (no occ subcommand exists); the write is idempotent.
+    systemd.services.nextcloud-bruteforce-bypass = {
+      after = ["nextcloud-setup.service"];
+      requires = ["nextcloud-setup.service"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        User = "nextcloud";
+        Group = "nextcloud";
+      };
+      script = ''
+        ${lib.getExe config.services.nextcloud.occ} config:app:set bruteForce whitelist_loopback \
+          --value "127.0.0.1/32"
+      '';
+    };
+
     systemd.services.nextcloud-update-plugins = {
       after = [
         "postgresql.service"
