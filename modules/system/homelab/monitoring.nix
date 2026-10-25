@@ -587,20 +587,6 @@ in {
             ];
           }
         ]
-        ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
-          {
-            job_name = "nextcloud-exporter";
-            scrape_interval = "60s";
-            static_configs = [
-              {
-                targets = [
-                  "127.0.0.1:${toString config.services.prometheus.exporters.nextcloud.port}"
-                ];
-                labels.host = localHost;
-              }
-            ];
-          }
-        ]
         ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
           {
             job_name = "adguard";
@@ -675,16 +661,6 @@ in {
             relabel_configs = proberRelabel config.services.prometheus.exporters.json.port;
           }
         ];
-    };
-
-    services.prometheus.exporters.nextcloud = mkIf config.modules.system.homelab.nextcloud.enable {
-      enable = true;
-      url = "http://127.0.0.1:${toString config.modules.system.homelab.nextcloud.port}";
-      username = "admin";
-      passwordFile = config.sops.secrets."nextcloud/admin-password".path;
-    };
-    users.users.nextcloud-exporter = mkIf config.modules.system.homelab.nextcloud.enable {
-      extraGroups = ["nextcloud"];
     };
 
     services.prometheus.exporters.blackbox = {

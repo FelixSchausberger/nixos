@@ -433,12 +433,15 @@
         # endpoint blackbox already uses (monitoring.nix).
         siteMonitor = "${local hl.nextcloud.port}/status.php";
         # Loopback works because nextcloud.nix trusts 127.0.0.1 as a domain;
-        # probing it there keeps the widget independent of Caddy.
+        # probing it there keeps the widget independent of Caddy. The widget
+        # reads OCS serverinfo, which rejects login-password auth while TOTP
+        # is enabled on the account, so it authenticates with the device token
+        # the calendar sync uses.
         widget = {
           type = "nextcloud";
           url = local hl.nextcloud.port;
           username = "admin";
-          password = "{{HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD}}";
+          password = "{{HOMEPAGE_VAR_NEXTCLOUD_APP_PASSWORD}}";
           fields = ["activeusers" "numfiles" "freespace"];
         };
       };
@@ -868,7 +871,7 @@
   widgetEnv = lib.concatStringsSep "\n" (
     lib.optional hl.monitoring.enable "HOMEPAGE_VAR_GRAFANA_ADMIN_PASSWORD=${config.sops.placeholder."grafana/admin-password"}"
     ++ lib.optional hl.adguardhome.enable "HOMEPAGE_VAR_ADGUARD_PASSWORD=${config.sops.placeholder."adguard/password"}"
-    ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD=${config.sops.placeholder."nextcloud/admin-password"}"
+    ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_APP_PASSWORD=${config.sops.placeholder."nextcloud/calendar-app-password"}"
     ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_ICS_URL=${config.sops.placeholder."nextcloud/calendar-ics-share-url"}"
     ++ lib.optional hl.immich.enable "HOMEPAGE_VAR_IMMICH_API_KEY=${config.sops.placeholder."immich/api-key"}"
     ++ lib.optional hl.jellyfin.enable "HOMEPAGE_VAR_JELLYFIN_API_KEY=${config.sops.placeholder."jellyfin/api-key"}"

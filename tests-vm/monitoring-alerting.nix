@@ -187,16 +187,6 @@
         age.keyFile = "/etc/monitoring-test-age-key";
         age.generateKey = false;
       };
-      # The nextcloud exporter stub (enabled below) reads the admin password
-      # through monitoring.nix; the fixture has no 'nextcloud' section, so
-      # point its secret at an existing fixture key (values are throwaway;
-      # the exporter only needs a readable file to start).
-      users.users.nextcloud-exporter = {};
-      sops.secrets."nextcloud/admin-password" = {
-        key = "grafana/secret-key";
-        owner = "nextcloud-exporter";
-        mode = "0440";
-      };
       environment.etc."monitoring-test-age-key".source =
         ./fixtures/monitoring/test-age-key.txt;
 
