@@ -101,6 +101,9 @@ in {
           {
             address = "127.0.0.1";
             omitPasswordAuth = true;
+            # per_listener_settings is on (the module emits it), and mosquitto
+            # 2.x refuses anonymous clients unless allow_anonymous is set.
+            settings.allow_anonymous = true;
             acl = ["pattern readwrite #"];
           }
         ];
