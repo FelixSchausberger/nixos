@@ -430,7 +430,11 @@
             Group = "root";
             Nice = 19;
             IOSchedulingClass = "idle";
-            TimeoutStartSec = 600;
+            # A full-store collect-garbage pass scans every path (~80k on m920q)
+            # before deleting anything, so it regularly needs more than the
+            # ten minutes this unit used to allow; a timeout kill leaves the
+            # unit failed and the store half-swept until the next daily slot.
+            TimeoutStartSec = 3600;
           };
         };
 
