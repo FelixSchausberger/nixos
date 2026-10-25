@@ -819,9 +819,10 @@ in {
     homepage.enable = true;
     smartHome = {
       enable = true;
-      # coordinatorUrl stays unset until the SLZB-MR4U is wired to the LAN with
-      # a reserved address last; zigbee2mqtt stays off until then and only the
-      # broker plus Home Assistant run (see the module's option comment).
+      # SLZB-MR4U radio 1 (TI CC2674P10) serves its serial port over TCP in
+      # Ethernet mode; 192.168.178.74 is the DHCP address to reserve in the
+      # Fritz!Box (MAC 72:af:09:a5:06:0c) so the endpoint never moves.
+      coordinatorUrl = "tcp://192.168.178.74:6638";
     };
     ntfy.enable = true;
     samba.enable = true;

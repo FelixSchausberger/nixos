@@ -115,6 +115,9 @@ in {
           # Radio 1 of the SLZB-MR4U is the TI CC2674P10 running TI's zstack
           # coordinator firmware.
           adapter = "zstack";
+          # SLZB-OS serves that radio's serial port over TCP; the URL is the
+          # reserved address of the stick, not a local device path.
+          serial.port = cfg.coordinatorUrl;
           frontend = {
             enabled = true;
             host = "127.0.0.1";
