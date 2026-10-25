@@ -111,12 +111,15 @@ in {
         enable = true;
         settings = {
           permit_join = false;
-          # MQTT discovery is on by the module default, which follows
-          # services.home-assistant.enable.
-          adapter = "zstack";
-          # SLZB-OS serves that radio's serial port over TCP; the URL is the
-          # reserved address of the stick, not a local device path.
-          serial.port = cfg.coordinatorUrl;
+          # Radio 1 of the SLZB-MR4U is the TI CC2674P10 running TI's zstack
+          # coordinator firmware; SLZB-OS serves that radio's serial port over
+          # TCP at the stick's reserved address. The adapter name lives under
+          # serial, matching the configuration schema, and MQTT discovery is on
+          # by the module default, which follows services.home-assistant.enable.
+          serial = {
+            port = cfg.coordinatorUrl;
+            adapter = "zstack";
+          };
           frontend = {
             enabled = true;
             host = "127.0.0.1";
