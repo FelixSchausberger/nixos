@@ -114,6 +114,15 @@ in {
         enable = true;
         settings = {
           permit_join = false;
+          # Devices that stop reporting show as "unavailable" in Home
+          # Assistant after the availability timeout instead of keeping a
+          # stale state.
+          availability = {
+            enabled = true;
+          };
+          # Frontend and logs show when a device last reported; the primary
+          # tool when a bulb starts misbehaving.
+          advanced.last_seen = "ISO_8601";
           # The MR4U exposes its radios by chip family: 6638 is the EFR32MG26
           # (EmberZNet 8.0.2) and 7638 the TI CC2674P10. The Ember radio carries
           # the Zigbee network here, leaving the TI radio free for the later
