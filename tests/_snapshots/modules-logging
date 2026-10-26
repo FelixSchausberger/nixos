@@ -32,7 +32,9 @@
   desktop_alloy_enabled = true;
   desktop_loki_enabled = false;
   desktop_ship_endpoint = "http://m920q:3100";
-  firewall_extra_input_rules = "ip saddr 192.168.178.3 tcp dport 3100 accept";
+  firewall_extra_input_rules = ''
+    ip saddr 192.168.178.72 tcp dport 8123 accept
+    ip saddr 192.168.178.3 tcp dport 3100 accept'';
   grafana_datasources = [
     "prometheus"
     "loki"
