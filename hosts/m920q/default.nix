@@ -823,6 +823,11 @@ in {
       # Ethernet mode; 192.168.178.74 is the DHCP address to reserve in the
       # Fritz!Box (MAC 72:af:09:a5:06:0c) so the endpoint never moves.
       coordinatorUrl = "tcp://192.168.178.74:6638";
+      # Direct LAN access to Home Assistant for the shared home-network
+      # clients: the girlfriend's iPhone (iOS private MAC 46:78:06:33:e6:cb,
+      # DHCP-reserved in the Fritz!Box so the address stays). No tailnet
+      # requirement for everyday light control.
+      lanClients = ["192.168.178.72"];
     };
     ntfy.enable = true;
     samba.enable = true;

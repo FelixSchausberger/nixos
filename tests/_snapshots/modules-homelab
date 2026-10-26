@@ -57,7 +57,14 @@
   prometheus_port = 9090;
   smart_home_coordinator_url = "tcp://192.168.178.74:6638";
   smart_home_enabled = true;
+  smart_home_ha_bind = [
+    "127.0.0.1"
+    "192.168.178.2"
+  ];
   smart_home_ha_port = 8123;
+  smart_home_lan_clients = [
+    "192.168.178.72"
+  ];
   smart_home_mosquitto = {
     acl = [
       "pattern readwrite #"

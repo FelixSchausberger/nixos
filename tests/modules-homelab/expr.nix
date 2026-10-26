@@ -84,6 +84,8 @@ in {
   smart_home_coordinator_url = config.modules.system.homelab.smartHome.coordinatorUrl;
   smart_home_ha_port = config.modules.system.homelab.smartHome.port;
   smart_home_z2m_frontend_port = config.modules.system.homelab.smartHome.frontendPort;
+  smart_home_lan_clients = config.modules.system.homelab.smartHome.lanClients;
+  smart_home_ha_bind = config.services.home-assistant.config.http.server_host;
   smart_home_mosquitto = let
     l = builtins.head config.services.mosquitto.listeners;
   in {
