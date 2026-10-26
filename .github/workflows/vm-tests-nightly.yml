@@ -74,7 +74,7 @@ jobs:
         # serial-console output buried in a truncated runner log; the artifact
         # preserves it.
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vm-test-${{ matrix.test }}-log
           path: ${{ runner.temp }}/vm-test.log
