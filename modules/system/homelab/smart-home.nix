@@ -79,6 +79,18 @@ in {
       default = 8449;
       description = "Tailscale Serve HTTPS port for the Zigbee2MQTT frontend";
     };
+
+    lanClients = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      example = ["192.168.178.72"];
+      description = ''
+        LAN addresses that may reach Home Assistant directly on the home
+        network (plain HTTP, password-gated by HA). When non-empty, HA binds
+        the m920q LAN address beside loopback and one accept rule per client
+        is generated; the tailnet Serve front is unaffected.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -154,10 +166,12 @@ in {
         config = {
           default_config = {};
           http = {
+            # Loopback always (the Tailscale Serve front), plus the m920q LAN
+            # address when direct home-network clients are configured.
+            server_host =
+              ["127.0.0.1"]
+              ++ lib.optional (cfg.lanClients != []) inputs.self.lib.hosts.m920q.ip;
             server_port = cfg.port;
-            # Tailnet-only UI: Serve connects from loopback, so HA binds loopback
-            # as well and the firewall stays the only LAN defence in depth.
-            server_host = ["127.0.0.1"];
             # The Tailscale Serve front terminates TLS and reaches HA from
             # 127.0.0.1; trusting it keeps client IPs and secure cookies intact.
             use_x_forwarded_for = true;
@@ -212,6 +226,15 @@ in {
         }
       );
     };
+
+    # Direct home-network clients (plain HTTP; HA's own login gates them). One
+    # accept rule per client keeps the generated nftables free of set-literal
+    # syntax (the same pattern as the Loki clientSources rules).
+    networking.firewall.extraInputRules = lib.mkIf (cfg.lanClients != []) (
+      lib.concatMapStringsSep "\n"
+      (client: "ip saddr ${client} tcp dport ${toString cfg.port} accept")
+      cfg.lanClients
+    );
 
     # State directories survive reboots on the impermanence host. The tmpfiles
     # rules create them under the mount source directly so the ordering
