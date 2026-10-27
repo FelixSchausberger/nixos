@@ -131,8 +131,14 @@ jobs:
             if [ "$count" -gt 0 ]; then
               gap=1
               echo "::notice::$host has $count uncached derivation(s) to build before merge:"
-              printf '%s\n' "$built" | head -10
-              if printf '%s\n' "$built" | grep -qE "$HEAVY"; then
+              # Both readers below consume the list to EOF: head or grep -q
+              # would close the pipe once satisfied, park the writer on
+              # SIGPIPE, and under pipefail either kill the step or discard
+              # the match as an error. The awk filter also caps the notice
+              # without truncating what the HEAVY probe sees.
+              printf '%s\n' "$built" | awk 'NR <= 10'
+              heavy_match=$(printf '%s\n' "$built" | grep -E "$HEAVY" || true)
+              if [ -n "$heavy_match" ]; then
                 heavy=1
               fi
             else
@@ -288,9 +294,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           body="$(printf '## Daily Dependency Update failed\n\nThe scheduled lock update did not complete. Hosts keep converging on the previous lock until this is resolved.\n\n- Run: %s\n' "$RUN_URL")"
+          # The run URL alone starts every incident with log archaeology;
+          # resolve the failing jobs and their log tail here so the issue
+          # names the cause. Both probes must degrade to the plain body:
+          # a failing reporter opens no issue at all.
+          failing="$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
+            --jq '.jobs[] | select(.conclusion == "failure") | "- " + .name' 2>/dev/null || true)"
+          if [ -n "$failing" ]; then
+            body+=$'\n\n**Failing job(s):**\n'"$failing"
+          fi
+          log_tail="$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null \
+            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tail -40 || true)"
+          if [ -n "$log_tail" ]; then
+            body+=$'\n\n<details><summary>Log tail</summary>\n\n```\n'"$log_tail"$'\n```\n</details>\n'
+          fi
           existing="$(gh issue list --repo "$REPO" --label "daily-updates-failure" --state open \
             --json number --jq '.[0].number' 2>/dev/null || true)"
           if [ -n "$existing" ]; then
