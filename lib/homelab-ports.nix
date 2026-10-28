@@ -3,6 +3,8 @@
 {
   immich = 2283; # modules/system/homelab/immich.nix
   navidrome = 4533; # modules/system/homelab/navidrome.nix
+  calibreWeb = 8084; # modules/system/homelab/calibre-web.nix
+  zellij = 8083; # modules/system/homelab/zellij-web.nix (loopback, Tailscale Serve terminates TLS)
   garminInflux = 8087; # modules/system/homelab/garmin.nix
   grafana = 3001; # modules/system/homelab/monitoring.nix
   adguard = 3000; # modules/system/homelab/adguardhome.nix
