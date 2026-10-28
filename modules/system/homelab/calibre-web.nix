@@ -12,6 +12,15 @@
   # (pbkdf2:sha256 / scrypt) the app validates against; the password itself
   # never leaves the sops secret file.
   calibreWebHashGen = pkgs.python3.withPackages (ps: [ps.werkzeug]);
+
+  # The nixpkgs package ships the Kobo sync code but not its runtime
+  # dependency: optional-dependencies.kobo (jsonschema) is not part of the
+  # default dependency list, so cps.services.SyncToken fails to import,
+  # feature_support['kobo'] is False, and the Enable Kobo sync toggle never
+  # renders in the UI. Pull the extra group into the runtime closure.
+  calibreWebPkg = pkgs.calibre-web.overridePythonAttrs (old: {
+    dependencies = old.dependencies ++ old.optional-dependencies.kobo;
+  });
 in {
   options.modules.system.homelab.calibreWeb = {
     enable = mkEnableOption "Calibre-Web ebook library server with Kobo sync and kepub conversion";
@@ -59,6 +68,7 @@ in {
   config = mkIf cfg.enable {
     services.calibre-web = {
       enable = true;
+      package = calibreWebPkg;
       dataDir = cfg.dataPath;
       inherit (cfg) openFirewall;
       listen = {
