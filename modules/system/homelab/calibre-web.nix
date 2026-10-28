@@ -7,6 +7,11 @@
 }: let
   cfg = config.modules.system.homelab.calibreWeb;
   inherit (lib) mkIf mkEnableOption mkOption types;
+
+  # Werkzeug generates the admin password hash in the same format
+  # (pbkdf2:sha256 / scrypt) the app validates against; the password itself
+  # never leaves the sops secret file.
+  calibreWebHashGen = pkgs.python3.withPackages (ps: [ps.werkzeug]);
 in {
   options.modules.system.homelab.calibreWeb = {
     enable = mkEnableOption "Calibre-Web ebook library server with Kobo sync and kepub conversion";
@@ -82,6 +87,12 @@ in {
     # ProtectSystem=strict would block every write to the library.
     systemd.services.calibre-web.serviceConfig.ReadWritePaths = [cfg.libraryPath];
 
+    sops.secrets."calibre-web/admin-password" = {
+      owner = "calibre-web";
+      group = "calibre-web";
+      mode = "0400";
+    };
+
     # The service user is neither the file owner nor in sambashare, so the
     # library needs ACLs like the Navidrome music tree: rwX for the service
     # user and for the Samba share group (the data share already grants
@@ -107,8 +118,8 @@ in {
     #   2. runs the app's migration entrypoint once (the same
     #      __RUN_MIGRATIONS_AND_EXIT call the upstream ExecStartPre makes,
     #      idempotent) so app.db exists,
-    #   3. seeds config_calibre_dir into app.db, the declarative replacement
-    #      for the upstream option.
+    #   3. seeds config_calibre_dir and the sops-managed admin password into
+    #      app.db, the declarative replacement for the upstream option.
     # Everything runs as the service user, so app.db, metadata.db and later
     # uploads all start life with the tmpfiles default ACLs.
     systemd.services.calibre-web-init = {
@@ -131,16 +142,25 @@ in {
           fi
           export __RUN_MIGRATIONS_AND_EXIT=1
           ${config.services.calibre-web.package}/bin/calibre-web -p ${cfg.dataPath}/app.db -g ${cfg.dataPath}/gdrive.db
+          # The admin password is sops-managed and re-applied on every boot,
+          # so a rotation in sops follows on the next deploy; UI-side
+          # password changes are overwritten again on the next activation.
+          # The hash format is self-describing (werkzeug's own scrypt /
+          # pbkdf2 encoding), so the app's check_password_hash validates it.
+          _hash=$(${calibreWebHashGen}/bin/python -c '
+            from werkzeug.security import generate_password_hash
+            with open("${config.sops.secrets."calibre-web/admin-password".path}") as f:
+                print(generate_password_hash(f.read().strip()))')
           ${pkgs.sqlite}/bin/sqlite3 ${cfg.dataPath}/app.db \
             "update settings set config_calibre_dir = '${cfg.libraryPath}'"
+          ${pkgs.sqlite}/bin/sqlite3 ${cfg.dataPath}/app.db \
+            "update user set password = '$_hash' where name = 'admin'"
         '';
       };
     };
 
-    # Not declarative (they persist in app.db, same as CWA's first run):
-    #   - initial admin password (default admin/admin123, change on first
-    #     login)
-    #   - the per-user "Enable Kobo sync" toggle, which exposes the /kobo
-    #     endpoint and the sync key the device's api_endpoint points at.
+    # The per-user "Enable Kobo sync" toggle stays a UI action (app.db): it
+    # generates the remote_auth_token that the Kobo's api_endpoint points
+    # at, which cannot be known declaratively.
   };
 }
