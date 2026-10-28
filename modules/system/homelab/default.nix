@@ -4,6 +4,7 @@
 {
   imports = [
     ./adguardhome.nix
+    ./calibre-web.nix
     ./caddy-proxy.nix
     ./garmin.nix
     ./homepage.nix

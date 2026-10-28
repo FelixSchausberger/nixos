@@ -35,6 +35,26 @@
         "
       '';
 
+    # Echoes the X-Script-Name header back in the body: the script-name
+    # route (Calibre-Web) must forward that header to the upstream, since
+    # its ReverseProxyPrefixFix generates all URLs from it.
+    mkCalibreMock = port:
+      pkgs.writeShellScript "mock-calibre" ''
+        exec ${pkgs.python3}/bin/python3 -c "
+        import http.server, socketserver
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                body = ('script-name=%s' % self.headers.get('X-Script-Name')).encode()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/plain')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+        with socketserver.TCPServer(('127.0.0.1', ${toString port}), Handler) as httpd:
+            httpd.serve_forever()
+        "
+      '';
+
     # Behaves like a BaseURL-configured Navidrome: it only answers under the
     # /navidrome prefix and replies to anything else (notably its unprefixed
     # root, what a prefix-stripping route forwards) with the root-absolute
@@ -135,6 +155,16 @@
             default = ports.nextcloud;
           };
         };
+        calibreWeb = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+          };
+          port = lib.mkOption {
+            type = lib.types.port;
+            default = ports.calibreWeb;
+          };
+        };
         homepage = {
           enable = lib.mkOption {
             type = lib.types.bool;
@@ -179,6 +209,15 @@
         };
       };
 
+      systemd.services.mock-calibre = {
+        description = "Mock Calibre-Web";
+        wantedBy = ["multi-user.target"];
+        serviceConfig = {
+          ExecStart = mkCalibreMock ports.calibreWeb;
+          Restart = "always";
+        };
+      };
+
       modules.system.homelab.caddyProxy = {
         enable = true;
         # http:// prefix forces HTTP-only listener — required in test VMs
@@ -193,6 +232,7 @@
     machine.wait_for_unit("mock-navidrome.service")
     machine.wait_for_unit("mock-adguard.service")
     machine.wait_for_unit("mock-immich.service")
+    machine.wait_for_unit("mock-calibre.service")
     machine.wait_for_unit("caddy.service")
 
     # 1. Test Navidrome path routing
@@ -216,6 +256,9 @@
     # 5. Test Nextcloud .well-known redirects
     res = machine.succeed("curl -s -I -H 'Host: m920q.test.local' http://127.0.0.1/.well-known/carddav")
     assert "/nextcloud/remote.php/dav" in res, f"Redirect failed: {res}"
+
+    # 6. Test the Calibre-Web script-name route forwards X-Script-Name
+    machine.succeed("curl -s -H 'Host: m920q.test.local' http://127.0.0.1/books/ | grep -q 'script-name=/books'")
 
     # 6. Verify Caddy is serving on port 80
     machine.succeed("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/ | grep -q '200'")
