@@ -221,6 +221,31 @@ in {
     # just without a kernel trace. Streams err-level and above
     # (loglevel=3 above); a reboot applies the param.
     "netconsole=6666@${hostInfo.ip}/eno1,6666@${inputs.self.lib.hosts.desktop.ip}/${inputs.self.lib.hosts.desktop.lanMac}"
+    # Crash forensics floor: a 4 MiB e820-reserved DRAM region for
+    # pstore/ramoops. netconsole (above) only delivers printk while the
+    # desktop receiver is up; the ramoops region catches the dmesg dump of
+    # any panic or oops regardless of the receiver, survives the warm reset
+    # (panic=30, watchdog) that follows, and is read back from
+    # /sys/fs/pstore on the next boot, where the already-enabled
+    # systemd-pstore.service archives it into the persisted
+    # /var/lib/systemd/pstore (below) and clears the zone for the next
+    # event. The address sits mid-range inside the firmware-stable System
+    # RAM window 0x100000000-0x4bc7fffff (verified identical e820 across
+    # boots): the loader places the kernel image (KASLR) and the initrd
+    # below 4 GiB, and the memmap reservation excludes the region from
+    # every kernel allocation. The nixpkgs kernel ships PSTORE_RAM=m but no
+    # PSTORE_CONSOLE, so this records panic/oops dmesg dumps, not a
+    # continuously updated console log - a hard watchdog reset without a
+    # panic still leaves no trace here (netconsole or the unclean-shutdown
+    # alert cover that case). Cold power loss clears the region as well; a
+    # reboot applies the params.
+    "pstore.backend=ramoops"
+    "memmap=4M$0x180000000"
+    "ramoops.mem_address=0x180000000"
+    "ramoops.mem_size=0x400000"
+    "ramoops.dmesg_size=0x100000"
+    "ramoops.dump_oops=1"
+    "ramoops.ecc=1"
   ];
 
   # Loaded after network-online rather than via boot.kernelModules: the NIC
@@ -459,7 +484,9 @@ in {
     }
   ];
 
-  boot.kernelModules = ["vkms"];
+  # ramoops must be loaded when a panic hits for the death to leave a trace
+  # in the reserved region (see kernelParams above); vkms is unrelated.
+  boot.kernelModules = ["vkms" "ramoops"];
 
   # KillMode "mixed": SIGTERM to the daemon, SIGKILL to the rest of its cgroup.
   # A nix-daemon restart during switch-to-configuration otherwise waits on the
@@ -488,6 +515,11 @@ in {
   # environment.persistence option does not exist.
   environment.persistence."/per".directories = [
     "/var/lib/crash-detect"
+    # systemd-pstore moves the panic/oops records out of /sys/fs/pstore
+    # (the ramoops region, see kernelParams above) here at every boot; the
+    # region is one event deep, so without this archive a second death
+    # overwrites the first one's evidence.
+    "/var/lib/systemd/pstore"
   ];
 
   services = {
