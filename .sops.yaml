@@ -3,6 +3,7 @@ keys:
   - &host-desktop age1fk8ml0rwz7fh8sacsc0yvzhkya6yd96s36yt7l32kwd0mc0p4a3setezxx # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (desktop)
   - &host-m920q age1zvajmg9yf00mnzelp4e9wgp3qcmrwmmvfrd4pl0xn3qlr43rwvysvg0rjz # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (m920q)
   - &host-hp-probook-wsl age1um74mktayfnw8m4gsalzxghm2qggguzj3v8742fykxsckd52x3cqlkp07t # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (hp-probook-wsl)
+  - age14kq39l0ftx3qx7f49jnzgunrzw37a33tnp3k95jy9mpmjeumva0qenk6q2 # ssh-to-age -i /per/etc/ssh/ssh_host_ed25519_key.pub (host-surface)
 creation_rules:
   - path_regex: secrets/[^/]+\.(json|yaml|yml)$
     key_groups:
@@ -11,3 +12,4 @@ creation_rules:
           - *host-desktop
           - *host-m920q
           - *host-hp-probook-wsl
+          - age14kq39l0ftx3qx7f49jnzgunrzw37a33tnp3k95jy9mpmjeumva0qenk6q2

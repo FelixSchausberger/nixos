@@ -1,6 +1,7 @@
 {
   pkgs,
   hosts,
+  vaultwardenUrl,
 }: let
   hostListSpace = builtins.concatStringsSep ", " hosts;
 in {
@@ -20,8 +21,10 @@ in {
       yq-go
     ];
     # SC2029 (info) fires on the deliberate client-side expansions inside the
-    # SSH command strings.
-    excludeShellChecks = ["SC2029"];
+    # SSH command strings. SC2317 (info) fires on the echo after
+    # reconcile_existing_item, which exits on every path; the echo stays as
+    # intent documentation if that helper ever learns to return.
+    excludeShellChecks = ["SC2029" "SC2317"];
     text = ''
       if [[ $# -lt 2 ]]; then
           echo "Usage: nix run .#new-host-keys generate HOSTNAME" >&2
@@ -32,6 +35,9 @@ in {
           echo "          key as Bitwarden vault item 'host/<name>'." >&2
           echo "backup    Fetch the live host key over SSH from an installed" >&2
           echo "          host, then the same registration and vault storage." >&2
+          echo "" >&2
+          echo "Prerequisite: the Bitwarden CLI must be pointed at the fleet" >&2
+          echo "Vaultwarden once: nix shell nixpkgs#bitwarden-cli -c bw config server ${vaultwardenUrl}" >&2
           echo "" >&2
           echo "Available hosts: ${hostListSpace}" >&2
           exit 1
@@ -71,6 +77,16 @@ in {
       if bw status | grep -q unauthenticated; then
           echo "Error: Bitwarden CLI is not logged in." >&2
           echo "Run once: nix shell nixpkgs#bitwarden-cli -c bw login" >&2
+          exit 1
+      fi
+      # The fleet vault is the self-hosted Vaultwarden on m920q. An
+      # unconfigured CLI silently targets bitwarden.com and the unlock then
+      # fails with a misleading "invalid master password" against an account
+      # that does not exist there. Guard on the reported serverUrl.
+      if bw status | grep -q '"serverUrl":null'; then
+          echo "Error: Bitwarden CLI has no server configured." >&2
+          echo "The fleet vault is the self-hosted Vaultwarden; point the CLI at it once:" >&2
+          echo "  nix shell nixpkgs#bitwarden-cli -c bw config server ${vaultwardenUrl}" >&2
           exit 1
       fi
 

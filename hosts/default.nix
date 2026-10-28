@@ -85,21 +85,21 @@ in {
       baseModules = server;
       extraModules = [./m920q.nix];
     };
+
+    surface = mkHostConfig {
+      hostName = "surface";
+      baseModules = laptop;
+      extraModules = [./surface.nix];
+    };
   };
 
   # Opt-in shelf configurations for hardware that is not currently deployed.
   # Keeping them out of nixosConfigurations means CI does not build them and
   # `nix flake check` does not evaluate them, while the configs stay in-tree
   # for easy revival. Access on demand, for example:
-  #   nix build .#legacyConfigurations.surface.config.system.build.toplevel
+  #   nix build .#legacyConfigurations.hp-probook-vmware.config.system.build.toplevel
   # To revive a host, move its entry back into nixosConfigurations.
   flake.legacyConfigurations = {
-    surface = mkHostConfig {
-      hostName = "surface";
-      baseModules = laptop;
-      extraModules = [./surface.nix];
-    };
-
     hp-probook-vmware = mkHostConfig {
       hostName = "hp-probook-vmware";
       baseModules = laptop;

@@ -1,6 +1,7 @@
 {
   pkgs,
   hosts,
+  vaultwardenUrl,
 }: let
   hostListSpace = builtins.concatStringsSep ", " hosts;
 in {
@@ -38,8 +39,9 @@ in {
           echo "  - SSH access to target as root (uses authorized_keys from ISO)" >&2
           echo "  - SSH key at ~/.ssh/id_ed25519 on the executing host (decrypts" >&2
           echo "    the GitHub token locally)" >&2
-          echo "  - Bitwarden CLI logged in (bw login), vault item 'host/<HOSTNAME>'" >&2
-          echo "    holding this host's SSH private key" >&2
+          echo "  - Bitwarden CLI logged in (bw login) and pointed at the fleet" >&2
+          echo "    Vaultwarden (bw config server ${vaultwardenUrl}), vault item" >&2
+          echo "    'host/<HOSTNAME>' holding this host's SSH private key" >&2
           echo "  - 'host-<HOSTNAME>' recipient merged on origin/main (create it" >&2
           echo "    with: nix run .#new-host-keys generate <HOSTNAME>)" >&2
           echo "" >&2
@@ -112,6 +114,16 @@ in {
           echo "Error: Bitwarden CLI is not logged in." >&2
           echo "Run once: nix shell nixpkgs#bitwarden-cli -c bw login" >&2
           exit 1
+        fi
+        # The vault is the self-hosted Vaultwarden on m920q. An unconfigured
+        # CLI silently targets bitwarden.com and the unlock then fails with a
+        # misleading "invalid master password" against an account that does
+        # not exist there. Guard on the reported serverUrl.
+        if bw status | grep -q '"serverUrl":null'; then
+            echo "Error: Bitwarden CLI has no server configured." >&2
+            echo "The fleet vault is the self-hosted Vaultwarden; point the CLI at it once:" >&2
+            echo "  nix shell nixpkgs#bitwarden-cli -c bw config server ${vaultwardenUrl}" >&2
+            exit 1
         fi
         if ! BW_SESSION=$(bw unlock --raw) || [[ -z "$BW_SESSION" ]]; then
           echo "Error: Bitwarden vault unlock failed." >&2
