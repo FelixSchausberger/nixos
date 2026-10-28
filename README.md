@@ -294,6 +294,10 @@ This automatically:
 - Custom ISO built with `nix build .#installer-iso-minimal`
 - SSH key at `~/.ssh/id_ed25519` on the host executing the command
 - VM booted with custom ISO
+- Bitwarden CLI pointed at the fleet Vaultwarden once:
+  `nix shell nixpkgs#bitwarden-cli -c bw config server https://m920q.tailf2f0ca.ts.net:8447`
+  (the CLI otherwise silently targets bitwarden.com, where unlocking fails
+  with a misleading "invalid master password")
 
 **What's pre-configured in the custom ISO:**
 
@@ -309,6 +313,59 @@ This automatically:
 - If SSH key missing: Ensure `~/.ssh/id_ed25519` exists on your dev machine
 - If repo clone fails: Manually clone with
   `ssh root@<vm-ip> "git clone https://github.com/FelixSchausberger/nixos.git /per/etc/nixos"`
+
+#### Bare Metal Without ISO (Existing NixOS Install)
+
+When the target already runs NixOS but has no usable SSH (old install with
+`services.openssh` disabled, fleet firewall not yet opening port 22),
+nixos-anywhere's kexec path still works after a one-time unlock on the
+target's console:
+
+1. **Open the firewall** (old fleet images shipped `allowPing` only):
+
+   ```bash
+   sudo systemctl stop firewall
+   ```
+
+2. **Start a temporary sshd** from a nix shell (works even when
+   `services.openssh` was never enabled: the privsep user and host keys are
+   created on the fly; everything vanishes with the fresh install). The
+   pubkey is fetched from the repo instead of being pasted, so the terminal
+   cannot mangle it:
+
+   ```bash
+   sudo nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#openssh -c bash -c '
+   pkill -x sshd; sleep 1
+   install -d -m700 /root/.ssh
+   curl -fsSL https://raw.githubusercontent.com/FelixSchausberger/nixos/main/hosts/installer/authorized_keys > /root/.ssh/authorized_keys
+   chmod 600 /root/.ssh/authorized_keys
+   [ -f /tmp/tmphostkey ] || ssh-keygen -t ed25519 -N "" -f /tmp/tmphostkey -q
+   SSHD_BIN=$(command -v sshd)
+   nohup "$SSHD_BIN" -D -e -f /dev/null \
+     -o HostKey=/tmp/tmphostkey \
+     -o PermitRootLogin=prohibit-password \
+     -o PubkeyAuthentication=yes \
+     -o AuthorizedKeysFile=/root/.ssh/authorized_keys \
+     -o StrictModes=no \
+     -o PasswordAuthentication=no \
+     >/tmp/tmpsshd.log 2>&1 &
+   sleep 1
+   ss -tln | grep -q ":22 " && echo TMP_SSHD_UP || { echo FAILED; tail -10 /tmp/tmpsshd.log; }
+   '
+   ```
+
+   nixpkgs' sshd re-execs itself, so the binary must be started with an
+   absolute path (`"$SSHD_BIN"`, never bare `sshd`), and nixpkgs' build
+   expects `/etc/ssh/sshd_config` to exist — passing `-f /dev/null` with
+   explicit `-o` flags avoids both traps.
+
+3. **Install from your dev machine** (same as the VM flow; nixos-anywhere
+   kexecs the target into the installer and the temp sshd disappears with
+   the old system):
+
+   ```bash
+   nix run .#install-remote surface <target-ip>
+   ```
 
 #### Alternative: Standard ISO with Manual Setup
 
