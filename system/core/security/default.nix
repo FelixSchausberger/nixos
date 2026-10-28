@@ -6,7 +6,7 @@
   security = {
     # Allow wayland lockers to unlock the screen
     pam.services = {
-      cthulock.text = "auth include login";
+      waylock.text = "auth include login";
       su = {
         unixAuth = true; # Ensure pam_unix.so is used
       };

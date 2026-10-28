@@ -2,7 +2,7 @@
 # Noctalia (native C++) owns the full shell layer: bar, dock, launcher,
 # control center, notifications, wallpaper/backdrop, lock screen, idle, OSD,
 # tray, and clipboard. The custom-stack daemons for those surfaces
-# (ironbar, walker, wired, cthulock, awww, stasis, avizo, wl-gammarelay)
+# (ironbar, walker, wired, waylock, awww, stasis, avizo, wl-gammarelay)
 # gate themselves off when wm.shell == "noctalia".
 # sessionTarget is accepted for call-site symmetry with the other shell
 # modules; autostart uses the upstream graphical-session unit.

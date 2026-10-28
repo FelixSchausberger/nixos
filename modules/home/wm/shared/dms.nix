@@ -2,7 +2,7 @@
 # DMS (quickshell/QML + Go daemon) owns the full shell layer: bar, island,
 # dock, launcher, notifications, clipboard, lock screen, idle, OSD, night
 # mode, and wallpaper with material-color retheming. The same custom-stack
-# daemons gated for noctalia (ironbar, walker, wired, cthulock, awww,
+# daemons gated for noctalia (ironbar, walker, wired, waylock, awww,
 # stasis, avizo, wl-gammarelay) gate off here too.
 _sessionTarget: {
   lib,

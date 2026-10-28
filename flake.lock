@@ -190,29 +190,6 @@
         "type": "github"
       }
     },
-    "cthulock": {
-      "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1758960299,
-        "narHash": "sha256-frPuebLh2TMnY6XODJ1/hi7LRxi5KLofU/jKK7vKKpI=",
-        "owner": "FriederHannenheim",
-        "repo": "cthulock",
-        "rev": "cc97b2a514ab7d2bc048064f6061a2c8749cbcb8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "FriederHannenheim",
-        "repo": "cthulock",
-        "type": "github"
-      }
-    },
     "dank-qml-common": {
       "flake": false,
       "locked": {
@@ -1661,7 +1638,6 @@
         "claude-code-nix": "claude-code-nix",
         "comin": "comin",
         "cosmic-manager": "cosmic-manager",
-        "cthulock": "cthulock",
         "determinate": "determinate",
         "disko": "disko",
         "dms": "dms",

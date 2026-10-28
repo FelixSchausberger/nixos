@@ -1,7 +1,7 @@
 # Wayle desktop shell integration for Wayland sessions.
 # Wayle (Rust/GTK4) provides bar, notifications, OSD, wallpaper engine, and
 # device controls. It has no launcher and no lock screen, so walker,
-# cthulock, awww, and stasis from the custom stack stay active alongside it.
+# waylock, awww, and stasis from the custom stack stay active alongside it.
 # Parameterized by session target so startup ordering matches the compositor.
 # Upstream ships no flake; the package comes from nixpkgs (pkgs.wayle).
 sessionTarget: {
