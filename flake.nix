@@ -265,11 +265,6 @@
       url = "git+https://git.madhouse-project.org/algernon/ala-lape.git";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    cthulock = {
-      url = "github:FriederHannenheim/cthulock";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-    };
     walker = {
       url = "github:abenz1267/walker";
       inputs.nixpkgs.follows = "nixpkgs";
