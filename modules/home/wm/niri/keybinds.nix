@@ -6,12 +6,12 @@
 }: let
   cfg = config.wm.niri;
 
-  # Launcher key follows the active shell: walker for custom/wayle,
-  # noctalia's / dms's built-in launcher for the full-layer shells.
+  # Launcher key follows the active shell: noctalia's / dms's built-in
+  # launcher for the full-layer shells; custom opens walker through the
+  # Super overview bind (niri/default.nix).
   shell = config.wm.shell or "custom";
   shellIsNoctalia = shell == "noctalia";
   shellIsDms = shell == "dms";
-  shellIsCustom = shell == "custom";
   # Full-layer shells own their idle management; the stasis toggle
   # belongs to custom/wayle.
   fullShell = builtins.elem shell ["noctalia" "dms"];
@@ -118,15 +118,6 @@ in {
 
         # Open terminal with herdr for AI agent sessions
         "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.herdr}/bin/herdr"];
-
-        # Launcher follows the shell: walker for custom/wayle, noctalia's
-        # `noctalia msg` IPC or dms's `dms ipc` spotlight for the others.
-        "Mod+D".action.spawn =
-          if shellIsNoctalia
-          then ["sh" "-c" "noctalia msg panel-toggle launcher"]
-          else if shellIsDms
-          then ["sh" "-c" "dms ipc call spotlight toggle"]
-          else "walker";
 
         # ===== WINDOW MANAGEMENT =====
         "Mod+Q".action.close-window = {};
@@ -269,22 +260,23 @@ in {
         # custom/wayle shells, and lib.mkIf must not nest inside binds
         # values because niri-flake renders them as literal KDL)
 
-        # ===== OVERVIEW (+ IRONBAR TOGGLE ON CUSTOM SHELL) =====
-        # Using spawn workaround since Niri doesn't support multiple actions per keybind yet
-        # Reference: https://github.com/YaLTeR/niri/issues/965
-        "Mod+Tab".action.spawn = [
-          "bash"
-          "-c"
-          (
-            if shellIsCustom
-            then "niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait"
-            else "niri msg action toggle-overview 2>/dev/null"
-          )
-        ];
+        # ===== OVERVIEW =====
+        # The niri-overview-bar watcher keeps Ironbar's visibility in sync
+        # with the overview state, so this bind only toggles the overview.
+        "Mod+Tab".action.toggle-overview = {};
       }
 
       # Hardware/media keys (shell-aware, see hwBinds above).
       hwBinds
+
+      # Launcher keys for the full-layer shells. The custom stack has no
+      # Mod+D: walker opens through the Super overview bind (niri/default.nix).
+      (lib.optionalAttrs shellIsNoctalia {
+        "Mod+D".action.spawn = ["sh" "-c" "noctalia msg panel-toggle launcher"];
+      })
+      (lib.optionalAttrs shellIsDms {
+        "Mod+D".action.spawn = ["sh" "-c" "dms ipc call spotlight toggle"];
+      })
 
       # stasis-toggle only exists when stasis runs (custom/wayle shells).
       # optionalAttrs at merge level: lib.mkIf must not nest inside binds

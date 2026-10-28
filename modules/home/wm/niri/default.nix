@@ -56,6 +56,26 @@
   # stays for custom and wayle.
   shellKeepsWalker =
     !(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"]);
+
+  # The GNOME-style overview flow (Super opens the overview with the
+  # walker search on top) belongs to the custom walker + ironbar stack.
+  customShell = (config.wm.shell or "custom") == "custom";
+
+  # Super alone toggles the overview: opens it with the walker search on
+  # top; Super again (or Escape, or picking an app) closes everything.
+  # niri release binds only fire when no other key was pressed, so
+  # Super+D and friends never trigger the overview.
+  overviewToggle = pkgs.writeShellScriptBin "niri-overview-toggle" ''
+    set -eu
+    niri=${config.programs.niri.package}/bin/niri
+    if [ "$("$niri" msg --json overview-state | ${pkgs.jq}/bin/jq -r .is_open)" = "true" ]; then
+      "$niri" msg action close-overview
+    else
+      "$niri" msg action open-overview
+      ${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker || true
+      "$niri" msg action close-overview
+    fi
+  '';
 in {
   imports = [
     inputs.cosmic-manager.homeManagerModules.default
@@ -572,6 +592,34 @@ in {
             blur = true;
           };
         }
+        # Blur behind the Ironbar pill (namespace set by ironbar itself).
+        # Noise and saturation inherit from the global blur config.
+        # geometry-corner-radius only shapes the shadow to the pill's
+        # 24px CSS radius; layer surfaces cannot report their visual
+        # geometry, so the radius must be restated here.
+        {
+          matches = [{namespace = "^ironbar";}];
+          background-effect = {
+            blur = true;
+          };
+          geometry-corner-radius = {
+            top-left = 24.0;
+            top-right = 24.0;
+            bottom-right = 24.0;
+            bottom-left = 24.0;
+          };
+          shadow = {
+            enable = true;
+            softness = 40;
+            spread = 5;
+            offset = {
+              x = 0;
+              y = 5;
+            };
+            draw-behind-window = true;
+            color = "#00000064";
+          };
+        }
       ];
 
       # Keybindings imported from keybinds.nix
@@ -589,6 +637,39 @@ in {
       };
       Install.WantedBy = ["graphical-session.target"];
     };
+
+    # niri-flake cannot express press/release binds: its kdl-leaf action
+    # type renders only flat nodes (sodiboo/niri-flake#1703). The Super
+    # overview bind is therefore appended as a top-level `include` of a
+    # standalone binds file: the main-file parser rejects a second binds
+    # node, but included files go through the ConfigPart merge path that
+    # accepts them (and later includes win on key conflicts). The include
+    # target is a store path so it exists both in the build sandbox for
+    # `niri validate` and at runtime. Override the niri-config source
+    # directly (mkForce wins over niri-flake's definition of the attribute).
+    xdg.configFile."niri-config" = lib.mkIf customShell (lib.mkForce {
+      enable = config.programs.niri.finalConfig != null;
+      target = "niri/config.kdl";
+      source = let
+        overviewBinds = pkgs.writeText "niri-overview-binds.kdl" ''
+          binds {
+              Mod {
+                  release { spawn "${overviewToggle}/bin/niri-overview-toggle"; }
+              }
+          }
+        '';
+      in
+        pkgs.runCommand "niri-config-overview.kdl" {
+          nativeBuildInputs = [config.programs.niri.package];
+          baseConfig = config.programs.niri.finalConfig;
+          inherit overviewBinds;
+          passAsFile = ["baseConfig"];
+        } ''
+          cat "$baseConfigPath" > "$out"
+          printf '\ninclude "%s"\n' "$overviewBinds" >> "$out"
+          niri validate -c "$out"
+        '';
+    });
 
     # niri-flake ships a KDE polkit agent whose portal registration spams
     # journald ("Failed to register with host portal"). Swap in polkit-gnome,

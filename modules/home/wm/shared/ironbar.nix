@@ -29,6 +29,9 @@
       {
         type = "workspaces";
         all_monitors = false;
+        # Numeric workspaces: index order matches niri's workspace order
+        # (sort = "index" is the niri-specific ordering added in v0.19.0).
+        sort = "index";
         # No name_map: workspaces appear only when Niri creates them
       }
     ];
@@ -121,24 +124,83 @@
         type = "volume";
         format = "{icon}";
         max_volume = 100;
+        # v0.19 profiles schema: single high icon plus threshold profiles
+        # (matching is equal-to-or-below the threshold).
         icons = {
-          volume_high = "󰕾";
-          volume_medium = "󰖀";
-          volume_low = "󰕿";
+          volume = "󰕾";
           muted = "󰖁";
+        };
+        profiles = {
+          medium = {
+            when = 66.66;
+            icons.volume = "󰖀";
+          };
+          low = {
+            when = 33.33;
+            icons.volume = "󰕿";
+          };
         };
       }
       {
         type = "network_manager";
-        format_ethernet = "󰈀";
-        format_wifi = "{icon}";
-        format_disconnected = "󰤭";
-        icons = {
-          wifi = {
-            "0-25" = "󰤯";
-            "25-50" = "󰤟";
-            "50-75" = "󰤢";
-            "75-100" = "󰤨";
+        icon_size = 18;
+        use_default_profiles = false;
+        # v0.19 reworked this module: device state renders via profiles
+        # matching on type/state/signal_strength. Wifi buckets mirror the
+        # old icons.wifi tiers (equal-to-or-below the strength bound).
+        profiles = {
+          wired_connected = {
+            when = {
+              type = "wired";
+              state = "connected";
+            };
+            icon = "󰈀";
+          };
+          wired_disconnected = {
+            when = {
+              type = "wired";
+              state = "disconnected";
+            };
+            icon = "󰤭";
+          };
+          wifi_disconnected = {
+            when = {
+              type = "wifi";
+              state = "disconnected";
+            };
+            icon = "󰤭";
+          };
+          wifi_weak = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 25;
+            };
+            icon = "󰤯";
+          };
+          wifi_ok = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 50;
+            };
+            icon = "󰤟";
+          };
+          wifi_good = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 75;
+            };
+            icon = "󰤢";
+          };
+          wifi_excellent = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 100;
+            };
+            icon = "󰤨";
           };
         };
       }
@@ -199,11 +261,20 @@
       {
         type = "volume";
         max_volume = 100;
+        # v0.19 profiles schema (see the niri config above).
         icons = {
-          volume_high = "󰕾";
-          volume_medium = "󰖀";
-          volume_low = "󰕿";
+          volume = "󰕾";
           muted = "󰖁";
+        };
+        profiles = {
+          medium = {
+            when = 66.66;
+            icons.volume = "󰖀";
+          };
+          low = {
+            when = 33.33;
+            icons.volume = "󰕿";
+          };
         };
         on_click_left = "pactl set-sink-mute @DEFAULT_SINK@ toggle";
         on_scroll_up = "pactl set-sink-volume @DEFAULT_SINK@ +5%";
@@ -234,12 +305,11 @@
     }
 
     .bar {
-      /* d9 ≈ 85% opacity — transparent enough for when niri blur ships */
+      /* d9 ≈ 85% opacity — niri blurs the layer surface (layer-rule
+         namespace "^ironbar"), so the pill reads as frosted glass. */
       background-color: #${c.base00}d9;
       border-radius: 24px;
       padding: 12px 4px;
-      /* Blur-ready — uncomment + lower alpha when niri blur is available:
-         backdrop-filter: blur(20px) saturate(1.5); */
     }
 
     .start,
@@ -430,6 +500,26 @@
       color: #${c.base05};
     }
   '';
+
+  # Syncs bar visibility to the niri overview state: the bar shows only
+  # while the overview is open (GNOME-style clean desktop). Asserts the
+  # current state on start so a watcher restart re-syncs after an outage.
+  overviewBarSync = pkgs.writeShellScript "niri-overview-bar-sync" ''
+    niri=${config.programs.niri.package}/bin/niri
+    ironbar=${ironbarPkg}/bin/ironbar
+    sync() {
+      if [ "$("$niri" msg --json overview-state | ${pkgs.jq}/bin/jq -r .is_open)" = "true" ]; then
+        "$ironbar" bar main show
+      else
+        "$ironbar" bar main hide
+      fi
+    }
+    sync
+    # niri emits OverviewOpenedOrClosed on every overview state change.
+    "$niri" msg --json event-stream |
+      ${pkgs.jq}/bin/jq --unbuffered -r 'select(.OverviewOpenedOrClosed != null) | "tick"' |
+      while read -r _; do sync; done
+  '';
 in {
   config = lib.mkIf enabled {
     home.packages = [ironbarPkg];
@@ -458,6 +548,30 @@ in {
       Service = {
         Type = "simple";
         ExecStart = "${ironbarPkg}/bin/ironbar";
+        # The overview-bar watcher only reacts to state changes, so the
+        # default-visible bar is hidden once mapped (clean desktop at
+        # login; the watcher shows it when the overview opens).
+        ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 1; ${ironbarPkg}/bin/ironbar bar main hide'";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+
+      Install.WantedBy = ["niri-session.target"];
+    };
+
+    # Shows the bar only while the niri overview is open. ironbar's
+    # crash-restart re-hides via ExecStartPost; the bar then stays hidden
+    # until the next overview toggle (no event fires for a lost one).
+    systemd.user.services.niri-overview-bar = lib.mkIf niri {
+      Unit = {
+        Description = "Sync Ironbar visibility to niri overview state";
+        After = ["ironbar.service" "niri-session.target"];
+        PartOf = ["ironbar.service"];
+      };
+
+      Service = {
+        Type = "simple";
+        ExecStart = "${overviewBarSync}";
         Restart = "on-failure";
         RestartSec = 5;
       };
