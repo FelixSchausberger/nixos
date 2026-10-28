@@ -4,7 +4,6 @@
     ./browsers # Web browsers (Chrome, Firefox, Zen)
     ./editors # Editors (VS Code, Zed)
     ./terminals # Terminal emulators (Ghostty)
-    ./calibre.nix # Comprehensive e-book software
     ./mpv.nix # General-purpose media player, fork of MPlayer and mplayer2
     ./obsidian.nix # A powerful knowledge base
     ./prusaslicer.nix # G-code generator for 3D printer (kept separate due to activation scripts)
