@@ -500,6 +500,26 @@
       color: #${c.base05};
     }
   '';
+
+  # Syncs bar visibility to the niri overview state: the bar shows only
+  # while the overview is open (GNOME-style clean desktop). Asserts the
+  # current state on start so a watcher restart re-syncs after an outage.
+  overviewBarSync = pkgs.writeShellScript "niri-overview-bar-sync" ''
+    niri=${config.programs.niri.package}/bin/niri
+    ironbar=${ironbarPkg}/bin/ironbar
+    sync() {
+      if [ "$("$niri" msg --json overview-state | ${pkgs.jq}/bin/jq -r .is_open)" = "true" ]; then
+        "$ironbar" bar main show
+      else
+        "$ironbar" bar main hide
+      fi
+    }
+    sync
+    # niri emits OverviewOpenedOrClosed on every overview state change.
+    "$niri" msg --json event-stream |
+      ${pkgs.jq}/bin/jq --unbuffered -r 'select(.OverviewOpenedOrClosed != null) | "tick"' |
+      while read -r _; do sync; done
+  '';
 in {
   config = lib.mkIf enabled {
     home.packages = [ironbarPkg];
@@ -528,6 +548,30 @@ in {
       Service = {
         Type = "simple";
         ExecStart = "${ironbarPkg}/bin/ironbar";
+        # The overview-bar watcher only reacts to state changes, so the
+        # default-visible bar is hidden once mapped (clean desktop at
+        # login; the watcher shows it when the overview opens).
+        ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 1; ${ironbarPkg}/bin/ironbar bar main hide'";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+
+      Install.WantedBy = ["niri-session.target"];
+    };
+
+    # Shows the bar only while the niri overview is open. ironbar's
+    # crash-restart re-hides via ExecStartPost; the bar then stays hidden
+    # until the next overview toggle (no event fires for a lost one).
+    systemd.user.services.niri-overview-bar = lib.mkIf niri {
+      Unit = {
+        Description = "Sync Ironbar visibility to niri overview state";
+        After = ["ironbar.service" "niri-session.target"];
+        PartOf = ["ironbar.service"];
+      };
+
+      Service = {
+        Type = "simple";
+        ExecStart = "${overviewBarSync}";
         Restart = "on-failure";
         RestartSec = 5;
       };
