@@ -1,7 +1,7 @@
 # Desktop shell selector for Wayland compositors.
 # Selects which shell stack owns bar, launcher, notifications, lock screen,
 # wallpaper, idle management, and OSD on a per-host basis. The "custom" value
-# preserves the hand-assembled stack (ironbar, walker, wired, cthulock, awww,
+# preserves the hand-assembled stack (ironbar, walker, wired, waylock, awww,
 # stasis, avizo); "wayle", "noctalia", and "dms" progressively replace
 # those parts.
 # Shell modules are parameterized by session target elsewhere; this file only
@@ -18,13 +18,13 @@
     description = ''
       Desktop shell stack for Wayland sessions on this host.
 
-      - custom: hand-assembled stack (ironbar, walker, wired, cthulock,
+      - custom: hand-assembled stack (ironbar, walker, wired, waylock,
         awww, stasis). Default; preserves current behavior.
       - wayle: Rust/GTK4 shell (bar, notifications, OSD, device controls).
-        Keeps walker (launcher), cthulock (lock), awww (wallpaper), and
+        Keeps walker (launcher), waylock (lock), awww (wallpaper), and
         stasis (idle) from the custom stack.
       - noctalia: native C++ shell owning the full layer. Disables
-        ironbar, walker, wired, cthulock, awww, stasis, avizo, and
+        ironbar, walker, wired, waylock, awww, stasis, avizo, and
         wl-gammarelay to keep single ownership of each protocol.
       - dms: Dank Material Shell (quickshell + Go daemon), full layer
         including a dynamic island. Owns the same protocol set as

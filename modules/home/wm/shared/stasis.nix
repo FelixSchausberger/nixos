@@ -28,7 +28,7 @@ sessionTarget: {
   # Nothing subscribes to logind's Lock signal on these shells (niri sets
   # LockedHint only once an ext-session-lock client takes over), so the idle
   # lock spawns the locker directly instead of signalling logind.
-  lockCmd = "cthulock";
+  lockCmd = "waylock";
 
   # RUNE configuration content
   runeConfig = let

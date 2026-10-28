@@ -253,7 +253,7 @@ in {
         "Super+Alt+L".action.spawn =
           if fullShell
           then ["loginctl" "lock-session"]
-          else ["cthulock"];
+          else ["waylock"];
 
         # ===== IDLE INHIBITOR =====
         # (stasis-toggle bind appended below; stasis only runs on
