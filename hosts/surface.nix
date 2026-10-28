@@ -4,8 +4,9 @@ in {
   imports =
     importLib.importHost "surface"
     ++ [
-      # Disko config available at ./surface/disko.nix
-      # Only used during installation, not imported for running systems
+      # importHost pulls every module in ./surface/ (default.nix, disko.nix):
+      # disko.nix both defines the running ZFS fileSystems and carries the
+      # diskoScript used by nixos-anywhere / install-remote.
       ./surface/hardware/hardware-configuration.nix
     ];
 }

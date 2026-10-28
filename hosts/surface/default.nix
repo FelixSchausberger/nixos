@@ -49,9 +49,6 @@ in {
     };
   };
 
-  # Surface uses ext4, not ZFS - disable persistence from system/core
-  environment.persistence = lib.mkForce {};
-
   modules.system.stylix-catppuccin.enable = true;
 
   modules.system.maintenance = {
@@ -68,6 +65,10 @@ in {
     enable = true;
     alertNtfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
   };
+
+  # ZFS requires a per-host hostId; the shared default in system/network.nix
+  # must never repeat across ZFS hosts (pool import ownership conflicts).
+  networking.hostId = lib.mkForce "4903fe7e";
 
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel

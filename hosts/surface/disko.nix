@@ -14,7 +14,7 @@
     disk = {
       main = {
         type = "disk";
-        device = "/dev/disk/by-id/changeme";
+        device = "/dev/disk/by-id/nvme-eui.33334a314a4019930025385900000001";
         content = {
           type = "gpt";
           partitions = {
