@@ -29,6 +29,9 @@
       {
         type = "workspaces";
         all_monitors = false;
+        # Numeric workspaces: index order matches niri's workspace order
+        # (sort = "index" is the niri-specific ordering added in v0.19.0).
+        sort = "index";
         # No name_map: workspaces appear only when Niri creates them
       }
     ];
@@ -121,24 +124,83 @@
         type = "volume";
         format = "{icon}";
         max_volume = 100;
+        # v0.19 profiles schema: single high icon plus threshold profiles
+        # (matching is equal-to-or-below the threshold).
         icons = {
-          volume_high = "󰕾";
-          volume_medium = "󰖀";
-          volume_low = "󰕿";
+          volume = "󰕾";
           muted = "󰖁";
+        };
+        profiles = {
+          medium = {
+            when = 66.66;
+            icons.volume = "󰖀";
+          };
+          low = {
+            when = 33.33;
+            icons.volume = "󰕿";
+          };
         };
       }
       {
         type = "network_manager";
-        format_ethernet = "󰈀";
-        format_wifi = "{icon}";
-        format_disconnected = "󰤭";
-        icons = {
-          wifi = {
-            "0-25" = "󰤯";
-            "25-50" = "󰤟";
-            "50-75" = "󰤢";
-            "75-100" = "󰤨";
+        icon_size = 18;
+        use_default_profiles = false;
+        # v0.19 reworked this module: device state renders via profiles
+        # matching on type/state/signal_strength. Wifi buckets mirror the
+        # old icons.wifi tiers (equal-to-or-below the strength bound).
+        profiles = {
+          wired_connected = {
+            when = {
+              type = "wired";
+              state = "connected";
+            };
+            icon = "󰈀";
+          };
+          wired_disconnected = {
+            when = {
+              type = "wired";
+              state = "disconnected";
+            };
+            icon = "󰤭";
+          };
+          wifi_disconnected = {
+            when = {
+              type = "wifi";
+              state = "disconnected";
+            };
+            icon = "󰤭";
+          };
+          wifi_weak = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 25;
+            };
+            icon = "󰤯";
+          };
+          wifi_ok = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 50;
+            };
+            icon = "󰤟";
+          };
+          wifi_good = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 75;
+            };
+            icon = "󰤢";
+          };
+          wifi_excellent = {
+            when = {
+              type = "wifi";
+              state = "connected";
+              signal_strength = 100;
+            };
+            icon = "󰤨";
           };
         };
       }
@@ -199,11 +261,20 @@
       {
         type = "volume";
         max_volume = 100;
+        # v0.19 profiles schema (see the niri config above).
         icons = {
-          volume_high = "󰕾";
-          volume_medium = "󰖀";
-          volume_low = "󰕿";
+          volume = "󰕾";
           muted = "󰖁";
+        };
+        profiles = {
+          medium = {
+            when = 66.66;
+            icons.volume = "󰖀";
+          };
+          low = {
+            when = 33.33;
+            icons.volume = "󰕿";
+          };
         };
         on_click_left = "pactl set-sink-mute @DEFAULT_SINK@ toggle";
         on_scroll_up = "pactl set-sink-volume @DEFAULT_SINK@ +5%";
@@ -234,12 +305,11 @@
     }
 
     .bar {
-      /* d9 ≈ 85% opacity — transparent enough for when niri blur ships */
+      /* d9 ≈ 85% opacity — niri blurs the layer surface (layer-rule
+         namespace "^ironbar"), so the pill reads as frosted glass. */
       background-color: #${c.base00}d9;
       border-radius: 24px;
       padding: 12px 4px;
-      /* Blur-ready — uncomment + lower alpha when niri blur is available:
-         backdrop-filter: blur(20px) saturate(1.5); */
     }
 
     .start,

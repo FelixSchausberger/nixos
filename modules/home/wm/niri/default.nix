@@ -572,6 +572,34 @@ in {
             blur = true;
           };
         }
+        # Blur behind the Ironbar pill (namespace set by ironbar itself).
+        # Noise and saturation inherit from the global blur config.
+        # geometry-corner-radius only shapes the shadow to the pill's
+        # 24px CSS radius; layer surfaces cannot report their visual
+        # geometry, so the radius must be restated here.
+        {
+          matches = [{namespace = "^ironbar";}];
+          background-effect = {
+            blur = true;
+          };
+          geometry-corner-radius = {
+            top-left = 24.0;
+            top-right = 24.0;
+            bottom-right = 24.0;
+            bottom-left = 24.0;
+          };
+          shadow = {
+            enable = true;
+            softness = 40;
+            spread = 5;
+            offset = {
+              x = 0;
+              y = 5;
+            };
+            draw-behind-window = true;
+            color = "#00000064";
+          };
+        }
       ];
 
       # Keybindings imported from keybinds.nix
