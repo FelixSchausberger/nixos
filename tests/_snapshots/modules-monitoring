@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 20;
+  rule_count = 21;
   rules = [
     {
       alert = "NextcloudDown";
@@ -103,6 +103,11 @@
       alert = "WanHighLatency";
       expr = "probe_duration_seconds{job=\"blackbox-icmp\"} > 0.5";
       priority = "high";
+    }
+    {
+      alert = "AmtWanDown";
+      expr = "probe_success{job=\"blackbox-amt\"} == 0";
+      priority = "urgent";
     }
     {
       alert = "NodeExporterDown";
@@ -166,6 +171,7 @@
     "blackbox"
     "blackbox-dns"
     "blackbox-icmp"
+    "blackbox-amt"
     "wall-power"
   ];
   vitals_scrape_enabled = true;

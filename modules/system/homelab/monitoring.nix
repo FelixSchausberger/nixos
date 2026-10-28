@@ -54,6 +54,17 @@
         timeout: 5s
         icmp:
           preferred_ip_protocol: ip4
+      # AMT WAN path: a TCP connect to the ME's TLS ports as the FRITZ!Box
+      # DNAT delivers them to an off-LAN client. Both ports down = the ME went
+      # silent (it stops ARP-answering after MEBx sessions; recovery is an
+      # unplug-60s power reset). 16993 open with 16995 down = the m920q-amt
+      # device record lost the 192.168.178.10 binding (FRITZ!Box UI: re-assign
+      # the permanent IPv4); the hairpin probe rides the same rule resolution.
+      amt_tcp:
+        prober: tcp
+        timeout: 5s
+        tcp:
+          preferred_ip_protocol: ip4
   '';
 
   # Probes carry the probed endpoint as the scrape target; these relabels move
@@ -162,6 +173,9 @@
       (mkRule "WanHighLatency" "high" "WAN latency is high"
         "ICMP round-trip to the public internet exceeds 500 ms (bufferbloat starving DNS)"
         ''probe_duration_seconds{job="blackbox-icmp"} > 0.5'')
+      (mkRule "AmtWanDown" "urgent" "AMT WAN path is down"
+        "The ME's TLS ports are unreachable through the FRITZ!Box DNAT ({{ $labels.instance }}). Both ports down: the ME went silent; unplug power for 60 s and boot. 16993 open with 16995 down: the m920q-amt device record lost the binding; FRITZ!Box UI: re-assign its permanent IPv4 to 192.168.178.10"
+        ''probe_success{job="blackbox-amt"} == 0'')
     ])
     ++ [
       (mkRule "NodeExporterDown" "urgent" "Node exporter is unreachable"
@@ -636,6 +650,26 @@ in {
               {
                 targets = ["1.1.1.1"];
                 labels.probe = "wan";
+                labels.host = localHost;
+              }
+            ];
+            relabel_configs = proberRelabel 9115;
+          }
+          {
+            # The WAN path rides the same FRITZ!Box DNAT an off-LAN client
+            # takes, so a failure here means the AMT rules no longer resolve
+            # to the ME (device record binding) or the ME went silent.
+            job_name = "blackbox-amt";
+            scrape_interval = "30s";
+            metrics_path = "/probe";
+            params.module = ["amt_tcp"];
+            static_configs = [
+              {
+                targets = [
+                  "116.204.198.109:16995"
+                  "116.204.198.109:16993"
+                ];
+                labels.probe = "amt-wan";
                 labels.host = localHost;
               }
             ];
