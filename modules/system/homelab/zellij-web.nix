@@ -47,7 +47,7 @@ in {
 
     port = lib.mkOption {
       type = lib.types.port;
-      default = 8083;
+      default = inputs.self.lib.homelabPorts.zellij;
       description = "Local port the Zellij web server binds on";
     };
 

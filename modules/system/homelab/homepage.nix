@@ -251,6 +251,19 @@
           };
         };
       }
+    ]
+    ++ lib.optionals hl.calibreWeb.enable [
+      {
+        "Calibre-Web" = {
+          icon = "calibre-web.png";
+          # Path route strips the prefix but forwards X-Script-Name, which
+          # Calibre-Web's ReverseProxyPrefixFix consumes to generate URLs
+          # under /books (same class as Navidrome's BaseURL).
+          href = "https://${hl.caddyProxy.tailnetDomain}/books";
+          description = "Ebook Library";
+          siteMonitor = local hl.calibreWeb.port;
+        };
+      }
     ];
 
   monitoringServices = lib.optionals hl.monitoring.enable [

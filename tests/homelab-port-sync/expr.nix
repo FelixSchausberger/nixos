@@ -17,4 +17,5 @@ in {
   caddy_config_has_navidrome_port = routesTo ports.navidrome;
   caddy_config_has_adguard_port = routesTo ports.adguard;
   caddy_config_has_nextcloud_port = routesTo ports.nextcloud;
+  caddy_config_has_calibre_port = routesTo ports.calibreWeb;
 }

@@ -27,6 +27,18 @@
     }
   '';
 
+  # For services that consume the X-Script-Name header instead of serving
+  # under their own base path (Calibre-Web's ReverseProxyPrefixFix): the
+  # prefix is stripped on the way in and re-declared via the header, so
+  # links and redirects the app generates stay under /<path> client-side.
+  mkScriptNameRoute = path: upstreamPort: ''
+    handle_path /${path}* {
+      reverse_proxy http://127.0.0.1:${toString upstreamPort} {
+        header_up X-Script-Name /${path}
+      }
+    }
+  '';
+
   # CalDAV/CardDAV clients and Nextcloud's service discovery probe the
   # .well-known endpoints at the site root; with Nextcloud served under a
   # sub-path these must redirect into it. webfinger/nodeinfo are only served
@@ -109,6 +121,13 @@ in {
       description = "Expose Nextcloud via Tailscale at <tailnetDomain>/nextcloud";
     };
 
+    calibreWeb = lib.mkOption {
+      type = lib.types.bool;
+      default = hl.calibreWeb.enable;
+      defaultText = lib.literalExpression "config.modules.system.homelab.calibreWeb.enable";
+      description = "Expose Calibre-Web via Tailscale at <tailnetDomain>/books";
+    };
+
     # No Homepage toggle: its Next.js build emits root-absolute /_next and
     # /api URLs (the package carries no basePath), so a path-stripped prefix
     # serves a page whose assets land on the Immich catch-all. Homepage runs
@@ -142,6 +161,10 @@ in {
         assertion = !cfg.nextcloud || hl.nextcloud.enable;
         message = "caddyProxy.nextcloud requires modules.system.homelab.nextcloud.enable = true";
       }
+      {
+        assertion = !cfg.calibreWeb || hl.calibreWeb.enable;
+        message = "caddyProxy.calibreWeb requires modules.system.homelab.calibreWeb.enable = true";
+      }
     ];
 
     # Allow Caddy to fetch TLS certificates from the local Tailscale daemon.
@@ -169,6 +192,7 @@ in {
           + lib.optionalString cfg.grafana (mkKeepRoute "grafana" hl.monitoring.grafanaPort)
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
+          + lib.optionalString cfg.calibreWeb (mkScriptNameRoute "books" hl.calibreWeb.port)
           + lib.optionalString hl.homepage.enable mkWallpaperRoute
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.

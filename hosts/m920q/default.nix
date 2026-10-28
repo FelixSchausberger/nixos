@@ -831,6 +831,12 @@ in {
       enable = true;
       openFirewall = true;
     };
+    # Ebook library: Kobo sync for the Clara BW over the LAN (the device
+    # cannot run Tailscale), web UI + OPDS through the Caddy tailnet route.
+    calibreWeb = {
+      enable = true;
+      openFirewall = true;
+    };
     nextcloud = {
       enable = true;
       host = "0.0.0.0";

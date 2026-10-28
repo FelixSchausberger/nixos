@@ -66,10 +66,11 @@ in {
           name = "Documents";
           path = "/per/mnt/data/documents";
         }
-        {
-          name = "Books";
-          path = "/per/mnt/data/documents/books";
-        }
+        # No root-level Books mount: books live in the Calibre-Web library at
+        # /per/mnt/data/media/books (modules/system/homelab/calibre-web.nix).
+        # Documents already exposes any remaining files under Documents/books,
+        # and a Books mount of the same tree duplicated every file in the web
+        # UI and doubled the hourly external-storage scan.
         {
           name = "CAD";
           path = "/per/mnt/data/projects/cad";

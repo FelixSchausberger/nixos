@@ -36,6 +36,7 @@
     "System/Media/Immich icon=immich.png href=https://m920q.tailf2f0ca.ts.net monitor widget=immich"
     "System/Media/Navidrome icon=navidrome.png href=https://m920q.tailf2f0ca.ts.net/navidrome monitor widget=navidrome"
     "System/Media/Jellyfin icon=jellyfin.png href=http://192.168.178.2:8096 monitor widget=jellyfin"
+    "System/Media/Calibre-Web icon=calibre-web.png href=https://m920q.tailf2f0ca.ts.net/books monitor"
     "System/Smart home/Home Assistant icon=mdi-home-assistant href=https://m920q.tailf2f0ca.ts.net:8448/ monitor"
     "System/Smart home/Zigbee2MQTT icon=mdi-zigbee href=https://m920q.tailf2f0ca.ts.net:8449/ monitor"
     "System/Nix/NixOS Repo icon=si-github href=https://github.com/FelixSchausberger/nixos widgets=customapi,customapi,customapi"
