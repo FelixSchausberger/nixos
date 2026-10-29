@@ -233,17 +233,24 @@ in {
     # RAM window 0x100000000-0x4bc7fffff (verified identical e820 across
     # boots): the loader places the kernel image (KASLR) and the initrd
     # below 4 GiB, and the memmap reservation excludes the region from
-    # every kernel allocation. The nixpkgs kernel ships PSTORE_RAM=m but no
-    # PSTORE_CONSOLE, so this records panic/oops dmesg dumps, not a
-    # continuously updated console log - a hard watchdog reset without a
-    # panic still leaves no trace here (netconsole or the unclean-shutdown
-    # alert cover that case). Cold power loss clears the region as well; a
-    # reboot applies the params.
+    # every kernel allocation. record_size is the kmsg zone size for the
+    # module (the DT binding's dmesg-size has no such module param); the
+    # other zone sizes default to 4 KiB each and are zeroed explicitly, so
+    # the whole region is four 1 MiB panic-record slots (a 4-deep ring).
+    # The nixpkgs kernel ships PSTORE_RAM=m but no PSTORE_CONSOLE, so this
+    # records panic/oops dmesg dumps, not a continuously updated console
+    # log - a hard watchdog reset without a panic still leaves no trace
+    # here (netconsole or the unclean-shutdown alert cover that case).
+    # Cold power loss clears the region as well; a reboot applies the
+    # params.
     "pstore.backend=ramoops"
     "memmap=4M$0x180000000"
     "ramoops.mem_address=0x180000000"
     "ramoops.mem_size=0x400000"
-    "ramoops.dmesg_size=0x100000"
+    "ramoops.record_size=0x100000"
+    "ramoops.console_size=0"
+    "ramoops.ftrace_size=0"
+    "ramoops.pmsg_size=0"
     "ramoops.dump_oops=1"
     "ramoops.ecc=1"
   ];
