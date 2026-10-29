@@ -163,6 +163,12 @@ in {
                 print(generate_password_hash(f.read().strip()))')
           ${pkgs.sqlite}/bin/sqlite3 ${cfg.dataPath}/app.db \
             "update settings set config_calibre_dir = '${cfg.libraryPath}'"
+          # Kobo-generated resource URLs (covers, book downloads) carry the
+          # External Port, whose upstream default (8083) predates the port
+          # collision with zellij that moved the service to 8084. The
+          # device-reachable port here is the service port itself.
+          ${pkgs.sqlite}/bin/sqlite3 ${cfg.dataPath}/app.db \
+            "update settings set config_external_port = ${toString cfg.port}"
           ${pkgs.sqlite}/bin/sqlite3 ${cfg.dataPath}/app.db \
             "update user set password = '$_hash' where name = 'admin'"
         '';
