@@ -838,6 +838,9 @@ in {
       enable = true;
       openFirewall = true;
     };
+    # Music Assistant: library + streaming services for the NAD C 368
+    # (MDC BluOS 2i on the WLAN) and future players, surfaced in HA.
+    musicAssistant.enable = true;
     # Ebook library: Kobo sync for the Clara BW over the LAN (the device
     # cannot run Tailscale), web UI + OPDS through the Caddy tailnet route.
     calibreWeb = {
