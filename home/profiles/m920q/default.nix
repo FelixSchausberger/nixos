@@ -24,6 +24,17 @@
     finished = false;
   };
 
+  # Agent control plane: the herd of opencode agents lives in the herdr
+  # session server (tui.herdr.server - an always-on user unit with
+  # reboot-like restart semantics, see the unit comment) so the phone
+  # bridge and the desktop are views onto the same panes. The vendored
+  # opencode integration feeds herdr lifecycle state (working/blocked/done)
+  # and records session ids for resume-after-restart; without it the state
+  # sidebar falls back to screen-manifest detection and a deploy loses
+  # resumable sessions.
+  tui.herdr.server.enable = true;
+  tui.herdr.opencodeIntegration.enable = true;
+
   features = {
     development = {
       enable = true;
