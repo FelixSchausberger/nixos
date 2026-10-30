@@ -33,6 +33,12 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    users.users.music-assistant = {
+      isSystemUser = true;
+      group = "music-assistant";
+    };
+    users.groups.music-assistant = {};
+
     services.music-assistant = {
       enable = true;
       inherit (cfg) providers;
@@ -53,7 +59,19 @@ in {
     # RSS jumps are normal but uncapped; the same runaway protection as the
     # HA and jellyfin services keeps a scan surge from evicting immich on
     # the 16 GB host.
+    #
+    # The upstream unit runs as a DynamicUser, whose StateDirectory setup
+    # migrates the pre-existing /var/lib/music-assistant into
+    # /var/lib/private: a rename across the impermanence bind mount, which
+    # dies at 238/STATE_DIRECTORY with "Device or resource busy". The
+    # static user plus a nulled StateDirectory keep the state path in
+    # place; the ntfy and adguardhome modules override the same upstream
+    # DynamicUser/impermanence collision the same way.
     systemd.services.music-assistant.serviceConfig = {
+      DynamicUser = lib.mkForce false;
+      StateDirectory = lib.mkForce null;
+      User = lib.mkForce "music-assistant";
+      Group = lib.mkForce "music-assistant";
       MemoryMax = "1200M";
       MemoryHigh = "1000M";
     };
@@ -61,15 +79,18 @@ in {
     # State survives reboots on the impermanence host; the tmpfiles rule
     # creates the directory under the mount source directly so the ordering
     # against the impermanence bind mounts cannot shadow it (same
-    # workaround as smart-home.nix). The nixpkgs unit runs as a DynamicUser
-    # with StateDirectory, so the store directory stays root-owned here and
-    # systemd re-owns it on every unit start.
+    # workaround as smart-home.nix).
     systemd.tmpfiles.rules = [
-      "d /per/var/lib/music-assistant 0755 root root -"
+      "d /per/var/lib/music-assistant 0700 music-assistant music-assistant -"
     ];
 
     environment.persistence."/per".directories = [
-      {directory = "/var/lib/music-assistant";}
+      {
+        directory = "/var/lib/music-assistant";
+        user = "music-assistant";
+        group = "music-assistant";
+        mode = "0700";
+      }
     ];
   };
 }
