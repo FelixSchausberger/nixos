@@ -8,7 +8,71 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  # Panic-evidence helper for the unclean-shutdown alert. systemd-pstore moves
+  # each panic record out of the pstore backend at boot (on hosts with a
+  # ramoops region such as the m920q host config, into
+  # /var/lib/systemd/pstore), and this helper hands the newest record's tail
+  # to the unclean-shutdown ntfy message so the death alert itself carries
+  # the kernel trace. A dmesg record holds the dmesg ring tail starting with
+  # a "Panic#<n> Part<m>" line and ending at the panic itself; a compressed
+  # variant embeds a deflate stream and is detected by the content failing
+  # UTF-8 decoding. Records archive with COPY_REPLACE, so a later death of
+  # the same zone replaces the older archive and the highest zone id is a
+  # real, current record in the one-death-per-boot case a single alert
+  # judges. The full record is copied to
+  # /var/lib/crash-detect/last-panic-dmesg for long-form forensics beyond
+  # what the alert carries. An empty archive exits silently; the caller then
+  # leaves its alert message unchanged.
+  panicEvidenceTail = pkgs.writeShellApplication {
+    name = "panic-evidence-tail";
+    runtimeInputs = [pkgs.coreutils pkgs.findutils pkgs.python3];
+    text = ''
+            archive_dir=/var/lib/systemd/pstore
+            full_copy=/var/lib/crash-detect/last-panic-dmesg
+
+            name=$(find "$archive_dir" -maxdepth 1 -name 'dmesg-ramoops-*' -printf '%f\n' 2>/dev/null | sort -V | tail -1) || true
+            if [[ -z "$name" ]]; then
+              exit 0
+            fi
+            src="$archive_dir/$name"
+            mkdir -p "$(dirname "$full_copy")"
+            cp -f -- "$src" "$full_copy"
+            python3 -c '
+      import sys, zlib
+
+      data = open(sys.argv[1], "rb").read()
+      try:
+          data.decode("utf-8")
+          decoded = data
+      except UnicodeDecodeError:
+          # Not text: a deflate stream. The kernel crypto comp emits the zlib
+          # format; try the raw variant too, once on the whole data and once
+          # after a leading text line, since the record comment may sit
+          # inside or outside the stream.
+          decoded = None
+          for stream in (data, data[data.find(b"\n") + 1 :]):
+              if not stream or decoded is not None:
+                  continue
+              for wbits in (15, -15):
+                  try:
+                      decoded = zlib.decompress(stream, wbits)
+                      break
+                  except zlib.error:
+                      pass
+              if decoded is not None:
+                  break
+          if decoded is None:
+              sys.stderr.write(
+                  "panic-evidence-tail: record is neither text nor deflate: %s\n" % sys.argv[1]
+              )
+              sys.exit(0)
+      lines = decoded.decode("utf-8", "replace").splitlines()
+      print("\n".join(lines[-40:])[-1600:])
+      ' "$src"
+    '';
+  };
+in {
   options.modules.system.maintenance = {
     enable = lib.mkEnableOption "automated system maintenance";
 
@@ -136,6 +200,10 @@
         # notifications.
         system-health-check = lib.mkIf config.modules.system.maintenance.monitoring.enable {
           description = "System health monitoring";
+          # The boot-time unclean-shutdown judge reads the pstore record that
+          # systemd-pstore moves during boot; a Persistent timer's boot
+          # catchup can otherwise start before that move completes.
+          after = ["systemd-pstore.service"];
           script = ''
             set -eu
 
@@ -180,7 +248,20 @@
               elif [[ ! -f $stamp_dir/clean-shutdown ]]; then
                 echo "WARNING: previous boot ended without a clean shutdown (crash, watchdog reset, or power loss)"
                 ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
-              ntfy_send "Unclean Shutdown on $host" "high" "warning" "Previous boot ended without reaching shutdown.target (panic, watchdog reset, or power loss). Correlate: Grafana logs (unit=netconsole-receiver), journalctl -b -1, wall power."
+                            # Attach the panic evidence the pstore backend captured (the
+                            # ramoops region on hosts that configure one; systemd-pstore
+                            # moves the records into /var/lib/systemd/pstore at boot): the
+                            # alert body itself carries the trace tail and the full record
+                            # lands in /var/lib/crash-detect/last-panic-dmesg.
+                            evidence=$(${panicEvidenceTail}/bin/panic-evidence-tail) || true
+                            msg="Previous boot ended without reaching shutdown.target (panic, watchdog reset, or power loss). Correlate: Grafana logs (unit=netconsole-receiver), journalctl -b -1, wall power."
+                            if [[ -n "''$evidence" ]]; then
+                              msg="''$msg
+              Panic record: /var/lib/crash-detect/last-panic-dmesg
+
+              ''$evidence"
+                            fi
+                            ntfy_send "Unclean Shutdown on $host" "high" "warning" "''$msg"
             ''}
               else
                 ${pkgs.coreutils}/bin/rm -f $stamp_dir/clean-shutdown
