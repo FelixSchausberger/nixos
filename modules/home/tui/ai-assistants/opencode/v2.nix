@@ -104,9 +104,21 @@
     # the whole window, matching 19 historical crashes that all began with the
     # plugin's introduction in 1b6dda9. The render leak itself is upstream
     # (opentui #1493); until it is fixed the plugin must not come back.
-    plugins = [
-      indicatorDir
-    ];
+    plugins =
+      [
+        indicatorDir
+      ]
+      # herdr's opencode lifecycle integration, vendored by the herdr module
+      # (option tui.herdr.opencodeIntegration). Upstream registers the V2
+      # integration as this directory path in cli.json; here it resolves
+      # against the rendered config root. Never ship the auto-discovered
+      # server-side herdr plugin alongside it: pane-local TUI reporting must
+      # remain the only state reporter (herdr integration docs).
+      ++ lib.optionals
+      (
+        config.tui.herdr.opencodeIntegration.enable or false
+      )
+      ["./herdr-opencode"];
     diffs.wrap = "word";
     session = {
       sidebar = "auto";
