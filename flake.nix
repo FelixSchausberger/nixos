@@ -143,6 +143,21 @@
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Neovim master (0.13 nightly) for programs.nixvim. The overlay ships
+    # the raw unwrapped drv nixvim's package option expects, built against
+    # the overlay's own fresh nixpkgs - deliberately NOT following the
+    # fleet pin, since master needs newer lua/treesitter than a channel
+    # narrow enough for the rest of the fleet provides.
+    #
+    # Pinned, not daily: the overlay tracks master and upstream ships no CI
+    # of its own, so nothing pre-builds its closure - a blanket bump would
+    # have every host candidate recompile neovim from source every day.
+    # The daily updater skips this input (daily-updates.yml); bumps here
+    # are deliberate. The first bump compiles master once on the runner
+    # and the personal cache then serves it to every host.
+    neovim-nightly-overlay = {
+      url = "github:nix-community/neovim-nightly-overlay";
+    };
     # Declarative Helix config with Steel plugin support
     nhx = {
       url = "github:Ra77a3l3-jar/nhx";
