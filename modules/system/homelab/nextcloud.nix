@@ -2,10 +2,17 @@
   inputs,
   config,
   lib,
+  options,
   pkgs,
   ...
 }: let
   cfg = config.modules.system.homelab.nextcloud;
+
+  # true while the pinned nixpkgs still declares the (26.11-removed)
+  # services.nextcloud.config.admin* options - they demand being nulled
+  # together, and nulling both disables the first-install admin creation.
+  legacyNextcloudAdminOptions =
+    lib.hasAttrByPath ["services" "nextcloud" "config" "adminuser"] options;
 
   # Obsidian's workspace.json is per-device UI state that every instance
   # rewrites constantly, so keeping it in the desktop sync set churns
@@ -96,14 +103,28 @@ in {
       # 34 having run clean;
       package = pkgs.nextcloud35;
       datadir = cfg.dataPath;
-      config = {
-        dbtype = "pgsql";
-        dbname = "nextcloud";
-        dbhost = "localhost";
-        dbuser = "nextcloud";
-        adminuser = "admin";
-        adminpassFile = config.sops.secrets."nextcloud/admin-password".path;
-      };
+      config =
+        {
+          dbtype = "pgsql";
+          dbname = "nextcloud";
+          dbhost = "localhost";
+          dbuser = "nextcloud";
+          # The adminuser/adminpassFile options were removed from the NixOS
+          # module (nixos 26.11): they only seeded the first-install admin,
+          # and new instances create users after installation via
+          # `nextcloud-occ user:add` /
+          # `group:adduser admin <username>`. The running instance already
+          # has its admin account. The sops secret stays declaration-only -
+          # monitoring's passwordFile and Homepage's
+          # HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD still consume it.
+        }
+        # Nixpkgs revisions that still declare the options get them nulled
+        # explicitly - the assert requires the pair to move together, and
+        # nulling both disables the first-install admin creation.
+        // lib.optionalAttrs legacyNextcloudAdminOptions {
+          adminuser = lib.mkForce null;
+          adminpassFile = lib.mkForce null;
+        };
 
       settings = {
         trusted_domains =
