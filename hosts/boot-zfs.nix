@@ -73,8 +73,9 @@
       ];
 
       initrd = {
-        systemd.enable = true;
-
+        # systemd.enable was removed in nixos 26.11: the scripted initrd is
+        # gone and the systemd initrd is the only mode, so these services
+        # live under the (now unconditional) boot.initrd.systemd module.
         systemd.services = {
           reset-root = {
             description = "Reset root filesystem to blank snapshot";
