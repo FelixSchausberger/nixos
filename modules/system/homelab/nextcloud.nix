@@ -8,11 +8,17 @@
 }: let
   cfg = config.modules.system.homelab.nextcloud;
 
-  # true while the pinned nixpkgs still declares the (26.11-removed)
-  # services.nextcloud.config.admin* options - they demand being nulled
-  # together, and nulling both disables the first-install admin creation.
+  # True while the pinned nixpkgs still *exposes* the 26.11-removed
+  # services.nextcloud.config.admin* options. A pure existence check cannot
+  # distinguish them: mkRemovedOptionModule keeps declaring the option with
+  # visibility off, so probing hasAttr instead (which saw the hidden option
+  # too) left the definitions live on 26.11 and threw there. Visibility is the
+  # discriminator: the channel's option set hides them only once the removal
+  # landed. The pair stays nulled together on older locks (the module's
+  # assertion requires that), which disables the first-install admin creation;
+  # drop this guard once 26.11 is the oldest lock main evaluates.
   legacyNextcloudAdminOptions =
-    lib.hasAttrByPath ["services" "nextcloud" "config" "adminuser"] options;
+    options.services.nextcloud.config.adminuser.visible or true;
 
   # Obsidian's workspace.json is per-device UI state that every instance
   # rewrites constantly, so keeping it in the desktop sync set churns
