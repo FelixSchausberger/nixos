@@ -924,5 +924,13 @@ in {
       enable = true;
       tailnetDomain = "m920q.tailf2f0ca.ts.net";
     };
+    # Phone bridge for the agent herd: herdr panes and approval cards on the
+    # phone (PWA; web push later once VAPID keys exist). Collie drives the
+    # herdr session server; the user-level .env mirroring these values is
+    # rendered by the TUI collie module from this same block.
+    collie = {
+      enable = true;
+      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+    };
   };
 }
