@@ -52,8 +52,16 @@ jobs:
           # Captured so the PR body can document exactly which inputs moved.
           # GitHub API rate limits and network blips fail the command
           # transiently, so retry with backoff before giving up.
+          # neovim-nightly-overlay stays pinned (flake.nix): it tracks
+          # neovim master without an upstream builder, so a blanket bump
+          # would have every host candidate recompile master daily.
+          # Bumps are deliberate; the batch below carries every other
+          # input in one update so the PR stays one commit.
+          mapfile -t others < <(
+            jq -r '.nodes["root"].inputs | keys[] | select(. != "neovim-nightly-overlay")' flake.lock
+          )
           for attempt in 1 2 3; do
-            if nix flake update | tee update-output.txt; then
+            if nix flake update "${others[@]}" | tee update-output.txt; then
               break
             fi
             if [ "$attempt" -eq 3 ]; then
