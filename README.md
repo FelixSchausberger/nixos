@@ -228,6 +228,11 @@ and deploys `nixosConfigurations.<hostname>`.
   immediate convergence (a restart remains as fallback if the daemon is
   wedged). Timeout is `UPDATE_TIMEOUT_SECS` (default 1200); a timeout is
   non-fatal because automation converges later.
+- `neovim-nightly-overlay` is the one pinned input: the daily run refreshes
+  every other input and deliberately skips it (flake.nix). Bump it manually
+  with `nix flake update neovim-nightly-overlay` when a new master snapshot
+  is wanted; the bump's closure is built once on the runner and then served
+  to every host from the personal cache.
 - `deploy` builds the committed config locally and switches after the guard.
 - `jjtest [rev]` moves the per-host `testing-<hostname>` bookmark to `rev`
   (default `@`) for the comin local remote on the development host. comin

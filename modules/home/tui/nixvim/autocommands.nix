@@ -13,11 +13,14 @@
       command = "wincmd L";
     }
 
-    # Soft-wrap prose like Helix's markdown soft-wrap; code stays unwrapped
+    # Soft-wrap prose like Helix's markdown soft-wrap; code stays unwrapped.
+    # linebreak breaks at word boundaries and breakindent hangs continuation
+    # lines; on nvim 0.13+ the wrap layout is conceal-aware, so it stays
+    # correct around render-markdown's concealed syntax.
     {
       event = "FileType";
       pattern = "markdown";
-      command = "setlocal wrap";
+      command = "setlocal wrap linebreak breakindent";
     }
 
     # Enable spellcheck for some filetypes
