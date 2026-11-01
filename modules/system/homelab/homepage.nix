@@ -924,8 +924,10 @@ in {
           cfg.httpsPort
           != hl.zellijWeb.httpsPort
           && cfg.httpsPort != hl.opencodeWeb.httpsPort
+          && cfg.httpsPort
+          != ((hl.collie or {}).httpsPort or (-1))
           && cfg.httpsPort != hl.monitoring.prometheusHttpsPort;
-        message = "modules.system.homelab.homepage.httpsPort must differ from the zellij-web, opencode-web and Prometheus Tailscale Serve ports";
+        message = "modules.system.homelab.homepage.httpsPort must differ from the zellij-web, opencode-web, collie and Prometheus Tailscale Serve ports";
       }
     ];
 
