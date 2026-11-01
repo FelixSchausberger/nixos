@@ -124,6 +124,25 @@ in {
     (lib.mkIf config.tui.herdr.enable {
       home.packages = [pkgs.herdr];
 
+      # Attach entry for remote shells ("mosh m920q -- fish -c hattach") and
+      # quick reattaches. Idempotent: the client attaches to the running
+      # server (the systemd herdr-server unit on the agent host) or starts
+      # one when no unit exists. HERDR_ENV is exported by herdr inside its
+      # panes - the same namespace guard the zellij auto-attach block checks -
+      # so double-attaching inside a herdr pane is a no-op; running it inside
+      # a zellij pane nests the herdr TUI there deliberately, which is the
+      # agent workflow's incidental fallback, not its primary surface.
+      programs.fish.functions.hattach = {
+        description = "Attach to the herdr session server (idempotent client attach)";
+        body = ''
+          if set -q HERDR_ENV
+            echo "hattach: already inside a herdr pane" >&2
+            return 0
+          end
+          command herdr
+        '';
+      };
+
       # herdr's plugin registry is imperative state (plugins.json) keyed by the
       # linked source path, so it cannot be a read-only Home Manager file. Link
       # the TTT editor plugin out of the ttt flake input at activation; relinking

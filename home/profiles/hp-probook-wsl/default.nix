@@ -73,6 +73,28 @@
     description = "Homelab session: mosh over LAN or tailnet, falling back to the Zellij web attach";
   };
 
+  # Agent layer twin of m920q above, but the attach target is herdr, not
+  # zellij. The mosh command override runs fish -c hattach remotely: non-
+  # interactive fish skips the zellij auto-attach hook (which requires
+  # `status is-interactive`), so the mosh session lands straight in the
+  # herdr TUI, symmetric with the phone. m920q / m920q-tail are the same
+  # ssh-config aliases the manual layer uses (ConnectTimeout chains the
+  # LAN -> tailnet fallback). When UDP is filtered entirely, plain ssh over
+  # TCP still works: it keeps the return back to herdr's own TUI instead of
+  # routing to the zellij web attach the manual layer falls back to.
+  programs.fish.functions.m920q-herdr = {
+    body = ''
+      command mosh m920q -- fish -c hattach
+      or command mosh m920q-tail -- fish -c hattach
+      or begin
+        echo "m920q-herdr: mosh unreachable (LAN and tailnet), attaching herdr over plain ssh (TCP)" >&2
+        command ssh -t m920q fish -c hattach
+        or command ssh -t m920q-tail fish -c hattach
+      end
+    '';
+    description = "Agent session: mosh straight into the herdr TUI (skips zellij), ssh fallback over TCP";
+  };
+
   # WSL-specific home configuration
   home = {
     packages = with pkgs; [
