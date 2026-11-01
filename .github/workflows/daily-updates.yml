@@ -122,10 +122,35 @@ jobs:
           # (anyio 4.14.2, mosh, herdr) merged green and then failed the
           # post-merge cache warm-up.
           HEAVY='(^|/)[0-9a-z]{32}-(freecad|krita|blender|prusa-slicer|inkscape)-|(^|/)[0-9a-z]{32}-linux-[0-9]'
+          mkdir -p eval-errors
           gap=0
           heavy=0
+          # A dry-run prints "these N derivations will be built" on stderr, so
+          # the exit status carries the only distinction this step makes
+          # without parsing prose: non-zero means the host configuration
+          # failed to evaluate - a config change is needed, not a cache gap.
+          # Every host is still scanned after a failure (one CI cycle should
+          # surface every surviving assertion instead of peeling them one per
+          # daily run; observed 2026-11-01: initrd -> nextcloud took two).
+          eval_failed=0
           for host in $(nix eval --raw '.#lib.deployedHosts' --apply 'hs: builtins.concatStringsSep " " hs'); do
-            output=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1 || true)
+            set +e
+            output=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1)
+            status=$?
+            set -e
+            if [ "$status" -ne 0 ]; then
+              eval_failed=1
+              printf '%s\n' "$output" > "eval-errors/$host.txt"
+              {
+                echo "### $host - evaluation failed (config change needed)"
+                echo ""
+                echo '```'
+                tail -25 "eval-errors/$host.txt"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "::notice::$host failed to evaluate - the assertion chain in eval-errors/$host.txt names the option/file to fix"
+              continue
+            fi
             built=$(printf '%s\n' "$output" | awk '/derivations will be built/{f=1;next} /paths will be fetched/{f=0} f' | grep -E '^[[:space:]]+/nix/store/' || true)
             count=$(printf '%s\n' "$built" | grep -cE '^[[:space:]]+/nix/store/' || true)
             if [ "$count" -gt 0 ]; then
@@ -145,6 +170,13 @@ jobs:
               echo "$host: closure fully substitutable"
             fi
           done
+
+          # decision=eval-failed + a non-zero exit keep the build matrix and
+          # the lock PR out of the way while report-failure labels the run.
+          if [ "$eval_failed" -eq 1 ]; then
+            echo "decision=eval-failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
 
           if [ "$gap" -eq 0 ]; then
             echo "decision=fast" >> "$GITHUB_OUTPUT"
@@ -180,6 +212,16 @@ jobs:
           path: |
             lock.patch
             pr-body.md
+          retention-days: 1
+      # Evaluation errors are the artifact a "config change needed" run wants
+      # (report-failure best picks them up): always() because classify exits
+      # non-zero on this class, which skips steps without it.
+      - name: Upload evaluation errors
+        if: always() && steps.classify.outputs.decision == 'eval-failed'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: eval-errors
+          path: eval-errors/
           retention-days: 1
   # Pre-merge warm-up: build exactly the delta the substituters lack (Nix
   # still fetches anything Hydra did build) and push it to our own cache.
@@ -298,6 +340,27 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           body="$(printf '## Daily Dependency Update failed\n\nThe scheduled lock update did not complete. Hosts keep converging on the previous lock until this is resolved.\n\n- Run: %s\n' "$RUN_URL")"
+          # The verdict leads the body: whether a run wants a repo-side head
+          # or is a cache-gap wait stays invisible in a red job list, and the
+          # raw log tail used to be the only place it lived. Signatures
+          # mirror tools/scripts/update-system.sh so the CLI and the issue
+          # agree (observed 2026-11-01: an eval assert surfaced as three
+          # unlabelled host builds).
+          log_tail="$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null \
+            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tail -40 || true)"
+          if printf '%s\n' "$log_tail" | grep -Eq "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
+            offending="$(printf '%s\n' "$log_tail" \
+              | grep -m1 -oE "option definition '[^']+' in '[^']+'" \
+              | sed -E "s#/nix/store/[a-z0-9]{32}-source##" || true)"
+            verdict="config change needed ($offending - removed-option assert or failed module assertion)"
+          elif printf '%s\n' "$log_tail" | grep -Eqi "narinfo|hash mismatch|missing from cache"; then
+            verdict="cache gap: closures absent from all substituters (CI warms felixschausberger.cachix.org before the lock PR merge)"
+          elif printf '%s\n' "$log_tail" | grep -Eq "builder for .* failed|error: build of"; then
+            verdict="dependency build failure"
+          else
+            verdict="unclassified - read the log tail"
+          fi
+          body+=$'\n\n**Failure class:** '"$verdict"
           # The run URL alone starts every incident with log archaeology;
           # resolve the failing jobs and their log tail here so the issue
           # names the cause. Both probes must degrade to the plain body:
@@ -307,8 +370,6 @@ jobs:
           if [ -n "$failing" ]; then
             body+=$'\n\n**Failing job(s):**\n'"$failing"
           fi
-          log_tail="$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null \
-            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tail -40 || true)"
           if [ -n "$log_tail" ]; then
             body+=$'\n\n<details><summary>Log tail</summary>\n\n```\n'"$log_tail"$'\n```\n</details>\n'
           fi
