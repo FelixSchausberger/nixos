@@ -1,4 +1,8 @@
-{inputs, ...}: {
+{
+  inputs,
+  pkgs,
+  ...
+}: {
   imports = [
     inputs.nixvim.homeModules.nixvim
     ./autocommands.nix
@@ -17,6 +21,12 @@
     vimAlias = true;
     vimdiffAlias = true;
     luaLoader.enable = true;
+
+    # Reuse the host's nixpkgs evaluation: one import pass and one closure,
+    # which is what the flake's nixvim follows declaration intends. Constructing
+    # nixvim's own pkgs from its pinned input instead would warn about the
+    # follows mismatch on every eval.
+    nixpkgs.pkgs = pkgs;
 
     # Bespoke logic stays in real Lua files under lua/, loaded here.
     extraFiles."lua/config/clipboard.lua".source = ./lua/config/clipboard.lua;
