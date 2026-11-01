@@ -95,7 +95,23 @@ else
 	124) timed_out ;;
 	*)
 		echo "error: CI run failed (exit $watch_rc); lock unchanged, system untouched" >&2
-		gh_ run view "$run_id" --log-failed 2>/dev/null | tail -n "$LOG_TAIL_LINES" >&2 || true
+		# The verdict mirrors daily-updates.yml's report-failure classes so
+		# one line out of the red run says what to do next: a
+		# "config change needed" verdict wants a repo edit (removed-option
+		# asserts peel one per fix cycle), a cache gap wants the CI warm-up
+		# to run or the nightly cron to retry after Hydra builds.
+		log_tail="$(gh -R "$REPO" run view "$run_id" --log-failed 2>/dev/null |
+			sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tail -n "$LOG_TAIL_LINES" || true)"
+		if printf '%s\n' "$log_tail" | grep -Eq "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
+			echo "likely cause: config change needed (removed option / assertion) - see the verdict line of the tracking issue" >&2
+		elif printf '%s\n' "$log_tail" | grep -Eqi "narinfo|hash mismatch|missing from cache"; then
+			echo "likely cause: cache gap - closures not on cache.nixos.org or felixschausberger.cachix.org yet" >&2
+		else
+			echo "likely cause: dependency build failure" >&2
+		fi
+		if [ -n "$log_tail" ]; then
+			printf '%s\n' "$log_tail" >&2
+		fi
 		exit 1
 		;;
 	esac
