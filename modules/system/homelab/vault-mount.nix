@@ -110,6 +110,11 @@ in {
       description = "WebDAV mount of the Nextcloud vault for terminal tooling";
       # nginx serves the local Nextcloud front door on the loopback url.
       after = ["nginx.service" "network-online.target"];
+      # systemd-resolved warns about units ordered after network-online.target
+      # without a dependency edge on it: ordering alone lets this unit start
+      # before the target completes if the target is not pulled in. wants
+      # supplies the edge without the hard coupling of requires.
+      wants = ["network-online.target"];
       wantedBy = ["multi-user.target"];
       serviceConfig = {
         # Runs as root: only root (or the setuid wrapper) can bind the fuse
