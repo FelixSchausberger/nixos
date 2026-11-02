@@ -184,6 +184,16 @@ in {
           outage can go unnoticed.
         '';
       };
+      failureIssueLabel = lib.mkOption {
+        type = lib.types.str;
+        default = "daily-updates-failure";
+        description = ''
+          Label under which the daily CI's report-failure job tracks its
+          failures; the watchdog quotes the tracking issue's latest
+          Failure-class verdict in each alert. Empty disables the verdict
+          lookup.
+        '';
+      };
     };
   };
 
@@ -631,11 +641,17 @@ in {
           };
         };
 
-        # Queries the last completed run of the lock-refresh workflow via the
-        # unauthenticated GitHub API (the repository is public; one call per
-        # day is far below the rate limit) and alerts when it failed or never
-        # ran. Runs once daily at 06:30 local time: the 03:00 UTC cron plus
-        # CI validation and auto-merge are reliably done by then.
+        # Watches the lock-refresh CI daily from this host: the workflow runs
+        # on GitHub runners, which cannot reach a LAN ntfy, so failure-only
+        # alerting at the source is impossible and this unit carries it.
+        # Queries the last completed run via the unauthenticated GitHub API
+        # (the repository is public; a handful of calls a day is far below
+        # the rate limit) and alerts when it failed or never ran, and -
+        # independent of the run outcome - when the flake's nixpkgs has
+        # fallen behind the published channel. The schedule can fire late or
+        # be skipped entirely, so the run's age, not the clock, decides
+        # whether the cron died; 06:30 local merely sits one slot after the
+        # 05:00 UTC cron.
         lock-refresh-watchdog = lib.mkIf config.modules.system.maintenance.lockRefreshWatch.enable {
           description = "Watchdog for the daily lock-refresh CI workflow";
           after = ["network-online.target"];
@@ -646,113 +662,180 @@ in {
           in ''
             set -euo pipefail
 
-            api="https://api.github.com/repos/${cfgWatch.repository}/actions/workflows/${cfgWatch.workflow}/runs?per_page=5"
+            # GitHub JSON calls: name the failing input and quote its head
+            # instead of letting jq die with a bare parse error.
+            run_json_ok() {
+              printf '%s' "$1" | ${pkgs.jq}/bin/jq -e 'type == "object"' >/dev/null 2>&1
+            }
 
+            api="https://api.github.com/repos/${cfgWatch.repository}/actions/workflows/${cfgWatch.workflow}/runs?per_page=5"
             response=$(${pkgs.curl}/bin/curl -sf \
               -H "Accept: application/vnd.github+json" "$api") \
               || { echo "WARN: GitHub API unreachable; watchdog check skipped" >&2; exit 0; }
-
-            # Name the input and show its head instead of letting jq die with a
-            # bare parse error. Exit non-zero so the unit fails and the hourly
-            # health check keeps reporting it until someone looks.
-            if ! printf '%s' "$response" | ${pkgs.jq}/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
+            if ! run_json_ok "$response"; then
               echo "ERROR: GitHub API response is not JSON: $(printf '%s' "$response" | head -c 200)" >&2
               exit 1
             fi
-
             run=$(printf '%s' "$response" | ${pkgs.jq}/bin/jq -r \
               '[.workflow_runs[] | select(.status == "completed")][0] // empty')
+
+            run_ok=0
+            run_msg=""
+            conclusion=""
+            run_id=""
+            run_age_hours=0
             if [[ -z "$run" ]]; then
-              echo "ERROR: no completed ${cfgWatch.workflow} run found" >&2
-              ${pkgs.curl}/bin/curl -s -o /dev/null \
-                -H "Title: Lock refresh missing on ${cfgWatch.repository}" \
-                -H "Priority: high" -H "Tags: warning,cd" \
-                -d "No completed ${cfgWatch.workflow} run found; cron may be disabled" \
-                "${ntfyUrl}" || true
-              exit 0
-            fi
-
-            conclusion=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .conclusion)
-            run_id=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .id)
-            run_age_hours=$(( ($(date +%s) - $(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r '.created_at | fromdateiso8601')) / 3600 ))
-
-            # No completed run in over a day means the cron stopped firing.
-            if [[ "$run_age_hours" -gt 26 ]]; then
-              echo "ERROR: latest lock-refresh run ($run_id) is $run_age_hours h old" >&2
-              ${pkgs.curl}/bin/curl -s -o /dev/null \
-                -H "Title: Lock refresh missing on ${cfgWatch.repository}" \
-                -H "Priority: high" -H "Tags: warning,cd" \
-                -d "Latest completed run ($run_id) is $run_age_hours hours old; cron did not fire" \
-                "${ntfyUrl}" || true
-              exit 0
-            fi
-
-            # Cache misses exit 0 now (the workflow waits for Hydra and builds
-            # the gap only after its grace window), so a non-success run is a
-            # genuine failure: nix flake update, namaka, or the warm-up build.
-            if [[ "$conclusion" != "success" ]]; then
-              echo "ERROR: lock-refresh run $run_id concluded '$conclusion'" >&2
-              ${pkgs.curl}/bin/curl -s -o /dev/null \
-                -H "Title: Lock refresh failed on ${cfgWatch.repository}" \
-                -H "Priority: high" -H "Tags: warning,cd" \
-                -d "Run $run_id concluded '$conclusion'; flake.lock is stale until fixed. Check: gh run view $run_id -R ${cfgWatch.repository} --log-failed" \
-                "${ntfyUrl}" || true
-              exit 0
-            fi
-
-            # A healthy run does not mean the lock is current: cache coverage
-            # can keep every run in its wait path. Compare the locked nixpkgs
-            # revision against the published channel and alert once a newer
-            # channel rev has gone unadopted past the threshold. Read both
-            # through `nix flake metadata`, which also proves the lock is
-            # fetchable (stronger than parsing the raw file).
-            #
-            # Capture stdout only: nix reports progress and any configuration
-            # warnings on stderr, and merging the two feeds non-JSON to jq.
-            # Unmerged they reach the journal, where a fetch failure stays
-            # readable.
-            if ! locked_json=$(${config.nix.package}/bin/nix flake metadata --json \
-                 "github:${cfgWatch.repository}/main"); then
-              echo "WARN: flake unreachable; staleness check skipped" >&2
-              exit 0
-            fi
-
-            # Same contract as the API response above: a parse failure names its
-            # input and quotes the offending bytes rather than surfacing as a
-            # bare jq error.
-            if ! printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -e 'type == "object"' >/dev/null 2>&1; then
-              echo "ERROR: nix flake metadata output is not JSON: $(printf '%s' "$locked_json" | head -c 200)" >&2
-              exit 1
-            fi
-
-            # Node ids are de-duplicated with numeric suffixes, so the nixpkgs
-            # this flake evaluates with is whichever id the root node maps to;
-            # the bare .locks.nodes.nixpkgs entry can belong to a transitive
-            # input and would measure an unrelated pin's age instead.
-            locked_rev=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r \
-              '.locks.nodes[.locks.nodes.root.inputs.nixpkgs].locked.rev')
-            locked_ts=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r \
-              '.locks.nodes[.locks.nodes.root.inputs.nixpkgs].locked.lastModified')
-            if [[ ! "$locked_ts" =~ ^[0-9]+$ ]]; then
-              echo "WARN: could not read locked nixpkgs timestamp; staleness check skipped" >&2
-              exit 0
-            fi
-
-            channel_rev=$(${config.nix.package}/bin/nix flake metadata --json \
-              "tarball+https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz" 2>/dev/null \
-              | ${pkgs.jq}/bin/jq -r '.revision // empty') \
-              || { echo "WARN: channel revision unreachable; staleness check skipped" >&2; exit 0; }
-
-            lock_age_hours=$(( ($(date +%s) - locked_ts) / 3600 ))
-            if [[ -n "$channel_rev" && "$channel_rev" != "$locked_rev" && "$lock_age_hours" -ge ${toString cfgWatch.maxStalenessHours} ]]; then
-              echo "ERROR: lock pinned to $locked_rev for $lock_age_hours h while channel is at $channel_rev" >&2
-              ${pkgs.curl}/bin/curl -s -o /dev/null \
-                -H "Title: Lock refresh stale on ${cfgWatch.repository}" \
-                -H "Priority: high" -H "Tags: warning,cd" \
-                -d "Channel $channel_rev has been available for ''${lock_age_hours}h but flake.lock is still pinned to $locked_rev; cache coverage likely unmet" \
-                "${ntfyUrl}" || true
+              run_msg="No completed ${cfgWatch.workflow} run found; cron may be disabled"
+              echo "ERROR: $run_msg" >&2
             else
-              echo "Lock refresh healthy: run $run_id succeeded, lock at $locked_rev ($lock_age_hours h old)"
+              conclusion=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .conclusion)
+              run_id=$(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r .id)
+              run_age_hours=$(( ($(date +%s) - $(printf '%s' "$run" | ${pkgs.jq}/bin/jq -r '.created_at | fromdateiso8601')) / 3600 ))
+              if [[ "$run_age_hours" -gt 26 ]]; then
+                run_msg="Latest completed run ($run_id) is $run_age_hours hours old; cron did not fire"
+                echo "ERROR: latest lock-refresh run ($run_id) is $run_age_hours h old" >&2
+              elif [[ "$conclusion" == "success" ]]; then
+                run_ok=1
+              else
+                # Cache misses exit 0 now (the workflow waits for Hydra and
+                # builds the gap only after its grace window), so a
+                # non-success run is a genuine failure: nix flake update,
+                # namaka, or the warm-up build.
+                run_msg="Run $run_id concluded '$conclusion'; flake.lock is stale until fixed. Check: gh run view $run_id -R ${cfgWatch.repository} --log-failed"
+                echo "ERROR: lock-refresh run $run_id concluded '$conclusion'" >&2
+              fi
+            fi
+
+            # Locked-rev and channel state, read before any alert so a
+            # failure alert still answers "how far behind is the base": a
+            # red run must not hide the staleness dimension (a channel can
+            # hold the fixed drv for days while runs stay red). Capture
+            # stdout only: nix logs progress and configuration warnings on
+            # stderr, and a merged stream would be non-JSON. `nix flake
+            # metadata` also proves both sources are fetchable, stronger
+            # than parsing the raw files. Node ids are de-duplicated with
+            # numeric suffixes, so the nixpkgs this flake evaluates with is
+            # whichever id the root node maps to; the bare
+            # .locks.nodes.nixpkgs entry can belong to a transitive input
+            # and measure an unrelated pin's age.
+            locked_rev=""
+            lock_age_hours=""
+            channel_rev=""
+            channel_age_hours=""
+            locked_json=$(${config.nix.package}/bin/nix flake metadata --json \
+                 "github:${cfgWatch.repository}/main" 2>/dev/null) || true
+            if [[ -n "$locked_json" ]] && run_json_ok "$locked_json"; then
+              locked_rev=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r \
+                '.locks.nodes[.locks.nodes.root.inputs.nixpkgs].locked.rev // empty')
+              locked_ts=$(printf '%s' "$locked_json" | ${pkgs.jq}/bin/jq -r \
+                '.locks.nodes[.locks.nodes.root.inputs.nixpkgs].locked.lastModified // empty')
+              if [[ "$locked_ts" =~ ^[0-9]+$ ]]; then
+                lock_age_hours=$(( ($(date +%s) - locked_ts) / 3600 ))
+              fi
+            fi
+            channel_json=$(${config.nix.package}/bin/nix flake metadata --json \
+              "tarball+https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz" 2>/dev/null) || true
+            if [[ -n "$channel_json" ]] && run_json_ok "$channel_json"; then
+              channel_rev=$(printf '%s' "$channel_json" | ${pkgs.jq}/bin/jq -r '.revision // empty')
+              channel_ts=$(printf '%s' "$channel_json" | ${pkgs.jq}/bin/jq -r '.locked.lastModified // empty')
+              if [[ "$channel_ts" =~ ^[0-9]+$ ]]; then
+                channel_age_hours=$(( ($(date +%s) - channel_ts) / 3600 ))
+              fi
+            fi
+
+            sit_rep="nixpkgs base: unknown"
+            if [[ -n "$locked_rev" ]]; then
+              sit_rep="nixpkgs base: $locked_rev"
+              if [[ -n "$lock_age_hours" ]]; then
+                sit_rep+=" ($lock_age_hours h)"
+              fi
+              if [[ -n "$channel_rev" ]]; then
+                sit_rep+=", channel: $channel_rev"
+                if [[ -n "$channel_age_hours" ]]; then
+                  sit_rep+=" ($channel_age_hours h)"
+                fi
+              fi
+            fi
+
+            # The CI's report-failure job tracks every failing run in a
+            # GitHub issue under the label below, closing it after the next
+            # green run; its latest Failure-class line names the failing drv
+            # and who owns the next move (repo config vs nixpkgs source
+            # build) without leaving the phone. Best effort: an unreachable
+            # API only drops this line from the alert.
+            verdict_ctx=""
+            watch_label="${cfgWatch.failureIssueLabel}"
+            if [[ -n "$watch_label" && "$run_ok" -eq 0 && -n "$run" ]]; then
+              issue_json=$(${pkgs.curl}/bin/curl -sf \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${cfgWatch.repository}/issues?labels=${cfgWatch.failureIssueLabel}&state=open&per_page=3") || issue_json=""
+              issue_number=$(printf '%s' "$issue_json" | ${pkgs.jq}/bin/jq -r '.[0].number // empty' 2>/dev/null) || issue_number=""
+              if [[ -n "$issue_number" ]]; then
+                comments_json=$(${pkgs.curl}/bin/curl -sf \
+                  -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/${cfgWatch.repository}/issues/$issue_number/comments?per_page=30") || comments_json=""
+                comment_body=$(printf '%s' "$comments_json" | ${pkgs.jq}/bin/jq -r 'sort_by(.created_at) | .[-1].body // empty' 2>/dev/null) || comment_body=""
+                class_line=$(printf '%s\n' "$comment_body" | ${pkgs.gnused}/bin/sed -n 's/^\*\*Failure class:\*\* //p' | head -1)
+                if [[ -n "$class_line" ]]; then
+                  verdict_ctx="Tracking #$issue_number verdict: $class_line"
+                fi
+              fi
+            fi
+
+            # One gauge per side of the compare, into the node exporter's
+            # textfile directory (the same channel emit-deploy-metrics
+            # writes): Grafana charts the drift without scraping GitHub.
+            metrics_dir="/var/lib/node-exporter/textfile"
+            if [[ -d "$metrics_dir" && (-n "$lock_age_hours" || -n "$channel_age_hours") ]]; then
+              mfile="$(mktemp "$metrics_dir/.lock-age.XXXXXX" 2>/dev/null)" || mfile=""
+              if [[ -n "$mfile" ]]; then
+                {
+                  echo "# TYPE nixos_lock_nixpkgs_age_hours gauge"
+                  if [[ -n "$lock_age_hours" ]]; then
+                    echo "nixos_lock_nixpkgs_age_hours $lock_age_hours"
+                  fi
+                  echo "# TYPE nixos_channel_nixpkgs_age_hours gauge"
+                  if [[ -n "$channel_age_hours" ]]; then
+                    echo "nixos_channel_nixpkgs_age_hours $channel_age_hours"
+                  fi
+                } > "$mfile"
+                chmod 0644 "$mfile"
+                mv -f "$mfile" "$metrics_dir/nix_lock_age.prom"
+              fi
+            fi
+
+            if [[ "$run_ok" -eq 1 ]]; then
+              # A succeeded run still does not mean freshness: cache
+              # coverage can keep every run on its wait path, so a healthy
+              # verdict comes from the locked rev sitting behind the
+              # published channel past the threshold.
+              if [[ -n "$channel_rev" && -n "$lock_age_hours" && "$channel_rev" != "$locked_rev" && "$lock_age_hours" -ge ${toString cfgWatch.maxStalenessHours} ]]; then
+                echo "ERROR: lock pinned to $locked_rev for $lock_age_hours h while channel is at $channel_rev" >&2
+                ${pkgs.curl}/bin/curl -s -o /dev/null \
+                  -H "Title: Lock refresh stale on ${cfgWatch.repository}" \
+                  -H "Priority: high" -H "Tags: warning,cd" \
+                  -d "Channel moved to $channel_rev but flake.lock sits at $locked_rev ($lock_age_hours h old); cache coverage likely unmet" \
+                  "${ntfyUrl}" || true
+              else
+                echo "Lock refresh healthy: run $run_id succeeded; $sit_rep"
+              fi
+            else
+              # Failure-class alerts keep their titles and gain the base
+              # context plus the tracking issue's verdict, so the page
+              # answers "how bad and whose turn is it" at a glance.
+              alert_title="Lock refresh failed on ${cfgWatch.repository}"
+              if [[ -z "$run" || "$run_age_hours" -gt 26 ]]; then
+                alert_title="Lock refresh missing on ${cfgWatch.repository}"
+              fi
+              body="$run_msg | $sit_rep"
+              if [[ -n "$verdict_ctx" ]]; then
+                body+=" | $verdict_ctx"
+              fi
+              ${pkgs.curl}/bin/curl -s -o /dev/null \
+                -H "Title: $alert_title" \
+                -H "Priority: high" -H "Tags: warning,cd" \
+                -d "$body" \
+                "${ntfyUrl}" || true
             fi
           '';
           serviceConfig = {
@@ -808,8 +891,10 @@ in {
           wantedBy = ["timers.target"];
           after = ["multi-user.target"];
           timerConfig = {
-            # 06:30 local: the 03:00 UTC cron plus validation and auto-merge
-            # have reliably finished by then.
+            # 06:30 local, one frequent slot after the workflow's 05:00 UTC
+            # (= 06:00 CET) cron: the schedule is not trusted to land before
+            # this (it drifts and skips), so the run-age check and not the
+            # wall clock carries the dead-cron verdict.
             OnCalendar = "*-*-* 06:30:00";
             Persistent = true;
             RandomizedDelaySec = "10min";
