@@ -340,12 +340,21 @@ jobs:
             --color "b60205" \
             --description "Daily dependency update failed" \
             2>/dev/null || true
+      # The drv ownership classifier below names packages from this repo's
+      # pkgs/ tree, so the failure report needs the tree. Shallow: none of
+      # the classification looks at history.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
       - name: Open or update the tracking issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DECISION: ${{ needs.update-flake.outputs.decision }}
         run: |
           body="$(printf '## Daily Dependency Update failed\n\nThe scheduled lock update did not complete. Hosts keep converging on the previous lock until this is resolved.\n\n- Run: %s\n' "$RUN_URL")"
           # The verdict leads the body: whether a run wants a repo-side head
@@ -354,19 +363,33 @@ jobs:
           # mirror tools/scripts/update-system.sh so the CLI and the issue
           # agree (observed 2026-11-01: an eval assert surfaced as three
           # unlabelled host builds).
-          log_tail="$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null \
-            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tail -40 || true)"
-          if printf '%s\n' "$log_tail" | grep -Eq "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
-            offending="$(printf '%s\n' "$log_tail" \
+          log_full="$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null \
+            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' || true)"
+          # --log-failed ends with the runner's cleanup sections, not with
+          # the failing command: the nix error lines sit minutes earlier,
+          # so a tail window reads every real build failure as
+          # unclassified. Classification probes the whole failed log; the
+          # issue display keeps the readable 40-line tail.
+          log_tail="$(printf '%s\n' "$log_full" | tail -40 || true)"
+          # The update job's own decision is the most precise classifier
+          # there is: eval-failed is emitted only for configuration
+          # problems, and the per-host assert details land in the run's
+          # eval-errors artifact and step summary rather than the job log,
+          # so log-tail patterns alone would read such runs as unclassified
+          # (observed 2026-11-02: the gtk2 EOL removal).
+          if [ "$DECISION" = "eval-failed" ]; then
+            verdict="config change needed (eval-failed): the eval-errors artifact and step summary on the run page name the failing option"
+          elif printf '%s\n' "$log_full" | grep -Eq "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
+            offending="$(printf '%s\n' "$log_full" \
               | grep -m1 -oE "option definition '[^']+' in '[^']+'" \
               | sed -E "s#/nix/store/[a-z0-9]{32}-source##" || true)"
             verdict="config change needed ($offending - removed-option assert or failed module assertion)"
-          elif printf '%s\n' "$log_tail" | grep -Eqi "narinfo|hash mismatch|missing from cache"; then
+          elif printf '%s\n' "$log_full" | grep -Eqi "narinfo|hash mismatch|missing from cache"; then
             verdict="cache gap: closures absent from all substituters (CI warms felixschausberger.cachix.org before the lock PR merge)"
           # Both the old (`builder for ... failed`) and the new (`Cannot
           # build` / `Reason: builder failed with exit code`) nix error
           # wording mean an uncached dependency failed to compile.
-          elif printf '%s\n' "$log_tail" | grep -Eq "builder for .* failed|error: build of|Cannot build|Reason: builder failed"; then
+          elif printf '%s\n' "$log_full" | grep -Eq "builder for .* failed|error: build of|Cannot build|Reason: builder failed"; then
             verdict="dependency build failure"
           else
             verdict="unclassified - read the log tail"
@@ -380,6 +403,61 @@ jobs:
             --jq '.jobs[] | select(.conclusion == "failure") | "- " + .name' 2>/dev/null || true)"
           if [ -n "$failing" ]; then
             body+=$'\n\n**Failing job(s):**\n'"$failing"
+          fi
+          # Only the refused derivations themselves: the failed log names
+          # every drv it visited, so a bare path grep would list the whole
+          # closure churn instead of the failure chain.
+          failing_drvs="$(printf '%s\n' "$log_full" \
+            | grep -oE "(Cannot build|builder for)[^']*'/nix/store/[a-z0-9]{32}-[a-zA-Z0-9+_.-]+\.drv" 2>/dev/null \
+            | grep -oE "/nix/store/[a-z0-9]{32}-[a-zA-Z0-9+_.-]+\.drv" \
+            | sed -E "s#.*/nix/store/[a-z0-9]{32}-##; s#\.drv$##" \
+            | grep -vE '^(etc|system-units|special-user-units|nixos-system-|unit-)' \
+            | sort -u | head -n 8 || true)"
+          if [ -n "$failing_drvs" ]; then
+            drv_list="$(printf '%s\n' "$failing_drvs" | tr '\n' ' ' | sed -e 's/  */ /g' -e 's/ $//')"
+            body+=$'\n\n**Failing drv(s):** '"$drv_list"
+            # Ownership split (this repo's pkgs/ tree vs nixpkgs), with
+            # already-open nixpkgs fix candidates linked: the reader of
+            # the tracker sees whose turn it is before opening anything.
+            repo_pkgs=""
+            nixpkgs_pkgs=""
+            while IFS= read -r drv_name; do
+              [ -n "$drv_name" ] || continue
+              # Strip the store hash and the python-interpreter prefix
+              # (python3.14-deprecated-1.3.1) so the name matches pkgs/ dir
+              # names and the nixpkgs search.
+              base="$(printf '%s' "$drv_name" | sed -E "s#^python[0-9.]+-##; s#-[0-9][0-9._+-]*\$##")"
+              if [ -d "pkgs/$base" ]; then
+                repo_pkgs+=" $base"
+              else
+                nixpkgs_pkgs+=" $base"
+              fi
+            done <<<"$failing_drvs"
+            if [ -n "$repo_pkgs" ]; then
+              body+=$'\n- repo side (pkgs/ tree):'"$repo_pkgs"
+            fi
+            if [ -n "$nixpkgs_pkgs" ]; then
+              body+=$'\n- nixpkgs:'"$nixpkgs_pkgs"
+              for pkg in $nixpkgs_pkgs; do
+                prs="$(gh api "search/issues?q=repo:NixOS/nixpkgs+is:pr+is:open+%22$pkg%22" \
+                  --jq '.items[0:2][] | "#\(.number) \(.title)"' 2>/dev/null || true)"
+                if [ -n "$prs" ]; then
+                  prs_flat="$(printf '%s' "$prs" | tr '\n' ' ' | sed -e 's/ $//')"
+                  body+=$'\n  - '"$pkg"' fix candidates: '"$prs_flat"
+                fi
+              done
+            fi
+          fi
+          # How long the fleet has been waiting, one API call: the age of
+          # the newest successful lock update. The staleness watchdog on
+          # m920q pages on the drift; this states it in the tracker.
+          last_green="$(gh run list --repo "$REPO" --workflow daily-updates.yml --status success -L 1 \
+            --json databaseId,createdAt --jq 'first(.[]) | "\(.databaseId) \(.createdAt)"' 2>/dev/null || true)"
+          if [ -n "$last_green" ]; then
+            green_id="$(printf '%s\n' "$last_green" | cut -d' ' -f1)"
+            green_ts="$(printf '%s\n' "$last_green" | cut -d' ' -f2)"
+            green_days="$(( ($(date +%s) - $(date -u -d "$green_ts" +%s)) / 86400 ))"
+            body+="$(printf '\n\n**Last successful update:** %s day(s) ago (run %s)' "$green_days" "$green_id")"
           fi
           if [ -n "$log_tail" ]; then
             body+=$'\n\n<details><summary>Log tail</summary>\n\n```\n'"$log_tail"$'\n```\n</details>\n'
