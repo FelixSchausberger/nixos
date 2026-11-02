@@ -363,7 +363,10 @@ jobs:
             verdict="config change needed ($offending - removed-option assert or failed module assertion)"
           elif printf '%s\n' "$log_tail" | grep -Eqi "narinfo|hash mismatch|missing from cache"; then
             verdict="cache gap: closures absent from all substituters (CI warms felixschausberger.cachix.org before the lock PR merge)"
-          elif printf '%s\n' "$log_tail" | grep -Eq "builder for .* failed|error: build of"; then
+          # Both the old (`builder for ... failed`) and the new (`Cannot
+          # build` / `Reason: builder failed with exit code`) nix error
+          # wording mean an uncached dependency failed to compile.
+          elif printf '%s\n' "$log_tail" | grep -Eq "builder for .* failed|error: build of|Cannot build|Reason: builder failed"; then
             verdict="dependency build failure"
           else
             verdict="unclassified - read the log tail"
