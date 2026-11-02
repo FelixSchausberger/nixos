@@ -721,6 +721,24 @@
         widgets = [
           {
             type = "customapi";
+            # Freshness of the fleet base: the daily lock-update workflow
+            # gates every deployment, so the last success is the number this
+            # card leads with; relativeDate renders "n days ago". The
+            # README badge carries the red/green side; the staleness
+            # watchdog alerts on drift.
+            url = "https://api.github.com/repos/FelixSchausberger/nixos/actions/workflows/daily-updates.yml/runs?per_page=1&status=success";
+            refreshInterval = 300000;
+            headers = githubHeaders;
+            mappings = [
+              {
+                field = "workflow_runs.0.created_at";
+                label = "Last update";
+                format = "relativeDate";
+              }
+            ];
+          }
+          {
+            type = "customapi";
             url = "https://api.github.com/repos/FelixSchausberger/nixos/actions/workflows/ci.yml/runs?per_page=1&branch=main";
             refreshInterval = 300000;
             headers = githubHeaders;
