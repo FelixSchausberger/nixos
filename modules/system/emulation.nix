@@ -209,6 +209,13 @@ in {
       steam-rom-manager # one-time Steam shortcut import for Cyberpunk 2077
     ];
 
+    # Lutris pulls gtk+ (2.24.33) into its FHS env, and upstream marked
+    # gtk+ broken ahead of dropping it in NixOS 27.05 (nixpkgs#410814),
+    # which refuses the whole host toplevel. "warn" keeps the daily lock
+    # PR evaluating while lutris still needs gtk2, and keeps the removal
+    # visible in every eval; drop this once lutris ships gtk3/gtk4.
+    nixpkgs.config.problems.handlers."gtk+".broken = "warn";
+
     modules.system.moonshine.extraApplications =
       # GameCube/Wii via Dolphin. `-b` hides the GUI and opens a separate
       # render window; gamescope (see gamescopeMoonshine) gives it a real
