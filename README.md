@@ -2,6 +2,7 @@
 
 [![CI Pipeline](https://github.com/FelixSchausberger/nixos/actions/workflows/ci.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions)
 [![Cachix Cache](https://github.com/FelixSchausberger/nixos/actions/workflows/cachix-push.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions/workflows/cachix-push.yml)
+[![Daily Dependency Updates](https://github.com/FelixSchausberger/nixos/actions/workflows/daily-updates.yml/badge.svg)](https://github.com/FelixSchausberger/nixos/actions/workflows/daily-updates.yml)
 
 ## About
 
