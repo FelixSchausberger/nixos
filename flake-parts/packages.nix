@@ -43,6 +43,11 @@
         # SSH connection manager
         dssh = pkgs.callPackage ../pkgs/dssh {};
 
+        # GrapheneOS provisioning for the Pixel 10a manifest in lib/phone.nix:
+        # wraps adb/fdroidcl, renders Obtainium imports, prints the lanes
+        # Android only offers interactively.
+        pixel-provision = pkgs.callPackage ../pkgs/pixel-provision {};
+
         # Bookmark slug derivation used by jjpush
         inherit jj-slug;
 
