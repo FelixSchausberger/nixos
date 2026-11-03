@@ -196,13 +196,32 @@
           href = "https://${hl.caddyProxy.tailnetDomain}";
           description = "Photo Management";
           siteMonitor = local hl.immich.port;
-          # Widget v2 against the installed Immich (>= v1.118); the sops
-          # key grants server.statistics, all the widget reads.
+          # customapi rather than the immich widget: the builtin renders a
+          # Users block (permanently 1 on this single-user instance) and a
+          # Storage block fed from Immich's quota usage, which sums only
+          # assets with libraryId IS NULL and so excludes the external
+          # library that the photo and video counts include. Mapping only
+          # the counts keeps the card meaningful; the sops key grants
+          # exactly this endpoint.
           widget = {
-            type = "immich";
-            version = 2;
-            url = local hl.immich.port;
-            key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
+            type = "customapi";
+            url = "${local hl.immich.port}/api/server/statistics";
+            refreshInterval = 30000;
+            headers = {
+              X-API-Key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
+            };
+            mappings = [
+              {
+                field = "photos";
+                label = "Photos";
+                format = "number";
+              }
+              {
+                field = "videos";
+                label = "Videos";
+                format = "number";
+              }
+            ];
           };
         };
       }
