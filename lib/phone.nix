@@ -74,12 +74,6 @@ in {
         url = "https://github.com/tailscale/tailscale-android";
       }
       {
-        id = "network.loki.messenger";
-        name = "Session";
-        author = "oxen-io";
-        url = "https://github.com/oxen-io/session-android";
-      }
-      {
         id = "com.limelight";
         name = "Moonlight";
         author = "moonlight-stream";
@@ -138,8 +132,6 @@ in {
       "com.discord"
       "org.telegram.messenger"
       "com.reddit.frontpage"
-      "com.bumble.app"
-      "co.hinge.app"
       "com.instagram.android"
       "fr.vinted"
       "com.ticketswap.ticketswap"
@@ -225,7 +217,6 @@ in {
       "io.homeassistant.companion.android" # Obtainium candidate at bench
       "com.otp.octopilauncher"
       "ch.protonmail.android"
-      "de.ideawise.fet"
       "com.github.catfriend1.syncthingfork"
       "com.veridonia.app"
       "com.tellm.android.app"
@@ -283,5 +274,9 @@ in {
     "com.maxmpz.audioplayer"
     "com.maxmpz.audioplayer.unlock" # no Subsonic streaming; Symfonik is the client
     "moe.shizuku.privileged.api" # superseded by Porter (maintained Shizuku fork)
+    "com.bumble.app" # user sign-off 2026-11-03
+    "co.hinge.app" # user sign-off 2026-11-03
+    "network.loki.messenger" # Session; user sign-off, not in use
+    "de.ideawise.fet" # user sign-off 2026-11-03
   ];
 }
