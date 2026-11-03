@@ -33,7 +33,7 @@
     "System/Terminal/OpenCode icon=opencode.png href=https://m920q.tailf2f0ca.ts.net:8444 monitor"
     "System/Utilities/Vaultwarden icon=mdi-key-variant href=https://m920q.tailf2f0ca.ts.net:8447 monitor"
     "System/Utilities/ntfy.sh icon=ntfy.png href=http://192.168.178.2:2586 monitor widget=ntfy"
-    "System/Media/Immich icon=immich.png href=https://m920q.tailf2f0ca.ts.net monitor widget=immich"
+    "System/Media/Immich icon=immich.png href=https://m920q.tailf2f0ca.ts.net monitor widget=customapi"
     "System/Media/Navidrome icon=navidrome.png href=https://m920q.tailf2f0ca.ts.net/navidrome monitor widget=navidrome"
     "System/Media/Jellyfin icon=jellyfin.png href=http://192.168.178.2:8096 monitor widget=jellyfin"
     "System/Media/Calibre-Web icon=calibre-web.png href=https://m920q.tailf2f0ca.ts.net/books monitor"
