@@ -10,6 +10,20 @@ runs:
   steps:
     - name: Setup SSL certificates
       uses: ./.github/actions/setup-ssl
+    # The hosted runner's root volume has roughly 20 GB of free space after
+    # its preinstalled toolchains ship, and the store grows once the
+    # substituters stream the heavy closures. The fleet hosts (m920q,
+    # desktop) and the portable ISO exceed that budget mid-build, so the
+    # runner fails the job on every store write with "No space left on
+    # device". Removing the toolchains (~30 GB: .NET, Android, GHC, Boost,
+    # CodeQL bundles) leaves room for the full closures.
+    - name: Free runner disk space
+      if: runner.os == 'Linux'
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+          /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+        df -h /
+      shell: bash
     - name: Install Nix
       # Single source of truth for the workflow Nix configuration. Every
       # workflow used to carry its own copy of this block and they drifted
