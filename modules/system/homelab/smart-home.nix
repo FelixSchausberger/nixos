@@ -159,10 +159,11 @@ in {
       # --- Home Assistant: publishes the MQTT discovery data Zigbee2MQTT emits
       home-assistant = {
         enable = true;
-        # Both components below are compiled into the HA python env; shelly is
+        # These components are compiled into the HA python env; shelly is
         # listed because the LAN Shelly plugs trigger discovery requests, and
-        # a missing module turns those into an error loop.
-        extraComponents = ["mqtt" "shelly"];
+        # octoprint because the MK3S+ printer integration polls OctoPrint.
+        # A missing module turns those into an error loop.
+        extraComponents = ["mqtt" "shelly" "octoprint"];
         config = {
           default_config = {};
           http = {

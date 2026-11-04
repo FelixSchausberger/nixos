@@ -6,6 +6,7 @@
   has_adguard_grafana_assertion = true;
   has_adguard_port_assertion = true;
   has_monitoring_ports_assertion = true;
+  has_octoprint_https_assertion = true;
   has_opencode_web_https_assertion = true;
   has_tailscale_interface_assertion = true;
   homepage_cards = [
@@ -45,6 +46,15 @@
     "System/Health/Garmin Stats icon=garmin.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/garmin-stats"
   ];
   monitoring_enabled = true;
+  octoprint_bind = "127.0.0.1";
+  octoprint_enabled = true;
+  octoprint_https_port = 8451;
+  octoprint_ipcheck_trusts_tailnet = true;
+  octoprint_port = 5000;
+  octoprint_serial_autoconnect = false;
+  octoprint_serial_port = "/dev/serial/by-id/usb-Prusa_Research__prusa3d.com__Original_Prusa_i3_MK3_CZPX2321X004XK87560-if00";
+  octoprint_serve_exec_start = "/nix/store/<hash>/tailscale-serve-octoprint-setup";
+  octoprint_state_dir = "/var/lib/octoprint";
   opencode_server_exec_start = [
     "/nix/store/<hash>/opencode/bin/opencode2 serve --service --hostname 127.0.0.1 --port 4096"
   ];
@@ -74,6 +84,7 @@
     omitPasswordAuth = true;
     only_listener = true;
   };
+  smart_home_octoprint_component = true;
   smart_home_z2m_frontend_port = 8085;
   smart_home_zigbee_enabled = true;
   tailscale_enabled = true;
