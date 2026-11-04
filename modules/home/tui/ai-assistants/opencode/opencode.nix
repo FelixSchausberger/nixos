@@ -5,7 +5,6 @@
   inputs,
   ...
 }: let
-  cfg = config.ai-assistants.opencode;
   system = pkgs.stdenv.hostPlatform.system;
 
   # Single source for the harness: model, agent rules, permissions, formatters,
@@ -60,30 +59,11 @@
     # TokenScope - the upstream @ramtinj95 package is V1-only - and registers
     # both the `tokenscope` tool and the /tokenscope command itself, so no
     # command file is deployed for it. The Zellij indicator is a CLI plugin and
-    # lives in cli.json instead. ntfy-mobile is added only where mobilePush is
-    # enabled; it is referenced by absolute path and kept outside the
-    # auto-discovered plugins/ directory so only the server role, which owns
-    # the event stream, loads it.
-    plugins =
-      [
-        "@slkiser/opencode-quota@5"
-        "@cheesecodestudio/opencode-tokenscope-v2"
-      ]
-      ++ lib.optional cfg.mobilePush.enable {
-        package = "${config.xdg.configHome}/${configDir}/ntfy-mobile";
-        options =
-          {
-            url = cfg.mobilePush.ntfyUrl;
-            topic = cfg.mobilePush.topic;
-            finished = cfg.mobilePush.finished;
-          }
-          // lib.optionalAttrs (cfg.mobilePush.clickBase != "") {
-            clickBase = cfg.mobilePush.clickBase;
-          }
-          // lib.optionalAttrs (cfg.mobilePush.tokenFile != null) {
-            tokenFile = toString cfg.mobilePush.tokenFile;
-          };
-      };
+    # lives in cli.json instead.
+    plugins = [
+      "@slkiser/opencode-quota@5"
+      "@cheesecodestudio/opencode-tokenscope-v2"
+    ];
   };
 
   # The terminal client owns a global cli.json, which only the client role
@@ -197,44 +177,6 @@ in {
       readOnly = true;
       description = "Launcher package exposing opencode and opencode2 with the fleet config root, graveyard path and rm shim applied";
     };
-
-    # Server-side push for the phone-facing server. Enabled only on the host
-    # whose server the phone can reach (see the Tailscale Serve target in
-    # modules/system/homelab/opencode-web.nix); the per-host loopback servers
-    # the desktop, WSL and nvim clients attach to stay silent.
-    mobilePush = {
-      enable = lib.mkEnableOption "ntfy push notifications for the phone-facing OpenCode server";
-      ntfyUrl = lib.mkOption {
-        type = lib.types.str;
-        default = "http://127.0.0.1:2586";
-        description = "Base URL of the self-hosted ntfy instance, reachable from the server host (loopback)";
-      };
-      topic = lib.mkOption {
-        type = lib.types.str;
-        default = "opencode";
-        description = "ntfy topic the phone subscribes to";
-      };
-      clickBase = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "URL a tapped notification opens; the web UI origin (its Tailscale Serve address)";
-      };
-      finished = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Push when a turn finishes. This cannot be narrowed to phone-originated
-          turns: neither the API, the event payload, nor the session tables
-          record which client a turn came from, so a turn started on the
-          desktop is indistinguishable from one started on the phone.
-        '';
-      };
-      tokenFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        default = null;
-        description = "Optional file holding an ntfy access token, sent as a bearer credential";
-      };
-    };
   };
 
   config = {
@@ -300,8 +242,6 @@ in {
         // {enabledProviders = ["opencode-go"];}
       );
       "${configDir}/indicator-v2".source = ./zellij-indicator-v2;
-      # Server-side push plugin; listed above only when mobilePush is enabled.
-      "${configDir}/ntfy-mobile".source = ./ntfy-mobile;
     };
   };
 }

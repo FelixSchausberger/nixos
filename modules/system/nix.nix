@@ -33,12 +33,6 @@
         inherit (zellijPlugins) zellij-forgot;
         dssh = final.callPackage ../../pkgs/dssh {};
 
-        # Collie comes from its upstream flake (flake input `collie`), not
-        # nixpkgs; lifted here so the system service and the home CLI share
-        # one `pkgs.collie` name. Their payloads exist for the fleet's
-        # systems only, so hosts outside them keep whatever upstream ships.
-        collie = inputs.collie.packages.${prev.stdenv.hostPlatform.system}.collie;
-
         # TODO(upstream): drop when NixOS/nixpkgs#511228 is fixed. The meson
         # test suite fails when a feature flag is disabled (e.g. geolocation),
         # which is how the NixOS portal module builds it on GUI hosts.

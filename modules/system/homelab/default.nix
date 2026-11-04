@@ -6,7 +6,6 @@
     ./adguardhome.nix
     ./calibre-web.nix
     ./caddy-proxy.nix
-    ./collie.nix
     ./garmin.nix
     ./homepage.nix
     ./immich.nix

@@ -120,6 +120,15 @@ in {
         author = "Reseam";
         url = "https://reseam.app";
       }
+      {
+        # OpenCode on the phone: the native Android client against the m920q
+        # OpenCode server, replacing the retired Collie PWA bridge. Pairing:
+        # `opencode pair --url ...` on the host prints the QR (see manual).
+        id = "io.github.beppe2880.opencodemobile";
+        name = "OpenCode Mobile";
+        author = "beppe2880";
+        url = "https://github.com/beppe2880/opencode-mobile";
+      }
     ];
 
     # Play-only proprietary apps, installed through Aurora Store's anonymous
@@ -243,7 +252,8 @@ in {
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
       "morphe-manager, reseam and UPM: run the patch flows for GMS-free targets only; patched YouTube and patched Maps are dead by design on GrapheneOS (no GMS, no signature spoofing)."
       "Porter: start once via its wireless-debugbing flow; the service stops on device restart, so reopen it after a reboot before SteamController talks to the controller."
-      "Re-add the PWA shortcuts the 9a had under its webapk stubs, from Vanadium."
+      "Re-add the remaining PWA shortcuts the 9a had under its webapk stubs, from Vanadium; do not resurrect the Collie bridge PWA (OpenCode runs native now)."
+      "OpenCode Mobile: run `opencode pair --url https://m920q.tailf2f0ca.ts.net:8444` on m920q and scan the printed QR; approvals, questions and diffs then arrive in the app, with notifications handled natively."
       "Bench checks from the plan: UPM/reseam package ids, always-on-VPN settings keys, and account sign-ins for the government apps."
     ];
   };

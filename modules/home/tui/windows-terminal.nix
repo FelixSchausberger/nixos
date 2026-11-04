@@ -91,7 +91,7 @@ in {
         # Agent layer twin (Ctrl+Alt+H): same mosh transports, but the remote
         # command override skips the interactive zellij auto-attach, so the
         # tab lands straight in the herdr TUI - the same panes, sidebar and
-        # state the phone's Collie dashboard shows.
+        # agent state as the homelab session.
         {
           command = {
             action = "newTab";

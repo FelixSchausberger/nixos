@@ -129,26 +129,6 @@
         "type": "github"
       }
     },
-    "collie": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1793525359,
-        "narHash": "sha256-SSaGmDGXY9M47doz4vJLMz0NMx3aGXMwCu0BR976NWU=",
-        "owner": "AltanS",
-        "repo": "collie",
-        "rev": "a8abbe185a255b95b6651439c4eaa42d7c68ece3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "AltanS",
-        "repo": "collie",
-        "type": "github"
-      }
-    },
     "comin": {
       "inputs": {
         "flake-compat": "flake-compat_2",
@@ -1729,7 +1709,6 @@
       "inputs": {
         "ala-lape": "ala-lape",
         "claude-code-nix": "claude-code-nix",
-        "collie": "collie",
         "comin": "comin",
         "cosmic-manager": "cosmic-manager",
         "determinate": "determinate",

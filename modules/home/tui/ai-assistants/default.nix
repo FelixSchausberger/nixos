@@ -7,7 +7,7 @@
     ./herdr
     ./obsidian-skills.nix
     ./opencode
-    ./opencode/v2.nix
+    ./opencode/opencode.nix
     ./opencode/store-maintenance.nix
   ];
 }
