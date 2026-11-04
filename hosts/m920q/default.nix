@@ -877,6 +877,11 @@ in {
       # requirement for everyday light control.
       lanClients = ["192.168.178.72"];
     };
+    # The Prusa MK3S+ is plugged into this host over USB; OctoPrint is the
+    # serial/web gateway (loopback + tailnet front), its entities surface in
+    # Home Assistant. The printer is controlled from HA or the OctoPrint UI;
+    # serial.autoconnect stays off so deploys never touch an ongoing print.
+    octoprint.enable = true;
     ntfy.enable = true;
     samba.enable = true;
     vaultwarden = {
