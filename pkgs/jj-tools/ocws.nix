@@ -10,6 +10,18 @@
 # empty and merged ones; a systemd user timer runs it daily (see the
 # jujutsu home module).
 #
+# A workspace can be parked: `ocws wait <task> [reason...]` marks it waiting
+# through an <task>.wait marker beside the workspace directory, and gc keeps
+# it whatever its commit state, because a session waiting on the outside
+# world (an upstream fix, a device) is not reclaimable regardless of what jj
+# sees. Waits older than OCWS_WAIT_STALE_DAYS resurface as gc nudges and a
+# prompt-badge reminder, so forgotten waiting is treated like any other
+# unclean state rather than a permanent free pass.
+#
+# Liveness ignores per-project MCP and LSP daemons: they inherit the cwd of
+# the session that spawned them and outlive it, so a cwd-only occupancy check
+# holds workspaces hostage after the session closed (2026-11 audit: five
+# empty workspaces whose only occupants were leaked mcp-nixos processes).
 # Base directory precedence: $OCWS_BASE, then the parent directory of the
 # current workspace (the sibling convention) when writable, then
 # $XDG_DATA_HOME/ocws (default ~/.local/share/ocws) so workspaces survive
@@ -53,10 +65,19 @@ writeShellApplication {
     Usage:
       ocws <task> [-- <opencode args>...]   create a workspace and run opencode there
       ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
-      ocws ls [--counts]                    list workspaces with their state and claim
-                                            (--counts prints the integers "total empty
-                                            merged unpushed in-flight conflict stale",
-                                            where stale = empty/merged with no live process)
+      ocws ls [--counts|--board]            list workspaces with their state and claim
+                                            (--counts prints the integers "total empty merged
+                                            unpushed in-flight conflict stale waitold", where
+                                            waitold counts parked workspaces older than
+                                            OCWS_WAIT_STALE_DAYS; --board groups the same
+                                            classification into "what needs you" sections)
+      ocws wait <task> [reason...]          park a workspace: gc keeps it until 'ocws go'
+                                            clears the marker, whatever its commit state -
+                                            for a session waiting on an external blocker
+                                            (an upstream fix, a device) that must not hold
+                                            its pane open
+      ocws go <task>                        release a parked workspace (removes its wait
+                                            marker); the next gc pass reclassifies it
       ocws done [--force] <task>            remove a finished workspace (refuses unmerged work
                                             or a live process; --force overrides both)
       ocws rm [--force] <task>              remove a workspace; --force discards unmerged work
@@ -71,6 +92,13 @@ writeShellApplication {
       OCWS_GC_EMPTY_AGE
                     seconds an empty, unclaimed workspace must sit idle before
                     gc removes it (default 21600)
+      OCWS_WAIT_STALE_DAYS
+                    days after which a parked workspace resurfaces as a gc
+                    nudge and in the prompt badge (default 14)
+      OCWS_LIVE_EXCLUDE
+                    grep -E pattern additionally excluded from the liveness
+                    scan, for detecting future auxiliary processes (per-project
+                    MCP or LSP daemons) that inherit their parent's cwd
       OCWS_HOOK_PRE_CREATE / OCWS_HOOK_POST_CREATE / OCWS_HOOK_PRE_DELETE /
       OCWS_HOOK_POST_DELETE
                     optional shell commands run around workspace create/remove,
@@ -101,6 +129,25 @@ writeShellApplication {
 
     valid_task() { printf '%s' "$1" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*$'; }
     ws_dir_for() { printf '%s/nixos-ws-%s' "$base" "$1"; }
+    # Wait markers live beside the workspace directories, never inside them: a
+    # marker under the working copy would be snapshotted into the next claim
+    # commit by any session that happens to run there. Keyed by task name, and
+    # rip_workspace removes it with the workspace so clearing cannot be
+    # forgotten by any of the removal paths (done, rm, gc).
+    wait_marker_for() { printf '%s/%s.wait' "$base" "$1"; }
+    # OCWS_WAIT_STALE_DAYS must survive invalid input without killing the
+    # script under errexit: arithmetic on a non-integer aborts a gc pass.
+    # The digit check is grep-based, not a shell case on an empty pattern:
+    # contiguous quote pairs inside this derivation body terminate the nix
+    # indented string, so the shell must never carry two adjacent quotes here.
+    wait_stale_days() {
+      v="''${OCWS_WAIT_STALE_DAYS:-14}"
+      if printf '%s' "$v" | grep -Eq '^[0-9]+$'; then
+        printf '%s' "$v"
+      else
+        echo 14
+      fi
+    }
     # Workspace listings and the finished-work check are read-only and must
     # never snapshot a foreign working copy: an `ocws ls` run from the primary
     # or another session's workspace would otherwise fold that workspace's
@@ -180,16 +227,27 @@ writeShellApplication {
         *) return 1 ;;
       esac
     }
-    # A live process whose cwd is inside the workspace means a session still
-    # uses it, even when its work has already merged. /proc cwd links resolve
-    # to the real path; entries owned by other users are unreadable and skipped.
+    # A live session-or-agent process whose cwd is inside the workspace means
+    # a session still uses it, even when its work has already merged, so gc
+    # must not reclaim under it. Auxiliary daemons (per-project MCP and LSP
+    # servers) inherit their spawning session's cwd and outlive it, so the
+    # cwd-only check excludes them: live_exclude is the default preset for
+    # shipped aux binaries, and OCWS_LIVE_EXCLUDE adds patterns later without
+    # a code change. A process whose cmdline cannot be read counts as live -
+    # an unreadability distinction cannot be made here, and ocws never kills.
+    live_exclude='(^|/)[^ ]*(mcp-[a-z0-9._-]+-wrapped|nix-language-server)[^ ]*'
+    [ -n "''${OCWS_LIVE_EXCLUDE:-}" ] && live_exclude="$live_exclude|''${OCWS_LIVE_EXCLUDE}"
     ws_live() {
-      local target="$1" p cwd
+      local target="$1" p cwd cmd
       for p in /proc/[0-9]*; do
         [ -r "$p/cwd" ] || continue
         cwd="$(readlink "$p/cwd" 2>/dev/null)" || continue
         case "$cwd" in
-          "$target" | "$target"/*) return 0 ;;
+          "$target" | "$target"/*)
+            cmd="$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)" || cmd=""
+            printf '%s' "$cmd" | grep -Eq "$live_exclude" && continue
+            return 0
+            ;;
         esac
       done
       return 1
@@ -200,19 +258,55 @@ writeShellApplication {
     ws_touched_since() {
       [ -n "$(find "$1" -newermt "@$2" -print -quit 2>/dev/null)" ]
     }
-    # Read-only overview of every workspace and its state. --counts prints the
-    # integers "total empty merged unpushed in-flight conflict stale" on one
-    # line and nothing else, for the status badge.
+    # Read-only overview of every workspace and its state. Three renderings
+    # share one classification pass: table (the default listing), counts
+    # (integers "total empty merged unpushed in-flight conflict stale waitold"
+    # for the status badge, where waitold counts parked workspaces past
+    # OCWS_WAIT_STALE_DAYS) and board (sections by what needs attention, so a
+    # returning user finds the one entry that matters without reading a linear
+    # list against the fleet).
     emit_ls() {
-      local counts_only="$1" name state desc root live
-      local n_total=0 n_empty=0 n_merged=0 n_unpushed=0 n_inflight=0 n_conflict=0 n_stale=0
+      local mode="$1" name state desc root live marker suffix state_display
+      local wait_parked wait_created wait_reason wait_days
+      local n_total=0 n_empty=0 n_merged=0 n_unpushed=0 n_inflight=0 n_conflict=0 n_stale=0 n_waiting=0 n_waitold=0
+      local now
+      now="$(date +%s)"
       local rows=()
+      local rows_parked=() rows_progress=() rows_review=() rows_conflict=() rows_claimed=() rows_reclaim=()
       while IFS= read -r name; do
         [ -n "$name" ] || continue
         IFS=$'\t' read -r state desc < <(ws_state "$name")
         root="$(realpath -m "$(ws_root_for "$name")")"
         live="-"
         ws_live "$root" && live="live"
+
+        # Parked: an explicit wait marker overrides the commit state for the
+        # display and shields the workspace from gc entirely - the marker
+        # outclasses the age gate and the liveness scan below.
+        wait_parked=0
+        wait_created=0
+        wait_reason=""
+        marker="$(wait_marker_for "$name")"
+        if [ -f "$marker" ]; then
+          wait_parked=1
+          wait_reason="$(sed -n '1p' "$marker")"
+          wait_created="$(sed -n '2p' "$marker")"
+          if ! printf '%s' "$wait_created" | grep -Eq '^[0-9]+$'; then wait_created=0; fi
+        fi
+        wait_days=$(( (now - wait_created) / 86400 ))
+
+        if [ "$wait_parked" = 1 ]; then
+          state_display="waiting"
+          suffix=""
+          [ "$wait_days" -gt 0 ] && suffix=" (''${wait_days}d)"
+          desc_display="parked: ''${wait_reason:-(no reason given)}$suffix"
+          [ "$state" != "empty" ] && desc_display="$desc_display [jj: $state]"
+        else
+          state_display="$state"
+          desc_display="$desc"
+          [ -n "$desc_display" ] || desc_display="(no description set)"
+        fi
+
         if [ "$name" != "default" ]; then
           n_total=$((n_total + 1))
           case "$state" in
@@ -222,19 +316,73 @@ writeShellApplication {
             in-flight) n_inflight=$((n_inflight + 1)) ;;
             conflict) n_conflict=$((n_conflict + 1)) ;;
           esac
-          # stale: gc would reclaim it now if not for the age gate - i.e. it
-          # is empty/merged and nothing is rooted in it. Live sessions and
-          # young workspaces are excluded so the badge does not nag.
-          if [ "$live" = "-" ] && { [ "$state" = "empty" ] || [ "$state" = "merged" ]; }; then
+          if [ "$wait_parked" = 1 ]; then
+            n_waiting=$((n_waiting + 1))
+            [ "$wait_days" -ge "$(wait_stale_days)" ] && n_waitold=$((n_waitold + 1))
+          fi
+          # Stale: gc would reclaim it now if not for the age gate - i.e. it
+          # is empty/merged and nothing is rooted in it. Live sessions, waiting
+          # parkers and young workspaces are excluded so the badge does not nag.
+          if [ "$live" = "-" ] && [ "$wait_parked" = 0 ] && { [ "$state" = "empty" ] || [ "$state" = "merged" ]; }; then
             n_stale=$((n_stale + 1))
           fi
+          if [ "$wait_parked" = 1 ]; then
+            rows_parked+=("$(printf '  %-16s %s' "$name" "$desc_display")")
+          else
+            case "$state" in
+              unpushed) rows_progress+=("$(printf '  %-16s %s' "$name" "$desc_display")") ;;
+              in-flight) rows_review+=("$(printf '  %-16s %s' "$name" "$desc_display")") ;;
+              conflict) rows_conflict+=("$(printf '  %-16s %s' "$name" "$desc_display")") ;;
+              empty | merged)
+                if [ "$live" = live ]; then
+                  rows_claimed+=("$(printf '  %-16s %s' "$name" "$desc_display")")
+                else
+                  rows_reclaim+=("$(printf '  %-16s %s' "$name" "$desc_display")")
+                fi
+                ;;
+            esac
+          fi
         fi
-        [ -n "$desc" ] || desc="(no description set)"
-        rows+=("$(printf '  %-18s %-10s %-5s %s' "$name" "$state" "$live" "$desc")")
+        rows+=("$(printf '  %-18s %-10s %-5s %s' "$name" "$state_display" "$live" "$desc_display")")
       done < <(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null)
 
-      if [ "$counts_only" = 1 ]; then
-        printf '%s %s %s %s %s %s %s\n' "$n_total" "$n_empty" "$n_merged" "$n_unpushed" "$n_inflight" "$n_conflict" "$n_stale"
+      if [ "$mode" = counts ]; then
+        printf '%s %s %s %s %s %s %s %s\n' "$n_total" "$n_empty" "$n_merged" "$n_unpushed" "$n_inflight" "$n_conflict" "$n_stale" "$n_waitold"
+        return
+      fi
+
+      if [ "$mode" = board ]; then
+        echo "ocws board - state derived from jj plus the wait marker; cleanup happens only under RECLAIMABLE"
+        if [ "''${#rows_parked[@]}" -gt 0 ]; then
+          echo ""
+          echo "  PARKED (waiting on the outside world)"
+          printf '%s\n' "''${rows_parked[@]}"
+        fi
+        if [ "''${#rows_progress[@]}" -gt 0 ]; then
+          echo ""
+          echo "  IN PROGRESS (unpushed)"
+          printf '%s\n' "''${rows_progress[@]}"
+        fi
+        if [ "''${#rows_review[@]}" -gt 0 ]; then
+          echo ""
+          echo "  IN REVIEW (open PR)"
+          printf '%s\n' "''${rows_review[@]}"
+        fi
+        if [ "''${#rows_conflict[@]}" -gt 0 ]; then
+          echo ""
+          echo "  NEEDS YOU (conflict)"
+          printf '%s\n' "''${rows_conflict[@]}"
+        fi
+        if [ "''${#rows_claimed[@]}" -gt 0 ]; then
+          echo ""
+          echo "  CLAIMED (session live)"
+          printf '%s\n' "''${rows_claimed[@]}"
+        fi
+        if [ "''${#rows_reclaim[@]}" -gt 0 ]; then
+          echo ""
+          echo "  RECLAIMABLE (gc removes once idle and unoccupied)"
+          printf '%s\n' "''${rows_reclaim[@]}"
+        fi
         return
       fi
 
@@ -246,8 +394,9 @@ writeShellApplication {
       echo "  unpushed:     commits outside main@origin no remote bookmark tracks"
       echo "  in-flight:    commits outside main@origin with an open PR"
       echo "  conflict:     needs 'jj resolve'"
+      echo "  waiting:      parked with 'ocws wait'; gc keeps until 'ocws go'"
       echo ""
-      echo "Summary: $n_empty empty, $n_merged merged, $n_unpushed unpushed, $n_inflight in-flight, $n_conflict conflict, $n_stale stale"
+      echo "Summary: $n_empty empty, $n_merged merged, $n_unpushed unpushed, $n_inflight in-flight, $n_conflict conflict, $n_stale stale, $n_waiting waiting ($n_waitold reminder)"
     }
     # Optional lifecycle hook, run with `bash -c` and OCWS_TASK/DIR/ROOT/BASE
     # exported. Env-only so there is no config file to parse. A failing hook is
@@ -260,13 +409,19 @@ writeShellApplication {
         bash -c "$cmd" || echo "ocws: '$hook' hook failed" >&2
     }
     rip_workspace() {
-      local task="$1" dir
+      local task="$1" dir wait_marker
       dir="$(realpath -m "$(ws_root_for "$task")")"
       if [ "$dir" = "$(realpath -m "$root")" ]; then
         echo "ocws: refusing to remove the current workspace ('$task')" >&2
         exit 1
       fi
       run_hook pre_delete "$task" "$dir" "''${OCWS_HOOK_PRE_DELETE:-}"
+      # All three removal paths (done, rm, gc) funnel through here, so the
+      # wait marker cannot survive the workspace: insistence on clearing it in
+      # each caller would eventually forget one, and a stale marker that pulls
+      # a workspace away from gc later would be invisible in `ocws ls`.
+      wait_marker="$(wait_marker_for "$task")"
+      if [ -f "$wait_marker" ]; then rip "$wait_marker"; fi
       jj workspace forget "$task"
       [ -d "$dir" ] && rip "$dir"
       run_hook post_delete "$task" "$dir" "''${OCWS_HOOK_POST_DELETE:-}"
@@ -276,12 +431,15 @@ writeShellApplication {
     # one. An empty unclaimed workspace is pure overhead and gets the shorter
     # OCWS_GC_EMPTY_AGE; a workspace that held work gets the longer
     # OCWS_GC_AGE. A workspace whose recorded directory is gone is forgotten
-    # outright. Liveness and touch-time guards keep a still-open session from
-    # losing its directory; rip's graveyard makes a mistaken removal
-    # restorable regardless. do_fetch=1 fetches first so absorption is judged
-    # against current origin.
+    # outright, wait marker and all. Parked workspaces (a wait marker) are
+    # checked before classification and kept whatever the state mentions, so
+    # the marker bypasses every gate below it in this loop. Liveness and
+    # touch-time guards keep a still-open session from losing its directory;
+    # rip's graveyard makes a mistaken removal restorable regardless.
+    # do_fetch=1 fetches first so absorption is judged against current origin.
     ocws_gc() {
       local do_fetch="$1" name dir state desc age_limit now
+      local marker wait_reason wait_created wait_days
       now="$(date +%s)"
       # Without main@origin every workspace would classify as empty and be
       # reclaimed. Refuse rather than guess.
@@ -298,6 +456,22 @@ writeShellApplication {
         if [ ! -d "$dir" ]; then
           rip_workspace "$name"
           echo "ocws gc: forgot '$name' (directory missing)"
+          continue
+        fi
+
+        # Parked: a wait marker keeps the workspace out of every gate below,
+        # whatever its commit state, because the reason lives outside jj - a
+        # session waiting on the outside world looks empty and unoccupied.
+        marker="$(wait_marker_for "$name")"
+        if [ -f "$marker" ]; then
+          wait_reason="$(sed -n '1p' "$marker")"
+          wait_created="$(sed -n '2p' "$marker")"
+          if ! printf '%s' "$wait_created" | grep -Eq '^[0-9]+$'; then wait_created=0; fi
+          echo "ocws gc: keeping '$name' (parked: ''${wait_reason:-(no reason given)})"
+          wait_days=$(( (now - wait_created) / 86400 ))
+          if [ "$wait_days" -ge "$(wait_stale_days)" ]; then
+            echo "ocws gc: '$name' has waited $wait_days days - resume it ('ocws go $name') or release the workspace"
+          fi
           continue
         fi
 
@@ -337,18 +511,52 @@ writeShellApplication {
     fi
 
     case "$sub" in
+      wait)
+        shift
+        task="''${1:-}"
+        [ -n "$task" ] || usage
+        valid_task "$task" || { echo "ocws: invalid task '$task' (use [A-Za-z0-9._-])" >&2; exit 2; }
+        workspace_exists "$task" || { echo "ocws: no workspace named '$task'" >&2; exit 1; }
+        [ "$task" = "default" ] && { echo "ocws wait: the primary checkout is the user's, not an agent workspace to park" >&2; exit 1; }
+        shift || true
+        reason="$*"
+        printf '%s\n%s\n' "$reason" "$(date +%s)" > "$(wait_marker_for "$task")"
+        echo "ocws: '$task' parked (''${reason:-(no reason given)}) - gc keeps it; resume with 'ocws go $task'"
+        exit 0
+        ;;
+      go)
+        shift
+        task="''${1:-}"
+        [ -n "$task" ] || usage
+        valid_task "$task" || { echo "ocws: invalid task '$task' (use [A-Za-z0-9._-])" >&2; exit 2; }
+        workspace_exists "$task" || { echo "ocws: no workspace named '$task'" >&2; exit 1; }
+        [ "$task" = "default" ] && { echo "ocws go: the primary checkout is the user's, not an agent workspace" >&2; exit 1; }
+        wait_marker="$(wait_marker_for "$task")"
+        if [ ! -f "$wait_marker" ]; then
+          echo "ocws: '$task' is not parked" >&2
+          exit 1
+        fi
+        rip "$wait_marker"
+        echo "ocws: '$task' resumed; gc reclassifies it on the next pass"
+        exit 0
+        ;;
       ls|list)
         shift
         counts=0
+        board=0
         if [ "''${1:-}" = "--counts" ]; then
           counts=1
           shift
         fi
-        if [ "$counts" = 0 ]; then
+        if [ "''${1:-}" = "--board" ]; then
+          board=1
+          shift
+        fi
+        if [ "$counts" = 0 ] && [ "$board" = 0 ]; then
           jj --ignore-working-copy workspace list
           echo ""
         fi
-        emit_ls "$counts"
+        if [ "$counts" = 1 ]; then emit_ls counts; elif [ "$board" = 1 ]; then emit_ls board; else emit_ls table; fi
         exit 0
         ;;
       gc)

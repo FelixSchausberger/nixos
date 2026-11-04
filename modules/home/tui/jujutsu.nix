@@ -63,8 +63,9 @@ in {
   # Reclaim finished jj workspaces daily and refresh the prompt badge. The
   # classification is jj against main@origin, so the job runs from the primary
   # checkout and no-ops on a host that lacks it. `ocws gc` fetches, keeps
-  # unpushed/in-flight/conflicted workspaces and any workspace with a live
-  # process, and reclaims empty/merged ones past the age gate.
+  # unpushed/in-flight/conflicted workspaces, any workspace with a live
+  # process and any parked one, and reclaims empty/merged ones past the age
+  # gate.
   systemd.user.services.ocws-gc = {
     Unit.Description = "Reclaim finished jj workspaces and refresh the ocws status badge";
     Service = {
@@ -76,11 +77,16 @@ in {
         [ -d "$repo" ] || exit 0
         cd "$repo"
         ${ocws}/bin/ocws gc
-        read -r total empty merged unpushed inflight conflict stale < <(${ocws}/bin/ocws ls --counts)
+        read -r total empty merged unpushed inflight conflict stale waitold < <(${ocws}/bin/ocws ls --counts)
+        waitold=''${waitold:-0}
         attention=$((unpushed + conflict))
         out=""
         if [ "$stale" -gt 0 ]; then out="🧹$stale "; fi
         if [ "$attention" -gt 0 ]; then out="$out⇡$attention "; fi
+        # Only stale waits reach the badge: a fresh park is deliberate
+        # deferral, a week-old wait is a forgotten promise and belongs in the
+        # same category as other unclean state.
+        if [ "$waitold" -gt 0 ]; then out="$out⏳$waitold "; fi
         mkdir -p "$(dirname "$badge")"
         printf '%s' "$out" > "$badge"
       '');
