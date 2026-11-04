@@ -83,8 +83,10 @@ in {
           ignore_timeout = true;
         };
 
-        # 🧹 reclaimable workspaces that no live session holds, ⇡ workspaces
-        # holding work that needs a push. Hidden while the badge is empty.
+        # Reclaimable workspaces that no live session holds (broom glyph),
+        # workspaces holding work that needs a push (arrow glyph) and parked
+        # waits older than the reminder gate (hourglass glyph). Hidden while
+        # the badge is empty.
         ocws = {
           when = "test -s ${badgeFile}";
           command = "cat ${badgeFile}";

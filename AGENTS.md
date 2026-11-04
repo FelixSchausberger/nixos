@@ -72,7 +72,11 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   the unit into `start-limit-hit`.
 - Before `jj describe` and `jjpush`, `jj diff --stat` must list only the files of
   the stated concern; scratch plans and audits under `.opencode/` stay ignored
-  and never enter a commit.
+  and never enter a commit. Park a session waiting on the outside world with
+  `ocws wait <task> [reason...]` and release it with `ocws go <task>`: gc keeps
+  parked workspaces whatever their commit state, and waits older than
+  `OCWS_WAIT_STALE_DAYS` (default 14) resurface in gc output and the prompt
+  badge.
 - `jj workspace add` run from a stale workspace can leave the new working copy at
   jj's root commit; after creating a workspace, check `@-` is `main@origin` and
   run `jj new main@origin` when it is the root.

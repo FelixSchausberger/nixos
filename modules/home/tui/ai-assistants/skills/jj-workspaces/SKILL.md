@@ -114,6 +114,22 @@ benefit for single quick changes.
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.
 
+6. Park a session that must idle on an outside blocker (an upstream fix, a
+   device shipment) instead of keeping its pane alive as the only preservation:
+
+   ```bash
+   ocws wait <task> [reason...]   # mark parked; gc then keeps it whatever
+                                  # its commit state
+   ocws go <task>                 # release; gc reclassifies on the next pass
+   ```
+
+   The wait marker (`<base>/<task>.wait`, reason + timestamp) lives outside
+   the working copy, so no snapshot can absorb it into a claim commit, and
+   every removal path (`done`, `rm`, `gc`) clears it with the workspace. A
+   parked workspace resurfaces when the wait passes `OCWS_WAIT_STALE_DAYS`
+   (default 14): gc nudges to resume or release, the prompt badge shows a
+   reminder count, and `ocws ls --board` lists it under PARKED.
+
 ## Naming Convention
 
 Use one task string in three places so `working_copies()` output is
@@ -165,3 +181,7 @@ A reader can then map any workspace `@` to its session without a registry.
   from the primary checkout. CI runs the full hook set on the PR.
 - `jj workspace list` shows every workspace and its `@`.
 - `jj workspace forget` never deletes work — commits stay in the repo.
+- A parked workspace (`ocws wait <task>`) is kept by `ocws gc` whatever its
+  commit state until `ocws go <task>` clears the marker; waits older than
+  `OCWS_WAIT_STALE_DAYS` (default 14) surface as gc nudges and a prompt-badge
+  reminder.
