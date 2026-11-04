@@ -77,6 +77,15 @@ in {
       }
     ];
 
+    # The printer account backs Homepage's OctoPrint card widgets (Basic
+    # auth against the REST API on loopback; the value reaches the dashboard
+    # only through the {{HOMEPAGE_VAR_*}} env template in homepage.nix) and
+    # Home Assistant's octoprint integration. The pair lives in sops so the
+    # two consumers rotate together; OctoPrint itself holds neither - its
+    # own account data stays in its profile store.
+    sops.secrets."octoprint/user" = {};
+    sops.secrets."octoprint/password" = {};
+
     services.octoprint = {
       enable = true;
       # Only the loopback and Tailscale-serve fronts reach the API; the nixpkgs

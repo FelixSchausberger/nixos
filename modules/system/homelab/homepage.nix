@@ -598,6 +598,7 @@
     ++ lib.optionals (utilityServices != []) [{"Utilities" = utilityServices;}]
     ++ lib.optionals (mediaServices != []) [{"Media" = mediaServices;}]
     ++ lib.optionals (smartHomeServices != []) [{"Smart home" = smartHomeServices;}]
+    ++ lib.optionals (makerServices != []) [{"Maker" = makerServices;}]
     ++ lib.optionals (nixServices != []) [{"Nix" = nixServices;}]
     ++ lib.optionals (healthServices != []) [{"Health" = healthServices;}];
 
@@ -721,6 +722,73 @@
         # uid "garmin-stats" (monitoring.nix provisions the dashboard).
         href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
         description = "Sleep, stress, heart rate, steps";
+      };
+    }
+  ];
+
+  # Maker band: the MK3S+ is attached to this host over USB and controlled
+  # through OctoPrint (system/homelab/octoprint.nix). The card opens the
+  # Tailscale Serve UI; the probes poll the loopback API because Homepage
+  # runs on this host, so they stay independent of Caddy and the tailnet.
+  #
+  # Two customapi widgets instead of the native octoprint widget: that one
+  # only carries an API key (its api template is ...?apikey={key}), so it
+  # would need a second application key beside the one the HA integration
+  # holds. The generic proxy handler sends HTTP Basic auth when the widget
+  # declares user/password, and OctoPrint's REST API accepts account
+  # credentials natively - the printer account in sops covers both
+  # consumers and stays manageable in one place.
+  #
+  # /api/job avoids sending per-second updates; 15s keeps the progress bar
+  # readable. When the printer is disconnected /api/printer answers with
+  # Offline state and null temps, which render as empty fields, not errors.
+  makerServices = lib.optionals hl.octoprint.enable [
+    {
+      "Prusa MK3S+" = {
+        icon = "printer.png";
+        href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.octoprint.httpsPort}";
+        description = "3D Printing";
+        siteMonitor = local hl.octoprint.port;
+        widgets = [
+          {
+            type = "customapi";
+            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/printer";
+            refreshInterval = 15000;
+            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
+            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            mappings = [
+              {
+                field = "state.text";
+                label = "State";
+              }
+              {
+                field = "temperature.tool0.actual";
+                label = "Tool";
+              }
+              {
+                field = "temperature.bed.actual";
+                label = "Bed";
+              }
+            ];
+          }
+          {
+            type = "customapi";
+            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/job";
+            refreshInterval = 15000;
+            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
+            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            mappings = [
+              {
+                field = "progress.completion";
+                label = "Print";
+              }
+              {
+                field = "job.file.name";
+                label = "File";
+              }
+            ];
+          }
+        ];
       };
     }
   ];
@@ -896,6 +964,10 @@
         style = "row";
         columns = 2;
       };
+      Maker = {
+        style = "row";
+        columns = 1;
+      };
       Nix = {
         style = "row";
         columns = 3;
@@ -928,6 +1000,8 @@
     ++ lib.optional hl.navidrome.enable "HOMEPAGE_VAR_NAVIDROME_TOKEN=${config.sops.placeholder."navidrome/token"}"
     ++ lib.optional (cfg.enable && githubAvailable) "HOMEPAGE_VAR_GITHUB_TOKEN=${config.sops.placeholder."github/token"}"
     ++ lib.optional cfg.enable "HOMEPAGE_VAR_NEXTDNS_API_KEY=${config.sops.placeholder."nextdns/api-key"}"
+    ++ lib.optional hl.octoprint.enable "HOMEPAGE_VAR_OCTOPRINT_USER=${config.sops.placeholder."octoprint/user"}"
+    ++ lib.optional hl.octoprint.enable "HOMEPAGE_VAR_OCTOPRINT_PASSWORD=${config.sops.placeholder."octoprint/password"}"
   );
 in {
   options.modules.system.homelab.homepage = {
