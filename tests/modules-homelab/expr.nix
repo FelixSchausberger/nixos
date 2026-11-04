@@ -96,6 +96,20 @@ in {
     config.systemd.services.zellij-web.serviceConfig.ExecStart;
   zellij_web_home_sharing =
     config.home-manager.users.schausberger.programs.zellij.settings.web_sharing;
+  # OctoPrint control stack for the MK3S+ on this host's USB.
+  octoprint_enabled = config.modules.system.homelab.octoprint.enable;
+  octoprint_port = config.modules.system.homelab.octoprint.port;
+  octoprint_https_port = config.modules.system.homelab.octoprint.httpsPort;
+  octoprint_bind = config.services.octoprint.host;
+  octoprint_state_dir = config.services.octoprint.stateDir;
+  octoprint_serial_port = config.services.octoprint.extraConfig.serial.port;
+  octoprint_serial_autoconnect = config.services.octoprint.extraConfig.serial.autoconnect;
+  octoprint_ipcheck_trusts_tailnet =
+    builtins.elem "100.64.0.0/10" config.services.octoprint.extraConfig.server.ipCheck.trustedSubnets;
+  octoprint_serve_exec_start = stripStoreHash config.systemd.services.tailscale-serve-octoprint.serviceConfig.ExecStart;
+  smart_home_octoprint_component =
+    builtins.elem "octoprint" config.services.home-assistant.extraComponents;
+
   opencode_web_enabled = config.modules.system.homelab.opencodeWeb.enable;
   opencode_web_port = config.modules.system.homelab.opencodeWeb.port;
   opencode_web_https_port = config.modules.system.homelab.opencodeWeb.httpsPort;
@@ -116,6 +130,7 @@ in {
   has_adguard_port_assertion = hasAssertionWithMessage "AdGuard Home admin UI port must not be 53 (reserved for DNS service)";
   has_adguard_grafana_assertion = hasAssertionWithMessage "AdGuard Home admin UI port must differ from Grafana port when monitoring is enabled";
   has_monitoring_ports_assertion = hasAssertionWithMessage "Grafana and Prometheus must use different ports";
+  has_octoprint_https_assertion = hasAssertionWithMessage "modules.system.homelab.octoprint.httpsPort must differ from cfg.port and the other Tailscale Serve fronts (zellij-web, opencode-web, homepage, prometheus, vaultwarden, home assistant, zigbee2mqtt frontend)";
   has_tailscale_interface_assertion = hasAssertionWithMessage "modules.system.homelab.tailscale.udpGROInterface must be null or a non-empty interface name";
   has_opencode_web_https_assertion = hasAssertionWithMessage "modules.system.homelab.opencodeWeb.httpsPort must differ from 8443 (zellij-web uses it)";
 

@@ -13,4 +13,5 @@
   homeAssistant = 8123; # modules/system/homelab/smart-home.nix
   zigbee2mqtt = 8085; # modules/system/homelab/smart-home.nix
   loki = 3100; # modules/system/homelab/logging.nix
+  octoprint = 5000; # modules/system/homelab/octoprint.nix
 }

@@ -16,6 +16,7 @@
     ./navidrome.nix
     ./nextcloud.nix
     ./ntfy.nix
+    ./octoprint.nix
     ./opencode-web.nix
     ./samba.nix
     ./smart-home.nix
