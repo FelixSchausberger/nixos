@@ -135,7 +135,7 @@ Configuration lives in `modules/home/tui/ai-assistants/opencode/`:
 `shared.nix` is the single source for the harness (model, permissions,
 formatters, skills, behavior context, agent text); `default.nix` holds the
 harness-agnostic shell integration (`oc`, the GitHub token export, sops
-secrets); `v2.nix` renders the config for `ai-assistants.opencode` into the canonical
+secrets); `opencode.nix` renders the config for `ai-assistants.opencode` into the canonical
 `~/.config/opencode/`. Credentials are database-backed, so `opencode auth login
 <provider>` is needed once.
 

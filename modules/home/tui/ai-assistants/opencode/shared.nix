@@ -40,7 +40,7 @@
   model = "opencode/mimo-v2.6-flash-free";
 
   # Port of the shared OpenCode server: the ai-assistants.opencode managed
-  # service (modules/home/tui/ai-assistants/opencode/v2.nix). It binds loopback
+  # service (modules/home/tui/ai-assistants/opencode/opencode.nix). It binds loopback
   # only; Tailscale Serve terminates TLS in front of it. Consumers: the `oc`
   # function, the zellij-web seed pane, the nixvim integration and the homepage
   # card monitor.
@@ -63,7 +63,7 @@
   # Quota display policy, rendered as
   # <config-root>/opencode-quota/quota-toast.json (the path the quota plugin
   # reads). The provider list is not shared with this source: it is host- and
-  # registry-specific, so v2.nix pins it to the Go subscription.
+  # registry-specific, so opencode.nix pins it to the Go subscription.
   quotaToast = {
     formatStyle = "singleWindow";
     percentDisplayMode = "remaining";

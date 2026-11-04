@@ -115,7 +115,7 @@ in {
     '';
 
     # Enables the opencode <-> herdr lifecycle integration. Registration
-    # happens in the opencode module (v2.nix), which appends herdr's plugin
+    # happens in the opencode module (opencode.nix), which appends herdr's plugin
     # directory entry to cli.json when this is on.
     opencodeIntegration.enable =
       lib.mkEnableOption "opencode <-> herdr lifecycle integration (vendored plugin)";
