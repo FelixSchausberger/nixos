@@ -384,7 +384,11 @@ jobs:
               | grep -m1 -oE "option definition '[^']+' in '[^']+'" \
               | sed -E "s#/nix/store/[a-z0-9]{32}-source##" || true)"
             verdict="config change needed ($offending - removed-option assert or failed module assertion)"
-          elif printf '%s\n' "$log_full" | grep -Eqi "narinfo|hash mismatch|missing from cache"; then
+          # narinfo is deliberately not a cache-gap token: the build-host
+          # action prints narinfo-cache-*-ttl lines in successful steps of a
+          # failed job's log, which would misreport a real build failure as
+          # a cache gap.
+          elif printf '%s\n' "$log_full" | grep -Eqi "hash mismatch|missing from cache"; then
             verdict="cache gap: closures absent from all substituters (CI warms felixschausberger.cachix.org before the lock PR merge)"
           # Both the old (`builder for ... failed`) and the new (`Cannot
           # build` / `Reason: builder failed with exit code`) nix error
