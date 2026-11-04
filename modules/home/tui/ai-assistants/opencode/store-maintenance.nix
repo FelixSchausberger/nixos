@@ -22,7 +22,7 @@
 
   # The launcher resolves the registered background service, so the CLI reads
   # and mutates through the same server the TUI and the web UI use instead of
-  # opening a second one against the database (v2.nix).
+  # opening a second one against the database (opencode.nix).
   launcher = config.ai-assistants.opencode.package;
 
   # The unit the CLI attaches to, and the one that must be stopped for VACUUM to

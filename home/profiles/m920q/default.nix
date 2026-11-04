@@ -9,25 +9,10 @@
   # the on-demand niri projector session (see ./niri.nix). The full desktop app
   # suite is deliberately not imported here.
 
-  # Push session events to the phone over the self-hosted ntfy instance. Scoped
-  # to m920q because it is the only host whose server the phone can reach - the
-  # shared `homelab` Zellij session and the remote attach path live here - while
-  # the per-host loopback servers on desktop and WSL stay silent. The harness
-  # itself takes no option; see modules/home/tui/ai-assistants/opencode/v2.nix.
-  ai-assistants.opencode.mobilePush = {
-    enable = true;
-    clickBase = "https://m920q.tailf2f0ca.ts.net:8444";
-    # Off: a "finished" push cannot be scoped to the phone, so it fires for
-    # desktop turns too. The needs-attention kinds (approval, question, error)
-    # still push. Flip this to true for phone-turn pings at the cost of
-    # desktop-turn ones.
-    finished = false;
-  };
-
   # Agent control plane: the herd of opencode agents lives in the herdr
   # session server (tui.herdr.server - an always-on user unit with
-  # reboot-like restart semantics, see the unit comment) so the phone
-  # bridge and the desktop are views onto the same panes. The vendored
+  # reboot-like restart semantics, see the unit comment) so the desktop
+  # and remote SSH attaches view the same panes. The vendored
   # opencode integration feeds herdr lifecycle state (working/blocked/done)
   # and records session ids for resume-after-restart; without it the state
   # sidebar falls back to screen-manifest detection and a deploy loses

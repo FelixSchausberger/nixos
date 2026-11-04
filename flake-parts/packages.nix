@@ -79,12 +79,6 @@
         # Applications
         quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
 
-        # Collie phone bridge for herdr. Upstream ships its own Nix
-        # packaging (derivation + manifest-checked hashes), so the source
-        # of truth lives in the collie input and version bumps ride the
-        # flake lock rather than a vendored pkgs/ copy.
-        collie = inputs.collie.packages.${pkgs.stdenv.hostPlatform.system}.collie;
-
         # IRIS shell autocomplete assistant
         iris = inputs.iris.packages.${pkgs.stdenv.hostPlatform.system}.iris;
 
