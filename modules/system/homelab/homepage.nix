@@ -731,46 +731,32 @@
   # Tailscale Serve UI; the probes poll the loopback API because Homepage
   # runs on this host, so they stay independent of Caddy and the tailnet.
   #
-  # Two customapi widgets instead of the native octoprint widget: that one
-  # only carries an API key (its api template is ...?apikey={key}), so it
-  # would need a second application key beside the one the HA integration
-  # holds. The generic proxy handler sends HTTP Basic auth when the widget
-  # declares user/password, and OctoPrint's REST API accepts account
-  # credentials natively - the printer account in sops covers both
-  # consumers and stays manageable in one place.
-  #
-  # /api/job avoids sending per-second updates; 15s keeps the progress bar
-  # readable. When the printer is disconnected /api/printer answers with
-  # Offline state and null temps, which render as empty fields, not errors.
+  # Widget set per the REST docs' status codes:
+  #   - /api/job is always 200 and carries the connection-independent state
+  #     text ("Offline" before Connect), the progress and the file name, so
+  #     its fields read in every printer state.
+  #   - /api/connection is always 200; the Link field (Closed / Operational)
+  #     decodes why the temperature tile on the right is empty or blank.
+  #   - /api/printer is the only source of nozzle/bed temperatures and
+  #     returns 409 until the printer is operational (OctoPrint connected),
+  #     so its tile shows Homepage's error state until the first Connect;
+  #     serial.autoconnect stays off by design, hence that state at every
+  #     service restart.
+  # Basic auth instead of the native octoprint widget: that one only carries
+  # an API key (its api template is ...?apikey={key}), which would need a
+  # second application key beside the one the HA integration holds. The
+  # generic proxy handler sends HTTP Basic auth when the widget declares
+  # user/password, and OctoPrint's REST API accepts account credentials
+  # natively - the printer account in sops covers both consumers and stays
+  # manageable in one place.
   makerServices = lib.optionals hl.octoprint.enable [
     {
       "Prusa MK3S+" = {
-        icon = "printer.png";
+        icon = "octoprint.png";
         href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.octoprint.httpsPort}";
         description = "3D Printing";
         siteMonitor = local hl.octoprint.port;
         widgets = [
-          {
-            type = "customapi";
-            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/printer";
-            refreshInterval = 15000;
-            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
-            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
-            mappings = [
-              {
-                field = "state.text";
-                label = "State";
-              }
-              {
-                field = "temperature.tool0.actual";
-                label = "Tool";
-              }
-              {
-                field = "temperature.bed.actual";
-                label = "Bed";
-              }
-            ];
-          }
           {
             type = "customapi";
             url = "http://127.0.0.1:${toString hl.octoprint.port}/api/job";
@@ -779,12 +765,46 @@
             password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
             mappings = [
               {
+                field = "state";
+                label = "State";
+              }
+              {
                 field = "progress.completion";
                 label = "Print";
               }
               {
                 field = "job.file.name";
                 label = "File";
+              }
+            ];
+          }
+          {
+            type = "customapi";
+            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/connection";
+            refreshInterval = 15000;
+            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
+            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            mappings = [
+              {
+                field = "current.state";
+                label = "Link";
+              }
+            ];
+          }
+          {
+            type = "customapi";
+            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/printer";
+            refreshInterval = 15000;
+            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
+            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            mappings = [
+              {
+                field = "temperature.tool0.actual";
+                label = "Tool";
+              }
+              {
+                field = "temperature.bed.actual";
+                label = "Bed";
               }
             ];
           }
