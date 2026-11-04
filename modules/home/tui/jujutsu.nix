@@ -15,13 +15,23 @@
   # timer below so the prompt never pays for the jj classification itself.
   badgeFile = "${config.xdg.cacheHome}/ocws/badge";
 
-  # Daily board digest for the phone: published straight after the gc pass,
-  # silent whenever the board is clean and gated on the option so only hosts
-  # whose broker the phone listens to publish. The ntfy-send helper carries
-  # the local broker as primary; the digest is deliberately not an alert and
-  # never an urgency, it rides the subscribed topic with an hourglass tag.
-  # Count fields are read defensively so the digest keeps working across
-  # minor ocws count-shape growth.
+  # Digest cadence state: the last published board signature + its epoch.
+  # Lives beside the badge in the cache; a clean board tears it down so a
+  # later rematch of the same mess counts as a fresh transition.
+  digestStateFile = "${config.xdg.cacheHome}/ocws/digest-last";
+
+  # Board digest for the phone, driven by an alerting lifecycle rather than
+  # a clock: publish on a state transition, stay silent while the mess is
+  # unchanged, and re-nudge once the last published mess has stood past
+  # OCWS_DIGEST_REPEAT_DAYS. Repetition without delta is alarm fatigue: a
+  # channel that says the same sentence every day gets muted, and a count
+  # threshold alone would let a small mess rot below the line forever. A
+  # clean board removes the signature, so a rematch of an old mess
+  # publishes as a fresh transition. The ntfy-send helper carries the local
+  # broker as primary; the digest is deliberately not an alert and never an
+  # urgency, it rides the subscribed topic with an hourglass tag. Count
+  # fields are read defensively so the digest keeps working across minor
+  # ocws count-shape growth.
   boardDigest =
     pkgs.writeShellScript "ocws-board-digest"
     (
@@ -30,21 +40,50 @@
       })
       + ''
         set -euo pipefail
+        repeat_days() {
+          v="''${OCWS_DIGEST_REPEAT_DAYS:-7}"
+          if printf '%s' "$v" | ${pkgs.gnugrep}/bin/grep -Eq '^[0-9]+$'; then
+            printf '%s' "$v"
+          else
+            echo 7
+          fi
+        }
+        signature() {
+          ${pkgs.coreutils}/bin/printf 'stale=%s unpushed=%s conflict=%s waitold=%s' "$stale" "$unpushed" "$conflict" "$waitold"
+        }
         repo=${lib.escapeShellArg defaults.paths.nixosConfig}
         # Same exit condition as the gc body: a host without the checkout
         # exits cleanly so the timer's unit stays green for vestigial hosts.
         [ -d "$repo" ] || exit 0
         cd "$repo"
+        state=${lib.escapeShellArg digestStateFile}
         read -r total empty merged unpushed inflight conflict stale waitold < <(${ocws}/bin/ocws ls --counts)
         waitold=''${waitold:-0}
         if [ "$((stale + unpushed + conflict + waitold))" -eq 0 ]; then
+          # A clean board removes the stored signature so the same mess
+          # returning later publishes as a fresh transition rather than a
+          # rerun of an old record.
+          ${pkgs.coreutils}/bin/rm -f "$state"
           exit 0
+        fi
+        sig="$(signature)"
+        if [ -f "$state" ]; then
+          olds="$(${pkgs.gnused}/bin/sed -n '1p' "$state")"
+          oldat="$(${pkgs.gnused}/bin/sed -n '2p' "$state")"
+          if ! printf '%s' "$oldat" | ${pkgs.gnugrep}/bin/grep -Eq '^[0-9]+$'; then oldat=0; fi
+          now=$(${pkgs.coreutils}/bin/date +%s)
+          if [ "$olds" = "$sig" ] && [ $(( (now - oldat) / 86400 )) -lt "$(repeat_days)" ]; then
+            # Same mess, recently published: the silence is the feature.
+            exit 0
+          fi
         fi
         if ! board=$(${ocws}/bin/ocws ls --board 2>/dev/null); then
           board=$(${ocws}/bin/ocws ls)
         fi
-        body="$(printf 'stale %s unpushed %s conflict %s old waits %s\n\n%s' "$stale" "$unpushed" "$conflict" "$waitold" "$board")"
-        ntfy_send "ocws board ($(${pkgs.coreutils}/bin/uname -n), daily)" low hourglass "$body"
+        body="$(${pkgs.coreutils}/bin/printf 'stale %s unpushed %s conflict %s old waits %s\n\n%s' "$stale" "$unpushed" "$conflict" "$waitold" "$board")"
+        ntfy_send "ocws board ($(${pkgs.coreutils}/bin/uname -n))" low hourglass "$body"
+        ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$state")"
+        ${pkgs.coreutils}/bin/printf '%s\n%s\n' "$sig" "$(${pkgs.coreutils}/bin/date +%s)" > "$state"
       ''
     );
 in {
@@ -54,7 +93,7 @@ in {
     # reports waiting, in-review and unclean workspaces. Off by default:
     # only hosts whose ntfy broker the phone subscribes to publish.
     boardDigest = {
-      enable = lib.mkEnableOption "daily ntfy digest of unclean ocws workspaces";
+      enable = lib.mkEnableOption "ntfy digest of unclean ocws workspaces, published on state transitions";
       ntfyUrl = lib.mkOption {
         type = lib.types.str;
         default = "http://127.0.0.1:2586";
