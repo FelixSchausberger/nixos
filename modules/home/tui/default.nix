@@ -38,7 +38,6 @@ in {
     ./zellij-remote.nix # Remote attach helper for the homelab Zellij web server
     ./cachix.nix # Cachix CLI for on-demand cache pushes
     ./vitals.nix # Vitals health monitoring daemon + CLI
-    ./collie.nix # Phone bridge client side (pairs with system/homelab/collie.nix)
   ];
 
   programs = {

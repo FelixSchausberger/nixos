@@ -108,9 +108,10 @@ in {
     # Boot-persistent agents need the session server to outlive logouts:
     # linger must be set for this host (m920q gets it already from the
     # zellij-web module's users.users.${user}.linger). Per host: agents live
-    # in the herdr server only where the phone/fleet workflows need them.
+    # in the herdr server only where remote attach or deploy-surviving
+    # sessions matter.
     server.enable = lib.mkEnableOption ''
-      herdr headless server as an always-on user service (phone bridge host)
+      herdr headless server as an always-on user service (agent-herd host)
     '';
 
     # Enables the opencode <-> herdr lifecycle integration. Registration
@@ -191,8 +192,8 @@ in {
     # scratch config home); the cliConfig side is in the opencode v2 module,
     # which appends the entry when the option is on. The server-side
     # auto-discovered entrypoint (plugins/herdr-agent-state.js, the V1
-    # headless-reporter path) is deliberately NOT vendored: the phone-facing
-    # shared server must not run a second state reporter that competes with
+    # headless-reporter path) is deliberately NOT vendored: the shared server
+    # must not run a second state reporter that competes with
     # the pane-local TUI reporter (upstream docs: restart server and TUIs so
     # "the old server reporter cannot overwrite pane-local state").
     (lib.mkIf config.tui.herdr.opencodeIntegration.enable {
@@ -201,9 +202,8 @@ in {
     })
 
     (lib.mkIf config.tui.herdr.server.enable {
-      # Always-on headless server: remote attend (herdr attach, the session
-      # picker on a phone client, a later PWA bridge) needs a live socket
-      # without a desktop client attached.
+      # Always-on headless server: remote attend (herdr attach over SSH or
+      # mosh) needs a live socket without a desktop client attached.
       # Restart semantics are reboot-like, the same upstream evidence class
       # as `herdr server stop`: layout and directories are restored, pane
       # processes are NOT, and agent conversations resume through the

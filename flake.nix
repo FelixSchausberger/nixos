@@ -111,20 +111,6 @@
       url = "github:nix-community/namaka";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Collie phone bridge (PWA front end for herdr panes and approvals).
-    # Consumes upstream's own flake packaging: their derivation wraps the
-    # release payload they hash against their own manifest, lays out the
-    # Bun-root tree the binary expects (bin/collie as a symlink into
-    # lib/collie, herdr-plugin.toml at the root it resolves by realpath)
-    # and gates install on `collie --version`; a local vendored copy of
-    # that logic would only duplicate their update mechanics. `collie
-    # update` declines a store install itself, so version bumps ride a
-    # flake.lock movement only.
-    collie = {
-      url = "github:AltanS/collie";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Nix package manager on Android (a Termux fork; proot-based, no root).
     # Consumed only by the nixOnDroidConfigurations flake output (flake-parts/
     # droid.nix, module tree in droid/): it declares the phone's terminal
