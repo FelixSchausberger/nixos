@@ -12,6 +12,9 @@
     jq
     python3
 
+    # LoC
+    tokei
+
     # Language Servers
     bash-language-server # Bash
     clang-tools # C/C++
