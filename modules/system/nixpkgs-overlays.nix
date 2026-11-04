@@ -108,6 +108,11 @@ _: {
       udiskie = prev.udiskie.overridePythonAttrs (_: {
         doCheck = false;
       });
+
+      # Vendored influxdb with the libflux deprecation fix; m920q's garmin
+      # chain is the only consumer. Retract when the channel's influxdb
+      # carries the upstream fix (nixpkgs#582154 or equivalent).
+      influxdb = prev.callPackage ../../pkgs/influxdb {};
     })
 
     # Calibre-Web's binary_helper.resolve_binary_path only accepts a kepubify
