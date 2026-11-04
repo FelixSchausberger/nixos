@@ -20,6 +20,12 @@
   tui.herdr.server.enable = true;
   tui.herdr.opencodeIntegration.enable = true;
 
+  # The phone subscribes to the homelab-alerts topic; the daily board digest
+  # rides that broker so waiting/in-review/unclean workspaces reach the phone
+  # even after a week away. m920q is the only host whose loopback ntfy is the
+  # phone's broker.
+  tui.jujutsu.boardDigest.enable = true;
+
   features = {
     development = {
       enable = true;
