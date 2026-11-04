@@ -13,20 +13,21 @@ primitive — especially when the custom version has worse failure modes.
 
 Two phases, strictly separated:
 
-- **Phase 1 — Plan (default).** Read-only for a `code` target; for a `plan`
-  target it additionally annotates the plan document. Halts for user approval.
-  Never edits code, never runs rebuilds, never creates bookmarks.
-- **Phase 2 — Execute (only on explicit follow-up such as "execute plan
-  `<path>`").** Runs the approved plan, writes the findings report, and fixes
-  `confirmed` findings only. `suspected` findings stay report-only.
+- **Phase 1 — Plan (default).** Read-only; plans are always delivered inline in
+  the conversation. Halts for user approval. Never edits code, never writes
+  files, never runs rebuilds, never creates bookmarks.
+- **Phase 2 — Execute (only on explicit approval, e.g. "execute the audit
+  plan", naming the audit).** Runs the approved plan, writes the findings
+  report, and fixes `confirmed` findings only. `suspected` findings stay
+  report-only.
 
 ## Run Target (decide first)
 
 - **code** (default): changed or existing repository files. Phase 1 writes an
   audit plan; Phase 2 writes a findings report.
-- **plan**: a design or implementation plan supplied by the user or written
-  during planning, before any code exists. The skill verifies the plan's
-  candidates read-only and folds the results back into the plan document. It
+- **plan**: a design or implementation plan supplied by the user or stated in
+  the conversation, before any code exists. The skill verifies the plan's
+  candidates read-only and re-presents the plan inline with its annotations. It
   never writes an `audit-*.md` report.
 
 The target is `plan` when the user points at a plan, asks to "check/review the
@@ -36,11 +37,11 @@ targets.
 
 ## Hard Constraints
 
-1. **Phase separation.** Phase 1 makes no repo edits and no code edits (the
-   single exception is annotating the plan document when the target is `plan`),
-   runs no rebuilds, runs no `jjwork` (fetch+rebase would mutate the working
-   copy), and creates no bookmarks. All other mutation belongs to Phase 2 after
-   explicit user approval.
+1. **Phase separation.** Phase 1 makes no repo edits and no code edits, writes
+   no files (nothing reads or writes a plan path; the harness plan document is
+   owned by concurrent sessions), runs no rebuilds, runs no `jjwork`
+   (fetch+rebase would mutate the working copy), and creates no bookmarks. All
+   other mutation belongs to Phase 2 after explicit user approval.
 2. **No speculation.** Every claimed alternative must be verified: nixpkgs
    option via the nixos MCP server (`search`, `type=options`), a man page
    section, or an upstream doc/issue. Unverifiable claims are filed as
@@ -180,10 +181,14 @@ Then present the candidate list to the user and halt. Do not write an
 
 ### plan target
 
-Read the plan, turn each design choice into a candidate, and verify every claim
-read-only (nixos MCP option search, upstream docs, nixpkgs module source, `man`
-pages, and the repository's own prior decisions). Then edit the plan document
-in place — do not create a second file — adding per candidate:
+Plans are always delivered inline in the conversation. Never write or read a
+plan file, and never reference a plan path: the harness plan document is a
+single file concurrent sessions own, and writing it collides with every
+occupant. Read the plan (from the conversation if the user stated it there),
+turn each design choice into a candidate, and verify every claim read-only
+(nixos MCP option search, upstream docs, nixpkgs module source, `man` pages,
+and the repository's own prior decisions). Present the plan inline, adding per
+candidate:
 
 ```markdown
 ### <N>. <Short title>
@@ -195,18 +200,21 @@ in place — do not create a second file — adding per candidate:
 ```
 
 Where the plan chose a more complex mechanism than a verified primitive
-provides, replace it in place with the simpler mechanism. Fold in a
-rejected-options list and a do-not-touch list. Present the updated plan and
-halt. Do not write an `audit-*.md` report, edit code, run rebuilds, or create
-bookmarks.
+provides, restate it inline with the simpler mechanism. Fold in a
+rejected-options list and a do-not-touch list. The inline presentation is the
+deliverable. Halt after presenting it. Do not write any file, edit code, run
+rebuilds, or create bookmarks. Exception: the user explicitly hands over a
+repo-relative plan document to annotate — edit that document in place, announce
+it, and halt.
 
 ## Phase 2 — Execute (explicit follow-up only)
 
 Run only when the user says to execute a specific plan file (e.g. "execute
 plan `.opencode/audits/plan-<date>-incremental.md`").
 
-For a **plan target** there is no code to fix: re-verify, finalize the plan
-document, write no report, and halt. The steps below apply to a **code
+For a **plan target** there is no code to fix: re-verify, re-present the
+finalized plan inline (annotate the user-supplied document if one was handed
+over in Phase 1), write no report, and halt. The steps below apply to a **code
 target**.
 
 1. Rebase context first (mutation is now expected):
@@ -261,7 +269,8 @@ flag-file recovery mechanism.
 1. **code target only:** write the report to
    `.opencode/audits/audit-<YYYY-MM-DD>-<mode>.md` (create the directory if
    needed; the directory is gitignored). A **plan target** writes no report:
-   the plan document edited in Phase 1 is the deliverable.
+   the plan presented inline in Phase 1 is the deliverable (or the
+   user-supplied document annotated during it).
 2. Present the ranked summary to the user and halt. Fixes are limited to
    `confirmed` findings from the approved plan; everything else is report-only.
 3. **code target only:** record the baseline for the next incremental run only
