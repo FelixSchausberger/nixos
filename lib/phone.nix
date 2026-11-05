@@ -51,9 +51,8 @@ in {
     ];
 
     # Upstream GitHub-release APKs, imported in bulk via Obtainium's
-    # `obtainium://apps/` deep link. Ids are matched against the 9a dump; the
-    # UPM and reseam rows are bench-checked on first import (Obtainium's id
-    # field is bookkeeping only).
+    # `obtainium://apps/` deep link. Ids are matched against the 9a dump;
+    # Obtainium's id field is bookkeeping only.
     obtainium = [
       {
         id = "app.alextran.immich";
@@ -80,12 +79,11 @@ in {
         url = "https://github.com/moonlight-stream/moonlight-android";
       }
       {
-        id = "app.morphe.manager";
-        name = "MorpheManager";
-        author = "MorpheApp";
-        url = "https://github.com/MorpheApp/morphe-manager";
-      }
-      {
+        # UPM runs ReVanced, Morphe and Reseam patch bundles in one place;
+        # its runtimes bundle the Morphe and Reseam engines, so the two
+        # dedicated managers stay dropped. Pin the arm64-v8a asset in
+        # Obtainium (Tensor G5; universal covers device families and
+        # re-picks flavors per update).
         id = "app.jman.upm";
         name = "UPM";
         author = "Jman-Github";
@@ -111,14 +109,6 @@ in {
         name = "SteamController";
         author = "SonicDX12";
         url = "https://github.com/SonicDX12/SteamController-Android";
-      }
-      {
-        # reseam ships no GitHub releases; the manager comes from reseam.app.
-        # Generic source with an APK filter gets configured at the bench.
-        id = "app.reseam.manager";
-        name = "Reseam";
-        author = "Reseam";
-        url = "https://reseam.app";
       }
       {
         # OpenCode on the phone: the native Android client against the m920q
@@ -250,11 +240,11 @@ in {
       "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on."
       "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
-      "morphe-manager, reseam and UPM: run the patch flows for GMS-free targets only; patched YouTube and patched Maps are dead by design on GrapheneOS (no GMS, no signature spoofing)."
+      "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) for GMS-free targets only; patched YouTube and patched Maps are dead by design on GrapheneOS (no GMS, no signature spoofing), and pinning the arm64-v8a asset keeps updates on the Tensor G5 flavor."
       "Porter: start once via its wireless-debugbing flow; the service stops on device restart, so reopen it after a reboot before SteamController talks to the controller."
       "Re-add the remaining PWA shortcuts the 9a had under its webapk stubs, from Vanadium; do not resurrect the Collie bridge PWA (OpenCode runs native now)."
       "OpenCode Mobile: run `opencode pair --url https://m920q.tailf2f0ca.ts.net:8444` on m920q and scan the printed QR; approvals, questions and diffs then arrive in the app, with notifications handled natively."
-      "Bench checks from the plan: UPM/reseam package ids, always-on-VPN settings keys, and account sign-ins for the government apps."
+      "Government-app account sign-ins happen in-app on first use; open items recorded on the bench live as comments next to their lane rows."
     ];
   };
 
@@ -284,6 +274,8 @@ in {
     "com.maxmpz.audioplayer.unlock" # no Subsonic streaming; Symfonik is the client
     "moe.shizuku.privileged.api" # superseded by Porter (maintained Shizuku fork)
     "network.loki.messenger" # Session; user sign-off, not in use
+    "app.morphe.manager" # dedicated Morphe manager: UPM bundles the Morphe runtime
+    "app.reseam.manager" # dedicated Reseam manager: UPM bundles Reseam's runtime; reseam's 0.39.1 separately fixes the Too-many-sessions install failure
 
     # Four rows the user considers private live outside this repo: the
     # manifest never carries ids for the privacy lane;
