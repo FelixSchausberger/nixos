@@ -388,6 +388,8 @@ jobs:
           # action prints narinfo-cache-*-ttl lines in successful steps of a
           # failed job's log, which would misreport a real build failure as
           # a cache gap.
+          elif printf '%s\n' "$log_full" | grep -Eq "No space left on device|disk budget insufficient"; then
+            verdict="disk full (ENOSPC): the closure build overflowed the runner disk - instantiation, not the cache push, fills the store, so a warm cache shortens builds but not the footprint; the free-disk step's df line names the volume class (72 GB vs 145 GB runners)"
           elif printf '%s\n' "$log_full" | grep -Eqi "hash mismatch|missing from cache"; then
             verdict="cache gap: closures absent from all substituters (CI warms felixschausberger.cachix.org before the lock PR merge)"
           # Both the old (`builder for ... failed`) and the new (`Cannot
