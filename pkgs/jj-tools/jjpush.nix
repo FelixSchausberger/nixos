@@ -78,9 +78,13 @@ writeShellApplication {
     fi
 
     # Search ancestors for an existing feature bookmark. The main bookmark
-    # always sits on the parent commit after a rebase, so it is excluded;
-    # otherwise the auto-create branch below would never trigger.
-    bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main")' -T 'name' 2>/dev/null | head -1 | tr -d '[:space:]')"
+    # always sits on the parent commit after a rebase, so it is excluded, and
+    # the testing-* branch never leaves the host: comin reads it from the
+    # colocated checkout (modules/system/comin.nix), a forge copy has no
+    # consumer, and jjtest parks the bookmark exactly on the commit under
+    # review - a head reused from there shadows the change (observed on #653
+    # and #661, both PRs carried testing-m920q as their head).
+    bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main") & ~bookmarks("testing-*")' -T 'name' 2>/dev/null | head -1 | tr -d '[:space:]')"
 
     if [ -z "$bookmark" ]; then
       # No feature bookmark — auto-create one from the commit description's
@@ -113,10 +117,17 @@ writeShellApplication {
     nix fmt 2>/dev/null || true
     prek run --all-files 2>/dev/null || true
 
-    # Push changes (track the remote branch first if needed).
+    # Push changes (track the remote branch first if needed). Scoped to the
+    # PR bookmark: the bare default (remote_bookmarks(remote)..@) also walks
+    # every tracked bookmark whose target differs from the remote, which is
+    # how a locally re-created testing-* bookmark rode to the forge (#661).
+    # Deletions are not part of a normal push (they need --deleted), so the
+    # previous call never carried them and this scoped one does not either;
+    # branch deletions are explicit ops (jjtest's stray-copy cleanup uses
+    # --deleted deliberately).
     echo "Pushing changes..."
     jj bookmark track "$bookmark" --remote=origin 2>/dev/null || true
-    if ! jj git push; then
+    if ! jj git push --bookmark "$bookmark"; then
       echo "Failed to push changes" >&2
       exit 1
     fi
