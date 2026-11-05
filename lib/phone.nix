@@ -48,6 +48,11 @@ in {
       "io.heckel.ntfy"
       "com.beemdevelopment.aegis"
       "org.mozilla.fennec_fdroid" # Firefox engine; replaces org.mozilla.fenix
+      # Bootstrap clients the 10a bench proved necessary: fdroidcl installs
+      # ids without any client, but the F-Droid client stays for browsing
+      # and Aurora's anonymous session serves the whole Aurora lane.
+      "org.fdroid.fdroid"
+      "com.aurora.store"
     ];
 
     # Upstream GitHub-release APKs, imported in bulk via Obtainium's
