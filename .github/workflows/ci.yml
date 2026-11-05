@@ -101,10 +101,20 @@ jobs:
 
           echo "✅ All fish configurations have valid syntax"
       - name: Validate flake structure
+        # nix flake show forces every host config, and newer nixpkgs.lib
+        # releases force the module option defaults eagerly enough that
+        # niri-flake's KDL-generator realisation fires during pure-eval
+        # (observed 2026-11-05 on the daily lock PR: "cannot build
+        # ...-config.kdl.drv during evaluation because the option
+        # 'allow-import-from-derivation' is disabled" against a nix.conf
+        # that enables it). Listing the host attrset keys validates the
+        # flake's structure without pulling any host config through the
+        # module system; per-host evaluation belongs to the daily
+        # pre-PR dry-run and the post-merge warm-up matrix.
         run: |
           echo "Validating flake metadata and structure..."
           nix flake metadata
-          nix flake show
+          nix eval --json .#nixosConfigurations --apply 'builtins.attrNames' > /dev/null
           echo "✅ Flake structure is valid"
       - name: Evaluate package derivations
         # nix flake show and nix flake check only force each package to WHNF:
