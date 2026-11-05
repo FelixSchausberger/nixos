@@ -11,6 +11,9 @@
   lib,
   android-tools,
   coreutils,
+  # sed and grep: the `check` audit greps the package list on-device.
+  gnugrep,
+  gnused,
   fdroidcl,
   jq,
 }: let
@@ -18,7 +21,7 @@
   manifestJson = writeText "phone-manifest.json" (builtins.toJSON manifest);
 in
   writeShellScriptBin "pixel-provision" ''
-        PATH=${lib.makeBinPath [android-tools coreutils fdroidcl jq]}
+        PATH=${lib.makeBinPath [android-tools coreutils gnugrep gnused fdroidcl jq]}
         ADB=${android-tools}/bin/adb
         MANIFEST=${manifestJson}
         # The privacy lane lives outside the repository by design:
