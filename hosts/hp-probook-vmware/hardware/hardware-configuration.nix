@@ -110,21 +110,4 @@
   environment.systemPackages = with pkgs; [
     open-vm-tools # VMware guest utilities
   ];
-
-  # VMware shared folder: Windows host C:\Users\corp-user\PDX
-  # Share must be configured in VMware Workstation: VM Settings → Options → Shared Folders
-  # Share name must be "PDX" to match the device path below
-  fileSystems."/mnt/PDX" = {
-    device = ".host:/PDX";
-    fsType = "fuse./run/current-system/sw/bin/vmhgfs-fuse";
-    options = [
-      "umask=22"
-      "uid=1000"
-      "gid=1000"
-      "allow_other"
-      "auto_unmount"
-      "defaults"
-      "nofail" # Don't fail boot if share is unavailable
-    ];
-  };
 }

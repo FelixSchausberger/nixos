@@ -454,38 +454,6 @@ in {
             },
           },
 
-          -- ── Jump hosts ───────────────────────────────────────────────────
-          ssh("Jumphost: corp-jh",  "corp-jh"),
-          ssh("Jumphost: jumphost", "jumphost"),
-
-          -- ── Switches ─────────────────────────────────────────────────────
-          ssh("Switch: corp10-sw1", "corp10-sw1"),
-
-          -- ── CORP3 ────────────────────────────────────────────────────────
-          ssh("CORP3: cwp-001", "corp3-cwp-001"),
-          ssh("CORP3: cwp-002", "corp3-cwp-002"),
-          ssh("CORP3: cwp-003", "corp3-cwp-003"),
-          ssh("CORP3: cwp-004", "corp3-cwp-004"),
-          ssh("CORP3: app-001", "corp3-app-001"),
-          ssh("CORP3: app-002", "corp3-app-002"),
-          ssh("CORP3: mgt-001", "corp3-mgt-001"),
-          ssh("CORP3: mgt-002", "corp3-mgt-002"),
-          ssh("CORP3: mwp-001", "corp3-mwp-001"),
-          ssh("CORP3: swp-001", "corp3-swp-001"),
-
-          -- ── CORP4 ────────────────────────────────────────────────────────
-          ssh("CORP4: cwp-001", "corp4-cwp-001"),
-          ssh("CORP4: cwp-002", "corp4-cwp-002"),
-          ssh("CORP4: cwp-003", "corp4-cwp-003"),
-          ssh("CORP4: cwp-004", "corp4-cwp-004"),
-          ssh("CORP4: cwp-005", "corp4-cwp-005"),
-          ssh("CORP4: cwp-006", "corp4-cwp-006"),
-          ssh("CORP4: app-001", "corp4-app-001"),
-          ssh("CORP4: app-002", "corp4-app-002"),
-          ssh("CORP4: mgt-001", "corp4-mgt-001"),
-          ssh("CORP4: mgt-002", "corp4-mgt-002"),
-          ssh("CORP4: mwp-001", "corp4-mwp-001"),
-          ssh("CORP4: swp-001", "corp4-swp-001"),
         }
 
         return config
@@ -497,12 +465,17 @@ in {
       };
 
       home.activation.zz-wezterm-windows-deploy = ''
-        WEZTERM_TARGET="/mnt/c/Users/corp-user/.config/wezterm/wezterm.lua"
-
-        if [ -f "$HOME/.config/wezterm/wezterm.lua" ] && [ -d "/mnt/c/Users/corp-user" ]; then
-          mkdir -p "$(dirname "$WEZTERM_TARGET")"
-          cp "$HOME/.config/wezterm/wezterm.lua" "$WEZTERM_TARGET"
-        fi
+        # The Windows-side account owns the target path; derive it from the
+        # c: mount instead of hard-coding the name, so machine-specific
+        # account names stay out of this repo.
+        for winhome in /mnt/c/Users/*/AppData; do
+          [ -d "$winhome" ] || continue
+          winuser="$(basename "$(dirname "$winhome")")"
+          [ -f "$HOME/.config/wezterm/wezterm.lua" ] || continue
+          target="/mnt/c/Users/$winuser/.config/wezterm/wezterm.lua"
+          mkdir -p "$(dirname "$target")"
+          cp "$HOME/.config/wezterm/wezterm.lua" "$target"
+        done
       '';
     };
   };

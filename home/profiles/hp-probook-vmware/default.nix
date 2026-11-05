@@ -6,7 +6,6 @@
 }: {
   # VMware VM profile with niri window manager support
   imports = [
-    ../../../modules/home/work/git.nix # Add work git config
     ./vmware-clipboard.nix
   ];
 

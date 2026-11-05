@@ -58,13 +58,6 @@ in {
       # =============================================
       ${hostSections}
 
-      # Corporate Corp-Example Git server
-      Host git.corp-example.frq
-          HostName git.corp-example.frq
-          Port 7999
-          User git
-          IdentityFile ~/.ssh/id_ed25519
-
       # Pixel 9a over the tailnet: sshd runs inside the nix-on-droid
       # environment (see droid/default.nix), listening on 8022, and the
       # MagicDNS short name resolves through 100.100.100.100.
@@ -74,7 +67,7 @@ in {
           Port 8022
           IdentityFile ~/.ssh/id_ed25519
 
-      # GitHub (using port 443 due to corporate firewall)
+      # GitHub via ssh.github.com:443 (works through restrictive networks)
       Host github.com
           HostName ssh.github.com
           Port 443
@@ -148,10 +141,9 @@ in {
       commit.template = "/per/etc/nixos/.gitmessage";
       # System-wide SSL certificate configuration for all HTTPS Git operations
       http.sslCAInfo = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-
-      # Corporate SSL certificate fix
-      "http \"http://git.corp-example.frq/\"".sslVerify = false;
-      "http \"https://git.corp-example.frq/\"".sslVerify = false;
+      # Corporate git configuration (work servers, their TLS exceptions and
+      # identities) stays out of this repo entirely: it lives in the local
+      # imperative layer on the machines that need it.
       # GitHub authentication for Nix flake operations
       "credential \"https://github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
       "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";

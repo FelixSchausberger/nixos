@@ -129,7 +129,6 @@ in {
             hidden = false;
             icon = "C:\\NixOS\\shortcut.ico";
             name = "NixOS";
-            startingDirectory = "C:\\Users\\corp-user";
           }
           {
             guid = "{2ece5bfe-50ed-5f3a-ab87-5cd4baafed2b}";
@@ -157,10 +156,12 @@ in {
           # Absolute path: avoids the bare-name resolving via a stale Windows
           # Terminal process PATH (dssh is installed via winget into
           # %LOCALAPPDATA%\Microsoft\WinGet\Links, which only newer WT
-          # processes have). Bare commandline: the tab closes when the ssh
+          # processes have). The Windows account name is substituted at
+          # deploy time (__WT_USER__), so account names never appear in
+          # this repo. Bare commandline: the tab closes when the ssh
           # session ends.
           {
-            commandline = "C:\\Users\\corp-user\\AppData\\Local\\Microsoft\\WinGet\\Links\\dssh.exe";
+            commandline = "C:\\Users\\__WT_USER__\\AppData\\Local\\Microsoft\\WinGet\\Links\\dssh.exe";
             guid = dsshGuid;
             hidden = false;
             # No icon: lets WT show its generic terminal icon so the tab is not
@@ -217,11 +218,22 @@ in {
     home.activation.zz-windows-terminal-deploy = ''
       WT_SETTINGS="$HOME/.config/windows-terminal/settings.json"
 
+      # The settings carry one Windows-account-absolute path (the winget
+      # dssh link). Substitute the owning account per package dir before
+      # copying, so account names stay out of this repo. Off-Windows hosts
+      # match nothing in the loop. If a package dir yields no account the
+      # __WT_USER__ placeholder is copied as-is and only the dssh profile
+      # starts broken; every other profile is unaffected.
       if [ -f "$WT_SETTINGS" ]; then
         for wt_pkg in /mnt/c/Users/*/AppData/Local/Packages/Microsoft.WindowsTerminal*; do
           [ -d "$wt_pkg" ] || continue
           mkdir -p "$wt_pkg/LocalState"
-          cp "$WT_SETTINGS" "$wt_pkg/LocalState/settings.json"
+          wt_user="$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$wt_pkg")")")")")"
+          if [ -n "$wt_user" ]; then
+            sed "s/__WT_USER__/$wt_user/g" "$WT_SETTINGS" > "$wt_pkg/LocalState/settings.json"
+          else
+            cp "$WT_SETTINGS" "$wt_pkg/LocalState/settings.json"
+          fi
         done
       fi
     '';

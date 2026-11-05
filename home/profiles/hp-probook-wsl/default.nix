@@ -6,7 +6,6 @@
   # WSL headless profile: TUI-only work environment.
   imports = [
     ../../../modules/home/tui-only.nix
-    ../../../modules/home/work/git.nix # Add work Git config
   ];
 
   # Feature-based configuration for WSL development environment
