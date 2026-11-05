@@ -5,6 +5,10 @@ inputs:
     description: "Cachix auth token. When empty the felixschausberger cache stays pull-only."
     required: false
     default: ""
+  disk-budget-min-gb:
+    description: "Minimum free GB on / the job may start building with; empty skips the assertion. Closure-warming jobs opt in because a host instantiation needs ~30-45 GB and the runner fleet hands out 72 GB and 145 GB volumes."
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -21,9 +25,29 @@ runs:
       if: runner.os == 'Linux'
       run: |
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-          /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          /usr/local/share/boost /opt/hostedtoolcache/CodeQL \
+          /usr/share/swift /usr/share/miniconda /usr/local/cargo /usr/local/rustup
+        docker system prune --all --force >/dev/null 2>&1 || true
         df -h /
       shell: bash
+    # Closure instantiation is the disk sink, not the cache push: a warm
+    # substituter shortens a build but the store still holds the whole
+    # closure, so a runner with too little space dies mid-build with
+    # confusing eval-cache sqlite errors ("No space left on device" on
+    # run 41934349363, 2026-11-04). Failing loudly here keeps the failure
+    # class visible in the tracking issue instead of inside a build log.
+    - name: Assert runner disk budget
+      if: runner.os == 'Linux' && inputs.disk-budget-min-gb != ''
+      run: |
+        avail=$(df -BG --output=avail / | tail -n 1 | tr -dc '0-9')
+        echo "available=${avail}G required=${DISK_BUDGET}G"
+        if [ "$avail" -lt "$DISK_BUDGET" ]; then
+          echo "::error::disk budget insufficient: ${avail}G free < ${DISK_BUDGET}G required; the runner would overflow during closure instantiation (ENOSPC class)"
+          exit 1
+        fi
+      shell: bash
+      env:
+        DISK_BUDGET: ${{ inputs.disk-budget-min-gb }}
     - name: Install Nix
       # Single source of truth for the workflow Nix configuration. Every
       # workflow used to carry its own copy of this block and they drifted

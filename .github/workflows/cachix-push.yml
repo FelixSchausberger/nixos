@@ -52,6 +52,7 @@ jobs:
         uses: ./.github/actions/nix-setup
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          disk-budget-min-gb: "45"
       - name: Build ${{ matrix.host }}
         uses: ./.github/actions/build-host
         with:
@@ -103,5 +104,6 @@ jobs:
         uses: ./.github/actions/nix-setup
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          disk-budget-min-gb: "45"
       - name: Build portable recovery ISO
         run: nix build .#installer-iso-portable --print-out-paths
