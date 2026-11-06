@@ -114,6 +114,32 @@ benefit for single quick changes.
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.
 
+   Composition with herdr-board (dispatch seat): cards are optional and never
+   a claim on the workspace — the change description is. A task that wants
+   the kanban seat gets a card after the workspace exists (label =
+   `nixos-ws-<task>`, cwd = the workspace directory; the daemon creates the
+   herdr workspace on first dispatch):
+
+   ```bash
+   board card create -d "Task prompt..." --space-kind new-workspace \
+     --space-ref nixos-ws-<task> --space-cwd "$HOME/.local/share/ocws/nixos-ws-<task>" \
+     --harness opencode
+   board card move <card-id> Sprint   # auto columns dispatch
+   ```
+
+   Every ocws removal path (`done`, `rm`, `gc`) cancels open runs and
+   archives the workspace's cards before the directory rip, guarded silent
+   when the board daemon is not running, so a card never outlives its
+   directory and a late dispatch cannot fall back to a wrong cwd.
+
+   Board scope: never run `board project create/select/open` from inside a
+   workspace. Each jj workspace's `.git` file makes it its own canonical git
+   root, so the un-pinned first board command bootstraps a per-workspace
+   project (verified live). The fleet exports `BOARD_SCOPE_PATH` into herdr
+   panes and interactive shells, and the board selection is pinned to
+   `/per/etc/nixos` once; with those in place a bare board command from any
+   workspace resolves the repo project.
+
 6. Park a session that must idle on an outside blocker (an upstream fix, a
    device shipment) instead of keeping its pane alive as the only preservation:
 

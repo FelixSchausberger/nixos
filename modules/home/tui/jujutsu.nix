@@ -10,7 +10,7 @@
   cfg = config.tui.jujutsu;
 
   ocws = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.ocws;
-
+  herdrBoard = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.herdr-board;
   # Single-line badge the starship prompt renders; written by the ocws-gc
   # timer below so the prompt never pays for the jj classification itself.
   badgeFile = "${config.xdg.cacheHome}/ocws/badge";
@@ -167,6 +167,11 @@ in {
         Type = "oneshot";
         ExecStart = toString (pkgs.writeShellScript "ocws-gc" ''
           set -euo pipefail
+          # ocws's herdr-board card cleanup resolves board and herdr from PATH,
+          # which a bare user unit does not carry; extend it only while the
+          # board module is enabled (herdr ships fleet-wide, the packaged
+          # board comes from the flake).
+          ${lib.optionalString config.tui.herdrBoard.enable "PATH=${herdrBoard}/bin:${pkgs.herdr}/bin:$PATH"}
           repo=${lib.escapeShellArg defaults.paths.nixosConfig}
           badge=${lib.escapeShellArg badgeFile}
           [ -d "$repo" ] || exit 0

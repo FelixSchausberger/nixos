@@ -18,6 +18,13 @@
 # prompt-badge reminder, so forgotten waiting is treated like any other
 # unclean state rather than a permanent free pass.
 #
+# When herdr-board (tui.herdrBoard) is on, every removal path also cleans the
+# workspace's dispatch cards (cancel open runs, archive by task/cwd mapping,
+# close the card panes' herdr workspace) so a card can never outlive its
+# directory: dispatch after removal would run silently in $HOME (2026-11
+# trial). The hook is guard-silent - `board` absent, or no daemon running,
+# means ocws behaves exactly as before.
+#
 # Liveness ignores per-project MCP and LSP daemons: they inherit the cwd of
 # the session that spawned them and outlive it, so a cwd-only occupancy check
 # holds workspaces hostage after the session closed (2026-11 audit: five
@@ -43,6 +50,7 @@
   findutils,
   rip2,
   zellij,
+  jq,
   bash,
 }:
 writeShellApplication {
@@ -55,6 +63,7 @@ writeShellApplication {
     findutils
     rip2
     zellij
+    jq
     bash
   ];
   text = ''
@@ -408,6 +417,46 @@ writeShellApplication {
       OCWS_TASK="$task" OCWS_DIR="$dir" OCWS_ROOT="$root" OCWS_BASE="$base" \
         bash -c "$cmd" || echo "ocws: '$hook' hook failed" >&2
     }
+    # herdr-board hygiene, guard-silent: ocws never depends on the board, so
+    # every probe and call below must degrade to a no-op when the board stack
+    # is absent (no board binary, no running daemon, no herdr). A workspace's
+    # cards bind to it by the mapping convention (label "nixos-ws-<task>", or
+    # any label with an explicit space_cwd of this directory); the tui
+    # .herdrBoard module and the jj-workspaces skill carry the convention.
+    # Every removal path runs this BEFORE the directory disappears: the 2026-11
+    # trial showed that a card dispatching after its directory vanished ran
+    # silently in $HOME (herdr's cwd snapshot falls back), and a removed
+    # directory breaks a live agent mid-run while the board still records
+    # whatever the agent reports. Cancelling the open runs and archiving the
+    # cards, then closing their panes, removes the workspace occupancy the
+    # occupancy check would otherwise refuse `done`/`rm` for.
+    board_cards_cleanup() {
+      local task="$1" dir ids id wid
+      dir="$(realpath -m "$2")"
+      command -v board >/dev/null 2>&1 || return 0
+      # `board version` is the one CLI probe that never auto-starts a daemon,
+      # so a host without running board state stays boardless.
+      if [ -z "$(board version --json 2>/dev/null | jq -r 'if .daemon_version and .daemon_version != "unavailable" then .daemon_version else empty end' 2>/dev/null)" ]; then
+        return 0
+      fi
+      ids="$(board card list --project "$root" --json 2>/dev/null | jq -r --arg ref "nixos-ws-$task" --arg cwd "$dir" \
+        '[.[] | select(((.space_ref // "") | ascii_downcase) == ($ref | ascii_downcase) or (.space_cwd != null and .space_cwd == $cwd)) | .id] | .[]' 2>/dev/null)"
+      for id in $ids; do
+        # Cancel first so archive is accepted (a card with an open run cannot
+        # be archived); both fail open for an already-idle card.
+        board card run cancel "$id" >/dev/null 2>&1 || true
+        board card archive "$id" >/dev/null 2>&1 || true
+      done
+      # Board panes persist as labelled shells after a run ends and keep the
+      # directory occupied, so close the card-dispatch workspace (herdr
+      # workspaces are labelled layout units, not git worktrees).
+      if command -v herdr >/dev/null 2>&1; then
+        wid="$(herdr workspace list 2>/dev/null | jq -r --arg ref "nixos-ws-$task" \
+          '[.result.workspaces[]? | select((.label // "") == $ref) | .workspace_id] | .[]' 2>/dev/null | head -1)"
+        if [ -n "$wid" ]; then herdr workspace close "$wid" >/dev/null 2>&1 || true; fi
+      fi
+      return 0
+    }
     rip_workspace() {
       local task="$1" dir wait_marker
       dir="$(realpath -m "$(ws_root_for "$task")")"
@@ -415,6 +464,7 @@ writeShellApplication {
         echo "ocws: refusing to remove the current workspace ('$task')" >&2
         exit 1
       fi
+      board_cards_cleanup "$task" "$dir"
       run_hook pre_delete "$task" "$dir" "''${OCWS_HOOK_PRE_DELETE:-}"
       # All three removal paths (done, rm, gc) funnel through here, so the
       # wait marker cannot survive the workspace: insistence on clearing it in
@@ -579,6 +629,10 @@ writeShellApplication {
           echo "Merge the PR, then retry; or 'ocws rm --force $task' to discard." >&2
           exit 1
         fi
+        # A card's dispatch panes keep the workspace occupied after its run
+        # ended; cancel and archive the workspace's cards first so the
+        # occupancy check below passes without --force.
+        board_cards_cleanup "$task" "$(realpath -m "$(ws_root_for "$task")")"
         # A session can still hold the directory after its work merged; a
         # removal under an open session strands it, so require --force then.
         if [ "$force" != "1" ] && ws_live "$(realpath -m "$(ws_root_for "$task")")"; then
@@ -602,6 +656,9 @@ writeShellApplication {
             echo "ocws: '$task' has unmerged/uncommitted work; use 'ocws done $task' after merging, or 'ocws rm --force $task' to discard." >&2
             exit 1
           fi
+          # Same card-panes-keep-it-alive treatment as `done`: cancel and
+          # archive the workspace's cards before the occupancy check.
+          board_cards_cleanup "$task" "$(realpath -m "$(ws_root_for "$task")")"
           if ws_live "$(realpath -m "$(ws_root_for "$task")")"; then
             echo "ocws: a process is still active in '$task'; close it first, or 'ocws rm --force $task'." >&2
             exit 1

@@ -80,6 +80,19 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   settling in. Two sessions in one directory cost a foreign plan file in a push
   and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
   report them instead of committing them.
+- Left of the dispatch seat: herdr-board (tui.herdrBoard) dispatches agent
+  runs as kanban cards into a herdr workspace inside the ocws directory and
+  carries task history; it is not a second claim system - the jj change
+  description stays the claim, and cards are optional per task (label
+  `nixos-ws-<task>`, or any label plus an explicit `--space-cwd` of the
+  workspace directory). ocws's removal paths (done/rm/gc) cancel open runs
+  and archive the workspace's cards automatically when a board daemon runs,
+  so a card never outlives its directory. Dispatch a card only after
+  `ocws <task>` created the workspace, and never run `board project
+  create/select/open` from inside a workspace: each jj workspace's `.git`
+  makes it its own canonical git root, so the un-pinned first board command
+  from a workspace would fork a per-workspace project (the fleet exports
+  `BOARD_SCOPE_PATH` to herdr panes and shells, which already answers this).
 - Leave no orphan processes: clean verification runs with `pkill -f <pattern>`
   (`kill $PID` only kills a `nix run` wrapper) and confirm with `ps` and `ss`.
   Never bind a port a deployed service uses - a leftover collector test held
