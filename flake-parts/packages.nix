@@ -37,6 +37,11 @@
       {
         jj-lsp = pkgs.callPackage ../pkgs/jj-lsp {};
 
+        # herdr-board kanban: cards dispatch agents into herdr panes; the
+        # ocws workflow treats it as an optional dispatch seat (see the
+        # tui.herdrBoard module and the ocws card-cleanup hook).
+        herdr-board = pkgs.callPackage ../pkgs/herdr-board {};
+
         # Instant AI Git Commit message generator (from nixpkgs)
         inherit (pkgs) lumen;
 

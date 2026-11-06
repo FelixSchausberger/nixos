@@ -46,11 +46,15 @@
   '';
 
   # herdr detects the default shell from SHELL and spawns panes with it;
-  # agents (opencode2, claude) must resolve like a login shell.
-  serverEnvironment = [
-    "SHELL=/etc/profiles/per-user/${user}/bin/fish"
-    "PATH=${homeDir}/.local/bin:/run/wrappers/bin:${homeDir}/.nix-profile/bin:/etc/profiles/per-user/${user}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
-  ];
+  # agents (opencode2, claude) must resolve like a login shell. Pane
+  # environments contributed by other modules (tui.herdr.paneEnvironment)
+  # ride along: the server passes them to every spawned pane.
+  serverEnvironment =
+    [
+      "SHELL=/etc/profiles/per-user/${user}/bin/fish"
+      "PATH=${homeDir}/.local/bin:/run/wrappers/bin:${homeDir}/.nix-profile/bin:/etc/profiles/per-user/${user}/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
+    ]
+    ++ config.tui.herdr.paneEnvironment;
 in {
   options.tui.herdr = {
     enable =
@@ -119,6 +123,18 @@ in {
     # directory entry to cli.json when this is on.
     opencodeIntegration.enable =
       lib.mkEnableOption "opencode <-> herdr lifecycle integration (vendored plugin)";
+
+    # Extra KEY=VALUE pairs added to the session-server environment and
+    # therefore inherited by every pane. Tools contribute their own wiring
+    # here (like commandKeys) instead of editing this module's list.
+    paneEnvironment = lib.mkOption {
+      default = [];
+      description = ''
+        KEY=VALUE environment entries appended to the herdr session server's
+        serverEnvironment; every spawned pane inherits them.
+      '';
+      type = lib.types.listOf lib.types.str;
+    };
   };
 
   config = lib.mkMerge [
