@@ -179,6 +179,16 @@
               "com.sun:auto-snapshot" = "false";
             };
           };
+          # The syncoid receiver for dpool/data. Declared so fresh installs
+          # ship the same layout the runtime replication creates; it is a
+          # replica sink, not user-facing storage (do not curate files here).
+          "backup/data" = {
+            type = "zfs_fs";
+            mountpoint = "/per/mnt/backup/data";
+            options = {
+              mountpoint = "/per/mnt/backup/data";
+            };
+          };
         };
       };
     };
