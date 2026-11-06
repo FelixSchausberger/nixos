@@ -48,6 +48,7 @@ in {
       "io.heckel.ntfy"
       "com.beemdevelopment.aegis"
       "org.mozilla.fennec_fdroid" # Firefox engine; replaces org.mozilla.fenix
+      "com.github.catfriend1.syncthingfork" # the vault sync; verified: the index carries it, fdroidcl installs it
       # Bootstrap clients the 10a bench proved necessary: fdroidcl installs
       # ids without any client, but the F-Droid client stays for browsing
       # and Aurora's anonymous session serves the whole Aurora lane.
@@ -96,25 +97,16 @@ in {
         url = "https://github.com/Jman-Github/Universal-Patch-Manager";
       }
       {
-        id = "com.abdurazaaqmohammed.AntiSplit";
-        name = "AntiSplitM";
-        author = "AbdurazaaqMohammed";
-        url = "https://github.com/AbdurazaaqMohammed/AntiSplit-M";
-      }
-      {
-        # Porter is a maintained fork of Shizuku with the same API; apps
-        # built for Shizuku (e.g. SteamController-Android) work with Porter
-        # alone, so Shizuku itself is dropped (superseded).
-        id = "eu.darken.porter";
-        name = "Porter";
-        author = "d4rken-org";
-        url = "https://github.com/d4rken-org/porter";
-      }
-      {
         id = "com.steamcontroller.android";
         name = "SteamController";
         author = "SonicDX12";
         url = "https://github.com/SonicDX12/SteamController-Android";
+      }
+      {
+        id = "eu.darken.porter";
+        name = "Porter";
+        author = "d4rken-org";
+        url = "https://github.com/d4rken-org/porter";
       }
       {
         # OpenCode on the phone: the native Android client against the m920q
@@ -124,6 +116,15 @@ in {
         name = "OpenCode Mobile";
         author = "beppe2880";
         url = "https://github.com/beppe2880/opencode-mobile";
+      }
+      {
+        # Keyboard of the fleet. Bench-verified id: the 0.1.30 release APK's
+        # applicationId governs (no launcher activity, so the launcher audit
+        # never sees IMEs). Single universal APK per release: no ABI pinning.
+        id = "org.futo.inputmethod.latin";
+        name = "FUTO Keyboard";
+        author = "futo-org";
+        url = "https://github.com/futo-org/android-keyboard";
       }
     ];
 
@@ -221,7 +222,6 @@ in {
       "io.homeassistant.companion.android" # Obtainium candidate at bench
       "com.otp.octopilauncher"
       "ch.protonmail.android"
-      "com.github.catfriend1.syncthingfork"
       "com.veridonia.app"
       "com.tellm.android.app"
       "at.post.app"
@@ -260,6 +260,7 @@ in {
   dropped = [
     "app.morphe.android.youtube" # patched YouTube: not reinstated on the 10a
     "app.revanced.android.gms" # microG shim: unused; patched targets strip GMS directly
+    "com.abdurazaaqmohammed.AntiSplit" # never reinstalled on the 10a; UPM covers the patch flows
     "app.revanced.manager"
     "app.revanced.manager.flutter"
     "com.cisco.anyconnect.vpn.android.avf"
