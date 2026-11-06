@@ -234,7 +234,8 @@ in {
       "com.wizards.mtga"
       "com.playdigious.deadcells.mobile"
 
-      # Car2go: service retired; the exact package id keeps a bench check.
+      # Car2go: the official client is verified working on the 10a despite
+      # the 9a-era retirement claim; the row keeps a fresh install reproducible.
       "com.car2go"
     ];
 
@@ -245,7 +246,7 @@ in {
       "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on."
       "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
-      "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) for GMS-free targets only; patched YouTube and patched Maps are dead by design on GrapheneOS (no GMS, no signature spoofing), and pinning the arm64-v8a asset keeps updates on the Tensor G5 flavor."
+      "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G5 flavor."
       "Porter: start once via its wireless-debugbing flow; the service stops on device restart, so reopen it after a reboot before SteamController talks to the controller."
       "Re-add the remaining PWA shortcuts the 9a had under its webapk stubs, from Vanadium; do not resurrect the Collie bridge PWA (OpenCode runs native now)."
       "OpenCode Mobile: run `opencode pair --url https://m920q.tailf2f0ca.ts.net:8444` on m920q and scan the printed QR; approvals, questions and diffs then arrive in the app, with notifications handled natively."
@@ -256,9 +257,8 @@ in {
   # Dropped by decision (9a audit plus user sign-off), kept as documentation
   # so a later manifest pass does not silently resurrect them.
   dropped = [
-    "app.morphe.android.youtube" # patched YouTube: needs GMS, GrapheneOS has none
-    "app.revanced.android.gms" # microG shim: same GMS dependency
-    "org.ungoogled.android.apps.maps" # morphe-patched Maps: same GMS dependency
+    "app.morphe.android.youtube" # patched YouTube: not reinstated on the 10a
+    "app.revanced.android.gms" # microG shim: unused; patched targets strip GMS directly
     "app.revanced.manager"
     "app.revanced.manager.flutter"
     "com.cisco.anyconnect.vpn.android.avf"
