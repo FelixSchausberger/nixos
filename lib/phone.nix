@@ -86,10 +86,11 @@ in {
       {
         # UPM runs ReVanced, Morphe and Reseam patch bundles in one place;
         # its runtimes bundle the Morphe and Reseam engines, so the two
-        # dedicated managers stay dropped. Pin the arm64-v8a asset in
-        # Obtainium (Tensor G5; universal covers device families and
-        # re-picks flavors per update).
-        id = "app.jman.upm";
+        # dedicated managers stay dropped. Bench-verified id: the APK's
+        # applicationId (app/build.gradle.kts) governs, and Obtainium
+        # matches imports against it. Pin the arm64-v8a asset in Obtainium
+        # (Tensor G5; universal re-picks flavors per update).
+        id = "app.universal.patch.manager";
         name = "UPM";
         author = "Jman-Github";
         url = "https://github.com/Jman-Github/Universal-Patch-Manager";
