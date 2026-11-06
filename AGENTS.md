@@ -5,6 +5,21 @@ rebuild prevention, rm shim, gh CLI preference) is defined globally in
 `~/.config/opencode/AGENTS.md`; this file adds only what is specific to this
 repository.
 
+## GitHub purge in flight (support ticket #4956676)
+
+History was rewritten 2026-11-05 with `git filter-repo
+--sensitive-data-removal` and force-pushed; GitHub Support is purging the
+archived pull refs and cached views (ticket
+`help.github.com/ticket/personal/0/4956676`). While the ticket is open:
+
+- No history rewrites or force-pushes of `main`. Normal append pushes stay
+  subject to the usual user authorization for deployed changes, and every
+  push must pass `prek run --all-files`; the `forbid-corporate-strings`
+  blocklist applies permanently, ticket or not.
+- Full incident context (restricted file, user-owned, never echoed into tool
+  output): `~/.local/share/ocws/phone-check-incident-notes.md`.
+- Remove this section only after the user reports the ticket closed.
+
 ## Repository
 
 Personal NixOS and Home Manager configuration built on flakes and flake-parts.
