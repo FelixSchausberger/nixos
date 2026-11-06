@@ -52,7 +52,7 @@ in {
       type = lib.types.str;
       # Static tailnet address: discovery stays off (see settings.options), so
       # the server must reach the phone without any discovery service.
-      default = "tcp://100.77.207.10:22000";
+      default = "tcp://100.78.213.64:22000";
       description = "Static address the server uses to reach the phone";
     };
   };

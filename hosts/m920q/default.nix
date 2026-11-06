@@ -860,9 +860,9 @@ in {
     vaultMount.enable = true;
     syncthingVault = {
       enable = true;
-      # pixel-9a; device IDs are public certificate fingerprints, not secrets
+      # pixel-10a; device IDs are public certificate fingerprints, not secrets
       # (pairing also requires the phone's private key and share acceptance).
-      phoneDeviceId = "4WLIL6A-FP3MZWP-ZEYMFMT-3HO3GD3-DYZU3RK-H3TF5W4-65VNEAE-76SJLQ7";
+      phoneDeviceId = "AXUGMSS-2YR4EIS-3MNLW6R-BMB6ZXO-DHGQAJU-PYYZWJM-YASNFNY-TRPDBQ2";
     };
     homepage.enable = true;
     smartHome = {
