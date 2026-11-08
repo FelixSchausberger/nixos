@@ -70,6 +70,23 @@ nix build .#installer-iso-full
 
 The ISO will be available at `result/iso/*.iso` after building.
 
+### Wireless-Only Targets
+
+The live image ships `wpa_supplicant`, `iw` and `dhcpcd`, so `nmtui` can join
+a network by hand. To remove the console typing entirely, bake a WiFi profile
+into the image at build time. Credentials never enter the repository: they
+come from the environment through an impure evaluation, and CI (pure builds)
+produces the plain image:
+
+```bash
+NIXOS_INSTALLER_WIFI_SSID='<ssid>' \
+NIXOS_INSTALLER_WIFI_PSK="$(sops -d secrets/secrets.yaml | yq -r '.wifi."<ssid>"')" \
+nix build --impure .#installer-iso-minimal
+```
+
+The profile lands in `/etc/NetworkManager/system-connections/` (mode 0600)
+and autoconnects on boot. Ethernet-attached targets never need this.
+
 ## Preparing Installation Media
 
 ### USB Drive (Linux)
