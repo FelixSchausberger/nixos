@@ -1,6 +1,7 @@
 # Surface Pro configuration with Stylix theming
 {
   inputs,
+  config,
   pkgs,
   lib,
   ...
@@ -70,6 +71,12 @@ in {
   # must never repeat across ZFS hosts (pool import ownership conflicts).
   networking.hostId = lib.mkForce "4903fe7e";
 
+  # The Marvell 88W8897 stays in world roaming without an explicit regulatory
+  # domain, where mwifiex returns zero scan results and iwd fails activation
+  # with CMD_TRIGGER_SCAN: Operation not supported. A runtime iw reg set only
+  # holds until reboot, so pin the domain from kernel boot.
+  boot.kernelParams = ["cfg80211.ieee80211_regdom=DE"];
+
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel
   boot.kernelPackages = pkgs.lib.mkForce pkgs.linuxPackages;
@@ -105,6 +112,13 @@ in {
   # in the power-saving specialisation. Surface manages power via power-profiles-daemon.
   services.tlp.enable = lib.mkForce false;
 
-  # Tailscale for fixed reachability across networks (MagicDNS)
-  modules.system.homelab.tailscale.enable = true;
+  # Tailscale for fixed reachability across networks (MagicDNS). The shared
+  # reusable key comes from sops; the expiry mirrors m920q's tracking so the
+  # rotation reminder covers both nodes.
+  sops.secrets."tailscale/auth-key" = {};
+  modules.system.homelab.tailscale = {
+    enable = true;
+    authKeyFile = config.sops.secrets."tailscale/auth-key".path;
+    authKeyExpires = "2027-01-14";
+  };
 }
