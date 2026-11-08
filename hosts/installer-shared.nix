@@ -51,6 +51,15 @@
     cfg = config.isoShared;
     authorizedKeysFile = ./installer/authorized_keys;
     hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
+
+    # Optional WiFi bootstrap: SSID/PSK arrive through the environment at
+    # build time and never touch the repository. getEnv is empty under pure
+    # evaluation, so CI builds the plain image:
+    #   NIXOS_INSTALLER_WIFI_SSID=... NIXOS_INSTALLER_WIFI_PSK=... \
+    #     nix build --impure .#installer-iso-minimal
+    wifiSsid = builtins.getEnv "NIXOS_INSTALLER_WIFI_SSID";
+    wifiPsk = builtins.getEnv "NIXOS_INSTALLER_WIFI_PSK";
+    hasWifi = wifiSsid != "" && wifiPsk != "";
   in {
     networking.hostName = cfg.hostName;
 
@@ -134,6 +143,13 @@
         wget
         git
         tmux
+        # Wireless bring-up tools. NetworkManager drives the association for
+        # nmtui, but the CLI helpers are not on PATH by default and
+        # wireless-only targets (laptops, Surface-class tablets) need them
+        # when the association has to be done by hand.
+        wpa_supplicant
+        iw
+        dhcpcd
       ])
       ++ [
         inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}.disko
@@ -153,6 +169,51 @@
     networking.networkmanager.enable = true;
     networking.wireless.enable = lib.mkForce false;
     networking.wireless.iwd.enable = lib.mkForce false;
+
+    # mwifiex (Marvell 88W8897 in Surface Pro 2017-class tablets) drops scans
+    # and associations under the card's default power saving.
+    networking.networkmanager.wifi.powersave = false;
+
+    # The 88W8897 also wedges when PCIe L1 substates engage; linux-surface
+    # recommends keeping port PM off on these machines. Live image only.
+    boot.kernelParams = ["pcie_port_pm=off"];
+
+    # linux-firmware ships mrvl/pcie8897_uapsta.bin only zstd-compressed, and
+    # the live kernel's firmware loader does not decompress it, leaving the
+    # adapter without firmware (empty iw scan, no carrier). Ship the
+    # uncompressed blob explicitly.
+    hardware.firmware = [
+      (pkgs.runCommand "mwifiex-8897-firmware" {} ''
+        install -Dm644 ${pkgs.fetchurl {
+          url = "https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/plain/mrvl/pcie8897_uapsta.bin";
+          hash = "sha256-z09R9BvX701/5l+3a4oqCJe8cKB0K8SuoT2TsD//0Do=";
+        }} $out/lib/firmware/mrvl/pcie8897_uapsta.bin
+      '')
+    ];
+
+    # A baked profile lets wireless-only machines join the network without
+    # console typing. ensureProfiles materialises it with NetworkManager's
+    # required permissions; the environment.etc shortcut produced a
+    # world-readable keyfile that NetworkManager silently ignored.
+    networking.networkmanager.ensureProfiles.profiles = lib.optionalAttrs hasWifi {
+      installer-wifi = {
+        connection = {
+          id = "installer-wifi";
+          type = "wifi";
+          autoconnect = true;
+        };
+        wifi = {
+          mode = "infrastructure";
+          ssid = wifiSsid;
+        };
+        wifi-security = {
+          key-mgmt = "wpa-psk";
+          psk = wifiPsk;
+        };
+        ipv4.method = "auto";
+        ipv6.method = "auto";
+      };
+    };
 
     # Fix sudo-rs conflict: system/core picks sudo-rs, but nixpkgs
     # installation-device.nix sets security.sudo. Keep sudo only.
