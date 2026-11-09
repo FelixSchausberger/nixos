@@ -54,13 +54,9 @@
         timeout: 5s
         icmp:
           preferred_ip_protocol: ip4
-      # AMT WAN path: a TCP connect to the ME's TLS ports as the FRITZ!Box
-      # DNAT delivers them to an off-LAN client. Both ports down = the ME went
-      # silent (it stops ARP-answering after MEBx sessions; recovery is an
-      # unplug-60s power reset). 16993 open with 16995 down = the m920q-amt
-      # device record lost the 192.168.178.10 binding (FRITZ!Box UI: re-assign
-      # the permanent IPv4); the hairpin probe rides the same rule resolution.
-      amt_tcp:
+      # Raw TCP connect shared by the AMT WAN path and the Zigbee coordinator
+      # probe: a refused connect is the signal, no payload is exchanged.
+      tcp_connect:
         prober: tcp
         timeout: 5s
         tcp:
@@ -87,6 +83,11 @@
   ];
 
   hasWallPlugs = cfg.wallPower.plugs != {};
+
+  smartHome = config.modules.system.homelab.smartHome;
+  # Zigbee probes exist only with a configured coordinator URL; the TCP probe
+  # derives its target from it and the frontend probe from frontendPort.
+  smartHomeProbes = smartHome.enable && smartHome.coordinatorUrl != null;
 
   # The alerting host's own name. Every scrape job carries it as a `host`
   # label so alert rules, notification titles and the local ntfy topic all
@@ -149,6 +150,14 @@
       (mkRule "VaultwardenDown" "urgent" "Vaultwarden is down"
         "Vaultwarden is not answering HTTP health probes ({{ $labels.instance }})"
         ''probe_success{job="blackbox",app="vaultwarden"} == 0'')
+    ])
+    ++ (lib.optionals smartHomeProbes [
+      (mkRule "Zigbee2MQTTDown" "urgent" "Zigbee2MQTT is down"
+        "Zigbee2MQTT is not serving its frontend; the bridge process is not running (coordinator, MQTT broker or configuration failure)"
+        ''probe_success{job="blackbox",app="zigbee2mqtt"} == 0'')
+      (mkRule "ZigbeeCoordinatorDown" "urgent" "Zigbee coordinator is unreachable"
+        "The SLZB coordinator is not accepting serial connections ({{ $labels.instance }}); if its Coordinator mode is USB, switch it back to LAN, otherwise reseat its cable"
+        ''probe_success{job="blackbox-zigbee"} == 0'')
     ])
     ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
       (mkRule "AdGuardDown" "urgent" "AdGuard Home DNS is down"
@@ -423,7 +432,8 @@ in {
           || config.modules.system.homelab.nextcloud.enable
           || config.modules.system.homelab.jellyfin.enable
           || config.modules.system.homelab.navidrome.enable
-          || config.modules.system.homelab.vaultwarden.enable;
+          || config.modules.system.homelab.vaultwarden.enable
+          || smartHomeProbes;
         # One static_config per service so each probe carries an "app" label:
         # the relabeling below sets instance to the probed URL, which contains
         # no service name, so alert rules must select by label instead of
@@ -478,6 +488,16 @@ in {
               # Rocket loopback port, not through the Tailscale Serve front.
               targets = ["http://127.0.0.1:${toString config.services.vaultwarden.config.ROCKET_PORT}/alive"];
               labels.app = "vaultwarden";
+              labels.host = localHost;
+            }
+          ]
+          ++ lib.optionals smartHomeProbes [
+            {
+              # The frontend listens only after herdsman reaches the
+              # coordinator and the MQTT connection is up, so the probe
+              # reports the whole bridge, not just the UI.
+              targets = ["http://127.0.0.1:${toString smartHome.frontendPort}/"];
+              labels.app = "zigbee2mqtt";
               labels.host = localHost;
             }
           ];
@@ -657,12 +677,15 @@ in {
           }
           {
             # The WAN path rides the same FRITZ!Box DNAT an off-LAN client
-            # takes, so a failure here means the AMT rules no longer resolve
-            # to the ME (device record binding) or the ME went silent.
+            # takes: both TLS ports down means the ME went silent (it stops
+            # ARP-answering after MEBx sessions; recovery is an unplug-60s
+            # power reset), while 16993 up with 16995 down means the
+            # m920q-amt device record lost the 192.168.178.10 binding
+            # (FRITZ!Box UI: re-assign the permanent IPv4).
             job_name = "blackbox-amt";
             scrape_interval = "30s";
             metrics_path = "/probe";
-            params.module = ["amt_tcp"];
+            params.module = ["tcp_connect"];
             static_configs = [
               {
                 targets = [
@@ -670,6 +693,24 @@ in {
                   "116.204.198.109:16993"
                 ];
                 labels.probe = "amt-wan";
+                labels.host = localHost;
+              }
+            ];
+            relabel_configs = proberRelabel 9115;
+          }
+        ]
+        ++ lib.optionals smartHomeProbes [
+          {
+            # The coordinator serves its radio as a serial port over TCP; a
+            # refused connect is what leaves zigbee2mqtt restart-looping.
+            job_name = "blackbox-zigbee";
+            scrape_interval = "30s";
+            metrics_path = "/probe";
+            params.module = ["tcp_connect"];
+            static_configs = [
+              {
+                targets = [(lib.removePrefix "tcp://" smartHome.coordinatorUrl)];
+                labels.probe = "zigbee-coordinator";
                 labels.host = localHost;
               }
             ];

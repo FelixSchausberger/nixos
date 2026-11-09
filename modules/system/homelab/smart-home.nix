@@ -5,8 +5,8 @@
 #   - The coordinator is reached over the network, not USB: SLZB-OS serves each
 #     radio of the MR4U on a TCP port (the MR manual lists 6638/7638 as the
 #     per-slot defaults; the device dashboard shows the exact values). Radio 1
-#     (CC2674P10) runs the Zigbee 3.0 coordinator firmware; radio 2
-#     (EFR32MG26) stays spare for a later Matter-over-Thread border router
+#     (EFR32MG26) runs the Zigbee 3.0 coordinator firmware; radio 2
+#     (CC2674P10) stays spare for a later Matter-over-Thread border router
 #     (services.openthread-border-router + services.matter-server), so the
 #     bulbs keep their full Zigbee feature set either way.
 #   - Mosquitto binds loopback only and authenticates nobody: its only clients
@@ -99,6 +99,10 @@ in {
         assertion =
           (!builtins.elem cfg.httpsPort servePorts) && (!builtins.elem cfg.frontendHttpsPort servePorts) && cfg.httpsPort != cfg.frontendHttpsPort;
         message = "modules.system.homelab.smartHome httpsPort/frontendHttpsPort must differ from the zellij-web, opencode-web, homepage, Prometheus and vaultwarden Tailscale Serve ports and from each other";
+      }
+      {
+        assertion = cfg.coordinatorUrl == null || lib.hasPrefix "tcp://" cfg.coordinatorUrl;
+        message = "modules.system.homelab.smartHome.coordinatorUrl must be null or a tcp://host:port URL";
       }
     ];
 
