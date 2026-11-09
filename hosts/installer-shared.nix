@@ -52,14 +52,33 @@
     authorizedKeysFile = ./installer/authorized_keys;
     hasAuthorizedKeys = builtins.pathExists authorizedKeysFile;
 
-    # Optional WiFi bootstrap: SSID/PSK arrive through the environment at
-    # build time and never touch the repository. getEnv is empty under pure
-    # evaluation, so CI builds the plain image:
-    #   NIXOS_INSTALLER_WIFI_SSID=... NIXOS_INSTALLER_WIFI_PSK=... \
+    # Optional WiFi bootstrap: a build-time file of ssid=psk lines (one per
+    # network) exported as NIXOS_INSTALLER_WIFI_FILE. Credentials never touch
+    # the repository; getEnv is empty under pure evaluation, so CI builds the
+    # plain image:
+    #   NIXOS_INSTALLER_WIFI_FILE=/tmp/wifi-networks.conf \
     #     nix build --impure .#installer-iso-minimal
-    wifiSsid = builtins.getEnv "NIXOS_INSTALLER_WIFI_SSID";
-    wifiPsk = builtins.getEnv "NIXOS_INSTALLER_WIFI_PSK";
-    hasWifi = wifiSsid != "" && wifiPsk != "";
+    #
+    # The fleet profile in modules/system/wifi.nix substitutes $WIFI_PSK from
+    # /run/secrets/wifi/env, a file only sops-nix can produce on installed
+    # hosts. On the live image sops has no key, so the profile would carry an
+    # empty password and never associate. Seed the same file here from the
+    # build-time credentials; the unmodified fleet profile then works.
+    wifiFile = builtins.getEnv "NIXOS_INSTALLER_WIFI_FILE";
+    wifiPskFor = ssid: let
+      lines =
+        if wifiFile == ""
+        then []
+        else lib.splitString "\n" (builtins.readFile wifiFile);
+      matches = builtins.filter (l: builtins.match "${lib.escapeRegex ssid}=.*" l != null) lines;
+    in
+      if matches == []
+      then null
+      else let
+        m = builtins.match "[^=]+=(.*)" (builtins.head matches);
+      in
+        builtins.head m;
+    wifiPsk = wifiPskFor "PrettyFlyForAWiFi";
   in {
     networking.hostName = cfg.hostName;
 
@@ -113,11 +132,17 @@
 
     services.getty.autologinUser = lib.mkIf cfg.autoLoginUser (lib.mkForce "schausberger");
 
-    systemd.tmpfiles.rules = [
-      "d /per 0755 root root -"
-      "d /per/etc 0755 root root -"
-      "d /per/system 0755 root root -"
-    ];
+    systemd.tmpfiles.rules =
+      [
+        "d /per 0755 root root -"
+        "d /per/etc 0755 root root -"
+        "d /per/system 0755 root root -"
+      ]
+      ++ lib.optionals (wifiPsk != null) [
+        # Seeds the substitution file the fleet WiFi profile reads; sops
+        # cannot provide it on the live image (no host key).
+        "f /run/secrets/wifi/env 0400 root root - WIFI_PSK=${wifiPsk}"
+      ];
 
     # The repository travels inside the ISO; recovery/install tooling finds
     # it at the fixed path via NIXOS_CONFIG_ROOT.
@@ -176,12 +201,19 @@
 
     # The 88W8897 also wedges when PCIe L1 substates engage; linux-surface
     # recommends keeping port PM off on these machines. Live image only.
-    boot.kernelParams = ["pcie_port_pm=off"];
+    # cfg80211.ieee80211_regdom: without a regulatory domain the card stays in
+    # world roaming, where mwifiex returns zero scan results, so association
+    # never starts (surface console confirmed: empty iw scan).
+    boot.kernelParams = [
+      "pcie_port_pm=off"
+      "cfg80211.ieee80211_regdom=DE"
+    ];
 
     # linux-firmware ships mrvl/pcie8897_uapsta.bin only zstd-compressed, and
     # the live kernel's firmware loader does not decompress it, leaving the
     # adapter without firmware (empty iw scan, no carrier). Ship the
-    # uncompressed blob explicitly.
+    # uncompressed blob explicitly. wireless-regdb lets cfg80211 apply the
+    # regulatory domain from the kernel param instead of world roaming.
     hardware.firmware = [
       (pkgs.runCommand "mwifiex-8897-firmware" {} ''
         install -Dm644 ${pkgs.fetchurl {
@@ -189,29 +221,71 @@
           hash = "sha256-z09R9BvX701/5l+3a4oqCJe8cKB0K8SuoT2TsD//0Do=";
         }} $out/lib/firmware/mrvl/pcie8897_uapsta.bin
       '')
+      pkgs.wireless-regdb
     ];
 
-    # A baked profile lets wireless-only machines join the network without
-    # console typing. ensureProfiles materialises it with NetworkManager's
-    # required permissions; the environment.etc shortcut produced a
-    # world-readable keyfile that NetworkManager silently ignored.
-    networking.networkmanager.ensureProfiles.profiles = lib.optionalAttrs hasWifi {
-      installer-wifi = {
-        connection = {
-          id = "installer-wifi";
-          type = "wifi";
-          autoconnect = true;
-        };
-        wifi = {
-          mode = "infrastructure";
-          ssid = wifiSsid;
-        };
-        wifi-security = {
-          key-mgmt = "wpa-psk";
-          psk = wifiPsk;
-        };
-        ipv4.method = "auto";
-        ipv6.method = "auto";
+    # Baked profiles let wireless-only machines join the network without
+    # console typing. Seeding the fleet profile's substitution file (above) is
+    # what actually authenticates: the profile itself comes from
+    # modules/system/wifi.nix and reads $WIFI_PSK from that path.
+
+    # The live image's NetworkManager has no usable WiFi plugin
+    # (wlp1s0: unavailable, 'failed to find VPN plugin for wifi'), so the
+    # radio is driven directly by wpa_supplicant. The previous install's
+    # saved profiles carry credentials that are known to work against the
+    # AP, so the service walks them until one associates, then DHCPs.
+    systemd.services.installer-wifi-import = {
+      description = "Join WiFi using the previous install's saved profiles";
+      wantedBy = ["multi-user.target"];
+      after = ["systemd-udev-settle.service"];
+      path = with pkgs; [
+        wpa_supplicant
+        iw
+        dhcpcd
+        util-linux
+        gnused
+        gnugrep
+        coreutils
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        set -eu
+        mkdir -p /mnt/old
+        mount -o ro /dev/nvme0n1p2 /mnt/old 2>/dev/null || true
+        rfkill unblock all || true
+        ip link set wlp1s0 up || true
+        touch /etc/dhcpcd.conf
+        for f in /mnt/old/etc/NetworkManager/system-connections/*.nmconnection; do
+          [ -e "$f" ] || continue
+          ssid=$(sed -n 's/^ssid=//p' "$f" | head -n1)
+          psk=$(sed -n 's/^psk=//p' "$f" | head -n1)
+          [ -n "$ssid" ] && [ -n "$psk" ] || continue
+          echo "trying $ssid"
+          wpa_passphrase "$ssid" "$psk" > /tmp/w.conf
+          wpa_supplicant -B -i wlp1s0 -c /tmp/w.conf 2>/dev/null || true
+          sleep 7
+          if iw dev wlp1s0 link | grep -q '^Connected'; then
+            echo "associated $ssid"
+            dhcpcd -4 wlp1s0 || true
+            break
+          fi
+          pkill -x wpa_supplicant || true
+        done
+      '';
+    };
+
+    # Some Surface firmware leaves the radio soft-blocked until an explicit
+    # unblock; wlp1s0 otherwise reports 'unavailable' in NetworkManager.
+    systemd.services.wifi-unblock = {
+      description = "Unblock the WiFi radio before NetworkManager starts";
+      wantedBy = ["multi-user.target"];
+      before = ["NetworkManager.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.util-linux}/bin/rfkill unblock all";
       };
     };
 

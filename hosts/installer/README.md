@@ -73,19 +73,28 @@ The ISO will be available at `result/iso/*.iso` after building.
 ### Wireless-Only Targets
 
 The live image ships `wpa_supplicant`, `iw` and `dhcpcd`, so `nmtui` can join
-a network by hand. To remove the console typing entirely, bake a WiFi profile
+a network by hand. To remove the console typing entirely, bake WiFi profiles
 into the image at build time. Credentials never enter the repository: they
-come from the environment through an impure evaluation, and CI (pure builds)
-produces the plain image:
+come from a build-time file through an impure evaluation, and CI (pure builds)
+produces the plain image.
+
+Create a file with the fleet SSID's credentials (`PrettyFlyForAWiFi=<psk>`,
+matching the profile in `modules/system/wifi.nix`), then:
 
 ```bash
-NIXOS_INSTALLER_WIFI_SSID='<ssid>' \
-NIXOS_INSTALLER_WIFI_PSK="$(sops -d secrets/secrets.yaml | yq -r '.wifi."<ssid>"')" \
-nix build --impure .#installer-iso-minimal
+NIXOS_INSTALLER_WIFI_FILE=/path/to/wifi.conf \
+  nix build --impure .#installer-iso-minimal
 ```
 
-The profile lands in `/etc/NetworkManager/system-connections/` (mode 0600)
-and autoconnects on boot. Ethernet-attached targets never need this.
+The build seeds `/run/secrets/wifi/env` at boot with the PSK the fleet's
+NetworkManager profile substitutes, so the unmodified profile authenticates
+on the live image (sops cannot provide that file without a host key). A
+`wifi-unblock` oneshot clears firmware soft-blocks before NetworkManager
+starts. Ethernet targets never need any of this.
+`mrvl/pcie8897_uapsta.bin` is shipped uncompressed for Surface-class Marvell
+88W8897 adapters, whose firmware the live kernel cannot decompress from the
+zstd blob in `linux-firmware`; `cfg80211.ieee80211_regdom=DE` keeps the card
+out of world-roaming, where mwifiex returns zero scan results.
 
 ## Preparing Installation Media
 

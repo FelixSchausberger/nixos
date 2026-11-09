@@ -161,6 +161,7 @@ in {
         rsync -az --delete -e "ssh ''${ssh_opts[*]}" \
           --exclude='result*' \
           --exclude='.direnv' \
+          --exclude='.git' \
           ./ "root@$TARGET_IP:/tmp/nixos-config/"
 
         # Partition with the disko binary shipped in the ISO (pinned by the
@@ -188,9 +189,17 @@ in {
         # mkswap overwrites the dm-crypt header; NixOS will re-create it on first boot.
         # Abort when the labeled scan finds nothing: guessing a device here and
         # running mkswap on it would destroy whatever it holds.
+        # .git is excluded above: in a jj secondary workspace it is a
+        # worktree pointer to a path the target does not have, and libgit2
+        # then fails the flake fetch. Without it the copy evaluates as a
+        # plain path flake, which is all nixos-install needs.
+        #
+        # Disko labels partitions <disk>-<partition> by default (e.g.
+        # disk-main-swap), so matching only the literal 'swap' misses every
+        # host that does not set name = "swap" explicitly.
         echo "Activating swap partition for install phase..."
         ssh "''${ssh_opts[@]}" "root@$TARGET_IP" \
-          'SWAP=$(lsblk -rno NAME,PARTLABEL | awk "$2==\"swap\"{print \"/dev/\"\$1}"); [[ -z "$SWAP" ]] && { echo "ERROR: no partition labeled swap found; refusing to guess" >&2; exit 1; }; mkswap "$SWAP" && swapon "$SWAP"'
+          'SWAP=$(lsblk -rno NAME,PARTLABEL | awk "$2 ~ /(^|-|_)swap$/{print \"/dev/\"\$1}" | head -1); [[ -z "$SWAP" ]] && { echo "ERROR: no swap partition found; refusing to guess" >&2; exit 1; }; mkswap "$SWAP" && swapon "$SWAP"'
 
         # Memory optimization: use existing lock file, limit parallelism, enable eval cache.
         # The token is piped over SSH stdin and read into a remote variable:
