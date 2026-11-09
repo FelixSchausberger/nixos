@@ -1,10 +1,10 @@
 # GrapheneOS provisioning for the Pixel 10a, built from lib/phone.nix. A
 # desktop-side (m920q) helper: `pair` wires up wireless adb, `apply` pushes the
-# manifest settings and the F-Droid lane and prints the interactive-lane
-# checklists, `links` renders the Obtainium bulk import, `check` audits the
-# result against the manifest. Android-side state (sign-ins, patcher runs) has
-# no machine interface, so those steps print as a checklist instead of lying
-# about being runnable.
+# manifest settings and the F-Droid lane for the owner or the private space and
+# prints the interactive-lane checklists, `links` renders the Obtainium bulk
+# import, `check` audits the result against the manifest. Android-side state
+# (sign-ins, patcher runs) has no machine interface, so those steps print as a
+# checklist instead of lying about being runnable.
 {
   writeText,
   writeShellScriptBin,
@@ -28,11 +28,34 @@ in
             MANIFEST=${manifestJson}
             # The privacy lane lives outside the repository by design:
             # user-managed file, never committed; missing file is a no-op.
+            # It targets the private space, the profile that hides its apps.
             PRIVATE=''${HOME}/.config/pixel-provision/private-apps.json
+            PROFILE=owner
 
-            lane() { jq -r ".$1[]" "$MANIFEST"; }
+            set_profile() {
+              PROFILE="''${1:-owner}"
+              case "$PROFILE" in
+                owner|private) ;;
+                *) echo "unknown profile: $PROFILE (use owner or private)" >&2; exit 1 ;;
+              esac
+            }
+
+            lanes_path() {
+              case "$PROFILE" in
+                owner) echo ".lanes" ;;
+                private) echo ".privateSpace.lanes" ;;
+              esac
+            }
+
+            lane() {
+              if [ "$1" = obtainium ]; then
+                jq -r "$(lanes_path).obtainium[].id" "$MANIFEST"
+              else
+                jq -r "$(lanes_path).$1[]" "$MANIFEST"
+              fi
+            }
             private_lane() {
-              if [ -f "$PRIVATE" ]; then
+              if [ "$PROFILE" = private ] && [ -f "$PRIVATE" ]; then
                 jq -r '.aurora[] // empty' "$PRIVATE"
               fi
             }
@@ -44,8 +67,22 @@ in
               fi
             }
 
+            target_user() {
+              case "$PROFILE" in
+                owner) echo 0 ;;
+                private)
+                  u=$("$ADB" shell cmd user list -v | sed -n 's/.*id=\([0-9]\+\).*type=profile\.PRIVATE.*parentId=0.*/\1/p' | head -n1)
+                  if [ -z "$u" ]; then
+                    echo "no private space under the main user" >&2
+                    exit 1
+                  fi
+                  echo "$u"
+                  ;;
+              esac
+            }
+
             obtainium_bulk_link() {
-              payload=$(jq -c '[.lanes.obtainium[] | {id, url, author, name}]' "$MANIFEST")
+              payload=$(jq -c "[$(lanes_path).obtainium[] | {id, url, author, name}]" "$MANIFEST")
               encoded=$(printf %s "$payload" | jq -sRr @uri)
               echo "obtainium://apps/$encoded"
             }
@@ -80,24 +117,27 @@ in
                 ;;
               apply)
                 ensure_device
+                set_profile "''${2:-owner}"
+                u=$(target_user)
                 nextdns=$(nextdns_resolution)
+                echo "== profile: $PROFILE (user $u)"
                 echo "== system settings"
                 while IFS=$'\t' read -r key value; do
-                  "$ADB" shell settings put global "$key" "$value"
+                  "$ADB" shell settings --user "$u" put global "$key" "$value"
                 done < <(jq -r '.settings.global[] | @tsv' "$MANIFEST")
                 while IFS=$'\t' read -r key value; do
-                  # always_on_vpn_* rows: bench-verified on the first 10a run; a
-                  # re-run converges if the keys differ.
-                  "$ADB" shell settings put secure "$key" "$value" || true
+                  # always_on_vpn_* rows: the shared settings keep Tailscale
+                  # always-on without lockdown for both profiles.
+                  "$ADB" shell settings --user "$u" put secure "$key" "$value" || true
                 done < <(jq -r '.settings.secure[] | @tsv' "$MANIFEST")
                 if [ -n "$nextdns" ]; then
-                  "$ADB" shell settings put global private_dns_specifier "$nextdns"
+                  "$ADB" shell settings --user "$u" put global private_dns_specifier "$nextdns"
                 else
                   echo "no NextDNS hostname given - private DNS specifier untouched" >&2
                 fi
                 echo "== F-Droid lane"
-                for id in $(lane lanes.fdroid); do
-                  fdroidcl install "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
+                for id in $(lane fdroid); do
+                  fdroidcl install -user "$u" "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
                 done
                 echo
                 echo "== Obtainium lane (interactive)"
@@ -105,23 +145,26 @@ in
                 obtainium_bulk_link
                 echo
                 echo "== Aurora lane (install manually in an anonymous session)"
-                lane lanes.aurora
-                echo
-                echo "== private lane (out-of-repo file merged at runtime)"
-                private_lane
+                lane aurora
+                if [ "$PROFILE" = private ]; then
+                  echo
+                  echo "== private lane (out-of-repo file merged at runtime)"
+                  private_lane
+                fi
                 echo
                 echo "== manual checklist"
-                jq -r '.lanes.manual[] | "- \(.)"' "$MANIFEST"
+                jq -r "$(lanes_path).manual[] | \"- \(.)\"" "$MANIFEST"
                 echo
                 echo "== dropped by decision (reference, do not install)"
                 jq -r '.dropped[]' "$MANIFEST"
                 echo
-                echo "re-run 'pixel-provision check' after the manual lanes."
+                echo "re-run 'pixel-provision check $PROFILE' after the manual lanes."
                 exit 0
                 ;;
               links)
+                set_profile "''${2:-owner}"
                 echo "Per-app (bulk below is authoritative for ids):"
-                jq -r '.lanes.obtainium[] | "obtainium://add?url=\(.url)"' "$MANIFEST"
+                jq -r "$(lanes_path).obtainium[] | \"obtainium://add?url=\(.url)\"" "$MANIFEST"
                 echo
                 echo "Bulk (one link, imports all with ids):"
                 obtainium_bulk_link
@@ -177,14 +220,30 @@ in
                 ;;
               check)
                 ensure_device
+                set_profile "''${2:-owner}"
+                u=$(target_user)
                 f=$(mktemp)
                 trap 'rm -f "$f"' EXIT
-                "$ADB" shell pm list packages -3 | sed 's/^package://' > "$f"
-                google=$(grep -c '^com\.google\.' "$f" || true)
-                echo "com.google.* installed: $google (expect 0 on GrapheneOS)"
-                grep '^com\.google\.' "$f" || true
-                echo "-- fdroid lane coverage:"
-                for id in $(lane lanes.fdroid); do
+                "$ADB" shell pm list packages -3 --user "$u" | sed 's/^package://' > "$f"
+                if [ "$PROFILE" = owner ]; then
+                  google=$(grep -c '^com\.google\.' "$f" || true)
+                  echo "com.google.* installed: $google (expect 0 on GrapheneOS)"
+                  grep '^com\.google\.' "$f" || true
+                  echo "-- fdroid lane coverage:"
+                  ids=$(lane fdroid)
+                else
+                  echo "-- sandboxed Google Play:"
+                  for id in com.google.android.gms com.android.vending com.google.android.projection.gearhead; do
+                    if grep -q "^$id$" "$f"; then
+                      echo "ok   $id"
+                    else
+                      echo "MISS $id"
+                    fi
+                  done
+                  echo "-- private lane coverage:"
+                  ids="$(lane fdroid) $(lane aurora) $(lane obtainium)"
+                fi
+                for id in $ids; do
                   if grep -q "^$id$" "$f"; then
                     echo "ok   $id"
                   else
@@ -199,9 +258,12 @@ in
           pixel-provision pair <pair-ip:port> <code> [main-ip:port]
               pair wireless debugging (code from the pairing dialog) and
               connect the main port from the wireless debugging screen.
-          pixel-provision apply    settings + fdroid lane + interactive checklists
-          pixel-provision links    obtainium deep links (bulk + per app)
-          pixel-provision check    Google-free and lane-coverage audit
+          pixel-provision apply [owner|private]
+              settings + fdroid lane + interactive checklists (default: owner)
+          pixel-provision links [owner|private]
+              obtainium deep links (bulk + per app, default: owner)
+          pixel-provision check [owner|private]
+              Google-free owner audit or private-space coverage audit
           pixel-provision widgets  stage the termux power-widget bundle (key,
                                    ssh config, ~/.shortcuts scripts via Download)
         env: NEXTDNS=<hostname>, ADB=<path>
