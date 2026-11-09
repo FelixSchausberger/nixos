@@ -45,11 +45,7 @@ in {
     rev = "64001df4d23267796c254bc4c0810890fc5af75b";
     hash = "sha256-QS09lC6yyUZA13PHERrdY/phfo1QoHAmRPpQUGL3pP8=";
     cargoLock = ./zellij-forgot.Cargo.lock;
-    # Second patch: tile 0.45 added the `no_focus` field to Action::Run.
-    cargoPatches = [
-      ./zellij-forgot.patch
-      ./zellij-forgot-0.45.patch
-    ];
+    cargoPatches = [./zellij-forgot.patch];
     inherit tileVersion;
     binaryName = "zellij_forgot";
     description = "Searchable keybind reference for the current mode";
