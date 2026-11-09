@@ -825,6 +825,9 @@ in {
     logging = {
       enable = true;
       clientSources = [inputs.self.lib.hosts.desktop.ip];
+      # SLZB-MR4U syslog sender; 192.168.178.74 is the coordinator's reserved
+      # address, the same one its zigbee2mqtt serial port uses.
+      syslogSource = "192.168.178.74";
     };
     # Garmin health-data pipeline: InfluxDB store + fetcher + Grafana
     # dashboard. Calendar overlay rides on Nextcloud (calendar.enable

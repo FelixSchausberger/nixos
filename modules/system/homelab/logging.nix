@@ -24,7 +24,7 @@
   # becomes the `host` stream label, so {host="desktop"} scopes a query to one
   # machine. `unit` and `level` are lifted from journal fields so the error view
   # can filter by service and severity without pattern-matching the message.
-  alloyConfig = endpoint: host: ''
+  alloyConfig = endpoint: host: syslog: ''
     loki.relabel "journal" {
       forward_to = []
 
@@ -46,6 +46,8 @@
       max_age       = "24h"
     }
 
+    ${syslog}
+
     loki.write "loki" {
       endpoint {
         url = "${endpoint}/loki/api/v1/push"
@@ -60,6 +62,24 @@
     then cfg.shipEndpoint
     else "http://127.0.0.1:${toString cfg.lokiPort}";
   alloyEnabled = cfg.enable || cfg.shipEndpoint != null;
+
+  # Syslog receiver for the SLZB coordinator on the aggregator only. The
+  # device buffers its boot log and flushes it when the sender starts, so the
+  # component exists to keep those lines searchable next to the journald logs.
+  # Client hosts keep it out of their config; the listener is UDP and
+  # unauthenticated, so the firewall rule below scopes it to the coordinator.
+  syslogComponent = lib.optionalString (cfg.enable && cfg.syslogSource != null) ''
+    loki.source.syslog "slzb" {
+      listener {
+        address       = "0.0.0.0:${toString cfg.syslogPort}"
+        protocol      = "udp"
+        syslog_format = "rfc3164"
+        labels        = {job = "syslog", device = "slzb-mr4u"}
+      }
+
+      forward_to = [loki.write.loki.receiver]
+    }
+  '';
 in {
   options.modules.system.homelab.logging = {
     enable = lib.mkEnableOption "Loki log aggregation (store, query, Grafana datasource)";
@@ -85,6 +105,20 @@ in {
         null on the aggregator host, which ships to the local listener; set it
         on client hosts.
       '';
+    };
+    syslogSource = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        LAN address allowed to send RFC3164 syslog to the Alloy listener. Set
+        it to the Zigbee coordinator's reserved address; null keeps the UDP
+        listener and its firewall rule out of the configuration.
+      '';
+    };
+    syslogPort = lib.mkOption {
+      type = lib.types.port;
+      default = inputs.self.lib.homelabPorts.syslog;
+      description = "UDP port of the Alloy syslog listener";
     };
   };
 
@@ -141,10 +175,14 @@ in {
       # clientSources may reach the push API. The tailnet interface is trusted,
       # so a tailnet client needs no rule here. One accept rule per source keeps
       # the generated nftables free of set-literal syntax.
-      networking.firewall.extraInputRules = lib.mkIf (cfg.clientSources != []) (
-        lib.concatMapStringsSep "\n"
-        (source: "ip saddr ${source} tcp dport ${toString cfg.lokiPort} accept")
-        cfg.clientSources
+      networking.firewall.extraInputRules = lib.mkIf (cfg.clientSources != [] || cfg.syslogSource != null) (
+        lib.concatStringsSep "\n" (
+          map
+          (source: "ip saddr ${source} tcp dport ${toString cfg.lokiPort} accept")
+          cfg.clientSources
+          ++ lib.optional (cfg.syslogSource != null)
+          "ip saddr ${cfg.syslogSource} udp dport ${toString cfg.syslogPort} accept"
+        )
       );
 
       environment.persistence."/per".directories = [
@@ -183,7 +221,7 @@ in {
         Group = lib.mkForce "alloy";
       };
       environment.etc."alloy/config.alloy".text =
-        alloyConfig alloyEndpoint config.networking.hostName;
+        alloyConfig alloyEndpoint config.networking.hostName syslogComponent;
       # Alloy keeps its journal read position under its state directory. That
       # lives on tmpfs, so an unpersisted cursor is lost every boot and the last
       # max_age window is shipped again; persisting it lets a restart resume
