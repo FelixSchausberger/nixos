@@ -291,7 +291,7 @@ jobs:
         # The branch push behind this step has failed with a transient
         # GitHub 500 (observed 2026-09-21); continue so the retry below runs.
         continue-on-error: true
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           # A PAT is mandatory here: PRs created with GITHUB_TOKEN do not
           # trigger pull_request workflows (GitHub anti-recursion rule), so
@@ -309,7 +309,7 @@ jobs:
         # differs from the branch tip, so a retry after a failed push cannot
         # duplicate commits or PRs.
         if: steps.create-pr.outcome == 'failure'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           token: ${{ secrets.LOCKS_UPDATE_PAT }}
           branch: daily-updates
