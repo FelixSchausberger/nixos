@@ -15,11 +15,14 @@ in {
   inherit nextDnsHostname;
 
   settings =
-    # System settings applied via `adb shell settings put <namespace> <key>
-    # <value>`. The private-DNS keys are the long-standing adb route to
-    # NextDNS; the always-on-VPN rows carry the plan audit's unverified
-    # marker and get checked on the flashing bench at the first run. An
-    # empty private_dns_specifier is skipped by the applying script.
+    # System settings applied via `adb shell settings --user <id> put
+    # <namespace> <key> <value>` to both the owner and the private space. The
+    # private-DNS keys are the long-standing adb route to NextDNS. Lockdown
+    # stays off: with Tailscale as the always-on app, lockdown blocks every
+    # non-VPN app while Tailscale is logged out, including the browser that
+    # must load the interactive login URL. A private space inherits these rows
+    # when it is created, so a lockdown value here would recreate the deadlock
+    # there. An empty private_dns_specifier is skipped by the applying script.
     let
       dns = nextDnsHostname;
     in {
@@ -29,7 +32,7 @@ in {
       ];
       secure = [
         ["always_on_vpn_app" "com.tailscale.ipn"]
-        ["always_on_vpn_lockdown" "1"]
+        ["always_on_vpn_lockdown" "0"]
       ];
     };
 
@@ -141,7 +144,6 @@ in {
       "com.instagram.android"
       "fr.vinted"
       "com.ticketswap.ticketswap"
-      "at.sharetoo.sharing.app"
 
       # Work and remote play (Intune/Outlook/Teams/AnyConnect/Azure
       # authenticator never made the cut: enrollment and push need Play
@@ -156,7 +158,6 @@ in {
       "com.openai.chatgpt"
       "com.deepl.mobiletranslator"
       "com.chess"
-      "com.duolingo"
 
       # Media
       "com.spotify.music"
@@ -171,23 +172,13 @@ in {
       "com.garmin.android.apps.connectmobile"
       "com.harman.ble.jbllink"
       "com.lenbrook.sovi.bluesound"
-      "chipolo.net.v3" # classic finder runs on GrapheneOS; Find-My-Device-network Spot variants need the Play network
 
       # Banks and finance
-      "at.erstebank.george"
-      "de.xcom.flatexat"
-      "se.tfbank.tfbankmobile.at"
       "at.spar.app"
-      "de.number26.android"
-      "de.traderepublic.app"
       "com.austrianapps.ventocom.hofer"
       "at.wuestenrot.klickmal.android"
-      "com.paypal.android.p2pmobile"
-      "capital.scalable.droid"
 
       # Government and health
-      "at.gv.oe.app"
-      "at.gv.oe.awp.eausweise"
       "at.digitalerimpfpass.app"
       "at.itsv.mobile.meineoegk"
       "at.valida.vorsorgeportal"
@@ -195,18 +186,14 @@ in {
       # Travel, mobility, daily life
       "at.wienerlinien.wienmobillab"
       "at.westbahn.app"
-      "de.hafas.android.oebb"
       "at.oebb.ts"
       "de.nextbike"
       "com.airbnb.android"
-      "com.ubercab"
       "com.rentalcars.handset"
       "at.lieferservice.android"
       "com.mcdonalds.mobileapp"
       "com.app.tgtg"
-      "com.austrian.connector.android"
       "at.energieag.fairteiler"
-      "at.willhaben"
       "at.is24.android"
       "com.greencopper.novarock"
       "com.plannet.milesandmoreapp"
@@ -234,10 +221,6 @@ in {
       # Games (paid titles come through the user's own Play entitlement)
       "com.wizards.mtga"
       "com.playdigious.deadcells.mobile"
-
-      # Car2go: the official client is verified working on the 10a despite
-      # the 9a-era retirement claim; the row keeps a fresh install reproducible.
-      "com.car2go"
     ];
 
     # Steps no manifest row can express: sign-ins, patcher runs, first-boot
@@ -245,6 +228,7 @@ in {
     manual = [
       "Sideload Obtainium itself from github.com/ImranR98/Obtainium/releases once, then run `pixel-provision links` and import the bulk obtainium://apps/ link it prints."
       "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on."
+      "Play-dependent banking, government and travel apps live in the private space; the owner's Aurora lane keeps only the apps that stay in this profile."
       "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
       "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G5 flavor."
@@ -253,6 +237,81 @@ in {
       "OpenCode Mobile: run `opencode pair --url https://m920q.tailf2f0ca.ts.net:8444` on m920q and scan the printed QR; approvals, questions and diffs then arrive in the app, with notifications handled natively."
       "Government-app account sign-ins happen in-app on first use; open items recorded on the bench live as comments next to their lane rows."
     ];
+  };
+
+  # The private space is the Play/Google-services profile: the owner stays
+  # free of sandboxed Play, and banking/travel apps that need Play run here.
+  # The settings above are shared. Main-profile apps come in through
+  # Settings > Security & privacy > Private space > Install available apps
+  # (Aegis, Spotify, Telegram, FUTO Keyboard); it copies the APK, not the data.
+  privateSpace = {
+    lanes = {
+      fdroid = [
+        "org.fdroid.fdroid"
+        "com.aurora.store"
+        "com.beemdevelopment.aegis"
+      ];
+
+      obtainium = [
+        {
+          id = "com.tailscale.ipn";
+          name = "Tailscale";
+          author = "tailscale";
+          url = "https://github.com/tailscale/tailscale-android";
+        }
+        {
+          id = "org.futo.inputmethod.latin";
+          name = "FUTO Keyboard";
+          author = "futo-org";
+          url = "https://github.com/futo-org/android-keyboard";
+        }
+      ];
+
+      # Play-only apps that need sandboxed Google Play. Aurora's anonymous
+      # session installs them without a Google account; add the account only
+      # if an app insists on Play licensing or Gmail.
+      aurora = [
+        # Banking and finance
+        "at.erstebank.george"
+        "de.number26.android"
+        "de.traderepublic.app"
+        "capital.scalable.droid"
+        "se.tfbank.tfbankmobile.at"
+        "com.paypal.android.p2pmobile"
+        "de.xcom.flatexat"
+
+        # Government
+        "at.gv.oe.app"
+        "at.gv.oe.awp.eausweise"
+
+        # Travel, mobility and daily life
+        "de.hafas.android.oebb"
+        "com.austrian.connector.android"
+        "com.ubercab"
+        "at.sharetoo.sharing.app"
+        "at.willhaben"
+        "com.car2go"
+
+        # Services and devices
+        "com.x8bit.bitwarden"
+        "chipolo.net.v3"
+        "com.duolingo"
+        "com.spotify.music"
+        "org.telegram.messenger"
+      ];
+
+      manual = [
+        "Install sandboxed Google Play services, Play Store and Android Auto from the GrapheneOS App Store inside the private space. No Google account is required; Aurora's anonymous session serves the Play apps. Add fel.schausberger@gmail.com only if an app insists on Play licensing."
+        "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (Aegis, Spotify, Telegram, FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
+        "Grant Play services an unrestricted battery exception in the private space, and unlock the private space after every reboot: push approvals only arrive while it is unlocked."
+        "Banking and government apps re-bind the device. Keep the Google secondary user or the Pixel 9a available until every app is verified. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
+        "Aegis: import the token export from the Google user before deleting it. The owner and the private space keep separate copies; either can approve banking logins."
+        "Spotify, Telegram, FUTO Keyboard and Aegis are also in the private lane; the owner keeps its working copies. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
+        "Tailscale: the private space is a separate node. Rename it (pixel-10a-private) and remove the stale Google-user node (pixel-10a-1) after deleting that user."
+        "UPM is not part of the private lane: sandboxed Google Play covers the patched-away dependencies. Remove it from the private space unless patched apps are still wanted."
+        "The out-of-repo privacy lane (~/.config/pixel-provision/private-apps.json) is merged into this profile's Aurora list by pixel-provision."
+      ];
+    };
   };
 
   # Dropped by decision (9a audit plus user sign-off), kept as documentation
@@ -284,9 +343,9 @@ in {
     "app.morphe.manager" # dedicated Morphe manager: UPM bundles the Morphe runtime
     "app.reseam.manager" # dedicated Reseam manager: UPM bundles Reseam's runtime; reseam's 0.39.1 separately fixes the Too-many-sessions install failure
 
-    # Four rows the user considers private live outside this repo: the
-    # manifest never carries ids for the privacy lane;
-    # pixel-provision merges ~/.config/pixel-provision/private-apps.json
-    # (ignored by the repo, user-managed) into the Aurora lane at runtime.
+    # The privacy lane lives outside this repo: the manifest never carries
+    # those ids; pixel-provision merges
+    # ~/.config/pixel-provision/private-apps.json (ignored by the repo,
+    # user-managed) into the private space's Aurora list at runtime.
   ];
 }
