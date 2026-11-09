@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 21;
+  rule_count = 23;
   rules = [
     {
       alert = "NextcloudDown";
@@ -72,6 +72,16 @@
     {
       alert = "VaultwardenDown";
       expr = "probe_success{job=\"blackbox\",app=\"vaultwarden\"} == 0";
+      priority = "urgent";
+    }
+    {
+      alert = "Zigbee2MQTTDown";
+      expr = "probe_success{job=\"blackbox\",app=\"zigbee2mqtt\"} == 0";
+      priority = "urgent";
+    }
+    {
+      alert = "ZigbeeCoordinatorDown";
+      expr = "probe_success{job=\"blackbox-zigbee\"} == 0";
       priority = "urgent";
     }
     {
@@ -172,6 +182,7 @@
     "blackbox-dns"
     "blackbox-icmp"
     "blackbox-amt"
+    "blackbox-zigbee"
     "wall-power"
   ];
   vitals_scrape_enabled = true;

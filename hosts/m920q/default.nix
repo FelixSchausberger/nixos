@@ -867,7 +867,7 @@ in {
     homepage.enable = true;
     smartHome = {
       enable = true;
-      # SLZB-MR4U radio 1 (TI CC2674P10) serves its serial port over TCP in
+      # SLZB-MR4U radio 1 (EFR32MG26) serves its serial port over TCP in
       # Ethernet mode; 192.168.178.74 is the DHCP address to reserve in the
       # Fritz!Box (MAC 72:af:09:a5:06:0c) so the endpoint never moves.
       coordinatorUrl = "tcp://192.168.178.74:6638";

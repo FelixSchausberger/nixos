@@ -95,6 +95,23 @@
           type = lib.types.bool;
           default = false;
         };
+        # monitoring.nix's Zigbee probes read the smart-home module's options;
+        # with coordinatorUrl null both probes and their rules stay out of the
+        # test, which exercises the delivery pipeline, not the coordinator.
+        smartHome = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+          };
+          coordinatorUrl = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+          };
+          frontendPort = lib.mkOption {
+            type = lib.types.port;
+            default = 8085;
+          };
+        };
         # garmin.nix reads these sibling options; the VM test does not import
         # the garmin module itself (no live Garmin credentials in CI).
         garmin = {
