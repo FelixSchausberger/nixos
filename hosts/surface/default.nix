@@ -74,8 +74,12 @@ in {
   # The Marvell 88W8897 stays in world roaming without an explicit regulatory
   # domain, where mwifiex returns zero scan results and iwd fails activation
   # with CMD_TRIGGER_SCAN: Operation not supported. A runtime iw reg set only
-  # holds until reboot, so pin the domain from kernel boot.
+  # holds until reboot. cfg80211 is a loadable module here, so a kernel
+  # command-line cfg80211.* parameter is ignored; the modprobe option sets the
+  # domain whenever the module loads. The kernelParams entry stays for kernels
+  # that build cfg80211 in.
   boot.kernelParams = ["cfg80211.ieee80211_regdom=DE"];
+  boot.extraModprobeConfig = "options cfg80211 ieee80211_regdom=DE";
 
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel
