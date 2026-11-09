@@ -6,6 +6,13 @@
 #   manager to be up (linger) so pulsesink can reach PipeWire.
 # - gui: uxplay renders into the compositor via waylandsink and is bound to
 #   niri-session.target (which guarantees WAYLAND_DISPLAY is exported).
+#
+# -vsync no is required for macOS 15.x clients before 15.3: those clients
+# report their own uptime instead of wall-clock time in the AirPlay NTP
+# timestamp. With timestamp sync enabled UxPlay drops audio buffers and
+# stalls video once the client uptime is older than the pipeline base time.
+# NTP sync is not needed for mirroring (FDH2/UxPlay#379); remove the flag
+# once all macOS clients run 15.3 or newer or UxPlay handles the client bug.
 {
   config,
   lib,
@@ -82,7 +89,7 @@ in {
           # random ephemeral ports each run, so clients discover the service
           # via mDNS but fail to connect through the fixed-port firewall rules
           # declared above.
-          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vs kmssink -as pulsesink -n Projector -nh";
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vsync no -vs kmssink -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";
@@ -123,7 +130,7 @@ in {
         serviceConfig = {
           # -p keeps uxplay on the legacy AirPlay ports declared in the
           # firewall rules above; see the headless service for details.
-          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vsync no -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";

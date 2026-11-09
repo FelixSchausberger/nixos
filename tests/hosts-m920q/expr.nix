@@ -101,4 +101,10 @@ in {
   # precedence in hosts/shared.nix depends on.
   trippy_wrapper_program = config.security.wrappers.trip.program or null;
   trippy_wrapper_capabilities = config.security.wrappers.trip.capabilities or null;
+
+  # Test: UxPlay disables NTP timestamp synchronization for macOS 15.x
+  # clients before 15.3, whose AirPlay NTP timestamp is client uptime
+  # (FDH2/UxPlay#379). The gui unit is the one m920q runs.
+  uxplay_vsync_disabled =
+    builtins.match ".*-vsync no.*" (toString config.systemd.user.services.uxplay.serviceConfig.ExecStart) != null;
 }

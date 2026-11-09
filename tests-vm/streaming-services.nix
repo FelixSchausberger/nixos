@@ -182,6 +182,11 @@ in {
     # 6. Verify uxplay package is installed on server
     server.succeed("which uxplay")
 
+    # 6b. Verify the shipped UxPlay unit disables NTP timestamp sync for
+    #     macOS 15.x clients before 15.3 (FDH2/UxPlay#379). The headless unit
+    #     is rendered even though it does not start without an HDMI hotplug.
+    server.succeed("grep -q -- '-vsync no' /etc/systemd/user/uxplay.service")
+
     # 7. Verify mock AirPlay listener is bound to RAOP port 7000
     server.wait_for_unit("mock-airplay.service")
     server.wait_for_open_port(7000)
