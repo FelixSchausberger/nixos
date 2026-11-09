@@ -24,15 +24,14 @@ in {
     license = lib.licenses.mit;
   };
   # On-demand plugins (launched via LaunchOrFocusPlugin keybind)
+  # v0.3.1 ships the zellij-tile 0.45 port and pins it in a committed lock.
   harpoon = builder.buildZellijPlugin {
     pname = "harpoon";
-    version = "0.3.0";
+    version = "0.3.1";
     owner = "Nacho114";
     repo = "harpoon";
-    rev = "7553290e22516c230e598e4fa81d91b1714a0a08";
-    hash = "sha256-JmYcbzxIF6qZs2/RKuspHqNpyDibGp9CVQJj47y/BOQ=";
-    cargoLock = ./harpoon.Cargo.lock;
-    cargoPatches = [./harpoon.patch];
+    rev = "fd5834a1bb4e076f0a54f6c966a6617247aaf317";
+    hash = "sha256-IEZqo6wHkL/7KUaX6rFuXyy6PwW/Dgywam/bgTQEZ0Q=";
     inherit tileVersion;
     description = "Jumplist for quickly navigating between often-used panes";
     homepage = "https://github.com/Nacho114/harpoon";
