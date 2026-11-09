@@ -21,7 +21,8 @@
     wms = ["niri"];
     isGui = true;
     description = "Surface tablet with Niri WM";
-    ip = "192.168.178.37";
+    ip = "192.168.178.172";
+    tailnetIp = "100.65.62.114";
   };
 
   hp-probook-wsl = {
