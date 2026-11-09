@@ -28,13 +28,15 @@ in {
     text = ''
       if [[ $# -lt 2 ]]; then
           echo "Usage: nix run .#new-host-keys generate HOSTNAME" >&2
-          echo "       nix run .#new-host-keys backup HOSTNAME [user@]TARGET_IP" >&2
+          echo "       nix run .#new-host-keys backup HOSTNAME [user@]TARGET_IP [--replace]" >&2
           echo "" >&2
           echo "generate  Keygen a host key, register the sops recipient in" >&2
           echo "          .sops.yaml, rekey secrets.yaml, and store the private" >&2
           echo "          key as Bitwarden vault item 'host/<name>'." >&2
           echo "backup    Fetch the live host key over SSH from an installed" >&2
           echo "          host, then the same registration and vault storage." >&2
+          echo "          --replace deletes a stale vault item whose key no" >&2
+          echo "          longer matches the live host instead of aborting." >&2
           echo "" >&2
           echo "Prerequisite: the Bitwarden CLI must be pointed at the fleet" >&2
           echo "Vaultwarden once: nix shell nixpkgs#bitwarden-cli -c bw config server ${vaultwardenUrl}" >&2
@@ -46,6 +48,18 @@ in {
       MODE="$1"
       HOSTNAME="$2"
       TARGET_HOST="''${3:-}"
+      # --replace lets a backup overwrite a vault item left over from an
+      # earlier key generation (e.g. the key was regenerated during an
+      # install) instead of aborting and demanding a manual bw delete.
+      REPLACE=""
+      for arg in "$@"; do
+          if [[ "$arg" == "--replace" ]]; then
+              REPLACE=1
+          fi
+      done
+      if [[ "$TARGET_HOST" == "--replace" ]]; then
+          TARGET_HOST=""
+      fi
 
       case "$MODE" in
           generate | backup) ;;
@@ -193,6 +207,20 @@ in {
               exit 1
           fi
           if [[ -n "$2" && "$item_recip" != "$2" ]]; then
+              if [[ -n "''${REPLACE:-}" ]]; then
+                  local item_id
+                  item_id=$(printf '%s' "$1" | yq -r '.id // ""')
+                  if [[ -z "$item_id" || "$item_id" == "null" ]]; then
+                      echo "Error: cannot read the id of the stale vault item 'host/$HOSTNAME'." >&2
+                      exit 1
+                  fi
+                  if ! bw delete item --session "$BW_SESSION" "$item_id" > /dev/null 2>&1; then
+                      echo "Error: failed to delete the stale vault item 'host/$HOSTNAME'." >&2
+                      exit 1
+                  fi
+                  echo "Removed the stale vault item 'host/$HOSTNAME'; storing the live key."
+                  return 3
+              fi
               echo "Error: vault item 'host/$HOSTNAME' holds a different key than the" >&2
               echo "live host (rotation in progress?). Re-back up the host or delete" >&2
               echo "the stale vault item, then rerun." >&2
@@ -273,8 +301,13 @@ in {
 
           unlock_vault
           if existing=$(bw get item --session "$BW_SESSION" "host/$HOSTNAME" 2> /dev/null) && [[ "$existing" == \{* ]]; then
-              reconcile_existing_item "$existing" "$RECIP"
-              echo "Vault item already matches the live host key."
+              rc=0
+              reconcile_existing_item "$existing" "$RECIP" || rc=$?
+              case "$rc" in
+                  0) echo "Vault item already matches the live host key." ;;
+                  3) store_item "host/$HOSTNAME" "$HOST_PRIV" "$HOST_PUB" "$FINGERPRINT" ;;
+                  *) exit 1 ;;
+              esac
           else
               store_item "host/$HOSTNAME" "$HOST_PRIV" "$HOST_PUB" "$FINGERPRINT"
           fi
