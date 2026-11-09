@@ -13,9 +13,11 @@
   # the tile dependency to `tileVersion` (derived from the nixpkgs zellij
   # version by the caller), regardless of what upstream's Cargo.toml pins.
   # Source-level API ports beyond the version bump live in the per-plugin
-  # cargoPatches. Changing tileVersion also requires regenerating each
-  # plugin's Cargo.lock (cargo generate-lockfile) — the lock must contain the
-  # forced tile version or the build fails on lock mismatch.
+  # cargoPatches. Changing tileVersion also requires regenerating the lock of
+  # every plugin that pins one in this directory (cargo generate-lockfile);
+  # plugins without a local `cargoLock` use the lock committed upstream,
+  # which must then already match tileVersion. Either way the build fails on
+  # lock mismatch.
   wasm = pkgs.pkgsCross.wasm32-wasip1;
 in {
   buildZellijPlugin = {
@@ -25,7 +27,9 @@ in {
     repo,
     rev,
     hash,
-    cargoLock,
+    # Lock copy pinned in this directory for plugins whose upstream does not
+    # commit one. Omit to use the in-tree (upstream) Cargo.lock.
+    cargoLock ? null,
     # zellij-tile/zellij-tile-utils version forced into Cargo.toml. Must match
     # the running zellij server (nixpkgs zellij) and the pinned Cargo.lock.
     tileVersion,
@@ -36,18 +40,22 @@ in {
     homepage,
     license,
   }: let
+    src = fetchFromGitHub {
+      inherit owner repo rev hash;
+    };
+    lockFile =
+      if cargoLock != null
+      then cargoLock
+      else src + "/Cargo.lock";
     unwrapped = wasm.rustPlatform.buildRustPackage {
-      inherit pname version;
-      src = fetchFromGitHub {
-        inherit owner repo rev hash;
-      };
-      cargoLock.lockFile = cargoLock;
+      inherit pname version src;
+      cargoLock.lockFile = lockFile;
       inherit cargoPatches;
       postPatch = ''
         ${lib.getExe pkgs.gnused} -i -E \
           's|(zellij-tile(-utils)? = )"[^"]*"|\1"${tileVersion}"|' \
           Cargo.toml
-        cp ${cargoLock} Cargo.lock
+        ${lib.optionalString (cargoLock != null) "cp ${cargoLock} Cargo.lock"}
       '';
       nativeBuildInputs = [wasm.lld];
       env.RUSTFLAGS = "-C linker=wasm-ld";
