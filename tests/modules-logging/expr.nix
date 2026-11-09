@@ -11,6 +11,7 @@
 {flake, ...}: let
   m920q = flake.nixosConfigurations.m920q;
   desktop = flake.nixosConfigurations.desktop;
+  lib = m920q.pkgs.lib;
 
   ml = m920q.config.modules.system.homelab.logging;
   dl = desktop.config.modules.system.homelab.logging;
@@ -26,6 +27,12 @@ in
   assert builtins.any (p: p.name == "logs") providers;
   # Loki is not opened LAN-wide: exactly the named client sources are allowed.
   assert builtins.elem "192.168.178.3" ml.clientSources;
+  # The SLZB syslog receiver exists on the aggregator only; shipping hosts
+  # must not open an unauthenticated UDP listener.
+  assert ml.syslogSource == "192.168.178.74";
+  assert ml.syslogPort == 1514;
+  assert lib.hasInfix "loki.source.syslog \"slzb\"" m920q.config.environment.etc."alloy/config.alloy".text;
+  assert !(lib.hasInfix "loki.source.syslog" desktop.config.environment.etc."alloy/config.alloy".text);
   # The desktop ships to the aggregator and runs no store of its own.
   assert dl.shipEndpoint == "http://m920q:3100";
   assert !desktop.config.services.loki.enable;
@@ -42,6 +49,8 @@ in
       m920q.config.services.loki.configuration.server.http_listen_address;
     loki_retention = m920q.config.services.loki.configuration.limits_config.retention_period;
     loki_client_sources = ml.clientSources;
+    syslog_port = ml.syslogPort;
+    syslog_source = ml.syslogSource;
     firewall_extra_input_rules = m920q.config.networking.firewall.extraInputRules;
     grafana_datasources = map (d: d.uid) datasources;
     logs_dashboard_provisioned = builtins.any (p: p.name == "logs") providers;
