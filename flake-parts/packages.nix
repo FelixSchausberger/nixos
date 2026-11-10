@@ -2,6 +2,11 @@
   perSystem = {pkgs, ...}: let
     zellijPlugins = pkgs.callPackage ../pkgs/zellij-plugins {};
 
+    # herdr-board kanban: cards dispatch agents into herdr panes; the ocws
+    # workflow treats it as the dispatch seat (see the tui.herdrBoard module
+    # and the ocws card hooks).
+    herdr-board = pkgs.callPackage ../pkgs/herdr-board {};
+
     # Bookmark slug derivation used by jjpush.
     jj-slug = pkgs.callPackage ../pkgs/jj-slug {};
 
@@ -38,9 +43,14 @@
         jj-lsp = pkgs.callPackage ../pkgs/jj-lsp {};
 
         # herdr-board kanban: cards dispatch agents into herdr panes; the
-        # ocws workflow treats it as an optional dispatch seat (see the
-        # tui.herdrBoard module and the ocws card-cleanup hook).
-        herdr-board = pkgs.callPackage ../pkgs/herdr-board {};
+        # ocws workflow treats it as the dispatch seat (see the
+        # tui.herdrBoard module and the ocws card hooks).
+        inherit herdr-board;
+
+        # One-shot idempotent seeding of the fleet board's lanes: imperative
+        # board state, run by hand on the herdr server host (see
+        # pkgs/jj-tools/board-seed.nix).
+        board-seed = pkgs.callPackage ../pkgs/jj-tools/board-seed.nix {inherit herdr-board;};
 
         # Instant AI Git Commit message generator (from nixpkgs)
         inherit (pkgs) lumen;
