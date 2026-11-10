@@ -118,9 +118,12 @@ benefit for single quick changes.
    the workspace — the change description is. On the herdr server host (the
    host whose `herdr-boardd` unit is enabled) `ocws <task>` mints the card
    itself when a board daemon is running, in the intake lane (To-Do); the
-   lanes are To-Do, Backlog, In Progress, In Review, Done, Blocked and
-   Follow Up, and moving a card into an automatic lane (In Progress or In
-   Review) dispatches an agent run in the card's workspace. A hand-built
+   lanes are To-Do, In Progress, In Review, Done and Blocked, and moving a
+   card into an automatic lane (In Progress or In Review) dispatches an
+   agent run in the card's workspace. Every card belongs to a live
+   workspace, so the board is flow-of-work, not a durable backlog: park a
+   deferred task with `ocws wait <task> reason...` (gc keeps it, and the wait
+   resurfaces after OCWS_WAIT_STALE_DAYS) instead of parking its card. A hand-built
    workspace gets its card by hand, after the workspace exists (label =
    `nixos-ws-<task>`, cwd = the workspace directory; the daemon creates the
    herdr workspace on first dispatch):

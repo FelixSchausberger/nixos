@@ -45,7 +45,7 @@ writeShellApplication {
     cards="$(timeout 5 "''${board_cmd[@]}" card list --json 2>/dev/null)" \
       || fail "cannot list cards for $board_dir"
 
-    want='["To-Do","Backlog","In Progress","In Review","Done","Blocked","Follow Up"]'
+    want='["To-Do","In Progress","In Review","Done","Blocked"]'
     have="$(jq -c '[.[] | .name]' <<<"$columns")"
     card_count="$(jq 'length' <<<"$cards")"
 
@@ -69,17 +69,20 @@ writeShellApplication {
     # Manual lanes carry no prompt: a person decides what enters them. The two
     # automatic lanes dispatch a run on entry; their prompts bind the agent to
     # the card's ocws workspace and to the board's comment/done contract.
+    # There is no backlog lane on purpose: every card belongs to a live
+    # workspace, a deferred task is parked with `ocws wait` (gc keeps it and
+    # the wait resurfaces after OCWS_WAIT_STALE_DAYS), and a board parking
+    # lane would duplicate that state and lose the card when gc reclaims the
+    # workspace. Done is the merge/cleanup queue; Blocked is the failure lane.
     in_progress_prompt='You are in the In Progress lane. Work in the ocws jj workspace at the card space cwd; the jj change description is the claim, so never create a second workspace or claim. Read the workspace jj log and diff for context, follow the repository AGENTS.md (jjwork before edits, one concern per change, run the validation battery), and do not push or deploy unless the card comments or the user ask for it. Report progress with board comment and close the stage with board done.'
     in_review_prompt='You are in the In Review lane. Review the work in the card ocws jj workspace: inspect jj log, the diff against main@origin, the claim description and the card comments. Be adversarial about correctness, failure modes and the repository rules; do not edit the work. Comment the verdict and close with board done --outcome ok when the work is sound, or --outcome fail when it needs rework (the card returns to In Progress).'
 
-    timeout 5 "''${board_cmd[@]}" column create --name Backlog --trigger manual --position 1 >/dev/null
     timeout 5 "''${board_cmd[@]}" column create --name "In Progress" --trigger auto --harness opencode \
-      --prompt "$in_progress_prompt" --position 2 >/dev/null
+      --prompt "$in_progress_prompt" --position 1 >/dev/null
     timeout 5 "''${board_cmd[@]}" column create --name "In Review" --trigger auto --harness opencode --fresh-session \
-      --prompt "$in_review_prompt" --position 3 >/dev/null
-    timeout 5 "''${board_cmd[@]}" column create --name Done --trigger manual --position 4 >/dev/null
-    timeout 5 "''${board_cmd[@]}" column create --name Blocked --trigger manual --position 5 >/dev/null
-    timeout 5 "''${board_cmd[@]}" column create --name "Follow Up" --trigger manual --position 6 >/dev/null
+      --prompt "$in_review_prompt" --position 2 >/dev/null
+    timeout 5 "''${board_cmd[@]}" column create --name Done --trigger manual --position 3 >/dev/null
+    timeout 5 "''${board_cmd[@]}" column create --name Blocked --trigger manual --position 4 >/dev/null
 
     # Wiring after creation: the targets only exist once all lanes are in
     # place, and a failure here leaves a readable, partially seeded board that
