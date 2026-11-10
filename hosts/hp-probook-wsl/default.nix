@@ -231,6 +231,10 @@ in {
         # with switch-to-configuration test (no bootloader change) seconds
         # after the bookmark moves, instead of requiring a GitHub round trip.
         localRemote.enable = true;
+        # WSL boots /nix/var/nix/profiles/system directly (there is no
+        # bootloader), so a comin switch has to be mirrored there or the next
+        # start reverts to the last nixos-rebuild generation.
+        persistSwitch = true;
       };
     };
 

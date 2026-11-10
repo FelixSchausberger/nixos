@@ -41,6 +41,19 @@
     runtimeInputs = with pkgs; [coreutils curl nix];
     text = ''
       export COMIN_NTFY_URL=${lib.escapeShellArg (toString cfg.alertNtfyUrl)}
+      ${lib.optionalString cfg.persistSwitch ''
+        # comin moves its own profile and switch-to-configuration updates the
+        # running system only, so a deployment reaches the boot source only on
+        # hosts whose bootloader reads that profile. Mirror it onto the NixOS
+        # system profile for hosts that boot that profile directly. A `test`
+        # deployment leaves the comin profile on the previous target, which is
+        # how the two operations are told apart here.
+        comin_target="$(readlink -f /nix/var/nix/profiles/system-profiles/comin 2>/dev/null || true)"
+        running="$(readlink -f /run/current-system)"
+        if [ -n "$comin_target" ] && [ "$comin_target" = "$running" ]; then
+          nix-env --profile /nix/var/nix/profiles/system --set "$running"
+        fi
+      ''}
       exec ${pkgs.bash}/bin/bash ${detectorBundle}/detect-downgrades.sh
     '';
   };
@@ -68,6 +81,21 @@ in {
       description = ''
         ntfy URL receiving package downgrade alerts after automated
         deployments. Unset logs detections to the journal instead.
+      '';
+    };
+
+    persistSwitch = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Mirror a successful switch deployment onto the NixOS system profile.
+
+        comin activates a deployment by writing system-profiles/comin and
+        running switch-to-configuration, which updates the running system
+        only. Hosts that boot through a bootloader pick the deployment up
+        from that profile's boot entry; a WSL distribution boots
+        /nix/var/nix/profiles/system directly, so without this a deployment
+        is reverted at the next start.
       '';
     };
 

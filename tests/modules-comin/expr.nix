@@ -19,6 +19,10 @@
     # Post-deployment downgrade detection is wired up
     post_deploy_set = config.services.comin.postDeploymentCommand != null;
 
+    # Only hosts that boot the NixOS system profile directly (no bootloader)
+    # mirror a switch deployment onto it.
+    persist_switch = config.modules.system.comin.persistSwitch;
+
     # Deployment state survives reboots on impermanence hosts; absent on hosts
     # where persistence is force-disabled (e.g. WSL).
     state_persisted =
