@@ -38,10 +38,12 @@ jobs:
     name: Build and push ${{ matrix.host }}
     needs: deployed-hosts
     runs-on: ubuntu-26.04
-    # 180 min: observed p90 host build is 144 min and worst green 294 min
-    # came from runs that hung; a hung run must not hold the queue-serialized
-    # concurrency group for the full 300-min default any longer.
-    timeout-minutes: 180
+    # The small hosts keep the 180-min hang detector (p90 build 144 min).
+    # Desktop's cold closure has taken 294 min, and a job killed at the cap
+    # never finishes uploading, which keeps the next push cold (the 2026-11
+    # cancel spiral). 330 leaves margin below the 360-min default while still
+    # bounding a hung desktop job.
+    timeout-minutes: ${{ matrix.host == 'desktop' && 330 || 180 }}
     strategy:
       fail-fast: false
       matrix:
