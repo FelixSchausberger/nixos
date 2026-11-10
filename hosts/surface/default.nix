@@ -81,6 +81,36 @@ in {
   boot.kernelParams = ["cfg80211.ieee80211_regdom=DE"];
   boot.extraModprobeConfig = "options cfg80211 ieee80211_regdom=DE";
 
+  # mwifiex registers late, so udev's predictable rename raced with the WiFi
+  # stack and the interface name flipped between boots (mlan0 vs wlp1s0).
+  # Everything binds by SSID, so pin the stable kernel name instead.
+  networking.usePredictableInterfaceNames = false;
+
+  # Cold boots occasionally leave iwd stuck in its first autoconnect_quick
+  # after the firmware loads; the proven workaround is a single iwd restart.
+  # Do it automatically when WiFi is still down 90s after NetworkManager.
+  systemd.services.wifi-boot-guard = {
+    description = "Restart iwd once when WiFi did not come up after boot";
+    wantedBy = ["multi-user.target"];
+    after = ["NetworkManager.service"];
+    requires = ["NetworkManager.service"];
+    path = [pkgs.networkmanager pkgs.systemd pkgs.coreutils pkgs.bash];
+    serviceConfig = {
+      Type = "oneshot";
+      TimeoutStartSec = "300";
+    };
+    script = ''
+      sleep 90
+      if nmcli -t -f DEVICE,TYPE,STATE device status | grep -q '^.*:wifi:connected$'; then
+        exit 0
+      fi
+      echo "WiFi not connected after boot; restarting iwd once" >&2
+      systemctl restart iwd
+      sleep 30
+      nmcli -t -f DEVICE,TYPE,STATE device status | grep '^.*:wifi:' || true
+    '';
+  };
+
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel
   boot.kernelPackages = pkgs.lib.mkForce pkgs.linuxPackages;
