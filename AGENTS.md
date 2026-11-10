@@ -89,7 +89,11 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   with the same label or an explicit `--space-cwd`. ocws's removal paths
   (done/rm/gc) cancel open runs
   and archive the workspace's cards automatically when a board daemon runs,
-  so a card never outlives its directory. Dispatch a card only after
+  so a card never outlives its directory. A herdr workspace is the seat and a
+  herdr tab a view inside it; neither owns the work, opening a tab creates
+  nothing, and closing one never releases the claim or an open PR. Hand a card
+  to an automatic lane only after the interactive session in its workspace is
+  closed - the board cannot see jj liveness. Dispatch a card only after
   `ocws <task>` created the workspace, and never run `board project
   create/select/open` from inside a workspace: each jj workspace's `.git`
   makes it its own canonical git root, so the un-pinned first board command

@@ -16,6 +16,24 @@ produce conflicted bookmarks (observed failure mode).
 The primary checkout (`/per/etc/nixos`) is reserved for the user and the comin
 reconciler. Agents should work in a workspace.
 
+## Herdr model
+
+The fleet runs agents inside herdr, whose three layers do not map onto the
+claim:
+
+- herdr workspace — the seat/project container, one per repo or task context.
+- herdr tab — a layout inside a workspace; use tabs for views (agent, logs,
+  server, review).
+- herdr pane — one real terminal.
+
+The claim lives in jj, not in herdr. `ocws <task>` creates the jj workspace,
+writes the change description, mints the board card on the herdr server host,
+and starts opencode rooted at the workspace. Opening a tab on its own creates
+nothing: the tab is where the command runs, not what owns the work. Closing a
+tab — even a workspace's last tab, which closes the herdr workspace — never
+releases the jj claim or an open PR. `ocws tab` is the zellij variant and does
+not apply inside herdr, whose panes carry no zellij session.
+
 ## When to Use
 
 Activate this skill when:
@@ -47,7 +65,7 @@ benefit for single quick changes.
 
    ```bash
    ocws <task>            # opencode in the current pane
-   ocws tab <task>        # opencode in a new zellij tab
+   ocws tab <task>        # opencode in a new zellij tab (not inside herdr)
    ```
 
    The base directory is chosen in this order: `$OCWS_BASE`, the parent of the
@@ -134,6 +152,11 @@ benefit for single quick changes.
      --harness opencode
    board card move <card-id> "In Progress"   # automatic lanes dispatch
    ```
+
+   Hand a task to an automatic lane only after the interactive opencode
+   session in that workspace is closed. The board cannot see jj liveness, and
+   a dispatched run opens a second agent in the same working copy; the
+   In Progress lane prompt restates the rule to the dispatched agent.
 
    Every ocws removal path (`done`, `rm`, `gc`) cancels open runs and
    archives the workspace's cards before the directory rip, guarded silent
