@@ -35,6 +35,7 @@ in {
     ./typix.nix # Typst: A markup-based typesetting system
     ./windows-terminal.nix # Windows Terminal settings deployment to Windows
     ./zellij.nix # Terminal multiplexer with modern features
+    ./zellij-client-reap.nix # Detach clients orphaned by dead mosh sessions
     ./zellij-quota-bridge.nix # Push OpenCode Go quota into the zjstatus bar
     ./zellij-remote.nix # Remote attach helper for the homelab Zellij web server
     ./cachix.nix # Cachix CLI for on-demand cache pushes
