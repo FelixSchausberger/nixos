@@ -752,6 +752,14 @@ writeShellApplication {
     # the card is minted here and can never point at a missing directory.
     board_card_create "$task" "$dir"
 
+    # Herdr tab labels are the navigation key (goto picker, expanded sidebar).
+    # Name the seat after the task so a new tab reads as the task, not as a
+    # generic shell. Guard-silent: HERDR_TAB_ID is unset outside a herdr pane,
+    # and a failed rename must never block the launch.
+    if [ -n "''${HERDR_TAB_ID:-}" ] && command -v herdr >/dev/null 2>&1; then
+      herdr tab rename "$HERDR_TAB_ID" "$task" >/dev/null 2>&1 || true
+    fi
+
     if [ "''${OCWS_V2:-0}" = "1" ]; then
       # Both names resolve to the same launcher, which pins the config root and
       # its database itself; the flag is kept for existing invocations.

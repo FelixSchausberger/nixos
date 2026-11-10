@@ -192,6 +192,10 @@ in {
       # weight for a single-repo workflow, while the compact strip keeps the
       # agent state rows visible. prefix+b toggles the full sidebar; the start
       # value applies on the next launch, reload-config covers the rest.
+      #
+      # New tabs are agent seats and ocws renames the tab to the task when it
+      # creates the workspace, so the native tab-name prompt would only ask for
+      # the same name twice. Plain non-agent tabs are renamed with prefix+shift+t.
       xdg.configFile."herdr/config.toml".text =
         lib.concatStringsSep "\n" (
           [
@@ -206,6 +210,7 @@ in {
             "[ui]"
             "sidebar_start_collapsed = true"
             ''sidebar_collapsed_mode = "compact"''
+            "prompt_new_tab_name = false"
           ]
           ++ lib.concatMap (key: [""] ++ renderCommandKey key) config.tui.herdr.commandKeys
         )
