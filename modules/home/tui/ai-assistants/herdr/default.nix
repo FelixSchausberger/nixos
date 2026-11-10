@@ -187,6 +187,11 @@ in {
       # `herdr update` would install a shadowing copy into ~/.local/bin, which
       # comes first on PATH (the zellij-web service documents the same order).
       # A herdr bump lands through the flake, not from inside the TUI.
+      #
+      # The sidebar starts collapsed in compact mode: the Spaces panel is dead
+      # weight for a single-repo workflow, while the compact strip keeps the
+      # agent state rows visible. prefix+b toggles the full sidebar; the start
+      # value applies on the next launch, reload-config covers the rest.
       xdg.configFile."herdr/config.toml".text =
         lib.concatStringsSep "\n" (
           [
@@ -197,6 +202,10 @@ in {
             ""
             "[theme]"
             ''name = "catppuccin"''
+            ""
+            "[ui]"
+            "sidebar_start_collapsed = true"
+            ''sidebar_collapsed_mode = "compact"''
           ]
           ++ lib.concatMap (key: [""] ++ renderCommandKey key) config.tui.herdr.commandKeys
         )
