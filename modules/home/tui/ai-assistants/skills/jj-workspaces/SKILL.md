@@ -114,9 +114,14 @@ benefit for single quick changes.
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.
 
-   Composition with herdr-board (dispatch seat): cards are optional and never
-   a claim on the workspace — the change description is. A task that wants
-   the kanban seat gets a card after the workspace exists (label =
+   Composition with herdr-board (dispatch seat): cards are never a claim on
+   the workspace — the change description is. On the herdr server host (the
+   host whose `herdr-boardd` unit is enabled) `ocws <task>` mints the card
+   itself when a board daemon is running, in the intake lane (To-Do); the
+   lanes are To-Do, Backlog, In Progress, In Review, Done, Blocked and
+   Follow Up, and moving a card into an automatic lane (In Progress or In
+   Review) dispatches an agent run in the card's workspace. A hand-built
+   workspace gets its card by hand, after the workspace exists (label =
    `nixos-ws-<task>`, cwd = the workspace directory; the daemon creates the
    herdr workspace on first dispatch):
 
@@ -124,7 +129,7 @@ benefit for single quick changes.
    board card create -d "Task prompt..." --space-kind new-workspace \
      --space-ref nixos-ws-<task> --space-cwd "$HOME/.local/share/ocws/nixos-ws-<task>" \
      --harness opencode
-   board card move <card-id> Sprint   # auto columns dispatch
+   board card move <card-id> "In Progress"   # automatic lanes dispatch
    ```
 
    Every ocws removal path (`done`, `rm`, `gc`) cancels open runs and
