@@ -31,6 +31,17 @@
         exec ${pkgs.prek}/bin/prek "$@"
       '';
     };
+
+    # rustc 1.99.1's cargo setup hook exports ZSTD_SYS_USE_PKG_CONFIG=1, so
+    # every crate pulling zstd-sys needs pkg-config and libzstd at build time.
+    # flake-checker pulls zstd and nixpkgs supplies neither, so its build
+    # script panics and `nix develop` - hence any job that reaches namaka
+    # through the devshell - fails before running. Mirrors nixpkgs #584990;
+    # the override goes away once nixos-unstable carries that fix.
+    flakeChecker = pkgs.flake-checker.overrideAttrs (old: {
+      nativeBuildInputs = (old.nativeBuildInputs or []) ++ [pkgs.pkg-config];
+      buildInputs = (old.buildInputs or []) ++ [pkgs.zstd];
+    });
   in {
     checks =
       (inputs.namaka.lib.load {
@@ -85,7 +96,7 @@
           bashInteractive
           deadnix
           fish
-          flake-checker # Flake input health monitoring
+          flakeChecker # Flake input health monitoring
           git
           inotify-tools # File system watching for niri-watch
           jq # JSON processing for profiling and build scripts
