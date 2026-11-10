@@ -18,12 +18,16 @@
 # prompt-badge reminder, so forgotten waiting is treated like any other
 # unclean state rather than a permanent free pass.
 #
-# When herdr-board (tui.herdrBoard) is on, every removal path also cleans the
-# workspace's dispatch cards (cancel open runs, archive by task/cwd mapping,
-# close the card panes' herdr workspace) so a card can never outlive its
-# directory: dispatch after removal would run silently in $HOME (2026-11
-# trial). The hook is guard-silent - `board` absent, or no daemon running,
-# means ocws behaves exactly as before.
+# When herdr-board (tui.herdrBoard) is on, workspace creation also mints the
+# workspace's dispatch card in the board's intake column, so every ocws task
+# is a ticket, and every removal path cleans the workspace's cards (cancel
+# open runs, archive by task/cwd mapping, close the card panes' herdr
+# workspace) so a card can never outlive its directory: dispatch after
+# removal would run silently in $HOME (2026-11 trial). Cards are
+# flow-of-work, never a claim - the jj change description `jj workspace add`
+# writes is the claim. Both hooks are guard-silent - `board` absent, no
+# daemon running, or a host that does not run the herdr server means ocws
+# behaves exactly as before.
 #
 # Liveness ignores per-project MCP and LSP daemons: they inherit the cwd of
 # the session that spawned them and outlive it, so a cwd-only occupancy check
@@ -417,6 +421,13 @@ writeShellApplication {
       OCWS_TASK="$task" OCWS_DIR="$dir" OCWS_ROOT="$root" OCWS_BASE="$base" \
         bash -c "$cmd" || echo "ocws: '$hook' hook failed" >&2
     }
+    # The canonical board scope is the primary checkout: every jj workspace is
+    # its own git root and a board project is keyed by canonical path, so a
+    # workspace path resolves to no project. `--board` is per-command and
+    # never moves the persistent selection (`--project` does).
+    board_scope_root() {
+      jj --ignore-working-copy workspace list -T 'if(name == "default", root ++ "\n", "")' 2>/dev/null | grep -m1 .
+    }
     # herdr-board hygiene, guard-silent: ocws never depends on the board, so
     # every probe and call below must degrade to a no-op when the board stack
     # is absent (no board binary, no running daemon, no herdr). A workspace's
@@ -431,7 +442,7 @@ writeShellApplication {
     # cards, then closing their panes, removes the workspace occupancy the
     # occupancy check would otherwise refuse `done`/`rm` for.
     board_cards_cleanup() {
-      local task="$1" dir ids id wid
+      local task="$1" dir ids id wid scope
       dir="$(realpath -m "$2")"
       command -v board >/dev/null 2>&1 || return 0
       # `board version` is the one CLI probe that never auto-starts a daemon,
@@ -439,7 +450,9 @@ writeShellApplication {
       if [ -z "$(board version --json 2>/dev/null | jq -r 'if .daemon_version and .daemon_version != "unavailable" then .daemon_version else empty end' 2>/dev/null)" ]; then
         return 0
       fi
-      ids="$(board card list --project "$root" --json 2>/dev/null | jq -r --arg ref "nixos-ws-$task" --arg cwd "$dir" \
+      scope="$(board_scope_root)"
+      [ -n "$scope" ] || return 0
+      ids="$(board --board "$scope" card list --json 2>/dev/null | jq -r --arg ref "nixos-ws-$task" --arg cwd "$dir" \
         '[.[] | select(((.space_ref // "") | ascii_downcase) == ($ref | ascii_downcase) or (.space_cwd != null and .space_cwd == $cwd)) | .id] | .[]' 2>/dev/null)"
       for id in $ids; do
         # Cancel first so archive is accepted (a card with an open run cannot
@@ -455,6 +468,39 @@ writeShellApplication {
           '[.result.workspaces[]? | select((.label // "") == $ref) | .workspace_id] | .[]' 2>/dev/null | head -1)"
         if [ -n "$wid" ]; then herdr workspace close "$wid" >/dev/null 2>&1 || true; fi
       fi
+      return 0
+    }
+    # herdr-board dispatch seat, create side: a new workspace gets a card in
+    # the board's intake column, so every ocws task is a ticket. The mapping
+    # and the failure posture mirror board_cards_cleanup: bind by label
+    # "nixos-ws-<task>" or by an explicit space_cwd, and stay a no-op when
+    # the board stack is absent. Creation runs after `jj workspace add`, so a
+    # card can never target a missing directory (a late dispatch into a
+    # vanished cwd falls back to $HOME).
+    board_card_create() {
+      local task="$1" dir scope existing
+      dir="$(realpath -m "$2")"
+      command -v board >/dev/null 2>&1 || return 0
+      # `board version` is the one probe that never auto-starts a daemon.
+      if [ -z "$(timeout 5 board version --json 2>/dev/null | jq -r 'if .daemon_version and .daemon_version != "unavailable" then .daemon_version else empty end' 2>/dev/null)" ]; then
+        return 0
+      fi
+      # Host gate, not a liveness gate: the herdr-boardd unit exists only on
+      # the herdr server host, and there the fleet board is canonical. On
+      # other hosts a board call would auto-start a host-local daemon with its
+      # own database and fork the project.
+      systemctl --user is-enabled herdr-boardd.service >/dev/null 2>&1 || return 0
+      scope="$(board_scope_root)"
+      [ -n "$scope" ] || return 0
+      existing="$(timeout 5 board --board "$scope" card list --json 2>/dev/null | jq -r --arg ref "nixos-ws-$task" --arg cwd "$dir" \
+        '[.[] | select(((.space_ref // "") | ascii_downcase) == ($ref | ascii_downcase) or (.space_cwd != null and .space_cwd == $cwd)) | .id] | .[0] // empty' 2>/dev/null)"
+      [ -n "$existing" ] && return 0
+      # No --column: creation lands in the first (intake) column, which the
+      # fleet pipeline keeps manual, so a created card never dispatches a run.
+      timeout 5 board --board "$scope" card create --title "$task" \
+        -d "ocws workspace: $dir. The jj change description is the claim; dispatch from In Progress only while no session is live in the workspace." \
+        --harness opencode --space-kind new-workspace --space-ref "nixos-ws-$task" --space-cwd "$dir" \
+        >/dev/null 2>&1 || true
       return 0
     }
     rip_workspace() {
@@ -701,6 +747,10 @@ writeShellApplication {
     jj workspace add "$dir" --name "$task" -r 'main@origin' -m "$task: started from main@origin"
 
     run_hook post_create "$task" "$dir" "''${OCWS_HOOK_POST_CREATE:-}"
+
+    # The workspace and its claim exist before anything can target them, so
+    # the card is minted here and can never point at a missing directory.
+    board_card_create "$task" "$dir"
 
     if [ "''${OCWS_V2:-0}" = "1" ]; then
       # Both names resolve to the same launcher, which pins the config root and

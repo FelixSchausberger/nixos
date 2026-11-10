@@ -83,9 +83,11 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
 - Left of the dispatch seat: herdr-board (tui.herdrBoard) dispatches agent
   runs as kanban cards into a herdr workspace inside the ocws directory and
   carries task history; it is not a second claim system - the jj change
-  description stays the claim, and cards are optional per task (label
-  `nixos-ws-<task>`, or any label plus an explicit `--space-cwd` of the
-  workspace directory). ocws's removal paths (done/rm/gc) cancel open runs
+  description stays the claim. `ocws <task>` mints the card on the herdr
+  server host when a board daemon runs (label `nixos-ws-<task>`, cwd = the
+  workspace directory); a hand-built workspace elsewhere gets one by hand
+  with the same label or an explicit `--space-cwd`. ocws's removal paths
+  (done/rm/gc) cancel open runs
   and archive the workspace's cards automatically when a board daemon runs,
   so a card never outlives its directory. Dispatch a card only after
   `ocws <task>` created the workspace, and never run `board project
