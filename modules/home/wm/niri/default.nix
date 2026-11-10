@@ -648,7 +648,7 @@ in {
     # `niri validate` and at runtime. Override the niri-config source
     # directly (mkForce wins over niri-flake's definition of the attribute).
     xdg.configFile."niri-config" = lib.mkIf customShell (lib.mkForce {
-      enable = config.programs.niri.finalConfig != null;
+      enable = config.programs.niri.finalConfigFile != null;
       target = "niri/config.kdl";
       source = let
         overviewBinds = pkgs.writeText "niri-overview-binds.kdl" ''
@@ -661,11 +661,10 @@ in {
       in
         pkgs.runCommand "niri-config-overview.kdl" {
           nativeBuildInputs = [config.programs.niri.package];
-          baseConfig = config.programs.niri.finalConfig;
+          inherit (config.programs.niri) finalConfigFile;
           inherit overviewBinds;
-          passAsFile = ["baseConfig"];
         } ''
-          cat "$baseConfigPath" > "$out"
+          cat "$finalConfigFile" > "$out"
           printf '\ninclude "%s"\n' "$overviewBinds" >> "$out"
           niri validate -c "$out"
         '';
