@@ -154,7 +154,7 @@
   #
   # Remote wake for the gaming PC lives on the router, not here: Fritz!Box
   # Heimnetz → computer → "Computer starten" (or MyFRITZ!App when off-LAN). The
-  # Moonlight / Steam Link apps handle wake + presence on the LAN themselves.
+  # The Moonlight app handles wake + presence on the LAN itself.
   # The Fritz!Box card under Router links there.
   #
   # Each card folds the resource gauges and the health view into one widget

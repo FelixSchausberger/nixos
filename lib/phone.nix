@@ -87,7 +87,7 @@ _: {
         # dedicated managers stay dropped. Bench-verified id: the APK's
         # applicationId (app/build.gradle.kts) governs, and Obtainium
         # matches imports against it. Pin the arm64-v8a asset in Obtainium
-        # (Tensor G5; universal re-picks flavors per update).
+        # (Tensor G4; universal re-picks flavors per update).
         id = "app.universal.patch.manager";
         name = "UPM";
         author = "Jman-Github";
@@ -127,7 +127,7 @@ _: {
 
     # Play-only proprietary apps, installed through Aurora Store's anonymous
     # session so no Google account or Play signer ever lands on the phone.
-    # The Steam Link family stays here; the controller app needs only Porter.
+    # The Steam community app stays here; the controller app needs only Porter.
     aurora = [
       # Communication
       "com.whatsapp"
@@ -142,7 +142,6 @@ _: {
       # Work and remote play (Intune/Outlook/Teams/AnyConnect/Azure
       # authenticator never made the cut: enrollment and push need Play
       # services)
-      "com.valvesoftware.steamlink"
       "com.valvesoftware.android.steam.community"
 
       # Productivity
@@ -226,7 +225,7 @@ _: {
       "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private, Google user pixel-10a-google) because Android VPNs are per-user."
       "Seedvault: every full backup kills the owner's Tailscale process. Tailscale's full-backup rules exclude every domain, so the backup measures zero bytes, Seedvault rejects the package as NO_DATA, and the framework then kills the backup-agent host process, which is the live app; always-on VPN is a start trigger and does not restart it. Tap the Tailscale quick-settings tile or open the app after a backup. Reproduced with 'bmgr backupnow com.tailscale.ipn' on 2026-11-11; the private space and Google-user tunnels are unaffected because backups run for the owner. Drop this item once the framework stops killing the agent host on a rejected package."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
-      "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G5 flavor."
+      "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G4 flavor."
       "Pixel Camera gallery: the 1.1.3 Morphe bundle (morphe-patches-pixelcamera-1.1.3.mpp) never reaches its gallery hook on GrapheneOS because Llys.b hard-gates on com.google.android.apps.photos and the review intent carries only secure_mode_ids; the installed camera is a local repack of the UPM output that fakes the Photos presence in that check and rewrites hwb.w to ACTION_VIEW content://media/external/file/<id> for app.alextran.immich. Rebuild the repack after every UPM camera patch, page-align the native libraries, and sign it with UPM's keystore and `apksigner --alignment-preserved` so the in-place install keeps the camera data. Immich is untouched, updates through Obtainium, and has no secure-review activity, so lock-screen review stops at the keyguard bouncer."
       "Porter: start once via its wireless-debugbing flow; the service stops on device restart, so reopen it after a reboot before SteamController talks to the controller."
       "Re-add the remaining PWA shortcuts the 9a had under its webapk stubs, from Vanadium; do not resurrect the Collie bridge PWA (OpenCode runs native now)."
