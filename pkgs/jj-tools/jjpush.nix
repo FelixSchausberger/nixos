@@ -84,7 +84,13 @@ writeShellApplication {
     # consumer, and jjtest parks the bookmark exactly on the commit under
     # review - a head reused from there shadows the change (observed on #653
     # and #661, both PRs carried testing-m920q as their head).
-    bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main") & ~bookmarks("testing-*")' -T 'name' 2>/dev/null | head -1 | tr -d '[:space:]')"
+    #
+    # The name template ends with an explicit newline: a bookmark whose local
+    # and remote targets differ renders one entry per target, and without the
+    # separator `head -1` takes their concatenation. That showed up as a
+    # doubled bookmark name which matched nothing, so a re-push after a
+    # rewrite (the normal amend-and-push cycle) failed in the push step.
+    bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main") & ~bookmarks("testing-*")' -T 'name ++ "\n"' 2>/dev/null | head -1 | tr -d '[:space:]')"
 
     if [ -z "$bookmark" ]; then
       # No feature bookmark — auto-create one from the commit description's
