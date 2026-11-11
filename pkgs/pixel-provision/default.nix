@@ -1,10 +1,10 @@
 # GrapheneOS provisioning for the Pixel 10a, built from lib/phone.nix. A
 # desktop-side (m920q) helper: `pair` wires up wireless adb, `apply` pushes the
-# manifest settings and the F-Droid lane for the owner or the private space and
-# prints the interactive-lane checklists, `links` renders the Obtainium bulk
-# import, `check` audits the result against the manifest. Android-side state
-# (sign-ins, patcher runs) has no machine interface, so those steps print as a
-# checklist instead of lying about being runnable.
+# manifest settings and the F-Droid lane for the owner, the private space or the
+# Google user and prints the interactive-lane checklists, `links` renders the
+# Obtainium bulk import, `check` audits the result against the manifest.
+# Android-side state (sign-ins, patcher runs) has no machine interface, so
+# those steps print as a checklist instead of lying about being runnable.
 {
   writeText,
   writeShellScriptBin,
@@ -35,8 +35,8 @@ in
             set_profile() {
               PROFILE="''${1:-owner}"
               case "$PROFILE" in
-                owner|private) ;;
-                *) echo "unknown profile: $PROFILE (use owner or private)" >&2; exit 1 ;;
+                owner|private|google) ;;
+                *) echo "unknown profile: $PROFILE (use owner, private or google)" >&2; exit 1 ;;
               esac
             }
 
@@ -44,6 +44,7 @@ in
               case "$PROFILE" in
                 owner) echo ".lanes" ;;
                 private) echo ".privateSpace.lanes" ;;
+                google) echo ".googleAccount.lanes" ;;
               esac
             }
 
@@ -78,6 +79,16 @@ in
                   fi
                   echo "$u"
                   ;;
+                google)
+                  # Full secondary user, not a profile: resolve it by type so a
+                  # renumbered user id still works.
+                  u=$("$ADB" shell cmd user list -v | sed -n 's/.*id=\([0-9]\+\).*type=full\.SECONDARY.*/\1/p' | head -n1)
+                  if [ -z "$u" ]; then
+                    echo "no secondary full user (Google user) on the device" >&2
+                    exit 1
+                  fi
+                  echo "$u"
+                  ;;
               esac
             }
 
@@ -85,21 +96,6 @@ in
               payload=$(jq -c "[$(lanes_path).obtainium[] | {id, url, author, name}]" "$MANIFEST")
               encoded=$(printf %s "$payload" | jq -sRr @uri)
               echo "obtainium://apps/$encoded"
-            }
-
-            nextdns_resolution() {
-              # Precedence: NEXTDNS env, the manifest value, then a prompt - an empty
-              # result means the specifier stays untouched and the phone keeps its
-              # resolver until the user names one.
-              v="''${NEXTDNS:-}"
-              if [ -z "$v" ]; then
-                v=$(jq -r '.nextDnsHostname // ""' "$MANIFEST")
-              fi
-              if [ -z "$v" ]; then
-                printf 'NextDNS private DNS hostname (empty to skip): ' >&2
-                read -r v >&2 || true
-              fi
-              echo "$v"
             }
 
             case ''${1:-help} in
@@ -119,7 +115,6 @@ in
                 ensure_device
                 set_profile "''${2:-owner}"
                 u=$(target_user)
-                nextdns=$(nextdns_resolution)
                 echo "== profile: $PROFILE (user $u)"
                 echo "== system settings"
                 while IFS=$'\t' read -r key value; do
@@ -127,23 +122,20 @@ in
                 done < <(jq -r '.settings.global[] | @tsv' "$MANIFEST")
                 while IFS=$'\t' read -r key value; do
                   # always_on_vpn_* rows: the shared settings keep Tailscale
-                  # always-on without lockdown for both profiles.
+                  # always-on without lockdown for every profile.
                   "$ADB" shell settings --user "$u" put secure "$key" "$value" || true
                 done < <(jq -r '.settings.secure[] | @tsv' "$MANIFEST")
-                if [ -n "$nextdns" ]; then
-                  "$ADB" shell settings --user "$u" put global private_dns_specifier "$nextdns"
-                else
-                  echo "no NextDNS hostname given - private DNS specifier untouched" >&2
+                if [ "$PROFILE" != google ]; then
+                  echo "== F-Droid lane"
+                  for id in $(lane fdroid); do
+                    fdroidcl install -user "$u" "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
+                  done
+                  echo
+                  echo "== Obtainium lane (interactive)"
+                  echo "Bulk import link (imports all ids at once):"
+                  obtainium_bulk_link
+                  echo
                 fi
-                echo "== F-Droid lane"
-                for id in $(lane fdroid); do
-                  fdroidcl install -user "$u" "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
-                done
-                echo
-                echo "== Obtainium lane (interactive)"
-                echo "Bulk import link (imports all ids at once):"
-                obtainium_bulk_link
-                echo
                 echo "== Aurora lane (install manually in an anonymous session)"
                 lane aurora
                 if [ "$PROFILE" = private ]; then
@@ -154,15 +146,21 @@ in
                 echo
                 echo "== manual checklist"
                 jq -r "$(lanes_path).manual[] | \"- \(.)\"" "$MANIFEST"
-                echo
-                echo "== dropped by decision (reference, do not install)"
-                jq -r '.dropped[]' "$MANIFEST"
+                if [ "$PROFILE" != google ]; then
+                  echo
+                  echo "== dropped by decision (reference, do not install)"
+                  jq -r '.dropped[]' "$MANIFEST"
+                fi
                 echo
                 echo "re-run 'pixel-provision check $PROFILE' after the manual lanes."
                 exit 0
                 ;;
               links)
                 set_profile "''${2:-owner}"
+                if [ "$PROFILE" = google ]; then
+                  echo "no obtainium lane for the google profile" >&2
+                  exit 1
+                fi
                 echo "Per-app (bulk below is authoritative for ids):"
                 jq -r "$(lanes_path).obtainium[] | \"obtainium://add?url=\(.url)\"" "$MANIFEST"
                 echo
@@ -231,6 +229,9 @@ in
                   grep '^com\.google\.' "$f" || true
                   echo "-- fdroid lane coverage:"
                   ids=$(lane fdroid)
+                elif [ "$PROFILE" = google ]; then
+                  echo "-- aurora lane coverage:"
+                  ids=$(lane aurora)
                 else
                   echo "-- sandboxed Google Play:"
                   for id in com.google.android.gms com.android.vending com.google.android.projection.gearhead; do
@@ -258,15 +259,15 @@ in
           pixel-provision pair <pair-ip:port> <code> [main-ip:port]
               pair wireless debugging (code from the pairing dialog) and
               connect the main port from the wireless debugging screen.
-          pixel-provision apply [owner|private]
-              settings + fdroid lane + interactive checklists (default: owner)
+          pixel-provision apply [owner|private|google]
+              settings + lane + interactive checklists (default: owner)
           pixel-provision links [owner|private]
               obtainium deep links (bulk + per app, default: owner)
-          pixel-provision check [owner|private]
-              Google-free owner audit or private-space coverage audit
+          pixel-provision check [owner|private|google]
+              Google-free owner audit or per-profile lane coverage
           pixel-provision widgets  stage the termux power-widget bundle (key,
                                    ssh config, ~/.shortcuts scripts via Download)
-        env: NEXTDNS=<hostname>, ADB=<path>
+        env: ADB=<path>
     USAGE
                 exit 1
                 ;;

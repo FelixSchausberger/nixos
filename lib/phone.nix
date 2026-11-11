@@ -5,30 +5,24 @@
 # membership is verified at plan time: the F-Droid ids against the fdroidcl
 # index, the Obtainium upstreams against their GitHub release assets. This
 # file is data only: a pure function returning the manifest attrset; the sole
-# consumer applies it with {} (pkgs/pixel-provision), keeping nextDnsHostname
-# and the settings rows in one lexical scope without rec.
-_: let
-  # NextDNS private-DNS hostname, applied at the first `apply` invocation.
-  # Supplied interactively or via NEXTDNS= when empty.
-  nextDnsHostname = "";
-in {
-  inherit nextDnsHostname;
-
+# consumer applies it with {} (pkgs/pixel-provision).
+_: {
   settings =
     # System settings applied via `adb shell settings --user <id> put
-    # <namespace> <key> <value>` to both the owner and the private space. The
-    # private-DNS keys are the long-standing adb route to NextDNS. Lockdown
-    # stays off: with Tailscale as the always-on app, lockdown blocks every
-    # non-VPN app while Tailscale is logged out, including the browser that
-    # must load the interactive login URL. A private space inherits these rows
-    # when it is created, so a lockdown value here would recreate the deadlock
-    # there. An empty private_dns_specifier is skipped by the applying script.
-    let
-      dns = nextDnsHostname;
-    in {
+    # <namespace> <key> <value>` to every profile the manifest covers. Private
+    # DNS stays off: Android's strict DoT cannot work on a Tailscale VPN
+    # network, because the split tunnel has no route to the DoT servers, so the
+    # resolver is left without any, the private-DNS probe fails and the network
+    # never validates ("Private DNS server cannot be accessed"). DNS is the
+    # network's resolver, and Tailscale's forwarder while the tunnel is up.
+    # Lockdown stays off: with Tailscale as the always-on app, lockdown blocks
+    # every non-VPN app while Tailscale is logged out, including the browser
+    # that must load the interactive login URL. A private space inherits these
+    # rows when it is created, so a lockdown value here would recreate the
+    # deadlock there.
+    {
       global = [
-        ["private_dns_mode" "hostname"]
-        ["private_dns_specifier" dns]
+        ["private_dns_mode" "off"]
       ];
       secure = [
         ["always_on_vpn_app" "com.tailscale.ipn"]
@@ -228,8 +222,8 @@ in {
     manual = [
       "Sideload Obtainium itself from github.com/ImranR98/Obtainium/releases once, then run `pixel-provision links` and import the bulk obtainium://apps/ link it prints."
       "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on."
-      "Play-dependent banking, government and travel apps live in the private space; the owner's Aurora lane keeps only the apps that stay in this profile."
-      "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did."
+      "Play-dependent banking, government and travel apps live in the private space; TF Bank is the exception and runs in the Google user (see googleAccount); the owner's Aurora lane keeps only the apps that stay in this profile."
+      "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private, Google user pixel-10a-google) because Android VPNs are per-user."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
       "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G5 flavor."
       "Porter: start once via its wireless-debugbing flow; the service stops on device restart, so reopen it after a reboot before SteamController talks to the controller."
@@ -240,8 +234,8 @@ in {
   };
 
   # The private space is the Play/Google-services profile: the owner stays
-  # free of sandboxed Play, and banking/travel apps that need Play run here.
-  # The settings above are shared. Main-profile apps come in through
+  # free of sandboxed Play, and most banking/travel apps that need Play run
+  # here. The settings above are shared. Main-profile apps come in through
   # Settings > Security & privacy > Private space > Install available apps
   # (Aegis, Spotify, Telegram, FUTO Keyboard); it copies the APK, not the data.
   privateSpace = {
@@ -276,7 +270,6 @@ in {
         "de.number26.android"
         "de.traderepublic.app"
         "capital.scalable.droid"
-        "se.tfbank.tfbankmobile.at"
         "com.paypal.android.p2pmobile"
         "de.xcom.flatexat"
 
@@ -304,12 +297,29 @@ in {
         "Install sandboxed Google Play services, Play Store and Android Auto from the GrapheneOS App Store inside the private space. No Google account is required; Aurora's anonymous session serves the Play apps. Add fel.schausberger@gmail.com only if an app insists on Play licensing."
         "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (Aegis, Spotify, Telegram, FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
         "Grant Play services an unrestricted battery exception in the private space, and unlock the private space after every reboot: push approvals only arrive while it is unlocked."
-        "Banking and government apps re-bind the device. Keep the Google secondary user or the Pixel 9a available until every app is verified. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
-        "Aegis: import the token export from the Google user before deleting it. The owner and the private space keep separate copies; either can approve banking logins."
+        "Banking and government apps re-bind the device. Keep the Pixel 9a available until every app is verified; the Google secondary user stays for TF Bank. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
+        "Aegis: import the token export from the Google user. The owner and the private space keep separate copies; either can approve banking logins."
         "Spotify, Telegram, FUTO Keyboard and Aegis are also in the private lane; the owner keeps its working copies. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
-        "Tailscale: the private space is a separate node. Rename it (pixel-10a-private) and remove the stale Google-user node (pixel-10a-1) after deleting that user."
+        "Tailscale: the private space is a separate node. Rename it to pixel-10a-private in the admin console (node names follow the phone's global device name, so a second login inherits the owner's), disable key expiry for it and keep Use Tailscale DNS settings on for MagicDNS."
         "UPM is not part of the private lane: sandboxed Google Play covers the patched-away dependencies. Remove it from the private space unless patched apps are still wanted."
         "The out-of-repo privacy lane (~/.config/pixel-provision/private-apps.json) is merged into this profile's Aurora list by pixel-provision."
+      ];
+    };
+  };
+
+  # The Google user is a full secondary user kept for TF Bank, which refuses
+  # the private space. It needs Tailscale like the other profiles: an Android
+  # VPN is per-user and cannot be shared, so this is a third tailnet node.
+  # Play apps come from Aurora's anonymous session, as in the private lane.
+  googleAccount = {
+    lanes = {
+      aurora = [
+        "se.tfbank.tfbankmobile.at"
+      ];
+
+      manual = [
+        "Tailscale: sign in once in the Google user, rename its node to pixel-10a-google in the admin console, disable key expiry for it and keep Use Tailscale DNS settings on. pixel-provision apply google sets always-on VPN; a process the system stops (a backup, a user switch) needs the app opened again, because always-on VPN is a start trigger, not a watchdog."
+        "TF Bank: install from the Aurora lane above and enroll in-app. It is the reason this user exists; the private space cannot run it."
       ];
     };
   };
