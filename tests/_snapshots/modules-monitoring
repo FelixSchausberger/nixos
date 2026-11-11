@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 23;
+  rule_count = 24;
   rules = [
     {
       alert = "NextcloudDown";
@@ -162,6 +162,11 @@
     {
       alert = "PostgresDown";
       expr = "up{job=\"postgres\"} == 0";
+      priority = "high";
+    }
+    {
+      alert = "FlakehubTokenExpiringSoon";
+      expr = "(nix_flakehub_token_expiry_timestamp_seconds - time()) < 7 * 86400";
       priority = "high";
     }
   ];
