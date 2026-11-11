@@ -21,10 +21,17 @@ reconciler. Agents should work in a workspace.
 The fleet runs agents inside herdr, whose three layers do not map onto the
 claim:
 
-- herdr workspace — the seat/project container, one per repo or task context.
+- herdr workspace — the UI container for a repository (the fleet runs one);
+  it is not one per agent.
 - herdr tab — a layout inside a workspace; use tabs for views (agent, logs,
   server, review).
 - herdr pane — one real terminal.
+
+The fleet runs one herdr workspace per repository and one tab per agent. The
+isolation unit is the jj workspace the tab's agent runs in: tabs in one herdr
+workspace each have their own jj workspace when they are created through
+`ocws`. Board-dispatched card runs create their own labeled herdr workspaces
+(`nixos-ws-<task>`); those are dispatch labels, not seats for people.
 
 The claim lives in jj, not in herdr. `ocws <task>` creates the jj workspace,
 writes the change description, mints the board card on the herdr server host,

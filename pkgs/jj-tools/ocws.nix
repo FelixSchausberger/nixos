@@ -732,6 +732,7 @@ writeShellApplication {
           if [ -t 0 ] && [ -t 1 ]; then
             printf 'task name: '
             read -r task || exit 0
+            [ -n "$task" ] || exit 0
           fi
         else
           shift
