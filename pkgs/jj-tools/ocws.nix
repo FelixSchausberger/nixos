@@ -78,6 +78,10 @@ writeShellApplication {
     Usage:
       ocws <task> [-- <opencode args>...]   create a workspace and run opencode there
       ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
+      ocws herdr [<task>] [-- <opencode args>]
+                                            start an agent seat: create the workspace
+                                            and run opencode in a new herdr tab; prompts
+                                            for the task when it is omitted
       ocws ls [--counts|--board]            list workspaces with their state and claim
                                             (--counts prints the integers "total empty merged
                                             unpushed in-flight conflict stale waitold", where
@@ -712,6 +716,94 @@ writeShellApplication {
         fi
         rip_workspace "$task"
         echo "Forgot '$task' (directory sent to the graveyard)."
+        exit 0
+        ;;
+      herdr)
+        shift
+        # A herdr tab is only a layout: with terminal.new_cwd = follow it
+        # inherits the focused pane's worktree, so running opencode in a bare
+        # tab shares that working copy. This subcommand creates the tab and
+        # starts the agent there through the same creation path as `ocws`, so
+        # a seat always gets its own jj workspace. An existing workspace is
+        # reopened only when no process is live in it; a second agent in one
+        # working copy is the interference this workflow exists to prevent.
+        task="''${1:-}"
+        if [ -z "$task" ]; then
+          if [ -t 0 ] && [ -t 1 ]; then
+            printf 'task name: '
+            read -r task || exit 0
+          fi
+        else
+          shift
+        fi
+        [ -n "$task" ] || usage
+        valid_task "$task" || { echo "ocws herdr: invalid task '$task' (use [A-Za-z0-9._-])" >&2; exit 2; }
+        extra=()
+        if [ "''${1:-}" = "--" ]; then
+          shift
+          extra=("$@")
+        elif [ "$#" -gt 0 ]; then
+          usage
+        fi
+        command -v herdr >/dev/null 2>&1 || { echo "ocws herdr: 'herdr' not found on PATH" >&2; exit 1; }
+
+        if workspace_exists "$task"; then
+          dir="$(realpath -m "$(ws_root_for "$task")")"
+          if ws_live "$dir"; then
+            echo "ocws herdr: '$task' already has a live session in $dir; refusing a second agent in the same workspace" >&2
+            exit 1
+          fi
+          if [ "''${OCWS_V2:-0}" = "1" ]; then
+            inner="cd $(printf '%q' "$dir") && exec $(printf '%q' opencode2)"
+          else
+            inner="cd $(printf '%q' "$dir") && exec $(printf '%q' opencode)"
+          fi
+          for arg in "''${extra[@]}"; do
+            inner+=" $(printf '%q' "$arg")"
+          done
+        else
+          self="$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")"
+          inner="$(printf '%q' "$self")"
+          [ "''${OCWS_V2:-0}" = "1" ] && inner+=" --v2"
+          inner+=" $(printf '%q' "$task")"
+          if [ "''${#extra[@]}" -gt 0 ]; then
+            inner+=" --"
+            for arg in "''${extra[@]}"; do
+              inner+=" $(printf '%q' "$arg")"
+            done
+          fi
+        fi
+
+        # The tab starts at a jj workspace root: ocws resolves the repository
+        # with `jj workspace root`, and the workspace base is outside it. The
+        # agent still starts only in the workspace ocws creates (or the existing
+        # one it cd's to); nothing runs in the tab's initial directory.
+        tab_args=(tab create --cwd "$root" --label "$task" --focus)
+        # Card runs live in their own herdr workspace labelled nixos-ws-<task>,
+        # and ocws done closes that workspace with the card. A seat tab opened
+        # there would die with the card, so fall back to a non-card workspace.
+        ws="''${HERDR_ACTIVE_WORKSPACE_ID:-''${HERDR_WORKSPACE_ID:-}}"
+        if [ -n "$ws" ]; then
+          ws_list="$(herdr workspace list 2>/dev/null || true)"
+          label="$(printf '%s' "$ws_list" | jq -r --arg id "$ws" '.result.workspaces[]? | select(.workspace_id == $id) | .label // empty' 2>/dev/null | head -1)"
+          case "$label" in
+            nixos-ws-*)
+              ws="$(printf '%s' "$ws_list" | jq -r '.result.workspaces[]? | select((.label // "") | startswith("nixos-ws-") | not) | .workspace_id' 2>/dev/null | head -1)"
+              [ -n "$ws" ] || { echo "ocws herdr: no non-card herdr workspace to open the seat in" >&2; exit 1; }
+              ;;
+          esac
+          [ -n "$ws" ] && tab_args+=(--workspace "$ws")
+        fi
+        if ! resp="$(herdr "''${tab_args[@]}" 2>&1)"; then
+          echo "ocws herdr: cannot create a herdr tab: $resp" >&2
+          exit 1
+        fi
+        pane="$(printf '%s' "$resp" | jq -r '.result.root_pane.pane_id // empty' 2>/dev/null || true)"
+        [ -n "$pane" ] || { echo "ocws herdr: herdr did not return a root pane: $resp" >&2; exit 1; }
+        if ! herdr pane run "$pane" "$inner"; then
+          echo "ocws herdr: tab created, but the agent did not start; run 'ocws $task' in it" >&2
+          exit 1
+        fi
         exit 0
         ;;
       tab)

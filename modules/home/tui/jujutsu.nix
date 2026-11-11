@@ -220,6 +220,19 @@ in {
         width = "95%";
         height = "95%";
       }
+
+      # New agent seat one key away. A herdr tab inherits the focused pane's
+      # worktree, so a bare tab plus opencode would share that working copy;
+      # the popup prompts for a task and `ocws herdr` creates the tab and runs
+      # ocws inside it. prefix+shift+a is free (the defaults use r/n/g/w/d/t/x/p).
+      {
+        key = "prefix+shift+a";
+        type = "popup";
+        command = "${ocws}/bin/ocws herdr";
+        description = "New agent seat: jj workspace + opencode in a new tab";
+        width = "50%";
+        height = "20%";
+      }
     ];
   };
 }
