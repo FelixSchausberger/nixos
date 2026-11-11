@@ -86,30 +86,45 @@ in {
   # Everything binds by SSID, so pin the stable kernel name instead.
   networking.usePredictableInterfaceNames = false;
 
-  # Cold boots occasionally leave iwd stuck in its first autoconnect_quick
-  # after the firmware loads; the proven workaround is a single iwd restart.
-  # Do it automatically when WiFi is still down 90s after NetworkManager.
+  # Cold boots leave iwd stuck in its first autoconnect_quick: it never
+  # transitions to a scanning autoconnect on its own, so a restart (or two)
+  # is what finally brings the link up. Retry the restart up to three times
+  # at 90s intervals, which covers the observed firmware-settling window.
   systemd.services.wifi-boot-guard = {
-    description = "Restart iwd once when WiFi did not come up after boot";
+    description = "Restart iwd until WiFi is connected after boot";
     wantedBy = ["multi-user.target"];
     after = ["NetworkManager.service"];
     requires = ["NetworkManager.service"];
     path = [pkgs.networkmanager pkgs.systemd pkgs.coreutils pkgs.bash];
     serviceConfig = {
       Type = "oneshot";
-      TimeoutStartSec = "300";
+      TimeoutStartSec = "600";
     };
     script = ''
-      sleep 90
-      if nmcli -t -f DEVICE,TYPE,STATE device status | grep -q '^.*:wifi:connected$'; then
-        exit 0
-      fi
-      echo "WiFi not connected after boot; restarting iwd once" >&2
-      systemctl restart iwd
+      for attempt in 1 2 3 4; do
+        sleep 90
+        if nmcli -t -f DEVICE,TYPE,STATE device status | grep -q '^.*:wifi:connected$'; then
+          exit 0
+        fi
+        echo "WiFi not connected after boot; restarting iwd (attempt $attempt)" >&2
+        systemctl restart iwd
+      done
       sleep 30
       nmcli -t -f DEVICE,TYPE,STATE device status | grep '^.*:wifi:' || true
     '';
   };
+
+  # iwd's known-network store is on the ephemeral root by default, so after
+  # every boot it has nothing to quick-connect to and depends on a scan it may
+  # never issue. Persist it like the rest of the per-host state.
+  environment.persistence."/per".directories = [
+    {
+      directory = "/var/lib/iwd";
+      user = "root";
+      group = "root";
+      mode = "0700";
+    }
+  ];
 
   # Force stable LTS kernel to avoid Rust compilation issues in newer kernels
   # The nixos-hardware surface module may try to use a newer kernel
