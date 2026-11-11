@@ -32,7 +32,10 @@ and starts opencode rooted at the workspace. Opening a tab on its own creates
 nothing: the tab is where the command runs, not what owns the work. Closing a
 tab — even a workspace's last tab, which closes the herdr workspace — never
 releases the jj claim or an open PR. `ocws tab` is the zellij variant and does
-not apply inside herdr, whose panes carry no zellij session.
+not apply inside herdr, whose panes carry no zellij session. With
+`terminal.new_cwd = follow`, a new tab inherits the focused pane's directory,
+so a tab can start inside another agent's worktree; start agents through
+`ocws`, not a bare tab.
 
 ## When to Use
 
@@ -65,8 +68,14 @@ benefit for single quick changes.
 
    ```bash
    ocws <task>            # opencode in the current pane
+   ocws herdr <task>      # new agent seat in a new herdr tab (prompts if omitted)
    ocws tab <task>        # opencode in a new zellij tab (not inside herdr)
    ```
+
+   Inside herdr, prefer `ocws herdr <task>` (bound to `prefix+shift+a`): it
+   creates the tab and runs `ocws` inside it, so the agent always starts in its
+   own jj workspace. Re-running it for an existing task reopens the seat only
+   when no process is live in that workspace.
 
    The base directory is chosen in this order: `$OCWS_BASE`, the parent of the
    current workspace (the sibling-directory convention) when writable, then
