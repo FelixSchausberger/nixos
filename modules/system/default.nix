@@ -11,6 +11,7 @@
     ./display-manager.nix
     ./emergency-shell.nix
     ./firmware.nix
+    ./flakehub-auth.nix
     ./fonts.nix
     ./home-manager.nix
     ./maintenance.nix

@@ -232,6 +232,13 @@
       (mkRule "PostgresDown" "high" "PostgreSQL exporter is unreachable"
         "PostgreSQL exporter is unreachable"
         ''up{job="postgres"} == 0'')
+    ]
+    ++ [
+      # A FlakeHub static token cannot renew itself, and the first symptom of
+      # expiry is every flake operation failing with 401 (2026-11-11).
+      (mkRule "FlakehubTokenExpiringSoon" "high" "FlakeHub token expires soon"
+        "The FlakeHub token expires in less than 7 days and has to be renewed by hand with determinate-nixd auth login"
+        "(nix_flakehub_token_expiry_timestamp_seconds - time()) < 7 * 86400")
     ];
 
   # No closure-size alert is defined here: closure bytes and store-path counts
