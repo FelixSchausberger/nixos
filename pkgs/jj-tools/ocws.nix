@@ -727,12 +727,29 @@ writeShellApplication {
         # a seat always gets its own jj workspace. An existing workspace is
         # reopened only when no process is live in it; a second agent in one
         # working copy is the interference this workflow exists to prevent.
+        #
+        # The seat runs from a herdr popup, and a popup closes the moment its
+        # command exits: an empty or invalid answer must re-ask instead of
+        # exiting, and a failure after the prompt must hold the popup open
+        # for a keypress, or the user sees only a flash of text.
+        fail() {
+          printf 'ocws herdr: %s\n' "$*" >&2
+          if [ -t 0 ]; then
+            read -r -p 'press enter to close ' _ || true
+          fi
+          exit 1
+        }
         task="''${1:-}"
         if [ -z "$task" ]; then
           if [ -t 0 ] && [ -t 1 ]; then
-            printf 'task name: '
-            read -r task || exit 0
-            [ -n "$task" ] || exit 0
+            while :; do
+              read -r -p 'task slug (required, ctrl-c cancels): ' task || exit 0
+              [ -n "$task" ] || continue
+              if valid_task "$task"; then
+                break
+              fi
+              printf 'ocws herdr: invalid task %q (start with a letter or digit, then [A-Za-z0-9._-])\n' "$task" >&2
+            done
           fi
         else
           shift
@@ -746,13 +763,15 @@ writeShellApplication {
         elif [ "$#" -gt 0 ]; then
           usage
         fi
-        command -v herdr >/dev/null 2>&1 || { echo "ocws herdr: 'herdr' not found on PATH" >&2; exit 1; }
+        # herdr exports HERDR_BIN_PATH to custom command keybindings, which is
+        # where the seat popup runs; outside one, fall back to the PATH name.
+        herdr_bin="''${HERDR_BIN_PATH:-herdr}"
+        command -v "$herdr_bin" >/dev/null 2>&1 || fail "herdr binary not found: $herdr_bin"
 
         if workspace_exists "$task"; then
           dir="$(realpath -m "$(ws_root_for "$task")")"
           if ws_live "$dir"; then
-            echo "ocws herdr: '$task' already has a live session in $dir; refusing a second agent in the same workspace" >&2
-            exit 1
+            fail "'$task' already has a live session in $dir; refusing a second agent in the same workspace"
           fi
           if [ "''${OCWS_V2:-0}" = "1" ]; then
             inner="cd $(printf '%q' "$dir") && exec $(printf '%q' opencode2)"
@@ -785,25 +804,23 @@ writeShellApplication {
         # there would die with the card, so fall back to a non-card workspace.
         ws="''${HERDR_ACTIVE_WORKSPACE_ID:-''${HERDR_WORKSPACE_ID:-}}"
         if [ -n "$ws" ]; then
-          ws_list="$(herdr workspace list 2>/dev/null || true)"
+          ws_list="$("$herdr_bin" workspace list 2>/dev/null || true)"
           label="$(printf '%s' "$ws_list" | jq -r --arg id "$ws" '.result.workspaces[]? | select(.workspace_id == $id) | .label // empty' 2>/dev/null | head -1)"
           case "$label" in
             nixos-ws-*)
               ws="$(printf '%s' "$ws_list" | jq -r '.result.workspaces[]? | select((.label // "") | startswith("nixos-ws-") | not) | .workspace_id' 2>/dev/null | head -1)"
-              [ -n "$ws" ] || { echo "ocws herdr: no non-card herdr workspace to open the seat in" >&2; exit 1; }
+              [ -n "$ws" ] || fail "no non-card herdr workspace to open the seat in"
               ;;
           esac
           [ -n "$ws" ] && tab_args+=(--workspace "$ws")
         fi
-        if ! resp="$(herdr "''${tab_args[@]}" 2>&1)"; then
-          echo "ocws herdr: cannot create a herdr tab: $resp" >&2
-          exit 1
+        if ! resp="$("$herdr_bin" "''${tab_args[@]}" 2>&1)"; then
+          fail "cannot create a herdr tab: $resp"
         fi
         pane="$(printf '%s' "$resp" | jq -r '.result.root_pane.pane_id // empty' 2>/dev/null || true)"
-        [ -n "$pane" ] || { echo "ocws herdr: herdr did not return a root pane: $resp" >&2; exit 1; }
-        if ! herdr pane run "$pane" "$inner"; then
-          echo "ocws herdr: tab created, but the agent did not start; run 'ocws $task' in it" >&2
-          exit 1
+        [ -n "$pane" ] || fail "herdr did not return a root pane: $resp"
+        if ! "$herdr_bin" pane run "$pane" "$inner"; then
+          fail "tab created, but the agent did not start; run 'ocws $task' in it"
         fi
         exit 0
         ;;
