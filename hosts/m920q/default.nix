@@ -36,6 +36,11 @@
   # lms.service below runs it natively, so the AMT path needs no container.
   lmsEnv = pkgs.callPackage ../../pkgs/intel-lms {};
 
+  desktopHost = inputs.self.lib.hosts.desktop;
+  # The desktop's static address is a /24 (hosts/desktop networkd), so its
+  # directed broadcast is the first three octets of the address plus 255.
+  desktopBroadcast = "${lib.concatStringsSep "." (lib.init (lib.splitString "." desktopHost.ip))}.255";
+
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
     exec ${pkgs.curl}/bin/curl -s -o /dev/null \
       -H "Title: SMART Alert: $SMARTD_DEVICESTRING" \
@@ -57,9 +62,9 @@
     name = "desktop-power";
     runtimeInputs = with pkgs; [wakeonlan iputils openssh curl coreutils];
     text = ''
-      host=${inputs.self.lib.hosts.desktop.ip}
-      mac=${inputs.self.lib.hosts.desktop.lanMac}
-      broadcast=192.168.178.255
+      host=${desktopHost.ip}
+      mac=${desktopHost.lanMac}
+      broadcast=${desktopBroadcast}
 
       up() { ping -c 1 -W 1 "$host" >/dev/null 2>&1; }
 
@@ -71,7 +76,11 @@
       case "''${1:-}" in
         on | wake)
           if up; then echo "desktop already up"; exit 0; fi
-          wakeonlan -i "$broadcast" "$mac"
+          if ! wakeonlan -i "$broadcast" "$mac"; then
+            notify "Desktop wake failed" "could not send the magic packet" high warning
+            echo "wake packet failed" >&2
+            exit 1
+          fi
           for _ in $(seq 1 48); do
             if up; then
               notify "Desktop is up" "reachable after wake request" default electric_plug
