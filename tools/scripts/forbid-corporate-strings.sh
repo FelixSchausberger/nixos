@@ -5,6 +5,11 @@
 # of the blocklist; the prek hook and jjpush both call it, so an entry can only
 # be added or dropped in one place.
 #
+# The last alternative is a canary planted in the private layer that carries the
+# work configuration. Any copy of that layer into this tree drags the marker
+# along, so a mistake is caught even when the identifiers themselves are not on
+# this list.
+#
 # The pattern segments are split into character classes so this file never
 # spells the identifiers it forbids. Hits are reported as file names only - a
 # matched line must never reach a terminal scrollback or a CI log.
@@ -14,31 +19,31 @@
 #   forbid-corporate-strings.sh --message F  scan a commit message file
 set -euo pipefail
 
-readonly pattern='freq[u]entis|b[i]tbucket|p[d]ts|sch[a]usbergerf|f[v]cs|f[a]ax10'
+readonly pattern='freq[u]entis|b[i]tbucket|p[d]ts|sch[a]usbergerf|f[v]cs|f[a]ax10|nixos-pr[i]vate-layer-canary-7c41e9'
 
 # sops ciphertext cannot spell an identifier, and the encrypted file is the one
 # path whose content is deliberately unreadable.
 readonly skip=(--glob '!secrets/**')
 
 report() {
-  local label="$1"
-  shift
-  local hits
-  hits="$(rg -i -l "${skip[@]}" -e "$pattern" "$@" 2>/dev/null || true)"
-  if [[ -n "$hits" ]]; then
-    printf 'forbid-corporate-strings: %s\n' "$label" >&2
-    printf '%s\n' "$hits" | sed 's/^/  /' >&2
-    return 1
-  fi
+	local label="$1"
+	shift
+	local hits
+	hits="$(rg -i -l "${skip[@]}" -e "$pattern" "$@" 2>/dev/null || true)"
+	if [[ -n "$hits" ]]; then
+		printf 'forbid-corporate-strings: %s\n' "$label" >&2
+		printf '%s\n' "$hits" | sed 's/^/  /' >&2
+		return 1
+	fi
 }
 
 if [[ ${1:-} == --message ]]; then
-  if [[ -z ${2:-} ]]; then
-    echo "usage: $0 --message <file>" >&2
-    exit 2
-  fi
-  report "blocked identifier in the commit message" -- "$2"
-  exit
+	if [[ -z ${2:-} ]]; then
+		echo "usage: $0 --message <file>" >&2
+		exit 2
+	fi
+	report "blocked identifier in the commit message" -- "$2"
+	exit
 fi
 
 report "blocked identifier in the tree" -- .
