@@ -11,6 +11,7 @@
   gnugrep,
   gnused,
   jj-slug,
+  ripgrep,
 }:
 writeShellApplication {
   name = "jjpush";
@@ -21,6 +22,7 @@ writeShellApplication {
     gnugrep
     gnused
     jj-slug
+    ripgrep
   ];
   text = ''
     set -euo pipefail
@@ -76,6 +78,24 @@ writeShellApplication {
       echo "Describe ('jj describe -r <change> -m \"...\"') or abandon them before pushing." >&2
       exit 1
     fi
+
+    # The blocklist gates the push. This is the last point before jj makes a
+    # branch public, and CI only sees the content after it is already on the
+    # forge. jj has no hook support, so prek's pre-commit stage is advisory
+    # here; this call is the enforcement. Both the description and the tree
+    # are scanned: a hostname in a commit message is as public as one in a
+    # file, and the message becomes the PR body.
+    repo_root="$(jj root)"
+    blocklist="$repo_root/tools/scripts/forbid-corporate-strings.sh"
+    if [ ! -x "$blocklist" ]; then
+      echo "Error: $blocklist is missing; refusing to push unscanned work." >&2
+      exit 1
+    fi
+    message_file="$(mktemp)"
+    trap 'rm -f "$message_file"' EXIT
+    jj log --no-graph -r 'main@origin..@' -T 'description ++ "\n"' >"$message_file"
+    "$blocklist" --message "$message_file"
+    "$blocklist"
 
     # Search ancestors for an existing feature bookmark. The main bookmark
     # always sits on the parent commit after a rebase, so it is excluded, and
