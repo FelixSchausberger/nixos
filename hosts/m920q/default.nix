@@ -596,6 +596,22 @@ in {
 
   systemd.timers.zfs-snapshot-frequent.enable = lib.mkForce false;
 
+  # Logical database dumps. The databases live under /var/lib/postgresql on
+  # rpool/eyd/root, which no snapshot policy covers, so until this ran they had
+  # no copy at all. The dumps land on the per dataset: sanoid snapshots it and
+  # the bpool replication carries it off the NVMe. The module rotates the
+  # current and previous dump; there is no retention knob to configure.
+  services.postgresqlBackup = {
+    enable = true;
+    databases = ["immich" "nextcloud"];
+    location = "/per/var/backup/postgresql";
+    compression = "zstd";
+    # Awake window: the host keeps the chassis blower on its slowest curve
+    # between 00:00 and 09:00 (see nightQuiet below), and the module default
+    # of 01:15 lands a zstd run inside it.
+    startAt = "*-*-* 13:40:00";
+  };
+
   services.smartd = {
     enable = true;
     # Self-tests run in the awake window (14:00), not at night: a short test
@@ -799,9 +815,37 @@ in {
         monthly = 12;
         yearly = 1;
       };
-      syncoidCommands."dpool-data-to-bpool-backup" = {
-        source = "dpool/data";
-        target = "bpool/backup/data";
+      # Replica retention. syncoid never deletes a target snapshot, so without
+      # a policy here each replica keeps everything the source ever pruned
+      # (observed: 2678 stale snapshots pinning ~600G on the dpool replica).
+      # Monthlies are the long-term layer; finer types stay on the source.
+      sanoidDatasets."bpool/backup/data" = {
+        hourly = 0;
+        daily = 0;
+        weekly = 0;
+        monthly = 24;
+        yearly = 0;
+      };
+      sanoidDatasets."bpool/backup/per" = {
+        hourly = 0;
+        daily = 0;
+        weekly = 0;
+        monthly = 24;
+        yearly = 0;
+      };
+      syncoidCommands = {
+        "dpool-data-to-bpool-backup" = {
+          source = "dpool/data";
+          target = "bpool/backup/data";
+        };
+        # Recursive carries /per/repos and any later child dataset; a
+        # non-recursive daily for rpool/eyd/per is how the desktop's replica
+        # silently misses its repos dataset.
+        "rpool-per-to-bpool-backup" = {
+          source = "rpool/eyd/per";
+          target = "bpool/backup/per";
+          recursive = true;
+        };
       };
     };
     immich = {

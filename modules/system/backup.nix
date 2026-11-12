@@ -92,6 +92,16 @@ in {
             default = "w";
             description = "ZFS send options (e.g. w for raw, L for large blocks)";
           };
+          recursive = lib.mkOption {
+            type = types.bool;
+            default = false;
+            description = "Replicate child datasets too (syncoid --recursive)";
+          };
+          extraArgs = lib.mkOption {
+            type = types.listOf types.str;
+            default = [];
+            description = "Extra syncoid arguments for this command";
+          };
         };
       });
       default = {};
@@ -99,7 +109,15 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (let
+    # sanoid addresses datasets by name, so a dataset on a lazily imported
+    # pool (the USB backup pool) is invisible until something triggers the
+    # import. Pull the import units in like the syncoid services do; Wants
+    # keeps hosts whose pools have no generated import unit working.
+    sanoidImportUnits = map (pool: "zfs-import-${pool}.service") (
+      lib.unique (map poolOf (lib.attrNames cfg.sanoidDatasets))
+    );
+  in {
     services.sanoid = {
       enable = true;
       # Map the module's frequency keys onto sanoid's own dataset config:
@@ -205,6 +223,12 @@ in {
             serviceConfig.WorkingDirectory = "-/";
           }
       )
-      cfg.syncoidCommands;
-  };
+      cfg.syncoidCommands
+      // {
+        sanoid = {
+          after = sanoidImportUnits;
+          wants = sanoidImportUnits;
+        };
+      };
+  });
 }
