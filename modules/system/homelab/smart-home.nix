@@ -170,12 +170,17 @@ in {
       home-assistant = {
         enable = true;
         # These components are compiled into the HA python env; shelly is
-        # listed because the LAN Shelly plugs trigger discovery requests, and
-        # octoprint because the MK3S+ printer integration polls OctoPrint.
-        # A missing module turns those into an error loop.
-        extraComponents = ["mqtt" "shelly" "octoprint"];
+        # listed because the LAN Shelly plugs trigger discovery requests,
+        # octoprint because the MK3S+ printer integration polls OctoPrint, and
+        # webdav because its backup location is configured only through the
+        # UI: config-entry-only integrations are not detected from YAML, and
+        # the missing module makes the config flow fail with "Invalid handler
+        # specified". A missing module turns those into an error loop.
+        extraComponents = ["mqtt" "shelly" "octoprint" "webdav"];
         config = {
           default_config = {};
+          # The WebDAV backup location writes to Nextcloud on dpool, which
+          # sanoid snapshots and syncoid replicates to the bpool backup disk.
           # No http section: HA 2026.10 migrated the HTTP configuration to
           # /var/lib/hass/.storage/http and deprecated the YAML key. The
           # running instance ignores this section and reports a repair issue

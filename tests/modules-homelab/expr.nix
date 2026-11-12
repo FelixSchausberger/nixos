@@ -109,6 +109,8 @@ in {
   octoprint_serve_exec_start = stripStoreHash config.systemd.services.tailscale-serve-octoprint.serviceConfig.ExecStart;
   smart_home_octoprint_component =
     builtins.elem "octoprint" config.services.home-assistant.extraComponents;
+  smart_home_webdav_component =
+    builtins.elem "webdav" config.services.home-assistant.extraComponents;
 
   opencode_web_enabled = config.modules.system.homelab.opencodeWeb.enable;
   opencode_web_port = config.modules.system.homelab.opencodeWeb.port;
