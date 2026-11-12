@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 24;
+  rule_count = 26;
   rules = [
     {
       alert = "NextcloudDown";
@@ -133,6 +133,16 @@
       alert = "FilesystemWarn";
       expr = "(node_filesystem_avail_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"}) < 0.2 and node_filesystem_size_bytes{fstype!~\"tmpfs|ramfs|squashfs|overlay|devtmpfs|efivarfs|iso9660|mqueue|hugetlbfs\"} > 2e9";
       priority = "high";
+    }
+    {
+      alert = "ZfsPoolDegraded";
+      expr = "node_zfs_zpool_state{state=\"degraded\"} == 1";
+      priority = "high";
+    }
+    {
+      alert = "ZfsPoolUnavailable";
+      expr = "node_zfs_zpool_state{state=~\"faulted|removed|unavail|suspended\"} == 1";
+      priority = "urgent";
     }
     {
       alert = "NixdGcStorm";

@@ -19,6 +19,49 @@
   # Convert to bytes for kernel parameter
   arcMaxBytes = toString (builtins.floor (arcMaxGB * 1024 * 1024 * 1024));
   arcMinBytes = toString (builtins.floor (arcMinGB * 1024 * 1024 * 1024));
+
+  # ZED notification body. It posts critical ZFS events to the local ntfy
+  # topic that backs the homelab alert feed.
+  zedNtfy = pkgs.writeShellScript "zed-ntfy" ''
+    # ntfy ZED notification - posts critical ZFS events to homelab alerts
+
+    case "$ZEVENT_CLASS" in
+      ereport.fs.zfs.checksum|ereport.fs.zfs.io|ereport.fs.zfs.data)
+        priority="urgent"
+        tags="warning,cd"
+        ;;
+      statechange|resource.fs.zfs.statechange)
+        priority="high"
+        tags="warning"
+        ;;
+      ereport.fs.zfs.vdev.remove|vdev_remove)
+        priority="urgent"
+        tags="warning,cd"
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+
+    title="ZFS: ''${ZEVENT_CLASS:-unknown} on ''${ZEVENT_POOL:-unknown}"
+    message="Pool: ''${ZEVENT_POOL:-unknown}
+    Device: ''${ZEVENT_VDEV_PATH:-unknown}
+    State: ''${ZEVENT_VDEV_STATE_STR:-unknown}
+    Type: ''${ZEVENT_VDEV_TYPE:-unknown}
+    ID: ''${ZEVENT_EID:-unknown}"
+
+    ${pkgs.curl}/bin/curl -s -o /dev/null \
+      -H "Title: $title" \
+      -H "Priority: $priority" \
+      -H "Tags: $tags" \
+      -d "$message" \
+      http://127.0.0.1:2586/homelab-alerts 2>/dev/null || true
+  '';
+
+  # ZED runs a zedlet only when the zevent class or subclass is a prefix of the
+  # file name (zed(8)), so the script is installed once per class it reports
+  # on; a single ntfy-notify.sh matches no class and never runs.
+  zedNtfyEvents = ["io" "checksum" "data" "statechange" "vdev.remove"];
 in {
   # ZFS performance optimization and ARC tuning
   boot.kernelParams = [
@@ -119,46 +162,14 @@ in {
     '';
   };
 
-  # Custom ZED notification script that posts critical ZFS events to ntfy
-  environment.etc."zfs/zed.d/ntfy-notify.sh" = {
-    mode = "0755";
-    text = ''
-      #! ${pkgs.runtimeShell}
-      # ntfy ZED notification - posts critical ZFS events to homelab alerts
-
-      case "$ZEVENT_CLASS" in
-        ereport.fs.zfs.checksum|ereport.fs.zfs.io|ereport.fs.zfs.data)
-          priority="urgent"
-          tags="warning,cd"
-          ;;
-        statechange|resource.fs.zfs.statechange)
-          priority="high"
-          tags="warning"
-          ;;
-        ereport.fs.zfs.vdev.remove|vdev_remove)
-          priority="urgent"
-          tags="warning,cd"
-          ;;
-        *)
-          exit 0
-          ;;
-      esac
-
-      title="ZFS: ''${ZEVENT_CLASS:-unknown} on ''${ZEVENT_POOL:-unknown}"
-      message="Pool: ''${ZEVENT_POOL:-unknown}
-      Device: ''${ZEVENT_VDEV_PATH:-unknown}
-      State: ''${ZEVENT_VDEV_STATE_STR:-unknown}
-      Type: ''${ZEVENT_VDEV_TYPE:-unknown}
-      ID: ''${ZEVENT_EID:-unknown}"
-
-      ${pkgs.curl}/bin/curl -s -o /dev/null \
-        -H "Title: $title" \
-        -H "Priority: $priority" \
-        -H "Tags: $tags" \
-        -d "$message" \
-        http://127.0.0.1:2586/homelab-alerts 2>/dev/null || true
-    '';
-  };
+  environment.etc = lib.listToAttrs (map (event: {
+      name = "zfs/zed.d/${event}-ntfy.sh";
+      value = {
+        source = zedNtfy;
+        mode = "0755";
+      };
+    })
+    zedNtfyEvents);
 
   # System packages for ZFS management and monitoring
   environment.systemPackages = with pkgs; [
