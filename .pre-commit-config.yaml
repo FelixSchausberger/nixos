@@ -1,4 +1,7 @@
 # Prek configuration - drop-in replacement for pre-commit hooks
+# Applies to every hook, so it is reserved for files a formatter would churn.
+# The blocklist hook does not rely on it: it scans the tree itself and sees
+# flake.lock and the three aggregator default.nix files too.
 exclude: |
   (?x)^(
     flake\.lock|
@@ -28,17 +31,22 @@ repos:
         exclude: ^secrets/
   # Employer-specific identifiers are never public-tree material: the work
   # git/SSH configuration lived here for a year before the security scrub.
-  # This blocklist is the exact set purged from the rewritten history; drop
-  # an entry only with an equally non-identifying replacement. The pattern
-  # segments are split into character classes so the blocklist itself never
-  # spells the identifiers it forbids.
+  # tools/scripts/forbid-corporate-strings.sh holds the pattern list and is
+  # also called from jjpush, the only gate that runs before jj publishes a
+  # branch (jj has no hook support). Drop an entry only with an equally
+  # non-identifying replacement.
   - repo: local
     hooks:
       - id: forbid-corporate-strings
         name: forbid-corporate-strings
-        entry: bash -c 'rg -i -l -e "freq[u]entis|b[i]tbucket|p[d]ts|sch[a]usbergerf|f[v]cs|f[a]ax10" -- "$@" && exit 1 || exit 0' --
+        entry: tools/scripts/forbid-corporate-strings.sh
         language: system
-        exclude: ^(\.pre-commit-config\.yaml$|^secrets/)
+        # Self-scanning instead of taking prek's file list, because the
+        # top-level exclude above hides flake.lock and the three aggregator
+        # default.nix files from every hook. always_run keeps it active on a
+        # commit that touches only an excluded file.
+        pass_filenames: false
+        always_run: true
   # - repo: https://github.com/pre-commit/pre-commit-hooks
   #   rev: v5.0.0
   #   hooks:

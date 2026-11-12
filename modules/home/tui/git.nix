@@ -58,6 +58,12 @@ in {
       # =============================================
       ${hostSections}
 
+      # Optional private layer (private flake, see AGENTS.md): absent on every
+      # host that does not evaluate it, and ssh ignores a missing literal
+      # Include. Placed after the defaults so a private Host block cannot
+      # silently override them everywhere.
+      Include ~/.ssh/config.d/private.conf
+
       # Pixel 9a over the tailnet: sshd runs inside the nix-on-droid
       # environment (see droid/default.nix), listening on 8022, and the
       # MagicDNS short name resolves through 100.100.100.100.
@@ -120,6 +126,15 @@ in {
 
   programs.git = {
     enable = true;
+    # Optional private layer (private flake, see AGENTS.md): the include is
+    # inert on hosts that do not evaluate it, because git ignores a missing
+    # include target. Nothing under the work machines' configuration belongs
+    # in this repository.
+    includes = [
+      {
+        path = "~/.config/git/private.conf";
+      }
+    ];
     settings = {
       user = {
         inherit (personalInfo) name;

@@ -16,6 +16,21 @@ archived pull refs and cached views (ticket
   subject to the usual user authorization for deployed changes, and every
   push must pass `prek run --all-files`; the `forbid-corporate-strings`
   blocklist applies permanently, ticket or not.
+- A checkout is clean only when `git cat-file -e
+  8d1acde80274c8981f9d567a1ec32b32dabc5f00` fails. The jj journal pins every
+  pre-rewrite commit through `refs/jj/keep`, and comin's bare clone holds them
+  in frozen packs, so `git reflog expire --expire=now --all && git gc
+  --prune=now` cleans neither: re-clone `/per/etc/nixos` and
+  `/var/lib/comin/repository`. The same source trees survive in the Nix store
+  as inputs of old generations until `nix-collect-garbage -d`.
+- Work git/SSH configuration lives in a private flake that depends on this
+  repository and extends its host configurations; this repository never gains
+  an input, URL or path pointing at it. The public tree carries only the two
+  inert include lines (`~/.config/git/private.conf`,
+  `~/.ssh/config.d/private.conf`).
+- The blocklist is `tools/scripts/forbid-corporate-strings.sh`. It scans the
+  tree (including `flake.lock`) and commit descriptions, and `jjpush` runs it
+  as a blocking gate; `prek run --all-files` and CI run the same script.
 - Full incident context (restricted file, user-owned, never echoed into tool
   output): `~/.local/share/ocws/phone-check-incident-notes.md`.
 - Remove this section only after the user reports the ticket closed.
