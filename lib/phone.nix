@@ -238,13 +238,12 @@ _: {
   # free of sandboxed Play, and most banking/travel apps that need Play run
   # here. The settings above are shared. Main-profile apps come in through
   # Settings > Security & privacy > Private space > Install available apps
-  # (Aegis, Spotify, Telegram, FUTO Keyboard); it copies the APK, not the data.
+  # (FUTO Keyboard); it copies the APK, not the data.
   privateSpace = {
     lanes = {
       fdroid = [
         "org.fdroid.fdroid"
         "com.aurora.store"
-        "com.beemdevelopment.aegis"
       ];
 
       obtainium = [
@@ -289,20 +288,20 @@ _: {
         # Services and devices
         "com.x8bit.bitwarden"
         "chipolo.net.v3"
+
+        # Learning
         "com.duolingo"
-        "com.spotify.music"
-        "org.telegram.messenger"
       ];
 
       manual = [
         "Install sandboxed Google Play services, Play Store and Android Auto from the GrapheneOS App Store inside the private space. No Google account is required; Aurora's anonymous session serves the Play apps. Add fel.schausberger@gmail.com only if an app insists on Play licensing."
-        "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (Aegis, Spotify, Telegram, FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
+        "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
         "Grant Play services an unrestricted battery exception in the private space, and unlock the private space after every reboot: push approvals only arrive while it is unlocked."
         "Banking and government apps re-bind the device. Keep the Pixel 9a available until every app is verified; the Google secondary user stays for TF Bank. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
-        "Aegis: import the token export from the Google user. The owner and the private space keep separate copies; either can approve banking logins."
-        "Spotify, Telegram, FUTO Keyboard and Aegis are also in the private lane; the owner keeps its working copies. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
+        "Aegis stays in the owner: import the token export from the Google user before deleting it. Banking logins in the private space use the owner's Aegis; copy the code across the shared clipboard."
+        "FUTO Keyboard is also in the private lane; the owner keeps its working copy. Duolingo is private-lane only. Spotify, Telegram and Aegis stay in the owner. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
         "Tailscale: the private space is a separate node. Rename it to pixel-10a-private in the admin console (node names follow the phone's global device name, so a second login inherits the owner's), disable key expiry for it and keep Use Tailscale DNS settings on for MagicDNS."
-        "UPM is not part of the private lane: sandboxed Google Play covers the patched-away dependencies. Remove it from the private space unless patched apps are still wanted."
+        "UPM stays in the owner: it patches the apps that must run without Play services, and the private space has sandboxed Play, so nothing here needs it."
         "The out-of-repo privacy lane (~/.config/pixel-provision/private-apps.json) is merged into this profile's Aurora list by pixel-provision."
       ];
     };
