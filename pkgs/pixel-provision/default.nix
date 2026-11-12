@@ -138,6 +138,12 @@ in
                   for id in $(lane fdroid); do
                     fdroidcl install -user "$u" "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
                   done
+                  # Aurora raises the system install prompt through the
+                  # installer appop. Without it the first aurora-lane install
+                  # never shows that prompt and parks as a permanent
+                  # "Installing" entry that only an app data reset clears.
+                  "$ADB" shell appops set --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES allow ||
+                    echo "FAILED: install-apps appop for Aurora (its lane will hang)" >&2
                   echo
                   echo "== Obtainium lane (interactive)"
                   echo "Bulk import link (imports all ids at once):"
