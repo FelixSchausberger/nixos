@@ -210,6 +210,16 @@
       (mkRule "FilesystemWarn" "high" "Filesystem low on free space"
         "Persistent filesystem {{ $labels.mountpoint }} ({{ $labels.device }}) is at {{ $value | humanizePercentage }} free; runaway writes head toward FilesystemFull"
         ''(${fsAvail} / ${fsSize}) < 0.2 and ${fsSize} > 2e9'')
+      # A degraded pool keeps serving and its backup jobs still succeed, so
+      # nothing else pages; ZED's statechange is the only immediate signal and
+      # a misnamed zedlet silences it. The zfs collector exports one series per
+      # state, so the expression has to name the unhealthy states.
+      (mkRule "ZfsPoolDegraded" "high" "ZFS pool {{ $labels.zpool }} is degraded"
+        "A device in pool {{ $labels.zpool }} is degraded; run 'zpool status -v' and clear or replace it. Backups still run but carry no redundancy"
+        ''node_zfs_zpool_state{state="degraded"} == 1'')
+      (mkRule "ZfsPoolUnavailable" "urgent" "ZFS pool {{ $labels.zpool }} is {{ $labels.state }}"
+        "Pool {{ $labels.zpool }} has a faulted, removed, unavailable or suspended device; writes fail until it is restored"
+        ''node_zfs_zpool_state{state=~"faulted|removed|unavail|suspended"} == 1'')
     ]
     ++ lib.optionals config.modules.system.maintenance.enable [
       # Tripwire for the disabled managed collector: garbageCollector.strategy
