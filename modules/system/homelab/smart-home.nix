@@ -59,7 +59,11 @@ in {
     port = lib.mkOption {
       type = lib.types.port;
       default = inputs.self.lib.homelabPorts.homeAssistant;
-      description = "Home Assistant loopback HTTP port";
+      description = ''
+        Home Assistant HTTP port. Must match the port in Settings > System >
+        Network: that UI value is authoritative for HA, while this option
+        feeds the Tailscale Serve upstream and the firewall rules below.
+      '';
     };
 
     httpsPort = lib.mkOption {
@@ -85,10 +89,12 @@ in {
       default = [];
       example = ["192.168.178.72"];
       description = ''
-        LAN addresses that may reach Home Assistant directly on the home
-        network (plain HTTP, password-gated by HA). When non-empty, HA binds
-        the m920q LAN address beside loopback and one accept rule per client
-        is generated; the tailnet Serve front is unaffected.
+        LAN addresses allowed through the host firewall to reach Home
+        Assistant directly on the home network (plain HTTP, password-gated by
+        HA); one accept rule per client is generated and the tailnet Serve
+        front is unaffected. HA's own bind addresses live in Settings >
+        System > Network, so adding a client here also requires adding the
+        m920q LAN address to the UI's server-host list.
       '';
     };
   };
@@ -170,18 +176,11 @@ in {
         extraComponents = ["mqtt" "shelly" "octoprint"];
         config = {
           default_config = {};
-          http = {
-            # Loopback always (the Tailscale Serve front), plus the m920q LAN
-            # address when direct home-network clients are configured.
-            server_host =
-              ["127.0.0.1"]
-              ++ lib.optional (cfg.lanClients != []) inputs.self.lib.hosts.m920q.ip;
-            server_port = cfg.port;
-            # The Tailscale Serve front terminates TLS and reaches HA from
-            # 127.0.0.1; trusting it keeps client IPs and secure cookies intact.
-            use_x_forwarded_for = true;
-            trusted_proxies = ["127.0.0.1"];
-          };
+          # No http section: HA 2026.10 migrated the HTTP configuration to
+          # /var/lib/hass/.storage/http and deprecated the YAML key. The
+          # running instance ignores this section and reports a repair issue
+          # while it remains. Binding, port, forwarded-header trust and
+          # trusted proxies are managed in Settings > System > Network.
           # No mqtt section: HA 2026.10 removed the mqtt YAML import, and any
           # leftover keys fail integration setup, which retrains the HTTP
           # config trial and re-binds the API to the default addresses.
@@ -246,11 +245,13 @@ in {
     # against the impermanence bind mounts cannot shadow them (the same
     # workaround as jellyfin.nix).
     #
-    # Home Assistant migrates the http section of configuration.yaml into
-    # /var/lib/hass/.storage/http on first boot and ignores the YAML afterwards
-    # (its fallback logic rebinds the API to the default addresses whenever an
-    # integration section fails validation). Future http option changes
-    # therefore require moving that store file aside before restarting.
+    # Home Assistant keeps its HTTP configuration in
+    # /var/lib/hass/.storage/http: the http section of configuration.yaml was
+    # migrated there and is ignored, so the module no longer declares one.
+    # Binding, port and proxy trust live in Settings > System > Network; the
+    # store is part of the config backup. If the state directory is rebuilt
+    # without restoring a backup, HA falls back to all interfaces on 8123
+    # with no forwarded-header trust, so reapply those settings in the UI.
     systemd.tmpfiles.rules =
       [
         "d /per/var/lib/hass 0700 hass hass -"
