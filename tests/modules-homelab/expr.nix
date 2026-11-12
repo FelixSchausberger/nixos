@@ -111,6 +111,10 @@ in {
     builtins.elem "octoprint" config.services.home-assistant.extraComponents;
   smart_home_webdav_component =
     builtins.elem "webdav" config.services.home-assistant.extraComponents;
+  smart_home_music_assistant_component =
+    builtins.elem "music_assistant" config.services.home-assistant.extraComponents;
+  smart_home_smlight_component =
+    builtins.elem "smlight" config.services.home-assistant.extraComponents;
 
   opencode_web_enabled = config.modules.system.homelab.opencodeWeb.enable;
   opencode_web_port = config.modules.system.homelab.opencodeWeb.port;

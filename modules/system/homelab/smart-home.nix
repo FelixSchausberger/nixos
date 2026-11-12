@@ -169,14 +169,13 @@ in {
       # --- Home Assistant: publishes the MQTT discovery data Zigbee2MQTT emits
       home-assistant = {
         enable = true;
-        # These components are compiled into the HA python env; shelly is
-        # listed because the LAN Shelly plugs trigger discovery requests,
-        # octoprint because the MK3S+ printer integration polls OctoPrint, and
-        # webdav because its backup location is configured only through the
-        # UI: config-entry-only integrations are not detected from YAML, and
-        # the missing module makes the config flow fail with "Invalid handler
-        # specified". A missing module turns those into an error loop.
-        extraComponents = ["mqtt" "shelly" "octoprint" "webdav"];
+        # These components are compiled into the HA python env; shelly,
+        # octoprint, music_assistant and smlight are discovered integrations
+        # that would otherwise error-loop on missing modules. webdav is
+        # config-entry-only: the UI backup location is not detected from YAML,
+        # so omitting it makes the config flow fail with "Invalid handler
+        # specified".
+        extraComponents = ["mqtt" "shelly" "octoprint" "webdav" "music_assistant" "smlight"];
         config = {
           default_config = {};
           # The WebDAV backup location writes to Nextcloud on dpool, which
