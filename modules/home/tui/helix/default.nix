@@ -1,6 +1,8 @@
 {
   config,
   inputs,
+  lib,
+  pkgs,
   ...
 }: {
   imports = [
@@ -121,7 +123,22 @@
     # Plugin derivations are symlinked into $STEEL_HOME/cogs by nhx.
     # Set enable = true to also add the (require ...) to init.scm.
     plugins = {
-      scooter.enable = true;
+      scooter = {
+        enable = true;
+        # rustPlatform's cargo setup hook exports RUSTONIG_SYSTEM_LIBONIG=1
+        # (rust-onig's system mode), so onig_sys probes pkg-config for
+        # oniguruma instead of building its vendored copy. nhx builds the
+        # plugin with buildRustPackage but passes neither input, and the
+        # build script panics. nixpkgs supplies the same pair to the stock
+        # `scooter` package (#585399); lib.unique makes this a no-op once
+        # nhx carries the inputs itself.
+        package = (pkgs.callPackage "${inputs.nhx}/pkgs" {}).scooter.overrideAttrs (
+          old: {
+            nativeBuildInputs = lib.unique ((old.nativeBuildInputs or []) ++ [pkgs.pkg-config]);
+            buildInputs = lib.unique ((old.buildInputs or []) ++ [pkgs.oniguruma]);
+          }
+        );
+      };
       juju.enable = true;
       notify.enable = true;
       breadcrumbs.enable = true;
