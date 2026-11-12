@@ -14,6 +14,20 @@
   # Loopback OTLP receiver of the collector below; spans never leave the host.
   otlpEndpoint = "http://127.0.0.1:4318";
 
+  # cockroachdb/swiss, pulled by the contrib collector's generated go.mod,
+  # gates its runtime shims to `go1.20 && !go1.27`, so the Go 1.27 default in
+  # buildGoModule fails with undefined runtime linknames. Pin the compiler to
+  # 1.26 until the default drops back below 1.27 or the distribution moves
+  # past 0.155.x with a newer swiss; both conditions retire the pin.
+  collectorNeedsGo126 =
+    lib.versionAtLeast pkgs.go.version "1.27"
+    && lib.versionOlder pkgs.opentelemetry-collector-contrib.version "0.156";
+
+  collectorPackage =
+    if collectorNeedsGo126
+    then (pkgs.opentelemetry-collector-releases.override {buildGoModule = pkgs.buildGo126Module;}).otelcol-contrib
+    else pkgs.opentelemetry-collector-contrib;
+
   # Deploy-time closure metrics. The node exporter textfile collector is the
   # only reader, so the activation snippet below is a no-op on hosts without
   # monitoring (no textfile directory) and the script itself skips the closure
@@ -789,7 +803,7 @@ in {
     services.opentelemetry-collector = {
       enable = true;
       # The core collector ships no spanmetrics connector.
-      package = pkgs.opentelemetry-collector-contrib;
+      package = collectorPackage;
       settings = {
         receivers.otlp.protocols.http.endpoint = "127.0.0.1:4318";
         connectors.spanmetrics = {
