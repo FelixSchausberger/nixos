@@ -44,7 +44,6 @@ _: {
       "org.tasks"
       "io.heckel.ntfy"
       "com.beemdevelopment.aegis"
-      "org.mozilla.fennec_fdroid" # Firefox engine; replaces org.mozilla.fenix
       "com.github.catfriend1.syncthingfork" # the vault sync; verified: the index carries it, fdroidcl installs it
       # Bootstrap clients the 10a bench proved necessary: fdroidcl installs
       # ids without any client, but the F-Droid client stays for browsing
@@ -345,7 +344,8 @@ _: {
     "com.anthropic.claude"
     "com.lexa.fakegps"
     "org.cromite.cromite" # third Chromium: Vanadium covers the engine natively
-    "org.mozilla.fenix" # Play build; F-Droid's fennec fork replaces it
+    "org.mozilla.fenix" # Play build; Vanadium covers browsing
+    "org.mozilla.fennec_fdroid" # F-Droid fork of the same browser; dropped with the Play build
     "com.maxmpz.audioplayer"
     "com.maxmpz.audioplayer.unlock" # no Subsonic streaming; Symfonik is the client
     "moe.shizuku.privileged.api" # superseded by Porter (maintained Shizuku fork)
