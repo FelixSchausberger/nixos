@@ -82,7 +82,9 @@
     omitPasswordAuth = true;
     only_listener = true;
   };
+  smart_home_music_assistant_component = true;
   smart_home_octoprint_component = true;
+  smart_home_smlight_component = true;
   smart_home_webdav_component = true;
   smart_home_z2m_frontend_port = 8085;
   smart_home_zigbee_enabled = true;
