@@ -2,9 +2,10 @@
 # desktop-side (m920q) helper: `pair` wires up wireless adb, `apply` pushes the
 # manifest settings and the F-Droid lane for the owner, the private space or the
 # Google user and prints the interactive-lane checklists, `links` renders the
-# Obtainium bulk import, `check` audits the result against the manifest.
-# Android-side state (sign-ins, patcher runs) has no machine interface, so
-# those steps print as a checklist instead of lying about being runnable.
+# Obtainium bulk import, `check` audits the result against the manifest, and
+# `widgets` stages the Termux desktop-power shortcuts. Android-side state
+# (sign-ins, patcher runs) has no machine interface, so those steps print as a
+# checklist instead of lying about being runnable.
 {
   writeText,
   writeShellScriptBin,
@@ -16,15 +17,15 @@
   gnused,
   fdroidcl,
   jq,
-  openssh,
 }: let
   manifest = (import ../../lib/phone.nix) {};
   manifestJson = writeText "phone-manifest.json" (builtins.toJSON manifest);
-  m920qAddress = "100.105.37.12";
+  hostLib = import ../../lib/hosts.nix;
+  m920qAddress = hostLib.m920q.tailnetIp;
 in
   writeShellScriptBin "pixel-provision" ''
-            PATH=${lib.makeBinPath [android-tools coreutils gnugrep gnused fdroidcl jq openssh]}
-            ADB=${android-tools}/bin/adb
+            PATH=${lib.makeBinPath [android-tools coreutils gnugrep gnused fdroidcl jq]}
+            ADB=''${ADB:-${android-tools}/bin/adb}
             MANIFEST=${manifestJson}
             # The privacy lane lives outside the repository by design:
             # user-managed file, never committed; missing file is a no-op.
@@ -62,10 +63,17 @@ in
             }
 
             ensure_device() {
-              if ! "$ADB" get-state >/dev/null 2>&1; then
-                echo "no adb device connected - run 'pixel-provision pair ...' first" >&2
-                exit 1
+              if state=$("$ADB" get-state 2>&1); then
+                return 0
               fi
+              case "$state" in
+                *"more than one"*)
+                  echo "multiple adb devices; export ANDROID_SERIAL=<serial> (see '$ADB devices')" >&2
+                  exit 1
+                  ;;
+              esac
+              echo "no adb device connected - run 'pixel-provision pair ...' first" >&2
+              exit 1
             }
 
             target_user() {
@@ -169,50 +177,36 @@ in
                 exit 0
                 ;;
               widgets)
-                # The termux widget lane: ~/.shortcuts scripts that ssh into m920q
-                # for desktop-power. adb cannot write com.termux's app-private
-                # home, so the bundle lands in Download and the printed finisher
-                # does the privileged move inside Termux.
+                # The termux widget lane: ~/.shortcuts scripts that ssh into
+                # m920q for desktop-power. adb cannot write com.termux's
+                # app-private home, so the bundle lands in Download and the
+                # printed finisher does the move inside Termux. Tailscale SSH
+                # authenticates the phone by tailnet identity, so the scripts
+                # carry no key material.
                 ensure_device
-                key=''${HOME}/.config/pixel-provision/phone-widget-key
-                if [ ! -f "$key" ]; then
-                  ssh-keygen -t ed25519 -N "" -C m920q-termux-widget -f "$key" >/dev/null
-                  echo "generated $key - add its public half to lib/ssh-keys.nix" >&2
-                fi
                 stage=$(mktemp -d)
-                mkdir "$stage/.ssh"
-                cp "$key" "$stage/.ssh/phone-widget-key"
-                cp ''${key}.pub "$stage/.ssh/phone-widget-key.pub"
-                printf '%s\n' \
-                  "Host m920q" \
-                  "  HostName ${m920qAddress}" \
-                  "  User schausberger" \
-                  "  IdentityFile ~/.ssh/phone-widget-key" \
-                  "  StrictHostKeyChecking accept-new" > "$stage/.ssh/config"
-                for act in on off status; do
+                for act in on off; do
                   {
                     printf '#!/data/data/com.termux/files/usr/bin/sh\n'
-                    printf 'exec ssh -F ~/.ssh/config m920q desktop-power %s\n' "$act"
+                    printf 'exec ssh -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=30 -o StrictHostKeyChecking=accept-new schausberger@%s desktop-power %s\n' "${m920qAddress}" "$act"
                   } > "$stage/power-$act"
                   chmod +x "$stage/power-$act"
                 done
                 "$ADB" shell mkdir -p /sdcard/Download/termux-widget-lane
-                "$ADB" push "$stage/.ssh/" /sdcard/Download/termux-widget-lane/.ssh >/dev/null
                 "$ADB" push "$stage"/power-* /sdcard/Download/termux-widget-lane/ >/dev/null
                 rm -rf "$stage"
-                cat <<'FINISH'
+                cat <<FINISH
     Finish inside the Termux app (NOT nix-on-droid):
       pkg install -y openssh
-      mkdir -p ~/.shortcuts ~/.ssh
-      mv /sdcard/Download/termux-widget-lane/.ssh/* ~/.ssh/
+      mkdir -p ~/.shortcuts
       mv /sdcard/Download/termux-widget-lane/power-* ~/.shortcuts/
-      chmod 700 ~/.ssh && chmod 600 ~/.ssh/phone-widget-key
       chmod +x ~/.shortcuts/power-*
-      ssh m920q desktop-power status
+      ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new schausberger@${m920qAddress} desktop-power status
       rm -rf /sdcard/Download/termux-widget-lane
     Then long-press a home screen and add the Termux:Widget shortcuts widget.
-    The key's public half is committed in lib/ssh-keys.nix; until that lands,
-    ~/.ssh/authorized_keys on the target host is the interim path.
+    No SSH key is involved: Tailscale SSH authenticates the phone by tailnet
+    identity. An older bundle installed ~/.ssh/phone-widget-key and a Host
+    m920q block; both can be deleted from Termux.
     FINISH
                 exit 0
                 ;;
@@ -265,9 +259,9 @@ in
               obtainium deep links (bulk + per app, default: owner)
           pixel-provision check [owner|private|google]
               Google-free owner audit or per-profile lane coverage
-          pixel-provision widgets  stage the termux power-widget bundle (key,
-                                   ssh config, ~/.shortcuts scripts via Download)
-        env: ADB=<path>
+          pixel-provision widgets  stage the termux power-on/power-off shortcuts
+                                   via Download (Tailscale SSH, no key)
+        env: ADB=<path>, ANDROID_SERIAL=<serial>
     USAGE
                 exit 1
                 ;;
