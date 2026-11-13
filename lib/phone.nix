@@ -13,8 +13,12 @@ _: {
     # DNS stays off: Android's strict DoT cannot work on a Tailscale VPN
     # network, because the split tunnel has no route to the DoT servers, so the
     # resolver is left without any, the private-DNS probe fails and the network
-    # never validates ("Private DNS server cannot be accessed"). DNS is the
-    # network's resolver, and Tailscale's forwarder while the tunnel is up.
+    # never validates ("Private DNS server cannot be accessed"). Instead the
+    # tailnet's sole global nameserver (admin console) is AdGuard Home at
+    # 100.105.37.12, and this manifest keeps Use Tailscale DNS on. AdGuard
+    # answers from the tailnet and falls back to NextDNS when its DoH upstreams
+    # fail; a second global nameserver is deliberately not configured because
+    # Tailscale races them and a NextDNS denial could be answered by AdGuard.
     # Lockdown stays off: with Tailscale as the always-on app, lockdown blocks
     # every non-VPN app while Tailscale is logged out, including the browser
     # that must load the interactive login URL. A private space inherits these
@@ -129,7 +133,6 @@ _: {
     # The Steam community app stays here; the controller app needs only Porter.
     aurora = [
       # Communication
-      "com.whatsapp"
       "org.thoughtcrime.securesms"
       "com.discord"
       "org.telegram.messenger"
@@ -221,8 +224,8 @@ _: {
       "Sideload Obtainium itself from github.com/ImranR98/Obtainium/releases once, then run `pixel-provision links` and import the bulk obtainium://apps/ link it prints."
       "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on."
       "Play-dependent banking, government and travel apps live in the private space; TF Bank is the exception and runs in the Google user (see googleAccount); the owner's Aurora lane keeps only the apps that stay in this profile."
-      "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private, Google user pixel-10a-google) because Android VPNs are per-user."
-      "Seedvault: every full backup kills the owner's Tailscale process. Tailscale's full-backup rules exclude every domain, so the backup measures zero bytes, Seedvault rejects the package as NO_DATA, and the framework then kills the backup-agent host process, which is the live app; always-on VPN is a start trigger and does not restart it. Tap the Tailscale quick-settings tile or open the app after a backup. Reproduced with 'bmgr backupnow com.tailscale.ipn' on 2026-11-11; the private space and Google-user tunnels are unaffected because backups run for the owner. Drop this item once the framework stops killing the agent host on a rejected package."
+      "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. The tailnet's sole global nameserver is AdGuard Home at 100.105.37.12 with Override local DNS on, so roaming queries use AdGuard; AdGuard falls back to NextDNS (https://dns.nextdns.io/b99bc7) when its DoH upstreams fail. Do not add NextDNS as a second Tailscale global nameserver: Tailscale races resolvers and a NextDNS denial could be answered by AdGuard. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private, Google user pixel-10a-google) because Android VPNs are per-user."
+      "Seedvault: exclude Tailscale from app backups (Settings > System > Backup > Backup status > three-dot menu > Exclude apps). Without the exclusion every full backup kills the owner's Tailscale process: Tailscale's full-backup rules exclude every domain, the backup measures zero bytes, Seedvault rejects the package as NO_DATA, and the framework kills the backup-agent host process, which is the live app; always-on VPN is a start trigger and does not restart it. Reproduced with 'bmgr backupnow com.tailscale.ipn' on 2026-11-11; the private space and Google-user tunnels are unaffected because backups run for the owner. Tailscale's backup data is empty, so the exclusion loses nothing."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
       "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G4 flavor."
       "Pixel Camera gallery: the 1.1.3 Morphe bundle (morphe-patches-pixelcamera-1.1.3.mpp) never reaches its gallery hook on GrapheneOS because Llys.b hard-gates on com.google.android.apps.photos and the review intent carries only secure_mode_ids; the installed camera is a local repack of the UPM output that fakes the Photos presence in that check and rewrites hwb.w to ACTION_VIEW content://media/external/file/<id> for app.alextran.immich. Rebuild the repack after every UPM camera patch, page-align the native libraries, and sign it with UPM's keystore and `apksigner --alignment-preserved` so the in-place install keeps the camera data. Immich is untouched, updates through Obtainium, and has no secure-review activity, so lock-screen review stops at the keyguard bouncer."
@@ -264,6 +267,11 @@ _: {
       # session installs them without a Google account; add the account only
       # if an app insists on Play licensing or Gmail.
       aurora = [
+        # Communication: WhatsApp needs FCM, so it lives where sandboxed Play
+        # services are available; the owner copy has no push transport and
+        # only polls its own socket.
+        "com.whatsapp"
+
         # Banking and finance
         "at.erstebank.george"
         "de.number26.android"
@@ -295,7 +303,8 @@ _: {
       manual = [
         "Install sandboxed Google Play services, Play Store and Android Auto from the GrapheneOS App Store inside the private space. No Google account is required; Aurora's anonymous session serves the Play apps. Add fel.schausberger@gmail.com only if an app insists on Play licensing."
         "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
-        "Grant Play services an unrestricted battery exception in the private space, and unlock the private space after every reboot: push approvals only arrive while it is unlocked."
+        "Grant Play services and WhatsApp an unrestricted battery exception in the private space, and unlock the private space after every reboot: push only arrives while it is unlocked."
+        "WhatsApp lives here for FCM push through sandboxed Play; the owner copy has no Play services and only polls its own socket, which is why messages arrived late. Transfer the chat history from the owner copy before uninstalling it, and keep the private space unlocked after a reboot so push keeps arriving."
         "Banking and government apps re-bind the device. Keep the Pixel 9a available until every app is verified; the Google secondary user stays for TF Bank. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
         "Aegis stays in the owner: import the token export from the Google user before deleting it. Banking logins in the private space use the owner's Aegis; copy the code across the shared clipboard."
         "FUTO Keyboard is also in the private lane; the owner keeps its working copy. Duolingo is private-lane only. Spotify, Telegram and Aegis stay in the owner. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
