@@ -62,10 +62,15 @@
             "https://dns.cloudflare.com/dns-query"
             "https://dns.quad9.net/dns-query"
           ];
-          # Plain-DNS fallback, only consulted when both DoH upstreams fail.
-          # Without it a stalled DoH provider or uplink turns into a hard DNS
-          # outage for every LAN client (observed 2026-09-15).
+          # Fallback resolvers, only consulted when both DoH upstreams fail.
+          # NextDNS comes first so a stalled DoH provider turns into a filtered
+          # fallback instead of a hard DNS outage (observed 2026-09-15); the
+          # plain resolvers stay behind it as the last resort when NextDNS is
+          # unreachable too. This is the NextDNS fallback; do not also add
+          # NextDNS as a second tailnet global nameserver (Tailscale races
+          # resolvers, so AdGuard would answer around a NextDNS denial).
           fallback_dns = [
+            "https://dns.nextdns.io/b99bc7"
             "9.9.9.9"
             "1.1.1.1"
           ];
@@ -75,10 +80,10 @@
           ];
           # LAN faces: 192.168.178.2 (IPv4) and the ULA (IPv6, the address the
           # router's RA advertises as RDNSS), so every LAN client reaches
-          # AdGuard directly. The tailnet IP exposes AdGuard to roaming
-          # Tailscale clients, which use it as the tailnet DNS server with
-          # public resolvers as fallback. 127.0.0.1 is the host's own path
-          # through resolved.
+          # AdGuard directly. Publish the tailnet IP as the sole tailnet global
+          # nameserver in the admin console so roaming Tailscale clients use
+          # AdGuard too; AdGuard's fallback_dns carries NextDNS when its DoH
+          # upstreams fail. 127.0.0.1 is the host's own path through resolved.
           bind_hosts = [
             "127.0.0.1"
             "192.168.178.2"
