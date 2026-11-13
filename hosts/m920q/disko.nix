@@ -120,7 +120,9 @@
             mountpoint = "/per";
             options = {
               mountpoint = "/per";
-              "com.sun:auto-snapshot" = "true";
+              # sanoid owns this tree; zfstools would run a second snapshot
+              # engine over it and pin duplicate history.
+              "com.sun:auto-snapshot" = "false";
             };
           };
           "eyd/home" = {
@@ -136,7 +138,7 @@
             mountpoint = "/per/repos";
             options = {
               mountpoint = "/per/repos";
-              "com.sun:auto-snapshot" = "true";
+              "com.sun:auto-snapshot" = "false";
             };
           };
         };
@@ -187,6 +189,27 @@
             mountpoint = "/per/mnt/backup/data";
             options = {
               mountpoint = "/per/mnt/backup/data";
+            };
+          };
+          # Replica sink for rpool/eyd/per. Its only content is what syncoid
+          # receives, and sanoid on the host prunes the target-only snapshots
+          # down to one per month.
+          "backup/per" = {
+            type = "zfs_fs";
+            mountpoint = "/per/mnt/backup/per";
+            options = {
+              mountpoint = "/per/mnt/backup/per";
+            };
+          };
+          # Cold store for the pre-NixOS manual backups and logical dumps.
+          # 1M records concentrate sequential reads; the archive is written
+          # once and read rarely.
+          "backup/archive" = {
+            type = "zfs_fs";
+            mountpoint = "/per/mnt/backup/archive";
+            options = {
+              mountpoint = "/per/mnt/backup/archive";
+              recordsize = "1M";
             };
           };
         };

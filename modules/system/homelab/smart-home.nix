@@ -212,6 +212,27 @@ in {
         wants = ["mosquitto.service"];
       };
 
+      # sqlite3 .backup is the only consistent copy of a live database; a
+      # plain file copy captures a torn write. state.json carries entity state
+      # and coordinator_backup.json the radio NVRAM, so a restore needs all
+      # three. The copy lands on the per dataset, which sanoid snapshots and
+      # the bpool replication carries off the NVMe.
+      zigbee2mqtt-db-backup = lib.mkIf (cfg.coordinatorUrl != null) {
+        description = "Copy the Zigbee2MQTT state database and radio backup";
+        after = ["zigbee2mqtt.service"];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "zigbee2mqtt";
+          Group = "zigbee2mqtt";
+        };
+        script = ''
+          set -eu
+          ${pkgs.sqlite}/bin/sqlite3 /per/var/lib/zigbee2mqtt/database.db ".backup '/per/var/backup/zigbee2mqtt/database.db'"
+          install -m 0600 /per/var/lib/zigbee2mqtt/state.json /per/var/backup/zigbee2mqtt/state.json
+          install -m 0600 /per/var/lib/zigbee2mqtt/coordinator_backup.json /per/var/backup/zigbee2mqtt/coordinator_backup.json
+        '';
+      };
+
       tailscale-serve-home-assistant = lib.mkIf hl.caddyProxy.enable (
         tailscaleServe {
           name = "tailscale-serve-home-assistant";
@@ -233,6 +254,16 @@ in {
           wants = ["zigbee2mqtt.service"];
         }
       );
+    };
+
+    systemd.timers.zigbee2mqtt-db-backup = lib.mkIf (cfg.coordinatorUrl != null) {
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        # Awake window, same reason as the other host timers: the chassis
+        # blower runs at its quietest between 00:00 and 09:00.
+        OnCalendar = "*-*-* 13:50:00";
+        Persistent = true;
+      };
     };
 
     # Direct home-network clients (plain HTTP; HA's own login gates them). One
@@ -263,6 +294,7 @@ in {
       ]
       ++ lib.optionals (cfg.coordinatorUrl != null) [
         "d /per/var/lib/zigbee2mqtt 0700 zigbee2mqtt zigbee2mqtt -"
+        "d /per/var/backup/zigbee2mqtt 0700 zigbee2mqtt zigbee2mqtt -"
       ];
 
     environment.persistence."/per".directories =
