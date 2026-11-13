@@ -239,7 +239,7 @@ jobs:
     needs: update-flake
     if: needs.update-flake.outputs.decision == 'build'
     runs-on: ubuntu-26.04
-    timeout-minutes: 180
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
