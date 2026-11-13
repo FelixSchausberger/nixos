@@ -34,7 +34,7 @@
     # opencode plan files refresh while agents edit them). The overlay
     # pins its own nixpkgs and has no upstream builder, so the pinned rev
     # substitutes from the personal cache after a deliberate bump.
-    package = inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
+    package = inputs.neovim-nightly-overlay.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
     # Bespoke logic stays in real Lua files under lua/, loaded here.
     extraFiles."lua/config/clipboard.lua".source = ./lua/config/clipboard.lua;

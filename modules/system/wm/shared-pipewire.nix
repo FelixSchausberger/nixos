@@ -10,7 +10,8 @@ _: {
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    jack.enable = true;
+    # JACK clients run under the `pw-jack` wrapper from `pipewire.jack`;
+    # the global LD_LIBRARY_PATH shim is deprecated upstream.
 
     # Low-latency configuration optimized for gaming and real-time audio
     # 48kHz sample rate with 32 sample quantum for minimal latency

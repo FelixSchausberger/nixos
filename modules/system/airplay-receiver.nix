@@ -48,10 +48,12 @@ in {
         enable = true;
         openFirewall = true;
         nssmdns4 = true;
-        publish = {
-          enable = true;
-          addresses = true;
-          userServices = true;
+        # nixpkgs defaults disable both general and user-service publishing;
+        # AirPlay discovery needs service registration plus address records.
+        settings.publish = {
+          disable-publishing = false;
+          disable-user-service-publishing = false;
+          publish-addresses = true;
         };
       };
 
