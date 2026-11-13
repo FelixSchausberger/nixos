@@ -212,13 +212,11 @@ in {
         wants = ["mosquitto.service"];
       };
 
-      # sqlite3 .backup is the only consistent copy of a live database; a
-      # plain file copy captures a torn write. state.json carries entity state
-      # and coordinator_backup.json the radio NVRAM, so a restore needs all
-      # three. The copy lands on the per dataset, which sanoid snapshots and
-      # the bpool replication carries off the NVMe.
+      # Zigbee2MQTT keeps its network cache and entity state as plain JSON
+      # files, so a copy is the whole backup; the per dataset's sanoid
+      # snapshots are the consistent point-in-time layer underneath.
       zigbee2mqtt-db-backup = lib.mkIf (cfg.coordinatorUrl != null) {
-        description = "Copy the Zigbee2MQTT state database and radio backup";
+        description = "Copy the Zigbee2MQTT database, state and radio backup";
         after = ["zigbee2mqtt.service"];
         serviceConfig = {
           Type = "oneshot";
@@ -227,7 +225,7 @@ in {
         };
         script = ''
           set -eu
-          ${pkgs.sqlite}/bin/sqlite3 /per/var/lib/zigbee2mqtt/database.db ".backup '/per/var/backup/zigbee2mqtt/database.db'"
+          install -m 0600 /per/var/lib/zigbee2mqtt/database.db /per/var/backup/zigbee2mqtt/database.db
           install -m 0600 /per/var/lib/zigbee2mqtt/state.json /per/var/backup/zigbee2mqtt/state.json
           install -m 0600 /per/var/lib/zigbee2mqtt/coordinator_backup.json /per/var/backup/zigbee2mqtt/coordinator_backup.json
         '';
