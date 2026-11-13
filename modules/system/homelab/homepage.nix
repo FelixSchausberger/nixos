@@ -693,16 +693,17 @@
       };
     }
     {
-      # NextDNS is the phone's DNS resolver: strict Android Private DNS with
-      # Tailscale DNS deliberately off, so a wedged tunnel costs tailnet
-      # reachability instead of the phone's internet. Its rewrite mapping
-      # m920q.tailf2f0ca.ts.net to the registry tailnetIp (lib/hosts.nix) is
-      # what keeps every Tailscale Serve URL resolvable from Android; a stale
+      # NextDNS is the fallback behind AdGuard Home, not a second tailnet
+      # nameserver and not the phone's private DNS: the phone keeps Tailscale
+      # DNS on, so AdGuard answers from the tailnet and forwards to NextDNS
+      # when its DoH upstreams fail. Its rewrite mapping
+      # m920q.tailf2f0ca.ts.net to the registry tailnetIp (lib/hosts.nix) keeps
+      # Tailscale Serve URLs resolvable when a query lands on NextDNS; a stale
       # rewrite silently breaks mobile access to all served UIs.
       "NextDNS" = {
         icon = "nextdns.png";
         href = "https://my.nextdns.io/b99bc7";
-        description = "Phone DNS resolver (tailnet-name rewrites)";
+        description = "Fallback DNS resolver (tailnet-name rewrites)";
         widget = {
           type = "nextdns";
           profile = "b99bc7";
