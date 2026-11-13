@@ -92,6 +92,11 @@ in {
             default = "w";
             description = "ZFS send options (e.g. w for raw, L for large blocks)";
           };
+          recvOptions = lib.mkOption {
+            type = types.str;
+            default = "";
+            description = "ZFS receive options (u skips mounting the received dataset)";
+          };
           recursive = lib.mkOption {
             type = types.bool;
             default = false;

@@ -840,11 +840,14 @@ in {
         };
         # Recursive carries /per/repos and any later child dataset; a
         # non-recursive daily for rpool/eyd/per is how the desktop's replica
-        # silently misses its repos dataset.
+        # silently misses its repos dataset. -u because the unit chroots into
+        # RootDirectory: a new child dataset cannot create its mountpoint
+        # there, and the replica is read from the pool, not from a mount.
         "rpool-per-to-bpool-backup" = {
           source = "rpool/eyd/per";
           target = "bpool/backup/per";
           recursive = true;
+          recvOptions = "u";
         };
       };
     };
