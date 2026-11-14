@@ -294,6 +294,115 @@
             help: Cumulative wall energy counter of the Shelly plug since power-on (Wh)
             path: '{ .aenergy.total }'
   '';
+
+  # Grafana provisions these dashboard files verbatim; the assertions below
+  # read the same provider list at evaluation time, so a malformed dashboard, a
+  # drifted UID or a query aimed at a datasource this host does not provision
+  # fails the deploy instead of rendering an empty panel. Deriving the list from
+  # the providers keeps the asserted set identical to the provisioned one.
+  grafanaDashboards =
+    map (provider: {
+      inherit (provider) name;
+      json = builtins.fromJSON (builtins.readFile provider.options.path);
+    })
+    config.services.grafana.provision.dashboards.settings.providers;
+
+  # v2 resources keep the UID in metadata.name, classic dashboards in uid; both
+  # shapes coexist until the remaining four are converted.
+  dashboardUid = dashboard: let
+    name = dashboard.json.metadata.name or "";
+  in
+    if name != ""
+    then name
+    else dashboard.json.uid or "";
+
+  dashboardTitle = dashboard: let
+    title = dashboard.json.spec.title or "";
+  in
+    if title != ""
+    then title
+    else dashboard.json.title or "";
+
+  # Every object under a `datasource` key at any depth: panel queries,
+  # variables and annotations all reference datasources this way.
+  datasourceRefs = node:
+    if builtins.isAttrs node
+    then
+      lib.optionals (node ? datasource) [node.datasource]
+      ++ lib.concatLists (map datasourceRefs (builtins.attrValues node))
+    else if builtins.isList node
+    then lib.concatLists (map datasourceRefs node)
+    else [];
+
+  # v2 layouts point at elements by name, so every panel must be referenced
+  # exactly once or it is either invisible or dangling.
+  elementRefs = node:
+    if builtins.isAttrs node
+    then
+      lib.optionals (node.kind or null == "ElementReference") [node.name or ""]
+      ++ lib.concatLists (map elementRefs (builtins.attrValues node))
+    else if builtins.isList node
+    then lib.concatLists (map elementRefs node)
+    else [];
+
+  # `grafana` and `-- Grafana --` are the built-in annotation datasource; a
+  # `$var` reference resolves to a datasource variable at view time.
+  provisionedDatasourceUids =
+    map (datasource: datasource.uid)
+    config.services.grafana.provision.datasources.settings.datasources;
+  validDatasourceRef = ref: let
+    uid = ref.uid or ref.name or "";
+  in
+    lib.hasPrefix "$" uid
+    || builtins.elem uid (provisionedDatasourceUids ++ ["grafana" "-- Grafana --"]);
+
+  dashboardAssertions =
+    lib.concatMap (
+      dashboard: let
+        elements = dashboard.json.spec.elements or {};
+        names = builtins.attrNames elements;
+        ids = map (name: elements.${name}.spec.id or null) names;
+      in
+        [
+          {
+            assertion = dashboardUid dashboard != "";
+            message = "Grafana dashboard ${dashboard.name} has no UID";
+          }
+          {
+            assertion = dashboardTitle dashboard != "";
+            message = "Grafana dashboard ${dashboard.name} has no title";
+          }
+          {
+            assertion = builtins.all validDatasourceRef (datasourceRefs dashboard.json);
+            message = "Grafana dashboard ${dashboard.name} queries a datasource this host does not provision";
+          }
+        ]
+        ++ lib.optionals (elements != {}) [
+          {
+            assertion =
+              (builtins.sort builtins.lessThan (elementRefs dashboard.json))
+              == (builtins.sort builtins.lessThan names);
+            message = "Grafana dashboard ${dashboard.name} has layout references that do not match its elements";
+          }
+          {
+            assertion = ids == lib.unique ids;
+            message = "Grafana dashboard ${dashboard.name} has duplicate panel ids";
+          }
+          {
+            assertion =
+              builtins.all (name: ("panel-" + toString (elements.${name}.spec.id or null)) == name)
+              names;
+            message = "Grafana dashboard ${dashboard.name} has element keys that are not panel-<id>";
+          }
+        ]
+    )
+    grafanaDashboards
+    ++ [
+      {
+        assertion = (map dashboardUid grafanaDashboards) == lib.unique (map dashboardUid grafanaDashboards);
+        message = "Grafana dashboards must have unique UIDs";
+      }
+    ];
 in {
   options.modules.system.homelab.monitoring = {
     enable = lib.mkEnableOption "Prometheus + node_exporter + Grafana monitoring stack";
@@ -362,34 +471,36 @@ in {
   };
 
   config = mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.grafanaPort != cfg.prometheusPort;
-        message = "Grafana and Prometheus must use different ports";
-      }
-      {
-        assertion = cfg.grafanaPort != cfg.nodeExporterPort;
-        message = "Grafana and node_exporter must use different ports";
-      }
-      {
-        assertion = cfg.prometheusPort != cfg.nodeExporterPort;
-        message = "Prometheus and node_exporter must use different ports";
-      }
-      {
-        assertion =
-          !config.modules.system.homelab.adguardhome.enable
-          || cfg.grafanaPort != config.modules.system.homelab.adguardhome.port;
-        message = "When AdGuard Home is enabled, Grafana port must differ from AdGuard admin port";
-      }
-      {
-        assertion =
-          cfg.prometheusHttpsPort
-          != hl.zellijWeb.httpsPort
-          && cfg.prometheusHttpsPort != hl.opencodeWeb.httpsPort
-          && cfg.prometheusHttpsPort != hl.homepage.httpsPort;
-        message = "modules.system.homelab.monitoring.prometheusHttpsPort must differ from the zellij-web, opencode-web and homepage Tailscale Serve ports";
-      }
-    ];
+    assertions =
+      [
+        {
+          assertion = cfg.grafanaPort != cfg.prometheusPort;
+          message = "Grafana and Prometheus must use different ports";
+        }
+        {
+          assertion = cfg.grafanaPort != cfg.nodeExporterPort;
+          message = "Grafana and node_exporter must use different ports";
+        }
+        {
+          assertion = cfg.prometheusPort != cfg.nodeExporterPort;
+          message = "Prometheus and node_exporter must use different ports";
+        }
+        {
+          assertion =
+            !config.modules.system.homelab.adguardhome.enable
+            || cfg.grafanaPort != config.modules.system.homelab.adguardhome.port;
+          message = "When AdGuard Home is enabled, Grafana port must differ from AdGuard admin port";
+        }
+        {
+          assertion =
+            cfg.prometheusHttpsPort
+            != hl.zellijWeb.httpsPort
+            && cfg.prometheusHttpsPort != hl.opencodeWeb.httpsPort
+            && cfg.prometheusHttpsPort != hl.homepage.httpsPort;
+          message = "modules.system.homelab.monitoring.prometheusHttpsPort must differ from the zellij-web, opencode-web and homepage Tailscale Serve ports";
+        }
+      ]
+      ++ dashboardAssertions;
 
     services.prometheus = {
       enable = true;
