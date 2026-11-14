@@ -41,8 +41,21 @@
                                   # Skip powershell on WSL when the WSLInterop binfmt is unregistered so
                                   # notifications degrade silently instead of erroring on every prompt
                                   perl -0pi -e 's|function __done_run_powershell_script\n    set -f powershell_exe|function __done_run_powershell_script\n    if uname -a \| string match --quiet --ignore-case --regex microsoft\n        and not test -f /proc/sys/fs/binfmt_misc/WSLInterop\n        return 1\n    end\n\n    set -f powershell_exe|g' $out/conf.d/done.fish
-                                # Guard niri command in SSH/headless sessions where NIRI_SOCKET is unset
-                                perl -pi -e 's{niri msg --json focused-window \| jq ".id"}{test -n "\$NIRI_SOCKET"; and type -q niri; and niri msg --json focused-window | jq ".id"}' $out/conf.d/done.fish
+                                  # A herdr pane is a multiplexer cell, not a compositor
+                                  # window: its shell starts under herdr-server, so
+                                  # SSH_CLIENT is unset and done.fish's load-time
+                                  # capability probe asks for a focused window on
+                                  # every new tab. The probe must not query a compositor
+                                  # there, and a stale NIRI_SOCKET from a dead niri
+                                  # session must not be queried anywhere: it errors on
+                                  # every shell start, and both window ids then stay
+                                  # empty, which compares equal and reads as focused.
+                                  perl -0pi -e 's{function __done_get_focused_window_id\n}{function __done_get_focused_window_id\n    if set -q HERDR_PANE_ID\n        return\n    end\n}' $out/conf.d/done.fish
+                                  perl -pi -e 's{test -n "\$NIRI_SOCKET"}{test -S "\$NIRI_SOCKET"}g' $out/conf.d/done.fish
+                                  # A socket file can outlive a crashed niri; the probe
+                                  # is advisory, so a failed query must not write to
+                                  # stderr from every shell start.
+                                  perl -pi -e 's{niri msg --json focused-window \| jq}{niri msg --json focused-window 2>/dev/null | jq}g' $out/conf.d/done.fish
 
                                   # Enhance notification messages to show more context
                                   # Change success title to include exit status
