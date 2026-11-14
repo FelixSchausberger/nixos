@@ -815,6 +815,18 @@ in {
         monthly = 12;
         yearly = 1;
       };
+      # /home holds private keys, browser sessions and shell history that no
+      # repository can reproduce, and it was the only dataset with no replica.
+      # Richer retention than rpool/eyd/per because the dataset is small
+      # (~5G) and the data is not re-creatable.
+      sanoidDatasets."rpool/eyd/home" = {
+        frequently = 8;
+        hourly = 24;
+        daily = 7;
+        weekly = 4;
+        monthly = 12;
+        yearly = 0;
+      };
       # Replica retention. syncoid never deletes a target snapshot, so without
       # a policy here each replica keeps everything the source ever pruned
       # (observed: 2678 stale snapshots pinning ~600G on the dpool replica).
@@ -837,6 +849,14 @@ in {
         # snapshot the source ages out stays pinned here forever.
         recursive = true;
       };
+      sanoidDatasets."bpool/backup/home" = {
+        hourly = 0;
+        daily = 0;
+        weekly = 0;
+        monthly = 24;
+        yearly = 0;
+        recursive = true;
+      };
       syncoidCommands = {
         "dpool-data-to-bpool-backup" = {
           source = "dpool/data";
@@ -851,6 +871,11 @@ in {
           source = "rpool/eyd/per";
           target = "bpool/backup/per";
           recursive = true;
+          recvOptions = "u";
+        };
+        "rpool-home-to-bpool-backup" = {
+          source = "rpool/eyd/home";
+          target = "bpool/backup/home";
           recvOptions = "u";
         };
       };
