@@ -31,6 +31,8 @@ in {
       # Vaultwarden client half only: the DR pull timer (dr.pull) that
       # fetches the quarterly snapshot off the m920q Samba share.
       ../../modules/system/homelab/vaultwarden.nix
+      # Archive client half: the weekly pull of the cold archive.
+      ../../modules/system/homelab/archive.nix
       # Log shipping (client half): pushes this host's journald to the m920q
       # Loki through Grafana Alloy.
       ../../modules/system/homelab/logging.nix
@@ -376,4 +378,9 @@ in {
   # pool. Persistent=true makes the timer fire at boot whenever a due run
   # was missed while the machine was off.
   modules.system.homelab.vaultwarden.dr.pull.enable = true;
+
+  # Same idea for the cold archive: the m920q's bpool and dpool share a
+  # chassis, so the legacy tree is pulled onto this host's backup pool and
+  # verified against the manifest the archive carries.
+  modules.system.homelab.archive.pull.enable = true;
 }
