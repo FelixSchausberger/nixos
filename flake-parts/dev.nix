@@ -104,6 +104,7 @@
           markdownlint-cli # Markdown linter used by the treefmt markdownlint formatter
           nix-update # Bump versions/hashes of pinned packages in pkgs/
           prettier
+          python3 # Runs tools/scripts/grafana-dashboard-v2.py
           shellcheck # Shell script linting for pre-commit hooks
           pre-commit-hook-ensure-sops
           ssh-to-age
