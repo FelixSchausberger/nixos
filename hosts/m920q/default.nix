@@ -832,6 +832,10 @@ in {
         weekly = 0;
         monthly = 24;
         yearly = 0;
+        # The replica is recursive (per/repos and future children). Without
+        # this, sanoid prunes only the parent and every received child
+        # snapshot the source ages out stays pinned here forever.
+        recursive = true;
       };
       syncoidCommands = {
         "dpool-data-to-bpool-backup" = {
