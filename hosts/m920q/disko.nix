@@ -130,7 +130,10 @@
             mountpoint = "/home";
             options = {
               mountpoint = "/home";
-              "com.sun:auto-snapshot" = "true";
+              # sanoid owns the home snapshot chain: it can prune its own
+              # autosnap_* names, while zfstools' zfs-auto-snap_* names are
+              # invisible to sanoid and would accrete on the replica forever.
+              "com.sun:auto-snapshot" = "false";
             };
           };
           "eyd/per/repos" = {
