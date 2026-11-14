@@ -61,7 +61,10 @@ jobs:
             jq -r '.nodes["root"].inputs | keys[] | select(. != "neovim-nightly-overlay")' flake.lock
           )
           for attempt in 1 2 3; do
-            if nix flake update "${others[@]}" | tee update-output.txt; then
+            # nix prints the updated-input list to stderr; merge it into the
+            # captured output so the PR body lists what moved instead of
+            # always claiming "No input revisions changed".
+            if nix flake update "${others[@]}" 2>&1 | tee update-output.txt; then
               break
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -274,6 +277,12 @@ jobs:
        (needs.update-flake.outputs.decision == 'build' && needs.build-and-push.result == 'success'))
     runs-on: ubuntu-26.04
     timeout-minutes: 20
+    # The tracker close step needs issues: write. A job-level permissions
+    # block replaces the workflow-level scopes, so the PR writes ride along.
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -305,6 +314,7 @@ jobs:
           commit-message: "chore: daily dependency update"
           body-path: pr-body.md
       - name: Create or update PR (retry)
+        id: create_pr_retry
         # The action recomputes the candidate tree and only pushes when it
         # differs from the branch tip, so a retry after a failed push cannot
         # duplicate commits or PRs.
@@ -318,6 +328,29 @@ jobs:
           labels: auto-merge
           commit-message: "chore: daily dependency update"
           body-path: pr-body.md
+      - name: Close the failure tracker on recovery
+        # A run that opens a lock PR is healthy again. Without this the issue
+        # from the last failure stays open while the updater is green
+        # (observed: #483 open with 37 comments across two green days), and
+        # the next failure's first comment reads as more of the same.
+        # report-failure opens a fresh issue on the next failure. Non-blocking:
+        # the PR already exists, and a tracker hiccup must not fail the run.
+        continue-on-error: true
+        if: steps.create-pr.outcome == 'success' || steps.create_pr_retry.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          existing="$(gh issue list --repo "$REPO" --label "daily-updates-failure" --state open \
+            --json number --jq '.[0].number' 2>/dev/null || true)"
+          [ -n "$existing" ] || exit 0
+          pr="$(gh pr view daily-updates --repo "$REPO" --json number --jq '.number' 2>/dev/null || true)"
+          body="Recovered: the daily dependency update is landing again."
+          if [ -n "$pr" ]; then
+            body="$body See PR #$pr."
+          fi
+          gh issue comment "$existing" --repo "$REPO" --body "$body"
+          gh issue close "$existing" --repo "$REPO" --reason completed
   # A failing run otherwise leaves only a red status with no issue and no
   # notification, so a stalled updater goes unnoticed (observed 2026-10-04..09).
   # Open or update a single tracking issue per failure.
