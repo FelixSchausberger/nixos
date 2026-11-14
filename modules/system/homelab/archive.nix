@@ -131,7 +131,7 @@ in {
       systemd.timers.archive-app-sync = {
         wantedBy = ["timers.target"];
         timerConfig = {
-          OnCalendar = "daily 14:10";
+          OnCalendar = "*-*-* 14:10:00";
           Persistent = true;
         };
       };
