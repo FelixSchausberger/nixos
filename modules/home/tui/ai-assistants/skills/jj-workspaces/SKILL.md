@@ -134,14 +134,16 @@ benefit for single quick changes.
    per revision, so a squash-merged PR counts as finished even though its draft
    commit is not an ancestor of `main@origin`; unsnapshotted edits in a foreign
    workspace are invisible by design (ocws never snapshots a workspace it does
-   not own).
+   not own). The `HOLD` column shows `live` (a process rooted in the workspace),
+   `session` (an unarchived opencode session under it updated within
+   `OCWS_GC_SESSION_AGE`, default 604800s), or `-` (idle).
 
    `done` refuses while unmerged work remains or a process is still rooted in
    the workspace (`--force` overrides both), so it doubles as a close-out
    check. `ocws gc` reclaims `empty`/`merged` workspaces, skipping any with a
-   live process and any touched within the age gate: an empty unclaimed
-   workspace after `OCWS_GC_EMPTY_AGE` (default 21600s), one that held work
-   after `OCWS_GC_AGE` (default 86400s). It runs on `ocws <task>` and daily
+   live process, any held by a recent session, and any touched within the age
+   gate: an empty unclaimed workspace after `OCWS_GC_EMPTY_AGE` (default
+   21600s), one that held work after `OCWS_GC_AGE` (default 86400s). It runs on `ocws <task>` and daily
    from a systemd user timer. `ocws rm [--force] <task>` removes without the
    fetch/check; `--force` discards unmerged work and live sessions.
 
