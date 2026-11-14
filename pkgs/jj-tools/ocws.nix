@@ -33,6 +33,14 @@
 # the session that spawned them and outlive it, so a cwd-only occupancy check
 # holds workspaces hostage after the session closed (2026-11 audit: five
 # empty workspaces whose only occupants were leaked mcp-nixos processes).
+# A cwd-only check misses a session whose TUI already exited, so gc also
+# consults the opencode session database: an unarchived session rooted in the
+# workspace and updated within OCWS_GC_SESSION_AGE keeps the workspace with no
+# process at all. Recency, not a pending prompt, is the observable state -
+# unanswered permission asks live in the server's memory and vanish with the
+# client - so this is a grace window; 'ocws wait' remains the indefinite
+# marker. The probe is guard-silent: no database, no sqlite3, or an unreadable
+# schema falls back to the process and touch checks.
 # Base directory precedence: $OCWS_BASE, then the parent directory of the
 # current workspace (the sibling convention) when writable, then
 # $XDG_DATA_HOME/ocws (default ~/.local/share/ocws) so workspaces survive
@@ -55,6 +63,7 @@
   rip2,
   zellij,
   jq,
+  sqlite,
   bash,
 }:
 writeShellApplication {
@@ -68,6 +77,7 @@ writeShellApplication {
     rip2
     zellij
     jq
+    sqlite
     bash
   ];
   text = ''
@@ -109,6 +119,10 @@ writeShellApplication {
       OCWS_GC_EMPTY_AGE
                     seconds an empty, unclaimed workspace must sit idle before
                     gc removes it (default 21600)
+      OCWS_GC_SESSION_AGE
+                    seconds an opencode session rooted in a workspace keeps that
+                    workspace out of gc, measured from the session's last update
+                    (default 604800)
       OCWS_WAIT_STALE_DAYS
                     days after which a parked workspace resurfaces as a gc
                     nudge and in the prompt badge (default 14)
@@ -269,6 +283,30 @@ writeShellApplication {
       done
       return 1
     }
+    # A recent opencode session rooted in the workspace is a resumable
+    # conversation even when no process holds the directory: the TUI may exit
+    # while a permission prompt is pending, or the client may run elsewhere and
+    # be pointed at this worktree. Pending input is in-memory, so the session's
+    # last update is the observable signal; the window is OCWS_GC_SESSION_AGE.
+    # Guard-silent: a missing database, a missing sqlite3, or a schema change
+    # falls back to the process and touch checks.
+    session_db="''${XDG_DATA_HOME:-$HOME/.local/share}/opencode/opencode.db"
+    session_age_seconds() {
+      v="''${OCWS_GC_SESSION_AGE:-604800}"
+      if printf '%s' "$v" | grep -Eq '^[0-9]+$'; then
+        printf '%s' "$v"
+      else
+        echo 604800
+      fi
+    }
+    ws_session_recent() {
+      local target="$1" since
+      [ -r "$session_db" ] || return 1
+      command -v sqlite3 >/dev/null 2>&1 || return 1
+      since=$(( ( $(date +%s) - $(session_age_seconds) ) * 1000 ))
+      [ -n "$(sqlite3 -cmd '.timeout 2000' "file:$session_db?mode=ro" \
+        "select 1 from session_v2 where directory = '$target' and time_archived is null and time_updated >= $since limit 1" 2>/dev/null)" ]
+    }
     # True when any entry under the workspace changed at or after the epoch.
     # GNU find's -newermt covers files and directories, so an edit, a new file
     # or a jj snapshot all count as activity, unlike the directory mtime alone.
@@ -296,6 +334,9 @@ writeShellApplication {
         root="$(realpath -m "$(ws_root_for "$name")")"
         live="-"
         ws_live "$root" && live="live"
+        if [ "$live" = "-" ] && { [ "$state" = "empty" ] || [ "$state" = "merged" ]; } && ws_session_recent "$root"; then
+          live="session"
+        fi
 
         # Parked: an explicit wait marker overrides the commit state for the
         # display and shields the workspace from gc entirely - the marker
@@ -351,7 +392,7 @@ writeShellApplication {
               in-flight) rows_review+=("$(printf '  %-16s %s' "$name" "$desc_display")") ;;
               conflict) rows_conflict+=("$(printf '  %-16s %s' "$name" "$desc_display")") ;;
               empty | merged)
-                if [ "$live" = live ]; then
+                if [ "$live" != "-" ]; then
                   rows_claimed+=("$(printf '  %-16s %s' "$name" "$desc_display")")
                 else
                   rows_reclaim+=("$(printf '  %-16s %s' "$name" "$desc_display")")
@@ -360,7 +401,7 @@ writeShellApplication {
             esac
           fi
         fi
-        rows+=("$(printf '  %-18s %-10s %-5s %s' "$name" "$state_display" "$live" "$desc_display")")
+        rows+=("$(printf '  %-18s %-10s %-8s %s' "$name" "$state_display" "$live" "$desc_display")")
       done < <(jj --ignore-working-copy workspace list -T 'name ++ "\n"' 2>/dev/null)
 
       if [ "$mode" = counts ]; then
@@ -369,7 +410,7 @@ writeShellApplication {
       fi
 
       if [ "$mode" = board ]; then
-        echo "ocws board - state derived from jj plus the wait marker; cleanup happens only under RECLAIMABLE"
+        echo "ocws board - state derived from jj plus the wait marker and recent sessions; cleanup happens only under RECLAIMABLE"
         if [ "''${#rows_parked[@]}" -gt 0 ]; then
           echo ""
           echo "  PARKED (waiting on the outside world)"
@@ -392,7 +433,7 @@ writeShellApplication {
         fi
         if [ "''${#rows_claimed[@]}" -gt 0 ]; then
           echo ""
-          echo "  CLAIMED (session live)"
+          echo "  CLAIMED (session active)"
           printf '%s\n' "''${rows_claimed[@]}"
         fi
         if [ "''${#rows_reclaim[@]}" -gt 0 ]; then
@@ -404,10 +445,11 @@ writeShellApplication {
       fi
 
       echo "Workspace states:"
-      printf '  %-18s %-10s %-5s %s\n' NAME STATE PROC DESCRIPTION
+      printf '  %-18s %-10s %-8s %s\n' NAME STATE HOLD DESCRIPTION
       printf '%s\n' "''${rows[@]}"
       echo ""
-      echo "  empty/merged: reclaimable by 'ocws gc' once idle and not live"
+      echo "  empty/merged: reclaimable by 'ocws gc' once idle and unoccupied"
+      echo "  HOLD:         live = process rooted here, session = recent opencode session, - = idle"
       echo "  unpushed:     commits outside main@origin no remote bookmark tracks"
       echo "  in-flight:    commits outside main@origin with an open PR"
       echo "  conflict:     needs 'jj resolve'"
@@ -533,9 +575,10 @@ writeShellApplication {
     # OCWS_GC_AGE. A workspace whose recorded directory is gone is forgotten
     # outright, wait marker and all. Parked workspaces (a wait marker) are
     # checked before classification and kept whatever the state mentions, so
-    # the marker bypasses every gate below it in this loop. Liveness and
-    # touch-time guards keep a still-open session from losing its directory;
-    # rip's graveyard makes a mistaken removal restorable regardless.
+    # the marker bypasses every gate below it in this loop. Process liveness, a
+    # recent opencode session, and the touch-time gate keep a paused
+    # conversation from losing its directory; rip's graveyard makes a mistaken
+    # removal restorable regardless.
     # do_fetch=1 fetches first so absorption is judged against current origin.
     ocws_gc() {
       local do_fetch="$1" name dir state desc age_limit now
@@ -584,6 +627,11 @@ writeShellApplication {
 
         if ws_live "$dir"; then
           echo "ocws gc: keeping '$name' (live process)"
+          continue
+        fi
+
+        if ws_session_recent "$dir"; then
+          echo "ocws gc: keeping '$name' (recent session)"
           continue
         fi
 
