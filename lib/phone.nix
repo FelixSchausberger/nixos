@@ -109,9 +109,10 @@ _: {
         url = "https://github.com/d4rken-org/porter";
       }
       {
-        # OpenCode on the phone: the native Android client against the m920q
-        # OpenCode server, replacing the retired Collie PWA bridge. Pairing:
-        # `opencode pair --url ...` on the host prints the QR (see manual).
+        # FOSS OpenCode client against the m920q OpenCode server, updated by
+        # Obtainium; the official Play-only companion is in the aurora lane.
+        # Pairing: `opencode pair --url ...` on the host prints the QR (see
+        # manual).
         id = "io.github.beppe2880.opencodemobile";
         name = "OpenCode Mobile";
         author = "beppe2880";
@@ -208,6 +209,11 @@ _: {
       "com.tellm.android.app"
       "at.post.app"
 
+      # OpenCode's official Play-only companion: Aurora installs it without a
+      # Google account and it needs no Play services. The Obtainium client
+      # stays as the FOSS fallback.
+      "ai.opencode.mobilecode"
+
       # Splitting and streaming
       "splid.teamturtle.com.splid"
       "com.tribab.tricount.android"
@@ -222,7 +228,7 @@ _: {
     # grants. `pixel-provision` prints this checklist at the end of `apply`.
     manual = [
       "Sideload Obtainium itself from github.com/ImranR98/Obtainium/releases once, then run `pixel-provision links` and import the bulk obtainium://apps/ link it prints."
-      "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on."
+      "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on. An install parked at \"Installing\" after a missed prompt never recovers on its own: `pixel-provision reset-aurora <profile>` clears that profile's Aurora data (and its anonymous session) so the next install prompts again."
       "Play-dependent banking, government and travel apps live in the private space; TF Bank is the exception and runs in the Google user (see googleAccount); the owner's Aurora lane keeps only the apps that stay in this profile."
       "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. The tailnet's sole global nameserver is AdGuard Home at 100.105.37.12 with Override local DNS on, so roaming queries use AdGuard; AdGuard falls back to NextDNS (https://dns.nextdns.io/b99bc7) when its DoH upstreams fail. Do not add NextDNS as a second Tailscale global nameserver: Tailscale races resolvers and a NextDNS denial could be answered by AdGuard. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private, Google user pixel-10a-google) because Android VPNs are per-user."
       "Seedvault: exclude Tailscale from app backups (Settings > System > Backup > Backup status > three-dot menu > Exclude apps). Without the exclusion every full backup kills the owner's Tailscale process: Tailscale's full-backup rules exclude every domain, the backup measures zero bytes, Seedvault rejects the package as NO_DATA, and the framework kills the backup-agent host process, which is the live app; always-on VPN is a start trigger and does not restart it. Reproduced with 'bmgr backupnow com.tailscale.ipn' on 2026-11-11; the private space and Google-user tunnels are unaffected because backups run for the owner. Tailscale's backup data is empty, so the exclusion loses nothing."
@@ -231,7 +237,7 @@ _: {
       "Pixel Camera gallery: the 1.1.3 Morphe bundle (morphe-patches-pixelcamera-1.1.3.mpp) never reaches its gallery hook on GrapheneOS because Llys.b hard-gates on com.google.android.apps.photos and the review intent carries only secure_mode_ids; the installed camera is a local repack of the UPM output that fakes the Photos presence in that check and rewrites hwb.w to ACTION_VIEW content://media/external/file/<id> for app.alextran.immich. Rebuild the repack after every UPM camera patch, page-align the native libraries, and sign it with UPM's keystore and `apksigner --alignment-preserved` so the in-place install keeps the camera data. Immich is untouched, updates through Obtainium, and has no secure-review activity, so lock-screen review stops at the keyguard bouncer."
       "Porter: start once via its wireless-debugbing flow; the service stops on device restart, so reopen it after a reboot before SteamController talks to the controller."
       "Re-add the remaining PWA shortcuts the 9a had under its webapk stubs, from Vanadium; do not resurrect the Collie bridge PWA (OpenCode runs native now)."
-      "OpenCode Mobile: run `opencode pair --url https://m920q.tailf2f0ca.ts.net:8444` on m920q and scan the printed QR; approvals, questions and diffs then arrive in the app, with notifications handled natively."
+      "OpenCode (official app from the aurora lane; the Obtainium client is the FOSS fallback): run `opencode pair --url https://m920q.tailf2f0ca.ts.net:8444` on m920q and scan the printed QR; approvals, questions and diffs then arrive in the app, with notifications handled natively."
       "Government-app account sign-ins happen in-app on first use; open items recorded on the bench live as comments next to their lane rows."
     ];
   };

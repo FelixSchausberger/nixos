@@ -2,7 +2,8 @@
 # desktop-side (m920q) helper: `pair` wires up wireless adb, `apply` pushes the
 # manifest settings and the F-Droid lane for the owner, the private space or the
 # Google user and prints the interactive-lane checklists, `links` renders the
-# Obtainium bulk import, `check` audits the result against the manifest, and
+# Obtainium bulk import, `check` audits the result against the manifest,
+# `reset-aurora` clears a stuck Aurora install state in one profile, and
 # `widgets` stages the Termux desktop-power shortcuts. Android-side state
 # (sign-ins, patcher runs) has no machine interface, so those steps print as a
 # checklist instead of lying about being runnable.
@@ -142,8 +143,13 @@ in
                   # installer appop. Without it the first aurora-lane install
                   # never shows that prompt and parks as a permanent
                   # "Installing" entry that only an app data reset clears.
-                  "$ADB" shell appops set --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES allow ||
+                  # appops set exits 0 even when the package is absent for the
+                  # user, so read the value back instead of trusting the exit
+                  # code.
+                  "$ADB" shell appops set --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES allow
+                  if ! "$ADB" shell cmd appops get --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES | grep -q allow; then
                     echo "FAILED: install-apps appop for Aurora (its lane will hang)" >&2
+                  fi
                   echo
                   echo "== Obtainium lane (interactive)"
                   echo "Bulk import link (imports all ids at once):"
@@ -167,6 +173,24 @@ in
                 fi
                 echo
                 echo "re-run 'pixel-provision check $PROFILE' after the manual lanes."
+                exit 0
+                ;;
+              reset-aurora)
+                ensure_device
+                set_profile "''${2:-owner}"
+                u=$(target_user)
+                if ! "$ADB" shell pm list packages --user "$u" | grep -qx "package:com.aurora.store"; then
+                  echo "Aurora is not installed in profile $PROFILE (user $u)" >&2
+                  exit 1
+                fi
+                echo "== reset Aurora in profile $PROFILE (user $u)"
+                "$ADB" shell am force-stop --user "$u" com.aurora.store
+                "$ADB" shell pm clear --user "$u" com.aurora.store || exit 1
+                # Clearing data drops the install-apps access; re-grant and
+                # verify it so the next install raises the system prompt.
+                "$ADB" shell appops set --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES allow
+                "$ADB" shell cmd appops get --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES
+                echo "reopen Aurora, choose the anonymous session, and retry the install"
                 exit 0
                 ;;
               links)
@@ -224,9 +248,12 @@ in
                 trap 'rm -f "$f"' EXIT
                 "$ADB" shell pm list packages -3 --user "$u" | sed 's/^package://' > "$f"
                 if [ "$PROFILE" = owner ]; then
-                  google=$(grep -c '^com\.google\.' "$f" || true)
-                  echo "com.google.* installed: $google (expect 0 on GrapheneOS)"
-                  grep '^com\.google\.' "$f" || true
+                  # The patched Pixel Camera is the intended com.google.*
+                  # exception: the manual camera lane repacks it to run without
+                  # Play services. Everything else stays Google-free.
+                  google=$(grep '^com\.google\.' "$f" | grep -v -E '^com\.google\.android\.GoogleCamera(\.morphe)?$' || true)
+                  echo "com.google.* installed outside the patched camera: $(printf '%s' "$google" | grep -c . || true) (expect 0 on GrapheneOS)"
+                  printf '%s\n' "$google" | grep . || true
                   echo "-- fdroid lane coverage:"
                   ids=$(lane fdroid)
                 elif [ "$PROFILE" = google ]; then
@@ -261,6 +288,9 @@ in
               connect the main port from the wireless debugging screen.
           pixel-provision apply [owner|private|google]
               settings + lane + interactive checklists (default: owner)
+          pixel-provision reset-aurora [owner|private|google]
+              clear Aurora's app data in a profile (a stuck "Installing"
+              entry) and re-grant its install-apps appop (default: owner)
           pixel-provision links [owner|private]
               obtainium deep links (bulk + per app, default: owner)
           pixel-provision check [owner|private|google]
