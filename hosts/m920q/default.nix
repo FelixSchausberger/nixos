@@ -791,6 +791,9 @@ in {
 
   modules.system.homelab = {
     adguardhome.enable = true;
+    # Legacy data that no live dataset owns: served read-only over SMB and
+    # pulled onto the desktop, which is what makes it leave the chassis.
+    archive.enable = true;
     backup = {
       enable = true;
       # rpool/eyd/per is sanoid-only on this host: zfstools opted out via
