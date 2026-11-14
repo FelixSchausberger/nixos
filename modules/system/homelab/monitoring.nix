@@ -307,21 +307,11 @@
     })
     config.services.grafana.provision.dashboards.settings.providers;
 
-  # v2 resources keep the UID in metadata.name, classic dashboards in uid; both
-  # shapes coexist until the remaining four are converted.
-  dashboardUid = dashboard: let
-    name = dashboard.json.metadata.name or "";
-  in
-    if name != ""
-    then name
-    else dashboard.json.uid or "";
+  # Every provisioned dashboard is a v2 resource: the UID is metadata.name and
+  # the layout lives in spec.elements/spec.layout.
+  dashboardUid = dashboard: dashboard.json.metadata.name or "";
 
-  dashboardTitle = dashboard: let
-    title = dashboard.json.spec.title or "";
-  in
-    if title != ""
-    then title
-    else dashboard.json.title or "";
+  dashboardTitle = dashboard: dashboard.json.spec.title or "";
 
   # Every object under a `datasource` key at any depth: panel queries,
   # variables and annotations all reference datasources this way.
@@ -362,39 +352,36 @@
         elements = dashboard.json.spec.elements or {};
         names = builtins.attrNames elements;
         ids = map (name: elements.${name}.spec.id or null) names;
-      in
-        [
-          {
-            assertion = dashboardUid dashboard != "";
-            message = "Grafana dashboard ${dashboard.name} has no UID";
-          }
-          {
-            assertion = dashboardTitle dashboard != "";
-            message = "Grafana dashboard ${dashboard.name} has no title";
-          }
-          {
-            assertion = builtins.all validDatasourceRef (datasourceRefs dashboard.json);
-            message = "Grafana dashboard ${dashboard.name} queries a datasource this host does not provision";
-          }
-        ]
-        ++ lib.optionals (elements != {}) [
-          {
-            assertion =
-              (builtins.sort builtins.lessThan (elementRefs dashboard.json))
-              == (builtins.sort builtins.lessThan names);
-            message = "Grafana dashboard ${dashboard.name} has layout references that do not match its elements";
-          }
-          {
-            assertion = ids == lib.unique ids;
-            message = "Grafana dashboard ${dashboard.name} has duplicate panel ids";
-          }
-          {
-            assertion =
-              builtins.all (name: ("panel-" + toString (elements.${name}.spec.id or null)) == name)
-              names;
-            message = "Grafana dashboard ${dashboard.name} has element keys that are not panel-<id>";
-          }
-        ]
+      in [
+        {
+          assertion = dashboardUid dashboard != "";
+          message = "Grafana dashboard ${dashboard.name} has no UID";
+        }
+        {
+          assertion = dashboardTitle dashboard != "";
+          message = "Grafana dashboard ${dashboard.name} has no title";
+        }
+        {
+          assertion = builtins.all validDatasourceRef (datasourceRefs dashboard.json);
+          message = "Grafana dashboard ${dashboard.name} queries a datasource this host does not provision";
+        }
+        {
+          assertion =
+            (builtins.sort builtins.lessThan (elementRefs dashboard.json))
+            == (builtins.sort builtins.lessThan names);
+          message = "Grafana dashboard ${dashboard.name} has layout references that do not match its elements";
+        }
+        {
+          assertion = ids == lib.unique ids;
+          message = "Grafana dashboard ${dashboard.name} has duplicate panel ids";
+        }
+        {
+          assertion =
+            builtins.all (name: ("panel-" + toString (elements.${name}.spec.id or null)) == name)
+            names;
+          message = "Grafana dashboard ${dashboard.name} has element keys that are not panel-<id>";
+        }
+      ]
     )
     grafanaDashboards
     ++ [
