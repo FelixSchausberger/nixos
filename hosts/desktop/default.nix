@@ -370,6 +370,24 @@ in {
         target = "bpool/desktop/per";
       };
     };
+    # Off-site success stamps: the pulls are the routes that leave the
+    # chassis, so their age is what the dashboard and the staleness rules
+    # watch (modules/system/backup.nix).
+    status = {
+      enable = true;
+      routes = {
+        archive-pull = {
+          unit = "archive-pull";
+          maxAge = "14d";
+          description = "archive pulled off-site";
+        };
+        vault-dr-pull = {
+          unit = "vaultwarden-dr-pull";
+          maxAge = "14d";
+          description = "vaultwarden DR pulled off-site";
+        };
+      };
+    };
   };
 
   # Chassis-loss copy of the m920q vault: syncoid above only moves this

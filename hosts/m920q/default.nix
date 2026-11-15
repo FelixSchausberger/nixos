@@ -882,6 +882,63 @@ in {
           recvOptions = "u";
         };
       };
+      # Success stamps for the dashboard and the staleness rules
+      # (modules/system/backup.nix). Each unit writes its file only when it
+      # exits 0, so the age is the last completed backup, not the attempt.
+      status = {
+        enable = true;
+        routes = {
+          snapshots = {
+            unit = "sanoid";
+            maxAge = "3h";
+            description = "sanoid snapshots";
+          };
+          data = {
+            unit = "syncoid-dpool-data-to-bpool-backup";
+            maxAge = "26h";
+            description = "dpool/data replica";
+          };
+          per = {
+            unit = "syncoid-rpool-per-to-bpool-backup";
+            maxAge = "26h";
+            description = "rpool/eyd/per replica";
+          };
+          home = {
+            unit = "syncoid-rpool-home-to-bpool-backup";
+            maxAge = "26h";
+            description = "rpool/eyd/home replica";
+          };
+          postgres-immich = {
+            unit = "postgresqlBackup-immich";
+            maxAge = "26h";
+            description = "immich PostgreSQL dump";
+          };
+          postgres-nextcloud = {
+            unit = "postgresqlBackup-nextcloud";
+            maxAge = "26h";
+            description = "nextcloud PostgreSQL dump";
+          };
+          zigbee = {
+            unit = "zigbee2mqtt-db-backup";
+            maxAge = "26h";
+            description = "Zigbee2MQTT state";
+          };
+          archive = {
+            unit = "archive-app-sync";
+            maxAge = "26h";
+            description = "archive app mirror";
+          };
+          vault-dr = {
+            unit = "vaultwarden-dr-generate";
+            maxAge = "100d";
+            # The artifact is quarterly, but the timer runs weekly: a first
+            # success that never happens should page within a week, not 100
+            # days.
+            firstRunGrace = "7d";
+            description = "vaultwarden DR snapshot";
+          };
+        };
+      };
     };
     immich = {
       enable = true;

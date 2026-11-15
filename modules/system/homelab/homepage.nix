@@ -144,15 +144,14 @@
     metrics = hostVitalsMetrics host;
   };
 
-  # Backup route cards. Prometheus carries no per-job success timestamp, so
-  # these read the systemd timer metrics: the last *attempt* (seconds before
-  # the job starts) plus the count of failed units. The `> 0` guard keeps a
-  # timer that has not fired since boot at "-" instead of a fifty-year age.
-  # A route that stops running entirely is caught by the staleness rules in
-  # monitoring.nix, not by this card.
+  # Backup route cards. The age comes from the per-route stamp each unit
+  # writes only when it exits 0 (modules/system/backup.nix), so it measures
+  # the last *successful* run: a failed attempt leaves the previous stamp and
+  # the card keeps aging. A route with no success yet has no series and reads
+  # "-", which is the graceful state for a fresh route.
   backupAge = label: expr: {
     inherit label;
-    query = "time() - (${expr} > 0)";
+    query = "time() - ${expr}";
     format.type = "duration";
   };
 
@@ -170,16 +169,16 @@
     {
       "ZFS backups" = {
         icon = "mdi-database-sync";
-        description = "Snapshots 15 min · replicas 20:00";
+        description = "Last success · snapshots 15 min, replicas 20:00";
         widget = {
           type = "prometheusmetric";
           url = local hl.monitoring.prometheusPort;
           refreshInterval = 60000;
           metrics = [
-            (backupAge "Snapshots" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="sanoid.timer"}'')
-            (backupAge "Data" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="syncoid-dpool-data-to-bpool-backup.timer"}'')
-            (backupAge "Per" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="syncoid-rpool-per-to-bpool-backup.timer"}'')
-            (backupAge "Home" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="syncoid-rpool-home-to-bpool-backup.timer"}'')
+            (backupAge "Snapshots" ''backup_last_success_timestamp_seconds{route="snapshots"}'')
+            (backupAge "Data" ''backup_last_success_timestamp_seconds{route="data"}'')
+            (backupAge "Per" ''backup_last_success_timestamp_seconds{route="per"}'')
+            (backupAge "Home" ''backup_last_success_timestamp_seconds{route="home"}'')
           ];
         };
       };
@@ -187,17 +186,17 @@
     {
       "Service backups" = {
         icon = "mdi-database-arrow-down";
-        description = "Dumps 13:40 · archive 14:10 · off-site weekly";
+        description = "Last success · dumps 13:40, archive 14:10";
         widget = {
           type = "prometheusmetric";
           url = local hl.monitoring.prometheusPort;
           refreshInterval = 60000;
           metrics = [
-            # min() reports the laggard when the two PostgreSQL timers drift.
-            (backupAge "PostgreSQL" ''min(node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name=~"postgresqlBackup-.*[.]timer"})'')
-            (backupAge "Zigbee" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="zigbee2mqtt-db-backup.timer"}'')
-            (backupAge "Archive" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="archive-app-sync.timer"}'')
-            (backupAge "Off-site" ''min(node_systemd_timer_last_trigger_seconds{host="desktop",name=~"archive-pull[.]timer|vaultwarden-dr-pull[.]timer"})'')
+            # min() reports the laggard: each database is its own route.
+            (backupAge "PostgreSQL" ''min(backup_last_success_timestamp_seconds{route=~"postgres-.*"})'')
+            (backupAge "Zigbee" ''backup_last_success_timestamp_seconds{route="zigbee"}'')
+            (backupAge "Archive" ''backup_last_success_timestamp_seconds{route="archive"}'')
+            (backupAge "Off-site" ''min(backup_last_success_timestamp_seconds{route=~"archive-pull|vault-dr-pull"})'')
           ];
         };
       };
