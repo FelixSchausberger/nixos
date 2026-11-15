@@ -32,27 +32,6 @@
         harpoon-plugin = zellijPlugins.harpoon;
         inherit (zellijPlugins) zellij-forgot;
         dssh = final.callPackage ../../pkgs/dssh {};
-
-        # Align the tree-sitter-rust grammar with the queries shipped by the
-        # steelix fork (a Helix master snapshot), which still use the
-        # `type_parameter` node that newer tree-sitter-rust releases renamed to
-        # constrained_type_parameter/optional_type_parameter/const_parameter.
-        # Mismatch caused: "Failed to compile highlights for 'rust': invalid
-        # node type \"type_parameter\"". Pin to upstream Helix-master's rev.
-        # Uses inputs.nixpkgs (not pkgs.path) so the file is realized under lazy-trees.
-        helix = prev.helix.override {
-          lockedGrammars =
-            lib.recursiveUpdate
-            (lib.importJSON "${inputs.nixpkgs}/pkgs/by-name/he/helix/grammars.json")
-            {
-              rust.nurl.args = {
-                hash = "sha256-Ls6tB6IxXDQDWwx0BJ7RgbheelC4MH8z97E7wwhkDcY=";
-                owner = "tree-sitter";
-                repo = "tree-sitter-rust";
-                rev = "77a3747266f4d621d0757825e6b11edcbf991ca5";
-              };
-            };
-        };
       })
     ];
   };

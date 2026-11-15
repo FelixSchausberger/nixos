@@ -19,10 +19,5 @@ _: {
           '';
       });
     })
-
-    # sops-nix's install helper resolves buildGo125Module from the consuming
-    # host's package set; the VM tests build from a bare package set and need
-    # the same alias.
-    (import ../../lib/build-go125-alias.nix)
   ];
 }
