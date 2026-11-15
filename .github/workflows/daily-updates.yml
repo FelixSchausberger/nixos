@@ -242,7 +242,10 @@ jobs:
     needs: update-flake
     if: needs.update-flake.outputs.decision == 'build'
     runs-on: ubuntu-26.04
-    timeout-minutes: 360
+    # Keep the job below GitHub's 6-hour run cap: a job timeout is reported as
+    # cancelled, and the reporter needs time to run after it. Desktop's cold
+    # closure took 294 min before the cache fixes; 330 leaves margin.
+    timeout-minutes: ${{ matrix.host == 'desktop' && 330 || 180 }}
     strategy:
       fail-fast: false
       matrix:
@@ -357,7 +360,10 @@ jobs:
   report-failure:
     name: Report failure
     needs: [update-flake, build-and-push, create-pr]
-    if: failure()
+    # A job timeout is reported as cancelled, so failure() alone left run
+    # 43592085341 without a tracker update. Treat a cancelled matrix leg as a
+    # reportable outcome too.
+    if: failure() || cancelled() || needs.build-and-push.result == 'cancelled'
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
@@ -411,7 +417,7 @@ jobs:
           # nix output carries ANSI colour; the sed below strips it.
           log_full="$(
             gh run view "$RUN_ID" --repo "$REPO" --json jobs \
-              --jq '.jobs[] | select(.conclusion == "failure") | .databaseId' 2>/dev/null \
+              --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | .databaseId' 2>/dev/null \
               | while IFS= read -r job_id; do
                   [ -n "$job_id" ] || continue
                   gh api --allow-escape-sequences \
@@ -437,6 +443,8 @@ jobs:
           log_matches_i() {
             grep -Eqi "$1" < <(printf '%s\n' "$log_full")
           }
+          cancelled_jobs="$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
+            --jq '.jobs[] | select(.conclusion == "cancelled") | .name' 2>/dev/null || true)"
           # The update job's own decision is the most precise classifier
           # there is: eval-failed is emitted only for configuration
           # problems, and the per-host assert details land in the run's
@@ -445,6 +453,9 @@ jobs:
           # (observed 2026-11-02: the gtk2 EOL removal).
           if [ "$DECISION" = "eval-failed" ]; then
             verdict="config change needed (eval-failed): the eval-errors artifact and step summary on the run page name the failing option"
+          elif [ -n "$cancelled_jobs" ]; then
+            cancelled_list="$(printf '%s\n' "$cancelled_jobs" | paste -sd ', ' -)"
+            verdict="cancelled: $cancelled_list stopped without a failure; GitHub reports a job timeout as cancelled (desktop cap 330 min). The run did not finish its cache warm-up."
           elif log_matches "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
             offending="$(printf '%s\n' "$log_full" \
               | grep -m1 -oE "option definition '[^']+' in '[^']+'" \
@@ -476,9 +487,9 @@ jobs:
           # names the cause. Both probes must degrade to the plain body:
           # a failing reporter opens no issue at all.
           failing="$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
-            --jq '.jobs[] | select(.conclusion == "failure") | "- " + .name' 2>/dev/null || true)"
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | "- " + .name + " (" + .conclusion + ")"' 2>/dev/null || true)"
           if [ -n "$failing" ]; then
-            body+=$'\n\n**Failing job(s):**\n'"$failing"
+            body+=$'\n\n**Failed/cancelled job(s):**\n'"$failing"
           fi
           # Only the refused derivations themselves: the failed log names
           # every drv it visited, so a bare path grep would list the whole
