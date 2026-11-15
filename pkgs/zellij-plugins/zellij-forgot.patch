@@ -1,8 +1,11 @@
-diff --git a/src/helper.rs b/src/helper.rs
-index 339bb88..a412cc4 100644
---- a/src/helper.rs
-+++ b/src/helper.rs
-@@ -19,36 +19,46 @@ pub fn modes_to_string(mode: InputMode) -> String {
+diff -ru '--exclude=Cargo.lock' '--exclude=Cargo.toml' zf-a/src/helper.rs zf-b/src/helper.rs
+--- zf-a/src/helper.rs	2026-11-15 15:12:54.543414006 +0100
++++ zf-b/src/helper.rs	2026-11-15 15:12:54.552414053 +0100
+@@ -16,39 +16,50 @@
+         InputMode::Move => "Move".to_string(),
+         InputMode::Prompt => "Prompt".to_string(),
+         InputMode::Tmux => "Tmux".to_string(),
++        InputMode::RenameSession => "RenameSession".to_string(),
      }
  }
  
@@ -68,7 +71,7 @@ index 339bb88..a412cc4 100644
              Action::ScrollToBottom => "ScrollToBottom".to_string(),
              Action::ScrollToTop => "ScrollToTop".to_string(),
              Action::PageScrollUp => "PageScrollUp".to_string(),
-@@ -58,108 +68,170 @@ pub fn actions_to_string(actions: Vec<Action>) -> String {
+@@ -58,108 +69,170 @@
              Action::ToggleFocusFullscreen => "ToggleFocusFullscreen".to_string(),
              Action::TogglePaneFrames => "TogglePaneFrames".to_string(),
              Action::ToggleActiveSyncTab => "ToggleActiveSyncTab".to_string(),
@@ -78,14 +81,7 @@ index 339bb88..a412cc4 100644
 -            Action::EditFile(path, direction, bool1, bool2, bool3, coordinates) => format!(
 -                "EditFile({:?}, {:?}, {}, {}, {}, {:?})",
 -                path, direction, bool1, bool2, bool3, coordinates
-+            Action::NewPane {
-+                direction,
-+                pane_name,
-+                start_suppressed,
-+            } => format!(
-+                "NewPane({:?}, {:?}, {})",
-+                direction, pane_name, start_suppressed
-             ),
+-            ),
 -            Action::NewFloatingPane(run_command_action, command, option) => {
 -                format!(
 -                    "NewFloatingPane({:?}, {:?}, {:?})",
@@ -95,7 +91,14 @@ index 339bb88..a412cc4 100644
 -            Action::NewTiledPane(direction, run_command_action, command) => format!(
 -                "NewTiledPane({:?}, {:?}, {:?})",
 -                direction, run_command_action, command
--            ),
++            Action::NewPane {
++                direction,
++                pane_name,
++                start_suppressed,
++            } => format!(
++                "NewPane({:?}, {:?}, {})",
++                direction, pane_name, start_suppressed
+             ),
 -            Action::NewInPlacePane(run_command_action, command) => {
 -                format!("NewInPlacePane({:?}, {:?})", run_command_action, command)
 -            }
