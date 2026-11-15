@@ -1419,7 +1419,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "fritz_wifi_status{friendly_name=~\"$device\", wifi_name=\"$wifi\"}",
+                        "expr": "fritz_wifi_info{friendly_name=~\"$device\", wifi_name=\"$wifi\"}",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "{{ ssid }}",
@@ -1971,7 +1971,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "fritz_wifi_status{friendly_name=~\"$device\", wifi_name=\"$wifi\"}",
+                        "expr": "fritz_wifi_info{friendly_name=~\"$device\", wifi_name=\"$wifi\"}",
                         "format": "time_series",
                         "instant": true,
                         "legendFormat": "802.11{{ standard }}",

@@ -271,7 +271,8 @@
           "options": [],
           "multi": true,
           "includeAll": true,
-          "allowCustomValue": true
+          "allowCustomValue": true,
+          "allValue": ".+"
         }
       }
     ]
