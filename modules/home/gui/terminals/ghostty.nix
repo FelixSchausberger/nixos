@@ -24,8 +24,10 @@
       window-padding-color = "extend"; # Extend bg color into padding in alt-screen
 
       # Terminal behavior
-      scrollback-limit = 100000; # 100k lines - maximum feasible for performance
-      copy-on-select = true;
+      # 100k lines; the default 50 MB scrollback-limit-bytes still caps
+      # memory when the history is dense.
+      scrollback-limit-lines = 100000;
+      copy-on-select = "primary";
       confirm-close-surface = false;
 
       # Cursor configuration
@@ -39,11 +41,12 @@
 
       # Shell integration
       shell-integration = "fish";
-      shell-integration-features = "cursor,sudo,title";
+      # ssh-env forwards COLORTERM/TERM_PROGRAM/TERM_PROGRAM_VERSION;
+      # ssh-terminfo installs xterm-ghostty on hosts that ship tic.
+      shell-integration-features = "cursor,sudo,title,ssh-env,ssh-terminfo";
 
       # Performance
       resize-overlay = "never";
-      resize-overlay-position = "center";
 
       # Key bindings
       keybind = [
