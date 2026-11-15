@@ -361,6 +361,9 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
+      # The failure classifier downloads each failed job's log through the
+      # actions API; read is enough.
+      actions: read
       contents: read
       issues: write
     steps:
@@ -397,14 +400,43 @@ jobs:
           # mirror tools/scripts/update-system.sh so the CLI and the issue
           # agree (observed 2026-11-01: an eval assert surfaced as three
           # unlabelled host builds).
-          log_full="$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null \
-            | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' || true)"
-          # --log-failed ends with the runner's cleanup sections, not with
-          # the failing command: the nix error lines sit minutes earlier,
-          # so a tail window reads every real build failure as
-          # unclassified. Classification probes the whole failed log; the
-          # issue display keeps the readable 40-line tail.
+          #
+          # The reporter is itself a job of the run it reports on, so the
+          # run is still in progress here and `gh run view --log-failed`
+          # refuses with "run ... is still in progress" and empty stdout
+          # (observed 2026-11-12 and 2026-11-15: every failure classified
+          # as unclassified). The job endpoint serves a completed job's
+          # log regardless of the run status, so collect the failed jobs'
+          # logs individually. --allow-escape-sequences is required because
+          # nix output carries ANSI colour; the sed below strips it.
+          log_full="$(
+            gh run view "$RUN_ID" --repo "$REPO" --json jobs \
+              --jq '.jobs[] | select(.conclusion == "failure") | .databaseId' 2>/dev/null \
+              | while IFS= read -r job_id; do
+                  [ -n "$job_id" ] || continue
+                  gh api --allow-escape-sequences \
+                    "repos/$REPO/actions/jobs/$job_id/logs" 2>/dev/null || true
+                done \
+              | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' || true
+          )"
+          # Job logs end with the runner's cleanup sections, not with the
+          # failing command: the nix error lines sit minutes earlier, so a
+          # tail window reads every real build failure as unclassified.
+          # Classification probes the whole failed log; the issue display
+          # keeps the readable 40-line tail.
           log_tail="$(printf '%s\n' "$log_full" | tail -40 || true)"
+          # `printf | grep -q` returns 141 under the runner's default
+          # `-o pipefail` whenever grep exits before printf finishes, so a
+          # matching branch reads as false on a full log (observed
+          # 2026-11-15: a log with matching errors still classified as
+          # unclassified). Feed grep from a process substitution instead:
+          # only grep's status decides.
+          log_matches() {
+            grep -Eq "$1" < <(printf '%s\n' "$log_full")
+          }
+          log_matches_i() {
+            grep -Eqi "$1" < <(printf '%s\n' "$log_full")
+          }
           # The update job's own decision is the most precise classifier
           # there is: eval-failed is emitted only for configuration
           # problems, and the per-host assert details land in the run's
@@ -413,23 +445,27 @@ jobs:
           # (observed 2026-11-02: the gtk2 EOL removal).
           if [ "$DECISION" = "eval-failed" ]; then
             verdict="config change needed (eval-failed): the eval-errors artifact and step summary on the run page name the failing option"
-          elif printf '%s\n' "$log_full" | grep -Eq "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
+          elif log_matches "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
             offending="$(printf '%s\n' "$log_full" \
               | grep -m1 -oE "option definition '[^']+' in '[^']+'" \
               | sed -E "s#/nix/store/[a-z0-9]{32}-source##" || true)"
             verdict="config change needed ($offending - removed-option assert or failed module assertion)"
+          # The disk pattern names the executed error only: the nix-setup
+          # step's script echo contains the literal
+          # `disk budget insufficient: ${avail}G free`, so the bare token
+          # reads a passing disk check as a full disk in every failed log.
+          elif log_matches "(::error::|##\[error\])disk budget insufficient: [0-9]+G free|No space left on device"; then
+            verdict="disk full (ENOSPC): the closure build overflowed the runner disk - instantiation, not the cache push, fills the store, so a warm cache shortens builds but not the footprint; the free-disk step's df line names the volume class (72 GB vs 145 GB runners)"
           # narinfo is deliberately not a cache-gap token: the build-host
           # action prints narinfo-cache-*-ttl lines in successful steps of a
           # failed job's log, which would misreport a real build failure as
           # a cache gap.
-          elif printf '%s\n' "$log_full" | grep -Eq "No space left on device|disk budget insufficient"; then
-            verdict="disk full (ENOSPC): the closure build overflowed the runner disk - instantiation, not the cache push, fills the store, so a warm cache shortens builds but not the footprint; the free-disk step's df line names the volume class (72 GB vs 145 GB runners)"
-          elif printf '%s\n' "$log_full" | grep -Eqi "hash mismatch|missing from cache"; then
+          elif log_matches_i "hash mismatch|missing from cache"; then
             verdict="cache gap: closures absent from all substituters (CI warms felixschausberger.cachix.org before the lock PR merge)"
           # Both the old (`builder for ... failed`) and the new (`Cannot
           # build` / `Reason: builder failed with exit code`) nix error
           # wording mean an uncached dependency failed to compile.
-          elif printf '%s\n' "$log_full" | grep -Eq "builder for .* failed|error: build of|Cannot build|Reason: builder failed"; then
+          elif log_matches "builder for .* failed|error: build of|Cannot build|Reason: builder failed"; then
             verdict="dependency build failure"
           else
             verdict="unclassified - read the log tail"
@@ -450,8 +486,8 @@ jobs:
           failing_drvs="$(printf '%s\n' "$log_full" \
             | grep -oE "(Cannot build|builder for)[^']*'/nix/store/[a-z0-9]{32}-[a-zA-Z0-9+_.-]+\.drv" 2>/dev/null \
             | grep -oE "/nix/store/[a-z0-9]{32}-[a-zA-Z0-9+_.-]+\.drv" \
-            | sed -E "s#.*/nix/store/[a-z0-9]{32}-##; s#\.drv$##" \
-            | grep -vE '^(etc|system-units|special-user-units|nixos-system-|unit-)' \
+            | sed -E 's#.*/nix/store/[a-z0-9]{32}-##; s#\.drv$##' \
+            | grep -vE '^(etc|system-units|special-user-units|nixos-system-|unit-|home-manager-(files|generation)$)' \
             | sort -u | head -n 8 || true)"
           if [ -n "$failing_drvs" ]; then
             drv_list="$(printf '%s\n' "$failing_drvs" | tr '\n' ' ' | sed -e 's/  */ /g' -e 's/ $//')"
