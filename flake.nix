@@ -197,16 +197,18 @@
     # nix/opencode.nix records a fixed-output hash for a node_modules tree
     # produced by `bun install` (nix/hashes.json). That output tracks the bun
     # version, so the build must not inherit the floating `nixpkgs` input: a
-    # nixpkgs bump carrying a new bun (1.4.2 restructures node_modules/.bun)
-    # fails with a fixed-output hash mismatch and stalls the daily lock
-    # refresh. Use a rev-pinned nixpkgs, which the daily update cannot move,
-    # and bump it only alongside an upstream hash that matches its bun (the
-    # rev below is the nixpkgs pinned inside the upstream tag's flake.lock).
+    # nixpkgs bump carrying a new bun changes node_modules/.bun and fails with
+    # a fixed-output hash mismatch, stalling the daily lock refresh. Use a
+    # rev-pinned nixpkgs, which the daily update cannot move. The v2.3.0 tag
+    # pins bun 1.4.2 in its own flake.lock, whose compiler resolves the `ws`
+    # re-export to the runtime's built-in and crashes the binary at startup,
+    # so the rev below carries bun 1.4.4, the version the tagged build script
+    # targets.
     nixpkgs-opencode2 = {
-      url = "github:NixOS/nixpkgs/3181085bfd08663b6b9e60bc7a8395c2aaa741bd";
+      url = "github:NixOS/nixpkgs/e126e9e73c335158ff8279ac14d5f4afec153716";
     };
     opencode-v2 = {
-      url = "github:anomalyco/opencode/v2.0.24";
+      url = "github:anomalyco/opencode/v2.3.0";
       inputs.nixpkgs.follows = "nixpkgs-opencode2";
     };
 

@@ -133,7 +133,20 @@
   # anything it spawns directly, but NOT agent tool calls: opencode builds the
   # tool shell's PATH from the login shell environment, so a prefix here is
   # invisible to them. agentShell below is what covers the tools.
-  opencodePackage = inputs.opencode-v2.packages.${system}.opencode;
+  # Upstream regenerates nix/hashes.json from its dev branch, and the v2.3.0
+  # tag still carries the 2026-10-31 value, which predates the release's
+  # dependency changes, so the fixed-output node_modules derivation rejects the
+  # tree bun produces from the tag's own lockfile. Pin the hash the build
+  # reports for this source with the flake's rev-pinned nixpkgs; both sides are
+  # pinned, so the value cannot drift.
+  opencodeUpstream = inputs.opencode-v2.packages.${system}.opencode;
+  opencodePackage = opencodeUpstream.override {
+    node_modules = opencodeUpstream.node_modules.override (
+      lib.optionalAttrs (system == "x86_64-linux") {
+        hash = "sha256-PYcpyYP/i0e6ZIt27u1tFYbjU4Cl848w77dU1NiIEls=";
+      }
+    );
+  };
 
   # The shell opencode uses for agent tool calls. It must be one that resolves
   # `rm` to the graveyard shim, which the fleet's shell functions cannot do:
