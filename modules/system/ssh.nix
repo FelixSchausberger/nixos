@@ -33,7 +33,9 @@
         ClientAliveCountMax = 3;
         X11Forwarding = false;
         PrintMotd = false;
-        AcceptEnv = ["COLORTERM"];
+        # Ghostty's ssh-env feature forwards these via SendEnv; sshd drops
+        # any variable not accepted here.
+        AcceptEnv = ["COLORTERM" "TERM_PROGRAM" "TERM_PROGRAM_VERSION"];
         Ciphers = [
           "chacha20-poly1305@openssh.com"
           "aes256-gcm@openssh.com"
