@@ -144,6 +144,84 @@
     metrics = hostVitalsMetrics host;
   };
 
+  # Backup route cards. Prometheus carries no per-job success timestamp, so
+  # these read the systemd timer metrics: the last *attempt* (seconds before
+  # the job starts) plus the count of failed units. The `> 0` guard keeps a
+  # timer that has not fired since boot at "-" instead of a fifty-year age.
+  # A route that stops running entirely is caught by the staleness rules in
+  # monitoring.nix, not by this card.
+  backupAge = label: expr: {
+    inherit label;
+    query = "time() - (${expr} > 0)";
+    format.type = "duration";
+  };
+
+  # node_systemd_unit_state exports one series per state, so summing the
+  # failed series yields 0 for a healthy group rather than an empty vector.
+  backupFailures = label: selector: {
+    inherit label;
+    query = ''sum(node_systemd_unit_state{${selector},state="failed"})'';
+    format.type = "number";
+  };
+
+  # One card per mechanism instead of one per dataset: the widget renders at
+  # most four values, and three cards cover every route with its own age.
+  backupServices = lib.optionals (hl.backup.enable && hl.monitoring.enable) [
+    {
+      "ZFS backups" = {
+        icon = "mdi-database-sync";
+        description = "Snapshots 15 min · replicas 20:00";
+        widget = {
+          type = "prometheusmetric";
+          url = local hl.monitoring.prometheusPort;
+          refreshInterval = 60000;
+          metrics = [
+            (backupAge "Snapshots" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="sanoid.timer"}'')
+            (backupAge "Data" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="syncoid-dpool-data-to-bpool-backup.timer"}'')
+            (backupAge "Per" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="syncoid-rpool-per-to-bpool-backup.timer"}'')
+            (backupAge "Home" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="syncoid-rpool-home-to-bpool-backup.timer"}'')
+          ];
+        };
+      };
+    }
+    {
+      "Service backups" = {
+        icon = "mdi-database-arrow-down";
+        description = "Dumps 13:40 · archive 14:10 · off-site weekly";
+        widget = {
+          type = "prometheusmetric";
+          url = local hl.monitoring.prometheusPort;
+          refreshInterval = 60000;
+          metrics = [
+            # min() reports the laggard when the two PostgreSQL timers drift.
+            (backupAge "PostgreSQL" ''min(node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name=~"postgresqlBackup-.*[.]timer"})'')
+            (backupAge "Zigbee" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="zigbee2mqtt-db-backup.timer"}'')
+            (backupAge "Archive" ''node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="archive-app-sync.timer"}'')
+            (backupAge "Off-site" ''min(node_systemd_timer_last_trigger_seconds{host="desktop",name=~"archive-pull[.]timer|vaultwarden-dr-pull[.]timer"})'')
+          ];
+        };
+      };
+    }
+    {
+      "Backup failures" = {
+        icon = "mdi-alert-circle-outline";
+        description = "0 is healthy; ntfy names the failing unit";
+        widget = {
+          type = "prometheusmetric";
+          url = local hl.monitoring.prometheusPort;
+          refreshInterval = 60000;
+          metrics = [
+            (backupFailures "ZFS" ''host="${config.networking.hostName}",name=~"(sanoid|syncoid-.*)[.]service"'')
+            (backupFailures "Services" ''host="${config.networking.hostName}",name=~"(postgresqlBackup-.*|zigbee2mqtt-db-backup|archive-app-sync)[.]service"'')
+            # Desktop series exist only while the PC is on, so this reads "-"
+            # when it is off rather than claiming a failure.
+            (backupFailures "Off-site" ''host="desktop",name=~"(archive-pull|vaultwarden-dr-pull|vaultwarden-dr-generate)[.]service"'')
+          ];
+        };
+      };
+    }
+  ];
+
   # Build services YAML from enabled homelab services.
   #
   # One card per monitored host. The m920q's node_exporter answers on loopback
@@ -907,6 +985,7 @@
   allServices =
     lib.optionals (accessServices != []) [{"Access" = accessServices;}]
     ++ lib.optionals (infraServices != []) [{"Infrastructure" = infraServices;}]
+    ++ lib.optionals (backupServices != []) [{"Backups" = backupServices;}]
     ++ lib.optionals (powerServices != []) [{"Power" = powerServices;}]
     ++ lib.optionals (monitoringServices != []) [{"Monitoring" = monitoringServices;}]
     ++ lib.optionals (networkServices != []) [{"Network" = networkServices;}]
@@ -939,6 +1018,12 @@
       icon = "mdi-server";
       style = "row";
       columns = 4;
+    };
+    Backups = {
+      tab = "Home";
+      icon = "mdi-backup-restore";
+      style = "row";
+      columns = 3;
     };
     Power = {
       tab = "Home";

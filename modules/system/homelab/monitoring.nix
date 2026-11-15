@@ -185,6 +185,30 @@
       (mkRule "BackupFailed" "high" "A backup job failed"
         "A ZFS snapshot or replication job (sanoid/syncoid) ended in failed state; backups are incomplete until fixed"
         ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == 1'')
+      # Failed-state rules only see a job that ran and failed. A timer that
+      # was disabled, renamed or never armed leaves nothing red while the
+      # copy silently ages, so watch the trigger age too. The `> 0` filter
+      # drops timers that have not fired since boot (LastTrigger resets),
+      # which would otherwise read as a fifty-year age and page on recovery.
+      (mkRuleFor "10m" "BackupSnapshotsStale" "high" "ZFS snapshots have stopped"
+        "sanoid last fired {{ $value | humanizeDuration }} ago; dataset snapshots are aging"
+        ''time() - (node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="sanoid.timer"} > 0) > 3 * 3600'')
+      (mkRuleFor "10m" "BackupReplicaStale" "high" "ZFS replication is stale"
+        "{{ $labels.name }} last ran {{ $value | humanizeDuration }} ago; the replica is behind"
+        ''time() - (node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name=~"syncoid-.*[.]timer"} > 0) > 26 * 3600'')
+      (mkRuleFor "10m" "BackupDumpStale" "high" "A service backup is stale"
+        "{{ $labels.name }} last ran {{ $value | humanizeDuration }} ago; the dump or archive mirror is behind"
+        ''time() - (node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name=~"postgresqlBackup-.*[.]timer|zigbee2mqtt-db-backup[.]timer|archive-app-sync[.]timer"} > 0) > 26 * 3600'')
+      # Two missed weekly pulls. The desktop is off for days by design, so a
+      # daily-sized window would page on every normal power-off.
+      (mkRuleFor "30m" "BackupOffsiteStale" "high" "The off-site copy is stale"
+        "{{ $labels.name }} last ran {{ $value | humanizeDuration }} ago; the desktop copy is behind (PC off for long, or pull broken)"
+        ''time() - (node_systemd_timer_last_trigger_seconds{host="desktop",name=~"archive-pull[.]timer|vaultwarden-dr-pull[.]timer"} > 0) > 14 * 86400'')
+      # The DR generator is weekly but only writes a snapshot when the newest
+      # one is 85 days old, so a silent timer means no quarterly DR at all.
+      (mkRuleFor "30m" "BackupVaultDrStale" "high" "The vaultwarden DR timer is stale"
+        "vaultwarden-dr-generate last fired {{ $value | humanizeDuration }} ago; no new DR snapshot is being produced"
+        ''time() - (node_systemd_timer_last_trigger_seconds{host="${config.networking.hostName}",name="vaultwarden-dr-generate.timer"} > 0) > 30 * 86400'')
     ])
     ++ (lib.optionals cfg.fritzbox.enable [
       (mkRule "FritzboxWanDown" "urgent" "Fritz!Box WAN link is down"

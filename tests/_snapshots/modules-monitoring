@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 26;
+  rule_count = 31;
   rules = [
     {
       alert = "NextcloudDown";
@@ -97,6 +97,31 @@
     {
       alert = "BackupFailed";
       expr = "node_systemd_unit_state{name=~\".*(sanoid|syncoid).*[.]service\",state=\"failed\"} == 1";
+      priority = "high";
+    }
+    {
+      alert = "BackupSnapshotsStale";
+      expr = "time() - (node_systemd_timer_last_trigger_seconds{host=\"m920q\",name=\"sanoid.timer\"} > 0) > 3 * 3600";
+      priority = "high";
+    }
+    {
+      alert = "BackupReplicaStale";
+      expr = "time() - (node_systemd_timer_last_trigger_seconds{host=\"m920q\",name=~\"syncoid-.*[.]timer\"} > 0) > 26 * 3600";
+      priority = "high";
+    }
+    {
+      alert = "BackupDumpStale";
+      expr = "time() - (node_systemd_timer_last_trigger_seconds{host=\"m920q\",name=~\"postgresqlBackup-.*[.]timer|zigbee2mqtt-db-backup[.]timer|archive-app-sync[.]timer\"} > 0) > 26 * 3600";
+      priority = "high";
+    }
+    {
+      alert = "BackupOffsiteStale";
+      expr = "time() - (node_systemd_timer_last_trigger_seconds{host=\"desktop\",name=~\"archive-pull[.]timer|vaultwarden-dr-pull[.]timer\"} > 0) > 14 * 86400";
+      priority = "high";
+    }
+    {
+      alert = "BackupVaultDrStale";
+      expr = "time() - (node_systemd_timer_last_trigger_seconds{host=\"m920q\",name=\"vaultwarden-dr-generate.timer\"} > 0) > 30 * 86400";
       priority = "high";
     }
     {
