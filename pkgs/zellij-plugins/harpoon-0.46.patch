@@ -1,0 +1,30 @@
+diff -ru a/src/main.rs b/src/main.rs
+--- a/src/main.rs	2026-11-15 14:45:04.093723618 +0100
++++ b/src/main.rs	2026-11-15 14:45:04.097723639 +0100
+@@ -327,14 +327,14 @@
+         // so we start rendering from y=1.
+         let header = format!("==== {} panes ====", self.panes.len());
+         let x = cols.saturating_sub(header.len()) / 2;
+-        print_text_with_coordinates(Text::new(&header), x, 0, None, None);
++        print_text_with_coordinates(Text::from(&header), x, 0, None, None);
+         let mut y = 1;
+ 
+         for (idx, pane) in self.panes.iter().enumerate() {
+             let text = if idx == self.selected {
+-                Text::new(&pane.to_string()).selected()
++                Text::from(&pane.to_string()).selected()
+             } else {
+-                Text::new(&pane.to_string())
++                Text::from(&pane.to_string())
+             };
+             print_text_with_coordinates(text, 0, y, None, None);
+             y += 1;
+@@ -355,7 +355,7 @@
+         build_narrow_hints()
+     };
+ 
+-    let mut text = Text::new(&line);
++    let mut text = Text::from(&line);
+     for range in key_ranges {
+         text = text.color_range(3, range);
+     }
