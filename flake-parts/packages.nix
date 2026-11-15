@@ -25,13 +25,9 @@
       }).config.system.build.isoImage;
 
     # Every tests-vm/default.nix entry becomes packages.test-<name>, making that
-    # attrset the only registry a new test needs an entry in. Tests build from
-    # the flake's pkgs plus the Go alias correction the host overlay set also
-    # applies (lib/build-go125-alias.nix), so a test importing sops-nix resolves
-    # the removed buildGo125Module exactly as production does.
+    # attrset the only registry a new test needs an entry in.
     vmTests = import ../tests-vm {
-      pkgs = pkgs.appendOverlays [(import ../lib/build-go125-alias.nix)];
-      inherit inputs;
+      inherit pkgs inputs;
       inherit (inputs) self;
     };
   in {

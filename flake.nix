@@ -296,10 +296,9 @@
       url = "github:abenz1267/elephant";
       inputs.nixpkgs.follows = "nixpkgs-elephant";
     };
-    # Channel snapshot with the Go 1.25 builder still present; every consumer
-    # that cannot migrate off buildGo125Module (elephant, sops-nix at
-    # lock level) evaluates from here. Bump deliberately when upstream
-    # switches to a current builder.
+    # Channel snapshot with the Go 1.25 builder still present; elephant still
+    # hardcodes buildGo125Module and its package set does not see host
+    # overlays. Bump deliberately when upstream switches to a current builder.
     nixpkgs-elephant = {
       url = "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst";
     };
