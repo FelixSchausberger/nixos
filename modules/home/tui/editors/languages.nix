@@ -693,7 +693,7 @@ in {
         # Development language servers
         clang-tools # C/C++ tools (includes clangd)
         typescript-language-server # TypeScript/JavaScript LSP
-        python312Packages.python-lsp-server # Python LSP
+        python3Packages.python-lsp-server # Python LSP
         lua-language-server # Lua LSP
         tinymist # Typst LSP
         gopls # Go language server
