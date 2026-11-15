@@ -303,6 +303,30 @@ def convert_variable(variable):
             },
         }
 
+    if kind == "custom":
+        # Custom variables carry a comma-separated option list as a plain
+        # string, and each option records whether it is selected; both survive
+        # in CustomVariableSpec as `query` and `options`.
+        return {
+            "kind": "CustomVariable",
+            "spec": {
+                **common,
+                "label": variable.get("label", name),
+                "description": variable.get("description", ""),
+                "query": variable.get("query", ""),
+                "options": [
+                    {
+                        **variable_option(option),
+                        "selected": bool(option.get("selected", False)),
+                    }
+                    for option in variable.get("options", [])
+                ],
+                "multi": bool(variable.get("multi", False)),
+                "includeAll": bool(variable.get("includeAll", False)),
+                "allowCustomValue": True,
+            },
+        }
+
     if kind == "query":
         uid, plugin = resolve_datasource(
             variable.get("datasource"), None, {}, f"variable {name}"
