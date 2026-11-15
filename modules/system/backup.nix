@@ -191,6 +191,9 @@ in {
         printf 'backup_last_success_timestamp_seconds{route="%s",description="%s"} %s\n' \
           ${lib.escapeShellArg name} ${lib.escapeShellArg (promLabel route.description)} \
           "$(${pkgs.coreutils}/bin/date +%s)" >"$tmp"
+        # The unit's UMask applies to the stamp (the syncoid units use 0077);
+        # the collector runs as node-exporter and must be able to read it.
+        ${pkgs.coreutils}/bin/chmod 0644 "$tmp"
         ${pkgs.coreutils}/bin/mv "$tmp" "$dir/backup-${name}.prom"
       '';
 
