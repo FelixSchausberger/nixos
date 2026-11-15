@@ -39,9 +39,9 @@ _: {
 
           # AI/MCP servers pull a check-dependency cascade
           # fastmcp→py-key-value-aio→py-key-value-shared→inline-snapshot→isort→
-          # pylama→vulture→pint→uncertainties→scipy. scipy's hypothesis-based
-          # tests are flaky against numpy 2.5 array_api and fail in the sandbox.
-          # Disable checks along the whole chain so scipy is never even built.
+          # pylama→vulture→pint→uncertainties. Disable checks along the chain so
+          # those test-only dependencies are never built; scipy stays at the
+          # channel's derivation so its Hydra build remains substitutable.
           fastmcp = pyprev.fastmcp.overridePythonAttrs (_: {
             doCheck = false;
           });
@@ -67,9 +67,6 @@ _: {
             doCheck = false;
           });
           uncertainties = pyprev.uncertainties.overridePythonAttrs (_: {
-            doCheck = false;
-          });
-          scipy = pyprev.scipy.overridePythonAttrs (_: {
             doCheck = false;
           });
         }

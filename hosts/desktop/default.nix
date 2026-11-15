@@ -247,20 +247,6 @@ in {
   # per game (priority 250 wins over the global default at 75).
   modules.system.steam.compatTools = {"1371980" = "GE-Proton";};
 
-  # OpenLDAP 2.6.13 test suite has a regression (provider/consumer DB mismatch).
-  # Skip tests rather than wait for upstream fix; runtime is unaffected.
-  # Warns once nixpkgs ships a fixed version so the override can be removed.
-  nixpkgs.config.packageOverrides = pkgs: let
-    regressionFixed = lib.versionAtLeast pkgs.openldap.version "2.6.14";
-  in {
-    openldap =
-      lib.warnIf regressionFixed
-      "OpenLDAP ${pkgs.openldap.version} is fixed; remove the doCheck=false override"
-      (pkgs.openldap.overrideAttrs (_old: {
-        doCheck = false;
-      }));
-  };
-
   # Kill user processes immediately on shutdown instead of waiting 90s
   services.logind.settings.Login.KillUserProcesses = true;
 
