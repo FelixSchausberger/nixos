@@ -1167,6 +1167,12 @@ in {
         User = lib.mkForce "homepage-dashboard";
         Group = lib.mkForce "homepage-dashboard";
       };
+      # Homepage reads services.yaml once at startup. environment.etc only
+      # rewrites the file, so without this a dashboard edit stays invisible
+      # until the next reboot.
+      restartTriggers = [
+        config.environment.etc."homepage-dashboard/services.yaml".source
+      ];
     };
 
     # The dashboard must be served from the origin root: its Next.js build
