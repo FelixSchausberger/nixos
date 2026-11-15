@@ -75,6 +75,27 @@
           touch $out
         '';
 
+        # The assertions in modules/system/homelab/monitoring.nix cover
+        # dashboard structure (UIDs, element references, datasource UIDs) but
+        # not query text, so a typo'd PromQL expression renders an empty panel
+        # without failing the deploy. gcx parses PromQL and panel units
+        # offline. The description and editability rules stay off because they
+        # flag 97 style findings across these six dashboards and gate nothing.
+        grafana-dashboard-lint =
+          pkgs.runCommand "grafana-dashboard-lint" {
+            nativeBuildInputs = [pkgs.gcx];
+          } ''
+            export HOME=$TMPDIR
+            gcx dev lint run --disable panel-title-description --disable uneditable-dashboard -o compact \
+              ${../modules/system/homelab/config-health-dashboard.json} \
+              ${../modules/system/homelab/fritz-dashboard.json} \
+              ${../modules/system/homelab/garmin-dashboard.json} \
+              ${../modules/system/homelab/logs-dashboard.json} \
+              ${../modules/system/homelab/nix-otel-dashboard.json} \
+              ${../modules/system/homelab/power-dashboard.json}
+            touch $out
+          '';
+
         # Unit test for the comin post-deploy downgrade detector; also runs as
         # a prek hook on changes to tools/scripts/detect-downgrades.sh.
         detect-downgrades = pkgs.runCommand "detect-downgrades-unit-test" {} ''
@@ -97,6 +118,7 @@
           deadnix
           fish
           flakeChecker # Flake input health monitoring
+          gcx # Offline Grafana dashboard linter (grafana-dashboard-lint)
           git
           inotify-tools # File system watching for niri-watch
           jq # JSON processing for profiling and build scripts
