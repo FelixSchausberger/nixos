@@ -152,6 +152,23 @@ in {
         experimental-advance-branches = {
           enabled-branches = [];
         };
+
+        # Live workspaces must not rewrite each other's history: a rebase in one
+        # workspace that touches another workspace's ancestry resurrects a hidden
+        # commit it still uses, and the two diverge. jj's stock immutability
+        # covers trunk and tags only, so the guard is expressed where jj enforces
+        # it. The custom term is workspace-relative: outside `default` every
+        # other working-copy commit and its ancestors are immutable; in `default`
+        # it collapses to none(), which keeps feature-stack integration working
+        # there. `only_if` is an idiom, not a conditional: a nonempty condition
+        # reaches root(), whose descendants are all(), while an empty one yields
+        # none(). Verified against jj-sensei's boundaries policy.
+        revset-aliases = {
+          "other_workspaces()" = "working_copies() ~ @";
+          "not_default()" = "@ ~ default@";
+          "only_if(condition, revisions)" = "revisions & descendants(ancestors(condition))";
+          "immutable_heads()" = "builtin_immutable_heads() | only_if(not_default(), other_workspaces())";
+        };
       };
     };
 
