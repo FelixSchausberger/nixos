@@ -18,17 +18,6 @@
 # prompt-badge reminder, so forgotten waiting is treated like any other
 # unclean state rather than a permanent free pass.
 #
-# When herdr-board (tui.herdrBoard) is on, workspace creation also mints the
-# workspace's dispatch card in the board's intake column, so every ocws task
-# is a ticket, and every removal path cleans the workspace's cards (cancel
-# open runs, archive by task/cwd mapping, close the card panes' herdr
-# workspace) so a card can never outlive its directory: dispatch after
-# removal would run silently in $HOME (2026-11 trial). Cards are
-# flow-of-work, never a claim - the jj change description `jj workspace add`
-# writes is the claim. Both hooks are guard-silent - `board` absent, no
-# daemon running, or a host that does not run the herdr server means ocws
-# behaves exactly as before.
-#
 # Liveness ignores per-project MCP and LSP daemons: they inherit the cwd of
 # the session that spawned them and outlive it, so a cwd-only occupancy check
 # holds workspaces hostage after the session closed (2026-11 audit: five
@@ -467,88 +456,6 @@ writeShellApplication {
       OCWS_TASK="$task" OCWS_DIR="$dir" OCWS_ROOT="$root" OCWS_BASE="$base" \
         bash -c "$cmd" || echo "ocws: '$hook' hook failed" >&2
     }
-    # The canonical board scope is the primary checkout: every jj workspace is
-    # its own git root and a board project is keyed by canonical path, so a
-    # workspace path resolves to no project. `--board` is per-command and
-    # never moves the persistent selection (`--project` does).
-    board_scope_root() {
-      jj --ignore-working-copy workspace list -T 'if(name == "default", root ++ "\n", "")' 2>/dev/null | grep -m1 .
-    }
-    # herdr-board hygiene, guard-silent: ocws never depends on the board, so
-    # every probe and call below must degrade to a no-op when the board stack
-    # is absent (no board binary, no running daemon, no herdr). A workspace's
-    # cards bind to it by the mapping convention (label "nixos-ws-<task>", or
-    # any label with an explicit space_cwd of this directory); the tui
-    # .herdrBoard module and the jj-workspaces skill carry the convention.
-    # Every removal path runs this BEFORE the directory disappears: the 2026-11
-    # trial showed that a card dispatching after its directory vanished ran
-    # silently in $HOME (herdr's cwd snapshot falls back), and a removed
-    # directory breaks a live agent mid-run while the board still records
-    # whatever the agent reports. Cancelling the open runs and archiving the
-    # cards, then closing their panes, removes the workspace occupancy the
-    # occupancy check would otherwise refuse `done`/`rm` for.
-    board_cards_cleanup() {
-      local task="$1" dir ids id wid scope
-      dir="$(realpath -m "$2")"
-      command -v board >/dev/null 2>&1 || return 0
-      # `board version` is the one CLI probe that never auto-starts a daemon,
-      # so a host without running board state stays boardless.
-      if [ -z "$(board version --json 2>/dev/null | jq -r 'if .daemon_version and .daemon_version != "unavailable" then .daemon_version else empty end' 2>/dev/null)" ]; then
-        return 0
-      fi
-      scope="$(board_scope_root)"
-      [ -n "$scope" ] || return 0
-      ids="$(board --board "$scope" card list --json 2>/dev/null | jq -r --arg ref "nixos-ws-$task" --arg cwd "$dir" \
-        '[.[] | select(((.space_ref // "") | ascii_downcase) == ($ref | ascii_downcase) or (.space_cwd != null and .space_cwd == $cwd)) | .id] | .[]' 2>/dev/null)"
-      for id in $ids; do
-        # Cancel first so archive is accepted (a card with an open run cannot
-        # be archived); both fail open for an already-idle card.
-        board card run cancel "$id" >/dev/null 2>&1 || true
-        board card archive "$id" >/dev/null 2>&1 || true
-      done
-      # Board panes persist as labelled shells after a run ends and keep the
-      # directory occupied, so close the card-dispatch workspace (herdr
-      # workspaces are labelled layout units, not git worktrees).
-      if command -v herdr >/dev/null 2>&1; then
-        wid="$(herdr workspace list 2>/dev/null | jq -r --arg ref "nixos-ws-$task" \
-          '[.result.workspaces[]? | select((.label // "") == $ref) | .workspace_id] | .[]' 2>/dev/null | head -1)"
-        if [ -n "$wid" ]; then herdr workspace close "$wid" >/dev/null 2>&1 || true; fi
-      fi
-      return 0
-    }
-    # herdr-board dispatch seat, create side: a new workspace gets a card in
-    # the board's intake column, so every ocws task is a ticket. The mapping
-    # and the failure posture mirror board_cards_cleanup: bind by label
-    # "nixos-ws-<task>" or by an explicit space_cwd, and stay a no-op when
-    # the board stack is absent. Creation runs after `jj workspace add`, so a
-    # card can never target a missing directory (a late dispatch into a
-    # vanished cwd falls back to $HOME).
-    board_card_create() {
-      local task="$1" dir scope existing
-      dir="$(realpath -m "$2")"
-      command -v board >/dev/null 2>&1 || return 0
-      # `board version` is the one probe that never auto-starts a daemon.
-      if [ -z "$(timeout 5 board version --json 2>/dev/null | jq -r 'if .daemon_version and .daemon_version != "unavailable" then .daemon_version else empty end' 2>/dev/null)" ]; then
-        return 0
-      fi
-      # Host gate, not a liveness gate: the herdr-boardd unit exists only on
-      # the herdr server host, and there the fleet board is canonical. On
-      # other hosts a board call would auto-start a host-local daemon with its
-      # own database and fork the project.
-      systemctl --user is-enabled herdr-boardd.service >/dev/null 2>&1 || return 0
-      scope="$(board_scope_root)"
-      [ -n "$scope" ] || return 0
-      existing="$(timeout 5 board --board "$scope" card list --json 2>/dev/null | jq -r --arg ref "nixos-ws-$task" --arg cwd "$dir" \
-        '[.[] | select(((.space_ref // "") | ascii_downcase) == ($ref | ascii_downcase) or (.space_cwd != null and .space_cwd == $cwd)) | .id] | .[0] // empty' 2>/dev/null)"
-      [ -n "$existing" ] && return 0
-      # No --column: creation lands in the first (intake) column, which the
-      # fleet pipeline keeps manual, so a created card never dispatches a run.
-      timeout 5 board --board "$scope" card create --title "$task" \
-        -d "ocws workspace: $dir. The jj change description is the claim; dispatch from In Progress only while no session is live in the workspace." \
-        --harness opencode --space-kind new-workspace --space-ref "nixos-ws-$task" --space-cwd "$dir" \
-        >/dev/null 2>&1 || true
-      return 0
-    }
     rip_workspace() {
       local task="$1" dir wait_marker
       dir="$(realpath -m "$(ws_root_for "$task")")"
@@ -556,7 +463,6 @@ writeShellApplication {
         echo "ocws: refusing to remove the current workspace ('$task')" >&2
         exit 1
       fi
-      board_cards_cleanup "$task" "$dir"
       run_hook pre_delete "$task" "$dir" "''${OCWS_HOOK_PRE_DELETE:-}"
       # All three removal paths (done, rm, gc) funnel through here, so the
       # wait marker cannot survive the workspace: insistence on clearing it in
@@ -727,10 +633,6 @@ writeShellApplication {
           echo "Merge the PR, then retry; or 'ocws rm --force $task' to discard." >&2
           exit 1
         fi
-        # A card's dispatch panes keep the workspace occupied after its run
-        # ended; cancel and archive the workspace's cards first so the
-        # occupancy check below passes without --force.
-        board_cards_cleanup "$task" "$(realpath -m "$(ws_root_for "$task")")"
         # A session can still hold the directory after its work merged; a
         # removal under an open session strands it, so require --force then.
         if [ "$force" != "1" ] && ws_live "$(realpath -m "$(ws_root_for "$task")")"; then
@@ -754,9 +656,6 @@ writeShellApplication {
             echo "ocws: '$task' has unmerged/uncommitted work; use 'ocws done $task' after merging, or 'ocws rm --force $task' to discard." >&2
             exit 1
           fi
-          # Same card-panes-keep-it-alive treatment as `done`: cancel and
-          # archive the workspace's cards before the occupancy check.
-          board_cards_cleanup "$task" "$(realpath -m "$(ws_root_for "$task")")"
           if ws_live "$(realpath -m "$(ws_root_for "$task")")"; then
             echo "ocws: a process is still active in '$task'; close it first, or 'ocws rm --force $task'." >&2
             exit 1
@@ -847,21 +746,6 @@ writeShellApplication {
         # agent still starts only in the workspace ocws creates (or the existing
         # one it cd's to); nothing runs in the tab's initial directory.
         tab_args=(tab create --cwd "$root" --label "$task" --focus)
-        # Card runs live in their own herdr workspace labelled nixos-ws-<task>,
-        # and ocws done closes that workspace with the card. A seat tab opened
-        # there would die with the card, so fall back to a non-card workspace.
-        ws="''${HERDR_ACTIVE_WORKSPACE_ID:-''${HERDR_WORKSPACE_ID:-}}"
-        if [ -n "$ws" ]; then
-          ws_list="$("$herdr_bin" workspace list 2>/dev/null || true)"
-          label="$(printf '%s' "$ws_list" | jq -r --arg id "$ws" '.result.workspaces[]? | select(.workspace_id == $id) | .label // empty' 2>/dev/null | head -1)"
-          case "$label" in
-            nixos-ws-*)
-              ws="$(printf '%s' "$ws_list" | jq -r '.result.workspaces[]? | select((.label // "") | startswith("nixos-ws-") | not) | .workspace_id' 2>/dev/null | head -1)"
-              [ -n "$ws" ] || fail "no non-card herdr workspace to open the seat in"
-              ;;
-          esac
-          [ -n "$ws" ] && tab_args+=(--workspace "$ws")
-        fi
         if ! resp="$("$herdr_bin" "''${tab_args[@]}" 2>&1)"; then
           fail "cannot create a herdr tab: $resp"
         fi
@@ -905,10 +789,6 @@ writeShellApplication {
     jj workspace add "$dir" --name "$task" -r 'main@origin' -m "$task: started from main@origin"
 
     run_hook post_create "$task" "$dir" "''${OCWS_HOOK_POST_CREATE:-}"
-
-    # The workspace and its claim exist before anything can target them, so
-    # the card is minted here and can never point at a missing directory.
-    board_card_create "$task" "$dir"
 
     # Herdr tab labels are the navigation key (goto picker, expanded sidebar).
     # Name the seat after the task so a new tab reads as the task, not as a
