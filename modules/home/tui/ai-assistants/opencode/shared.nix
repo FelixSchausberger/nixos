@@ -74,15 +74,18 @@
       enabled = true;
       windows = ["weekly"];
     };
+    # The sidebar panel duplicates the compact status and costs a full column;
+    # the status line carries the same quota plus session tokens.
     tuiSidebarPanel = {
-      enabled = true;
+      enabled = false;
     };
-    # Compact status stays home-only: on the prompt row it would compete with
-    # whatever renders below the composer in that harness.
+    # One line under the composer in a session and at the bottom of home: every
+    # Go window (5h, weekly, monthly) and the current session's token totals.
     tuiCompactStatus = {
       enabled = true;
       homeBottom = true;
-      sessionPrompt = false;
+      sessionPrompt = true;
+      formatStyle = "allWindows";
     };
     tuiPromptBar = {
       enabled = false;
