@@ -659,8 +659,16 @@ writeShellApplication {
         # the placeholder intact and the next call retries the whole claim.
         jj workspace rename "$final"
         jj describe -m "$text"
+        # A manual `ocws title` can run from another tab whose shell happens to
+        # be cd'ed into the workspace; relabelling that tab would be wrong. The
+        # seat's own tab is the one whose foreground process runs in the
+        # workspace, so check that before renaming.
         if [ -n "''${HERDR_TAB_ID:-}" ] && command -v herdr >/dev/null 2>&1; then
-          herdr tab rename "$HERDR_TAB_ID" "$final" >/dev/null 2>&1 || true
+          tab_cwd="$(herdr pane list 2>/dev/null | jq -r --arg tab "$HERDR_TAB_ID" \
+            'first(.result.panes[]? | select(.tab_id == $tab) | (.foreground_cwd // .cwd)) // empty' 2>/dev/null)"
+          case "$(realpath -m "''${tab_cwd:-/nonexistent}")/" in
+            "$here/"*) herdr tab rename "$HERDR_TAB_ID" "$final" >/dev/null 2>&1 || true ;;
+          esac
         fi
         echo "ocws: claimed '$task' as '$final'"
         exit 0
