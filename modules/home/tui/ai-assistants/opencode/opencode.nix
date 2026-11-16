@@ -15,6 +15,35 @@
   # The canonical config root.
   configDir = "opencode";
 
+  # v6 has no enabled-providers allowlist: a provider with a detected login is
+  # on unless `providers.off` names it. This is @slkiser/opencode-quota
+  # 6.2.2's catalog minus the Go subscription, so Zen and every other detected
+  # login stay off; a provider added upstream defaults on until it is listed
+  # here.
+  quotaOffProviders = [
+    "anthropic"
+    "copilot"
+    "openai"
+    "openrouter"
+    "cursor"
+    "alibaba-coding-plan"
+    "alibaba-token-plan"
+    "google-gemini-cli"
+    "google-agy"
+    "zai"
+    "zhipu"
+    "minimax-coding-plan"
+    "minimax-china-coding-plan"
+    "kimi-code-plan-global"
+    "kimi-code-plan-cn"
+    "deepseek"
+    "xai"
+    "xiaomi"
+    "opencode"
+    "ollama-cloud"
+    "custom"
+  ];
+
   # programs.mcp.servers reshaped into V2's mcp.servers form (command array +
   # environment). File-backed env values become the {file:path} token V2
   # substitutes at config load.
@@ -52,16 +81,16 @@
     shell = "${agentShell}/bin/bash";
     skills = [combinedSkills];
     mcp.servers = mcpServers;
-    # Server-side package plugins. @slkiser/opencode-quota 5 peers
-    # @opencode/plugin 2.x and renders its sidebar/toast surfaces through the
-    # V2 API; the major is pinned because npm `latest` tracks a release that
-    # dropped V2's predecessor. opencode-tokenscope-v2 is the V2 port of
-    # TokenScope - the upstream @ramtinj95 package is V1-only - and registers
-    # both the `tokenscope` tool and the /tokenscope command itself, so no
-    # command file is deployed for it. The Zellij indicator is a CLI plugin and
-    # lives in cli.json instead.
+    # Server-side package plugins. @slkiser/opencode-quota 6 peers
+    # @opencode/plugin 2.0.28+ and renders its sidebar and status line through
+    # the V2 API; the major is pinned so a future major cannot move the
+    # settings schema under the declarative settings file.
+    # opencode-tokenscope-v2 is the V2 port of TokenScope - the upstream
+    # @ramtinj95 package is V1-only - and registers both the `tokenscope` tool
+    # and the /tokenscope command itself, so no command file is deployed for
+    # it. The Zellij indicator is a CLI plugin and lives in cli.json instead.
     plugins = [
-      "@slkiser/opencode-quota@5"
+      "@slkiser/opencode-quota@6"
       "@cheesecodestudio/opencode-tokenscope-v2"
     ];
   };
@@ -244,15 +273,17 @@ in {
         enableSkillAnalysis = true;
       };
       # Quota policy from shared.nix, scoped to the Go subscription. The Zen
-      # gateway (provider id `opencode`, synonym `opencode-zen`) is excluded
-      # deliberately: only free models bill against it, and neither the quota
+      # gateway (provider id `opencode`, synonym `opencode-zen`) is listed off
+      # deliberately: only free models are used there, and neither the quota
       # plugin nor the Console billing API exposes a free-tier usage
       # percentage - only balance, spend and a budget percent that needs a
-      # USD monthly limit. A balance row is useless when nothing is planned
-      # to be spent, so no Zen rows are rendered.
-      "${configDir}/opencode-quota/quota-toast.json".text = builtins.toJSON (
-        shared.quotaToast
-        // {enabledProviders = ["opencode-go"];}
+      # USD monthly limit. A balance row is useless when nothing is planned to
+      # be spent, so Zen stays off. The list is merged rather than reassigning
+      # `providers` so other provider settings from shared.nix survive.
+      "${configDir}/opencode-quota/settings.jsonc".text = builtins.toJSON (
+        lib.recursiveUpdate shared.quotaSettings {
+          providers.off = quotaOffProviders;
+        }
       );
       "${configDir}/indicator-v2".source = ./zellij-indicator-v2;
     };
