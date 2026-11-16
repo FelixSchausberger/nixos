@@ -346,6 +346,20 @@ in {
       yearly = 0;
       recursive = true;
     };
+    sanoidDatasets."dpool/games" = {
+      # sanoid-only like rpool/eyd/per: opt zfstools out once with
+      # `zfs set com.sun:auto-snapshot=false dpool/games`.
+      # Steam updates rewrite whole depots, so each retained snapshot pins the
+      # replaced bytes: keep the layer small (two dailies, two weeklies, one
+      # monthly) because the 1TB backup disk also holds the home and per
+      # replicas.
+      frequently = 0;
+      hourly = 0;
+      daily = 2;
+      weekly = 2;
+      monthly = 1;
+      yearly = 0;
+    };
     syncoidCommands = {
       "desktop-home-to-bpool" = {
         source = "rpool/eyd/home";
@@ -355,6 +369,12 @@ in {
         source = "rpool/eyd/per";
         target = "bpool/desktop/per";
       };
+      # The games pool is the desktop's only non-reproducible bulk data; the
+      # snapshot layer above is its sole off-disk history.
+      "desktop-games-to-bpool" = {
+        source = "dpool/games";
+        target = "bpool/desktop/games";
+      };
     };
     # Off-site success stamps: the pulls are the routes that leave the
     # chassis, so their age is what the dashboard and the staleness rules
@@ -362,6 +382,21 @@ in {
     status = {
       enable = true;
       routes = {
+        home = {
+          unit = "syncoid-desktop-home-to-bpool";
+          maxAge = "8d";
+          description = "desktop home replica";
+        };
+        per = {
+          unit = "syncoid-desktop-per-to-bpool";
+          maxAge = "8d";
+          description = "desktop per replica";
+        };
+        games = {
+          unit = "syncoid-desktop-games-to-bpool";
+          maxAge = "8d";
+          description = "desktop games replica";
+        };
         archive-pull = {
           unit = "archive-pull";
           maxAge = "14d";
