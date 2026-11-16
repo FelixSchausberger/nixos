@@ -97,25 +97,9 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   settling in. Two sessions in one directory cost a foreign plan file in a push
   and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
   report them instead of committing them.
-- Left of the dispatch seat: herdr-board (tui.herdrBoard) dispatches agent
-  runs as kanban cards into a herdr workspace inside the ocws directory and
-  carries task history; it is not a second claim system - the jj change
-  description stays the claim. `ocws <task>` mints the card on the herdr
-  server host when a board daemon runs (label `nixos-ws-<task>`, cwd = the
-  workspace directory); a hand-built workspace elsewhere gets one by hand
-  with the same label or an explicit `--space-cwd`. ocws's removal paths
-  (done/rm/gc) cancel open runs
-  and archive the workspace's cards automatically when a board daemon runs,
-  so a card never outlives its directory. A herdr workspace is the seat and a
-  herdr tab a view inside it; neither owns the work, opening a tab creates
-  nothing, and closing one never releases the claim or an open PR. Hand a card
-  to an automatic lane only after the interactive session in its workspace is
-  closed - the board cannot see jj liveness. Dispatch a card only after
-  `ocws <task>` created the workspace, and never run `board project
-  create/select/open` from inside a workspace: each jj workspace's `.git`
-  makes it its own canonical git root, so the un-pinned first board command
-  from a workspace would fork a per-workspace project (the fleet exports
-  `BOARD_SCOPE_PATH` to herdr panes and shells, which already answers this).
+- A herdr workspace is the seat and a herdr tab a view inside it; neither owns
+  the work. Opening a tab creates nothing, and closing one - even a workspace's
+  last tab - never releases the jj claim or an open PR.
 - Leave no orphan processes: clean verification runs with `pkill -f <pattern>`
   (`kill $PID` only kills a `nix run` wrapper) and confirm with `ps` and `ss`.
   Never bind a port a deployed service uses - a leftover collector test held

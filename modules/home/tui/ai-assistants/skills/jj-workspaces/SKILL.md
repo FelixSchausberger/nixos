@@ -30,19 +30,17 @@ claim:
 The fleet runs one herdr workspace per repository and one tab per agent. The
 isolation unit is the jj workspace the tab's agent runs in: tabs in one herdr
 workspace each have their own jj workspace when they are created through
-`ocws`. Board-dispatched card runs create their own labeled herdr workspaces
-(`nixos-ws-<task>`); those are dispatch labels, not seats for people.
+`ocws`.
 
 The claim lives in jj, not in herdr. `ocws <task>` creates the jj workspace,
-writes the change description, mints the board card on the herdr server host,
-and starts opencode rooted at the workspace. Opening a tab on its own creates
-nothing: the tab is where the command runs, not what owns the work. Closing a
-tab — even a workspace's last tab, which closes the herdr workspace — never
-releases the jj claim or an open PR. `ocws tab` is the zellij variant and does
-not apply inside herdr, whose panes carry no zellij session. With
-`terminal.new_cwd = follow`, a new tab inherits the focused pane's directory,
-so a tab can start inside another agent's worktree; start agents through
-`ocws`, not a bare tab.
+writes the change description, and starts opencode rooted at the workspace.
+Opening a tab on its own creates nothing: the tab is where the command runs,
+not what owns the work. Closing a tab — even a workspace's last tab, which
+closes the herdr workspace — never releases the jj claim or an open PR.
+`ocws tab` is the zellij variant and does not apply inside herdr, whose panes
+carry no zellij session. With `terminal.new_cwd = follow`, a new tab inherits
+the focused pane's directory, so a tab can start inside another agent's
+worktree; start agents through `ocws`, not a bare tab.
 
 ## When to Use
 
@@ -149,45 +147,6 @@ benefit for single quick changes.
 
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.
-
-   Composition with herdr-board (dispatch seat): cards are never a claim on
-   the workspace — the change description is. On the herdr server host (the
-   host whose `herdr-boardd` unit is enabled) `ocws <task>` mints the card
-   itself when a board daemon is running, in the intake lane (To-Do); the
-   lanes are To-Do, In Progress, In Review, Done and Blocked, and moving a
-   card into an automatic lane (In Progress or In Review) dispatches an
-   agent run in the card's workspace. Every card belongs to a live
-   workspace, so the board is flow-of-work, not a durable backlog: park a
-   deferred task with `ocws wait <task> reason...` (gc keeps it, and the wait
-   resurfaces after OCWS_WAIT_STALE_DAYS) instead of parking its card. A hand-built
-   workspace gets its card by hand, after the workspace exists (label =
-   `nixos-ws-<task>`, cwd = the workspace directory; the daemon creates the
-   herdr workspace on first dispatch):
-
-   ```bash
-   board card create -d "Task prompt..." --space-kind new-workspace \
-     --space-ref nixos-ws-<task> --space-cwd "$HOME/.local/share/ocws/nixos-ws-<task>" \
-     --harness opencode
-   board card move <card-id> "In Progress"   # automatic lanes dispatch
-   ```
-
-   Hand a task to an automatic lane only after the interactive opencode
-   session in that workspace is closed. The board cannot see jj liveness, and
-   a dispatched run opens a second agent in the same working copy; the
-   In Progress lane prompt restates the rule to the dispatched agent.
-
-   Every ocws removal path (`done`, `rm`, `gc`) cancels open runs and
-   archives the workspace's cards before the directory rip, guarded silent
-   when the board daemon is not running, so a card never outlives its
-   directory and a late dispatch cannot fall back to a wrong cwd.
-
-   Board scope: never run `board project create/select/open` from inside a
-   workspace. Each jj workspace's `.git` file makes it its own canonical git
-   root, so the un-pinned first board command bootstraps a per-workspace
-   project (verified live). The fleet exports `BOARD_SCOPE_PATH` into herdr
-   panes and interactive shells, and the board selection is pinned to
-   `/per/etc/nixos` once; with those in place a bare board command from any
-   workspace resolves the repo project.
 
 6. Park a session that must idle on an outside blocker (an upstream fix, a
    device shipment) instead of keeping its pane alive as the only preservation:
