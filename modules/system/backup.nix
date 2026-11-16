@@ -160,12 +160,12 @@ in {
       lib.unique (map poolOf (lib.attrNames cfg.sanoidDatasets))
     );
 
-    # Per-route success metrics. systemd's ExecStartPost only runs when the
-    # main command exited 0, so a stamp is proof of a successful run, not of
-    # an attempt; a failed run leaves the previous stamp in place and the
-    # staleness rule then measures the real age. The static route table (max
-    # age, first seen) is what lets "never succeeded" be distinguished from
-    # "succeeded once, then stopped".
+    # Per-route success metrics. The stamp is written from ExecStopPost and
+    # only when the unit stopped with SERVICE_RESULT=success, so it is proof of
+    # a completed run, not of an attempt; a failed run leaves the previous
+    # stamp in place and the staleness rule then measures the real age. The
+    # static route table (max age, first seen) is what lets "never succeeded"
+    # be distinguished from "succeeded once, then stopped".
     promLabel = s: builtins.replaceStrings ["\\" "\"" "\n"] ["\\\\" "\\\"" " "] s;
 
     toSeconds = v: let
@@ -182,9 +182,17 @@ in {
       then throw "modules.system.homelab.backup.status.routes.*.maxAge must look like 30m, 26h, 14d or 4w (got '${v}')"
       else lib.toInt (builtins.elemAt m 0) * mult.${builtins.elemAt m 1};
 
+    # Runs from ExecStopPost so the stamp means "exited cleanly", not "was
+    # started": ExecStartPost on a Type=simple unit fires right after the
+    # process is forked, which stamped a still-running archive pull as a
+    # success. SERVICE_RESULT/EXIT_CODE/EXIT_STATUS are only available to the
+    # stop hooks, so the guard lives here.
     stampScript = name: route:
       pkgs.writeShellScript "backup-stamp-${name}" ''
         set -eu
+        [ "''${SERVICE_RESULT:-}" = success ] || exit 0
+        [ "''${EXIT_CODE:-exited}" = exited ] || exit 0
+        [ "''${EXIT_STATUS:-0}" = 0 ] || exit 0
         dir=${lib.escapeShellArg cfg.status.textfileDirectory}
         [ -d "$dir" ] || exit 0
         tmp="$dir/.backup-${name}.$$"
@@ -333,7 +341,7 @@ in {
               # `+` bypasses the unit's User= and sandbox so the stamp can write
               # into the root-owned textfile directory even for backup units that
               # run as postgres or zigbee2mqtt.
-              serviceConfig.ExecStartPost = lib.mkAfter ["+${stampScript name route}"];
+              serviceConfig.ExecStopPost = lib.mkAfter ["+${stampScript name route}"];
             })
           statusRoutes
           // {
