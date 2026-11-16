@@ -364,10 +364,17 @@ in {
       "desktop-home-to-bpool" = {
         source = "rpool/eyd/home";
         target = "bpool/desktop/home";
+        # -u: the replica is read from the pool, and the service chroot cannot
+        # create the mountpoint (same reason as the m920q commands).
+        recvOptions = "u";
       };
       "desktop-per-to-bpool" = {
         source = "rpool/eyd/per";
         target = "bpool/desktop/per";
+        # Recursive carries /per/repos; without it the replica silently misses
+        # the child dataset.
+        recursive = true;
+        recvOptions = "u";
       };
       # The games pool is the desktop's only non-reproducible bulk data; the
       # snapshot layer above is its sole off-disk history.
