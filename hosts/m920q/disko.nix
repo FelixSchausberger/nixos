@@ -194,6 +194,14 @@
               mountpoint = "/per/mnt/backup/data";
             };
           };
+          # Replica sink for rpool/eyd/home.
+          "backup/home" = {
+            type = "zfs_fs";
+            mountpoint = "/per/mnt/backup/home";
+            options = {
+              mountpoint = "/per/mnt/backup/home";
+            };
+          };
           # Replica sink for rpool/eyd/per. Its only content is what syncoid
           # receives, and sanoid on the host prunes the target-only snapshots
           # down to one per month.
