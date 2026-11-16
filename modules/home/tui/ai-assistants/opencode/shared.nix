@@ -60,38 +60,32 @@
     };
   };
 
-  # Quota display policy, rendered as
-  # <config-root>/opencode-quota/quota-toast.json (the path the quota plugin
-  # reads). The provider list is not shared with this source: it is host- and
-  # registry-specific, so opencode.nix pins it to the Go subscription.
-  quotaToast = {
-    formatStyle = "singleWindow";
-    percentDisplayMode = "remaining";
-    accountingDetail = "summary";
-    tuiCommandDisplay = "inline";
-    enableToast = true;
-    resetNotifications = {
-      enabled = true;
-      windows = ["weekly"];
+  # Quota policy, rendered as <config-root>/opencode-quota/settings.jsonc (the
+  # path the v6 plugin reads). The provider list is not shared with this
+  # source: it is host- and registry-specific, so opencode.nix pins it to the
+  # Go subscription. The plugin's settings tabs save into this file, so the
+  # read-only store symlink rejects their writes: change the policy here.
+  quotaSettings = {
+    version = 6;
+    # One line under the message box and at the bottom of home. v6 keeps
+    # session tokens in the sidebar and toasts, not on this line.
+    sidebar.show = false;
+    sidebar.sessionTokens = true;
+    statusLine = {
+      show = true;
+      home = true;
+      withSidebar = true;
     };
-    # The sidebar panel duplicates the compact status and costs a full column;
-    # the status line carries the same quota plus session tokens.
-    tuiSidebarPanel = {
-      enabled = false;
+    toast = {
+      show = true;
+      resetNotice = "weekly";
+      sessionTokens = true;
     };
-    # One line under the composer in a session and at the bottom of home: every
-    # Go window (5h, weekly, monthly) and the current session's token totals.
-    tuiCompactStatus = {
-      enabled = true;
-      homeBottom = true;
-      sessionPrompt = true;
-      formatStyle = "allWindows";
+    words = {
+      percent = "left";
+      detail = "summary";
+      sessionTokens = "current";
     };
-    tuiPromptBar = {
-      enabled = false;
-    };
-    showSessionTokens = true;
-    sessionTokenScope = "current";
   };
 
   # Canonical ordered permission rules in the native V2 shape. V1 derives its
@@ -230,7 +224,7 @@ in {
     model
     webPort
     formatters
-    quotaToast
+    quotaSettings
     permissionRules
     codeSimplifierAgent
     ;
