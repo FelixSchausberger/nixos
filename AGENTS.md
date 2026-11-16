@@ -96,7 +96,8 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) before
   settling in. Two sessions in one directory cost a foreign plan file in a push
   and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
-  report them instead of committing them.
+  report them instead of committing them. A seat opened unnamed carries a filler
+  `t-<HHMMSS>` description until `ocws title` claims it from the session title.
 - A herdr workspace is the seat and a herdr tab a view inside it; neither owns
   the work. Opening a tab creates nothing, and closing one - even a workspace's
   last tab - never releases the jj claim or an open PR.

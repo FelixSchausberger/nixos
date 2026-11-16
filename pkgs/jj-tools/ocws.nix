@@ -79,8 +79,13 @@ writeShellApplication {
       ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
       ocws herdr [<task>] [-- <opencode args>]
                                             start an agent seat: create the workspace
-                                            and run opencode in a new herdr tab; prompts
-                                            for the task when it is omitted
+                                            and run opencode in a new herdr tab; an
+                                            unnamed seat gets a filler task that
+                                            'ocws title' replaces
+      ocws title <text...>                  claim the current seat: set the change
+                                            description, rename the workspace and the
+                                            herdr tab from the session title; a no-op
+                                            unless the description is still the filler
       ocws ls [--counts|--board]            list workspaces with their state and claim
                                             (--counts prints the integers "total empty merged
                                             unpushed in-flight conflict stale waitold", where
@@ -594,6 +599,72 @@ writeShellApplication {
         echo "ocws: '$task' resumed; gc reclassifies it on the next pass"
         exit 0
         ;;
+      title)
+        shift
+        text="$*"
+        [ -n "$text" ] || usage
+        # The seat runs in its own workspace, so the directory identifies the
+        # task: jj records workspace roots absolutely, and a prefix match also
+        # covers a command run from a subdirectory. Read the list once: a
+        # pipeline here would let an early `break` SIGPIPE jj, and pipefail
+        # would then abort the claim.
+        here="$(realpath -m "$PWD")"
+        names="$(jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null)"
+        task=""
+        while IFS=$'\t' read -r name ws_root; do
+          case "$here/" in
+            "$(realpath -m "$ws_root")/"*)
+              task="$name"
+              break
+              ;;
+          esac
+        done <<<"$names"
+        [ -n "$task" ] || { echo "ocws title: not inside a registered workspace" >&2; exit 1; }
+        # `default` is the coordinator and the anchor the boundaries alias keys
+        # off (`default@`), so a stray claim from the primary checkout must not
+        # rename it.
+        [ "$task" = "default" ] && { echo "ocws title: the primary checkout is not a seat" >&2; exit 1; }
+        # Only the placeholder `jj workspace add` wrote is replaceable. Match
+        # its shape, not the name, so a retry finishes a claim whose rename
+        # already landed. Once a human or an agent described the change, the
+        # claim is theirs.
+        desc="$(jj --ignore-working-copy log --no-graph -r @ -T 'description.first_line()' 2>/dev/null)"
+        if ! grep -Eq '^t-[0-9]{4,6}(-[0-9])?: started from main@origin$' <<<"$desc"; then
+          exit 0
+        fi
+        slug="$(printf '%s' "$text" \
+          | tr '[:upper:]' '[:lower:]' \
+          | tr -cs '[:alnum:]' '-' \
+          | sed -e 's/^-*//' -e 's/-*$//' \
+          | cut -c1-48 \
+          | sed -e 's/-*$//')"
+        [ -n "$slug" ] || exit 0
+        # Workspace names are the handle other sessions read, so a second seat
+        # with the same title must not collide with the first.
+        taken() {
+          local existing
+          while IFS=$'\t' read -r existing _; do
+            if [ "$existing" = "$1" ]; then return 0; fi
+          done <<<"$names"
+          return 1
+        }
+        final="$slug"
+        n=2
+        while taken "$final"; do
+          final="$slug-$n"
+          n=$((n + 1))
+          [ "$n" -gt 9 ] && break
+        done
+        # Rename before describing: a refused rename (a name race) then leaves
+        # the placeholder intact and the next call retries the whole claim.
+        jj workspace rename "$final"
+        jj describe -m "$text"
+        if [ -n "''${HERDR_TAB_ID:-}" ] && command -v herdr >/dev/null 2>&1; then
+          herdr tab rename "$HERDR_TAB_ID" "$final" >/dev/null 2>&1 || true
+        fi
+        echo "ocws: claimed '$task' as '$final'"
+        exit 0
+        ;;
       ls|list)
         shift
         counts=0
@@ -679,29 +750,34 @@ writeShellApplication {
         # command exits: an empty or invalid answer must re-ask instead of
         # exiting, and a failure after the prompt must hold the popup open
         # for a keypress, or the user sees only a flash of text.
+        seat_log="''${XDG_CACHE_HOME:-$HOME/.cache}/ocws/seat.log"
         fail() {
           printf 'ocws herdr: %s\n' "$*" >&2
           if [ -t 0 ]; then
             read -r -p 'press enter to close ' _ || true
+          else
+            # The detached binding has no terminal to show the error in, so
+            # keep it where the next diagnosis will look.
+            mkdir -p "$(dirname "$seat_log")"
+            printf '%s %s\n' "$(date -Is)" "$*" >> "$seat_log"
           fi
           exit 1
         }
         task="''${1:-}"
-        if [ -z "$task" ]; then
-          if [ -t 0 ] && [ -t 1 ]; then
-            while :; do
-              read -r -p 'task slug (required, ctrl-c cancels): ' task || exit 0
-              [ -n "$task" ] || continue
-              if valid_task "$task"; then
-                break
-              fi
-              printf 'ocws herdr: invalid task %q (start with a letter or digit, then [A-Za-z0-9._-])\n' "$task" >&2
-            done
-          fi
-        else
+        if [ -n "$task" ]; then
           shift
+        else
+          # The keypress is the interrupt: a name prompt would put a dialog in
+          # front of every seat. An unnamed seat gets a filler that
+          # `ocws title` replaces once OpenCode names the session.
+          task="t-$(date +%H%M%S)"
+          n=2
+          while workspace_exists "$task"; do
+            task="t-$(date +%H%M%S)-$n"
+            n=$((n + 1))
+            [ "$n" -gt 9 ] && break
+          done
         fi
-        [ -n "$task" ] || usage
         valid_task "$task" || { echo "ocws herdr: invalid task '$task' (use [A-Za-z0-9._-])" >&2; exit 2; }
         extra=()
         if [ "''${1:-}" = "--" ]; then
@@ -730,7 +806,9 @@ writeShellApplication {
           done
         else
           self="$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")"
-          inner="$(printf '%q' "$self")"
+          # The seat is created for speed: skip the gc pass and the network
+          # fetch the create path would otherwise run before `workspace add`.
+          inner="OCWS_NO_MAINT=1 $(printf '%q' "$self")"
           [ "''${OCWS_V2:-0}" = "1" ] && inner+=" --v2"
           inner+=" $(printf '%q' "$task")"
           if [ "''${#extra[@]}" -gt 0 ]; then
@@ -778,14 +856,22 @@ writeShellApplication {
     fi
     [ -e "$dir" ] && { echo "ocws: path already exists: $dir" >&2; exit 1; }
 
-    # Opportunistically reclaim finished workspaces before adding a new one.
-    # Best-effort: a gc failure must never block workspace creation. Skips the
-    # fetch (do_fetch=0) because the create path fetches immediately below.
-    ocws_gc 0 || true
+    # Maintenance is skipped when an interactive seat asks for a workspace: a
+    # full classification plus a network fetch costs seconds, and the seat must
+    # appear on the keypress. The daily timer owns reclamation and `jjwork`
+    # fetches before any real work.
+    if [ "''${OCWS_NO_MAINT:-0}" != "1" ]; then
+      # Opportunistically reclaim finished workspaces before adding a new one.
+      # Best-effort: a gc failure must never block workspace creation. Skips
+      # the fetch (do_fetch=0) because the create path fetches below.
+      ocws_gc 0 || true
+    fi
 
     run_hook pre_create "$task" "$dir" "''${OCWS_HOOK_PRE_CREATE:-}"
 
-    jj git fetch >/dev/null 2>&1 || true
+    if [ "''${OCWS_NO_MAINT:-0}" != "1" ]; then
+      jj git fetch >/dev/null 2>&1 || true
+    fi
     jj workspace add "$dir" --name "$task" -r 'main@origin' -m "$task: started from main@origin"
 
     run_hook post_create "$task" "$dir" "''${OCWS_HOOK_POST_CREATE:-}"

@@ -1,0 +1,13 @@
+{
+  "name": "ocws-seat",
+  "version": "0.1.0",
+  "description": "Claims an ocws seat once OpenCode has a session title: runs `ocws title`, which renames the jj workspace, its change description and the herdr tab. Hand-rolled default export so the plugin needs no node_modules; server/rpc stubs so V2's loader resolves the directory without throwing.",
+  "type": "module",
+  "exports": {
+    "./server": "./server.ts",
+    "./tui": "./src/index.ts",
+    "./rpc": "./rpc.ts",
+    ".": "./src/index.ts"
+  },
+  "license": "MIT"
+}
