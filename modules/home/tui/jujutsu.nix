@@ -234,15 +234,17 @@ in {
 
       # New agent seat one key away. A herdr tab inherits the focused pane's
       # worktree, so a bare tab plus opencode would share that working copy;
-      # the popup prompts for a task and `ocws herdr` creates the tab and runs
-      # ocws inside it. prefix+shift+a is free (the defaults use r/n/g/w/d/t/x/p).
+      # `ocws herdr` creates the tab and runs ocws inside it. The binding runs
+      # detached because the seat names itself: a filler task at creation,
+      # `ocws title` once OpenCode has a session title. Failures (no herdr
+      # binary, a live process in the workspace) land in the seat log rather
+      # than a popup nobody is looking at.
+      # prefix+shift+a is free (the defaults use r/n/g/w/d/t/x/p).
       {
         key = "prefix+shift+a";
-        type = "popup";
+        type = "shell";
         command = "${ocws}/bin/ocws herdr";
         description = "New agent seat: jj workspace + opencode in a new tab";
-        width = "50%";
-        height = "20%";
       }
     ];
   };

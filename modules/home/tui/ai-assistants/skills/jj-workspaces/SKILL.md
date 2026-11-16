@@ -72,15 +72,22 @@ benefit for single quick changes.
 2. Create the workspace, claim it, and start opencode rooted there in one step:
 
    ```bash
-   ocws <task>            # opencode in the current pane
-   ocws herdr <task>      # new agent seat in a new herdr tab (prompts if omitted)
+   ocws <task>            # opencode in the current pane, named up front
+   ocws herdr             # new agent seat in a new herdr tab, filler name
+   ocws herdr <task>      # same, with a task name you already know
    ocws tab <task>        # opencode in a new zellij tab (not inside herdr)
    ```
 
-   Inside herdr, prefer `ocws herdr <task>` (bound to `prefix+shift+a`): it
-   creates the tab and runs `ocws` inside it, so the agent always starts in its
-   own jj workspace. Re-running it for an existing task reopens the seat only
-   when no process is live in that workspace.
+   Inside herdr, `prefix+shift+a` runs `ocws herdr` with no task, bound
+   detached: the tab appears with a filler task (`t-<HHMMSS>`), the workspace is
+   created without the gc pass and fetch that would delay it, and opencode
+   starts. Once OpenCode names the session, the seat plugin runs
+   `ocws title "<title>"`, which sets the change description, renames the
+   workspace and renames the herdr tab — once, and only while the description is
+   still the placeholder `jj workspace add` wrote. Run `ocws title` by hand if
+   the plugin is off; it is a no-op on an already-claimed workspace. Re-running
+   `ocws herdr <task>` for an existing task reopens the seat only when no process
+   is live in that workspace.
 
    The base directory is chosen in this order: `$OCWS_BASE`, the parent of the
    current workspace (the sibling-directory convention) when writable, then

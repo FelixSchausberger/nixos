@@ -96,10 +96,12 @@
   };
 
   # The terminal client owns a global cli.json, which only the client role
-  # reads. The patched indicator fork is referenced by absolute path and
-  # deliberately sits outside the auto-discovered plugins/ directory so the
-  # server role never loads it.
+  # reads. Client-side plugins are referenced by absolute path and deliberately
+  # sit outside the auto-discovered plugins/ directory so the server role never
+  # loads them: the indicator paints the pane title, the seat claim renames the
+  # workspace its own TUI runs in.
   indicatorDir = "${config.xdg.configHome}/${configDir}/indicator-v2";
+  seatDir = "${config.xdg.configHome}/${configDir}/ocws-seat";
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
@@ -116,6 +118,7 @@
     plugins =
       [
         indicatorDir
+        seatDir
       ]
       # herdr's opencode lifecycle integration, vendored by the herdr module
       # (option tui.herdr.opencodeIntegration). Upstream registers the V2
@@ -286,6 +289,7 @@ in {
         }
       );
       "${configDir}/indicator-v2".source = ./zellij-indicator-v2;
+      "${configDir}/ocws-seat".source = ./ocws-seat;
     };
   };
 }
