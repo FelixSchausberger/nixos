@@ -286,17 +286,28 @@ in {
       description = "Sync Nextcloud calendar events into Grafana annotations";
       after = ["nextcloud-setup.service" "grafana.service"];
       wants = ["grafana.service"];
+      unitConfig = {
+        # Five attempts over half an hour cover a slow boot and a switch,
+        # then stop so a real fault stays visible.
+        StartLimitBurst = 5;
+        StartLimitIntervalSec = 1800;
+      };
       serviceConfig = {
         Type = "oneshot";
         User = "garmin-fetch";
         Group = "garmin-fetch";
         EnvironmentFile = config.sops.templates."garmin-calendar/env".path;
-        # A comin switch restarts grafana.service; when the 15-minute timer
-        # fires inside that window the sync hits a refused connection, fails,
-        # and makes the whole activation report failure
+        # A comin switch restarts grafana.service, and a cold boot leaves it
+        # migrating for ~100s after the unit reports active; when the
+        # 15-minute timer fires inside either window the sync hits a refused
+        # connection, fails, and makes the whole activation report failure
         # (switch-to-configuration exit 4). Wait for Grafana's health endpoint
-        # before syncing instead of racing the restart.
-        ExecStartPre = "${pkgs.curl}/bin/curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 --max-time 30 http://127.0.0.1:${toString hl.monitoring.grafanaPort}/api/health";
+        # before syncing instead of racing it; the retry window has to outlast
+        # a boot, not just a switch.
+        ExecStartPre = "${pkgs.curl}/bin/curl --fail --silent --show-error --retry 30 --retry-delay 5 --retry-all-errors --max-time 5 http://127.0.0.1:${toString hl.monitoring.grafanaPort}/api/health";
+        # A missed window must not wait for the next timer tick.
+        Restart = "on-failure";
+        RestartSec = "30s";
       };
       script = ''
         exec ${inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.garmin-calendar-sync}/bin/garmin-calendar-sync
