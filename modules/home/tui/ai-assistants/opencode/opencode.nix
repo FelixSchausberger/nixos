@@ -258,6 +258,10 @@ in {
         ];
         Restart = "always";
         RestartSec = 5;
+        # sd-switch stops the unit with SIGTERM on every activation and the
+        # process can exit 130 if it handles SIGINT; acknowledge both so a
+        # planned stop is not logged as a failed unit.
+        SuccessExitStatus = ["130" "143"];
       };
       Install.WantedBy = ["default.target"];
     };
