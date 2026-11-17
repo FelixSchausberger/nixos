@@ -72,6 +72,9 @@
         # hosts/m920q, this export keeps the derivation under flake eval)
         intel-lms = pkgs.callPackage ../pkgs/intel-lms {};
 
+        # Terminal CalDAV task manager (TUI) for the homelab PIM stack
+        cfait = pkgs.callPackage ../pkgs/cfait {};
+
         # Applications
         quantumlauncher = pkgs.callPackage ../pkgs/quantumlauncher {};
 

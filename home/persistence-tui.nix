@@ -31,6 +31,10 @@
       ".local/share/calendars"
       ".local/share/contacts"
       ".local/share/vdirsyncer"
+
+      # Cfait's offline journal: queued edits that have not reached Nextcloud
+      # yet must survive a reboot
+      ".local/share/cfait"
     ];
   };
 }
