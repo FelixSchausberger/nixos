@@ -11,7 +11,7 @@
   ...
 }: let
   dsshGuid = "{e0b0a5b5-4f2a-4a1d-9d88-3c5d9d1b7b01}";
-  moshHomelabGuid = "{ddea1859-4521-504c-81d0-0196754902b0}";
+  zellijM920qGuid = "{ddea1859-4521-504c-81d0-0196754902b0}";
   # uuid3 over a stable namespace label; the WT profile registry matches on it.
   herdrM920qGuid = "{0188e581-cf5a-31cb-b6a2-07b288087b0f}";
 
@@ -23,16 +23,16 @@
   # failures (>= 0) keep their own exit code. The explicit title keeps the tab
   # labelled like the profile instead of the powershell.exe path until mosh
   # sends its own.
-  moshHomelabCommandline =
+  zellijM920qCommandline =
     "powershell.exe -NoProfile -Command \""
-    + "$Host.UI.RawUI.WindowTitle = 'm920q mosh'; "
+    + "$Host.UI.RawUI.WindowTitle = 'm920q zellij'; "
     + "& wsl.exe -d NixOS -- fish -c m920q; "
     + "if ($LASTEXITCODE -lt 0) "
     + "{ Write-Host '[wsl] session start failed, retrying'; "
     + "& wsl.exe -d NixOS -- fish -c m920q }; "
     + "exit $LASTEXITCODE\"";
 
-  # Same WSL-retry wrapper as the mosh profile above, but the remote entry
+  # Same WSL-retry wrapper as the zellij profile above, but the remote entry
   # point is the agent layer: the m920q-herdr fish function lands straight
   # in the herdr TUI (mosh command override -> fish -c hattach). fish runs
   # non-interactive there, which is what keeps the zellij auto-attach hook
@@ -77,16 +77,16 @@ in {
           };
           keys = "ctrl+alt+d";
         }
-        # Open the mosh session to m920q directly (Ctrl+Alt+M). Prefer this over
-        # plain ssh for interactive zellij work: mosh survives IP changes and
-        # suspend, and it preserves SSH_CONNECTION on the server, so the fish
-        # zellij auto-attach still fires on m920q.
+        # Open the Zellij session on m920q directly (Ctrl+Alt+Z). Prefer this
+        # over plain ssh for interactive zellij work: mosh survives IP changes
+        # and suspend, and it preserves SSH_CONNECTION on the server, so the
+        # fish zellij auto-attach still fires on m920q.
         {
           command = {
             action = "newTab";
-            profile = moshHomelabGuid;
+            profile = zellijM920qGuid;
           };
-          keys = "ctrl+alt+m";
+          keys = "ctrl+alt+z";
         }
         # Agent layer twin (Ctrl+Alt+H): same mosh transports, but the remote
         # command override skips the interactive zellij auto-attach, so the
@@ -169,12 +169,13 @@ in {
             # ssh LocalCommand in the Windows .ssh/config).
             name = "dssh";
           }
-          # Mosh session to the m920q homelab via WSL. dssh cannot launch mosh
-          # (ssh-only launcher), so this profile wraps the fish function that
-          # picks the tailscale/LAN path. Routed through the WSL default-shell
-          # wrapper (no -e): a direct exec would skip /etc/set-environment and
-          # miss PATH/LANG. Tab closes when the session ends. The command line
-          # is the retry wrapper declared above; wsl.exe itself is unchanged.
+          # Zellij session on m920q, reached over mosh via WSL. dssh cannot
+          # launch mosh (ssh-only launcher), so this profile wraps the fish
+          # function that picks the tailscale/LAN path. Routed through the WSL
+          # default-shell wrapper (no -e): a direct exec would skip
+          # /etc/set-environment and miss PATH/LANG. Tab closes when the
+          # session ends. The command line is the retry wrapper declared above;
+          # wsl.exe itself is unchanged.
           #
           # Icon: Segoe Fluent Icons "Wifi" glyph (U+E701), same value the WT
           # settings UI writes when picking the wifi icon - distinguishes mosh
@@ -182,15 +183,15 @@ in {
           # escape (a bare backslash is dropped silently), so the glyph is
           # parsed out of a JSON string literal via fromJSON.
           {
-            commandline = moshHomelabCommandline;
-            guid = moshHomelabGuid;
+            commandline = zellijM920qCommandline;
+            guid = zellijM920qGuid;
             hidden = false;
             icon = builtins.fromJSON ''"\ue701"'';
-            name = "m920q mosh";
+            name = "m920q zellij";
           }
           # Herdr attach, straight over the same mosh chain: same retries and
-          # wifi glyph. Deliberately no icon/name overlap with the mosh tab so
-          # the agent surface reads as its own thing.
+          # wifi glyph. Deliberately no icon/name overlap with the zellij tab
+          # so the agent surface reads as its own thing.
           {
             commandline = herdrM920qCommandline;
             guid = herdrM920qGuid;
