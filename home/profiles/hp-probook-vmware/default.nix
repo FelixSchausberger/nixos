@@ -35,9 +35,6 @@
     };
   };
 
-  # Fix missing calendar configuration
-  accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
-
   # Home configuration for VMware VM
   programs = {
     # Enable direnv for project-specific environments
