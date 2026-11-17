@@ -1,8 +1,10 @@
-# Local PIM stack: vdirsyncer pulls the Nextcloud CalDAV/CardDAV collections
-# once per host; khal/ikhal, todoman and khard then work offline against the
-# synced vdirs. First run per host needs collection discovery (it prompts to
-# create the missing local collection directories, answer y):
-#   vdirsyncer discover calendar_events calendar_tasks contacts_nextcloud
+# Local PIM stack for events and contacts: vdirsyncer pulls the Nextcloud
+# CalDAV/CardDAV collections once per host; khal/ikhal and khard then work
+# offline against the synced vdirs. Tasks are not synced here: cfait talks to
+# the Nextcloud VTODO collections directly (modules/home/tui/cfait.nix).
+# First run per host needs collection discovery (it prompts to create the
+# missing local collection directories, answer y):
+#   vdirsyncer discover calendar_events contacts_nextcloud
 # Until then the vdirsyncer timer fails with "Please run vdirsyncer discover"
 # and khal/ikhal refuse to start (missing default calendar).
 {
@@ -32,12 +34,6 @@ in {
   programs = {
     vdirsyncer.enable = true;
     khal.enable = true;
-    # todoman globs its lists from accounts.calendar.basePath; point it at
-    # the task pair's collections only (khal shows events, not VTODO).
-    todoman = {
-      enable = true;
-      glob = "tasks/*";
-    };
     khard.enable = true;
   };
 
@@ -66,26 +62,6 @@ in {
           khal = {
             enable = true;
             type = "discover";
-          };
-        };
-      # VTODO lists for todoman. khal is events-only, so this account is
-      # deliberately not exposed to it.
-      tasks =
-        caldavAccount
-        // {
-          vdirsyncer = {
-            enable = true;
-            collections = [
-              "finance"
-              "household"
-              "materialism"
-              "self-case"
-              "tasks"
-              "tech"
-              "to-do"
-            ];
-            itemTypes = ["VTODO"];
-            conflictResolution = "remote wins";
           };
         };
     };
