@@ -30,6 +30,17 @@
 in {
   home.packages = [cfait];
 
+  # The upstream name is easy to forget; `todo` is the verb the user reaches
+  # for. Aliases (not abbreviations) keep `todo` in shell history as typed.
+  programs = {
+    fish.shellAliases = lib.mkIf config.programs.fish.enable {
+      todo = "cfait";
+    };
+    bash.shellAliases = lib.mkIf config.programs.bash.enable {
+      todo = "cfait";
+    };
+  };
+
   home.activation.cfaitConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
     target="$HOME/.config/cfait/config.toml"
     if [ ! -e "$target" ]; then
