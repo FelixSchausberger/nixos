@@ -91,8 +91,8 @@
         nixfmt-classic = final.nixfmt;
         nixfmt-rfc-style = final.nixfmt;
       })
-      # ceph pulls python311 and breaks evaluation on current nixpkgs; the
-      # ISO does not need ceph-enabled qemu.
+      # ceph drags its daemon closure into the live ISO, and the installer
+      # never provisions ceph, so build qemu without it.
       (_final: prev: {
         qemu = prev.qemu.override {ceph = null;};
       })
