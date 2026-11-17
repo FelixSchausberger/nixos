@@ -34,10 +34,19 @@
       touying-author = "${typstSkillsSrc}/touying-author";
     };
 
-  # Free OpenCode Zen tier (keyless, no paid dependency): drives the session
-  # default plus the title/summary/compaction and explore/general agents in
-  # both harnesses. Paid opencode-go models stay one /model switch away.
-  model = "opencode/mimo-v2.6-flash-free";
+  # OpenCode Go subscription models: planning runs GLM-5.2 and execution runs
+  # DeepSeek V4.1 Flash 1017, both at the max reasoning variant. The root
+  # default is the build model without a variant because the V2 catalog
+  # default cannot retain one; the primary agents below select theirs
+  # explicitly. Hidden maintenance agents and subagents inherit the session
+  # model.
+  buildModel = "opencode-go/deepseek-v4.1-flash";
+  planModel = "opencode-go/glm-5.2";
+  model = buildModel;
+  agents = {
+    build.model = "${buildModel}#max";
+    plan.model = "${planModel}#max";
+  };
 
   # Port of the shared OpenCode server: the ai-assistants.opencode managed
   # service (modules/home/tui/ai-assistants/opencode/opencode.nix). It binds loopback
@@ -221,6 +230,7 @@ in {
   inherit
     combinedRules
     sharedSkills
+    agents
     model
     webPort
     formatters

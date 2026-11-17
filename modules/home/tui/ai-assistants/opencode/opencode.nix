@@ -73,7 +73,7 @@
 
   opencodeConfig = {
     "$schema" = "https://opencode.ai/config.json";
-    inherit (shared) model;
+    inherit (shared) agents model;
     permissions = shared.permissionRules;
     formatter = shared.formatters;
     # Agent tool calls and the terminal run this shell, so they inherit the rm
