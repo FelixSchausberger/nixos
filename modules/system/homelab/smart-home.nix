@@ -207,9 +207,19 @@ in {
         MemoryHigh = "1200M";
       };
 
+      # An unreachable coordinator makes the bridge exit a few seconds into
+      # every start, and the module's fixed 10 s RestartSec turned one stick
+      # outage (2026-11-17) into 1000 restarts and 33k journal lines in four
+      # hours. Exponential backoff to 5 min bounds that rate while still
+      # letting the bridge reconnect on its own once the stick returns, which
+      # a start limit would forfeit until someone re-armed the unit.
       zigbee2mqtt = lib.mkIf (cfg.coordinatorUrl != null) {
         after = ["mosquitto.service"];
         wants = ["mosquitto.service"];
+        serviceConfig = {
+          RestartSteps = 4;
+          RestartMaxDelaySec = "5min";
+        };
       };
 
       # Zigbee2MQTT keeps its network cache and entity state as plain JSON
