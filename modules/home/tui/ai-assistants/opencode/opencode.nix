@@ -80,7 +80,18 @@
     # shim (see agentShell above).
     shell = "${agentShell}/bin/bash";
     skills = [combinedSkills];
-    mcp.servers = mcpServers;
+    # The Rex community MCP carries the Rex docs, changelog and beta Discord
+    # discussions read-only. It is remote and OAuth-gated: the token lives in
+    # the per-machine credential store, so each host runs
+    # `opencode mcp auth superlogical` once (beta Discord membership required).
+    mcp.servers =
+      mcpServers
+      // {
+        superlogical = {
+          type = "remote";
+          url = "https://www.superlogical.com/rex/community-mcp";
+        };
+      };
     # Server-side package plugins. @slkiser/opencode-quota 6 peers
     # @opencode/plugin 2.0.28+ and renders its sidebar and status line through
     # the V2 API; the major is pinned so a future major cannot move the
