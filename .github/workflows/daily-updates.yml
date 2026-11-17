@@ -368,8 +368,10 @@ jobs:
     timeout-minutes: 10
     permissions:
       # The failure classifier downloads each failed job's log through the
-      # actions API; read is enough.
+      # actions API and reads the check-run annotations, the only trace a
+      # lost hosted runner leaves; read is enough.
       actions: read
+      checks: read
       contents: read
       issues: write
     steps:
@@ -415,9 +417,10 @@ jobs:
           # log regardless of the run status, so collect the failed jobs'
           # logs individually. --allow-escape-sequences is required because
           # nix output carries ANSI colour; the sed below strips it.
+          failed_jobs="$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | .databaseId' 2>/dev/null || true)"
           log_full="$(
-            gh run view "$RUN_ID" --repo "$REPO" --json jobs \
-              --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | .databaseId' 2>/dev/null \
+            printf '%s\n' "$failed_jobs" \
               | while IFS= read -r job_id; do
                   [ -n "$job_id" ] || continue
                   gh api --allow-escape-sequences \
@@ -425,6 +428,19 @@ jobs:
                 done \
               | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' || true
           )"
+          # A hosted runner that loses communication never reports a log
+          # (BlobNotFound); its check-run annotation is the only record.
+          # Prepend the annotations so the classifier sees them while the
+          # 40-line tail below stays the end of the real log.
+          annotations="$(
+            printf '%s\n' "$failed_jobs" \
+              | while IFS= read -r job_id; do
+                  [ -n "$job_id" ] || continue
+                  gh api "repos/$REPO/check-runs/$job_id/annotations" \
+                    --jq '.[].message' 2>/dev/null || true
+                done || true
+          )"
+          log_full="$(printf '%s\n%s\n' "$annotations" "$log_full")"
           # Job logs end with the runner's cleanup sections, not with the
           # failing command: the nix error lines sit minutes earlier, so a
           # tail window reads every real build failure as unclassified.
@@ -456,6 +472,8 @@ jobs:
           elif [ -n "$cancelled_jobs" ]; then
             cancelled_list="$(printf '%s\n' "$cancelled_jobs" | paste -sd ', ' -)"
             verdict="cancelled: $cancelled_list stopped without a failure; GitHub reports a job timeout as cancelled (desktop cap 330 min). The run did not finish its cache warm-up."
+          elif log_matches_i "hosted runner lost communication|runner lost communication|runner has received a shutdown signal"; then
+            verdict="runner lost: the hosted runner stopped communicating and left no job log; re-run the failed jobs (not a build defect)"
           elif log_matches "no longer has any effect|can no longer be used since it's been removed|Failed assertions"; then
             offending="$(printf '%s\n' "$log_full" \
               | grep -m1 -oE "option definition '[^']+' in '[^']+'" \
