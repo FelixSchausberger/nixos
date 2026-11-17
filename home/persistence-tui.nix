@@ -26,11 +26,15 @@
       ".cache/zellij"
       ".local/share/zellij"
 
-      # PIM stack: synced CalDAV/CardDAV collections, vdirsyncer discovery
-      # cache and item status (without status the timer demands a re-discover)
-      ".local/share/calendars"
+      # Contact stack: synced CardDAV collection, vdirsyncer discovery cache
+      # and item status (without status the timer demands a re-discover)
       ".local/share/contacts"
       ".local/share/vdirsyncer"
+
+      # Chroncal's SQLite store, seeded config and log
+      ".local/share/chroncal"
+      ".config/chroncal"
+      ".local/state/chroncal"
 
       # Cfait's offline journal: queued edits that have not reached Nextcloud
       # yet must survive a reboot

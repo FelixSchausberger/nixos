@@ -1,8 +1,8 @@
 # Cfait: terminal CalDAV task manager for the homelab session.
 #
 # Tasks are synced straight from Nextcloud's VTODO collections, so this module
-# replaces the vdirsyncer/todoman task pair that used to live in pim.nix; khal
-# keeps handling events. The config is seeded once and then owned by cfait
+# replaces the vdirsyncer/todoman task pair that used to live in pim.nix;
+# chroncal handles events. The config is seeded once and then owned by cfait
 # (it rewrites settings in place), so it must stay a regular file rather than
 # a read-only store symlink.
 {

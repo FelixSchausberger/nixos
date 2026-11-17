@@ -1,8 +1,4 @@
-{
-  lib,
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   # WSL headless profile: TUI-only work environment.
   imports = [
     ../../../modules/home/tui-only.nix
@@ -21,9 +17,6 @@
       ];
     };
   };
-
-  # Fix missing calendar configuration that's causing evaluation errors
-  accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
 
   # WSL-specific home configuration
   # Focus on terminal applications and CLI tools

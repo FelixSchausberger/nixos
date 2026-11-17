@@ -29,8 +29,9 @@ in {
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./amt.nix # Intel AMT SOL for m920q (amtterm + amttool via sops)
     ./sops.nix # Simple and flexible tool for managing secrets
+    ./chroncal.nix # CalDAV calendar TUI (events are synced directly, not via vdirsyncer)
     ./cfait.nix # CalDAV task manager TUI (tasks are synced directly, not via vdirsyncer)
-    ./pim.nix # Nextcloud CalDAV/CardDAV sync (vdirsyncer) + khal/ikhal, khard
+    ./pim.nix # Nextcloud CardDAV sync (vdirsyncer) + khard
     ./spotify-player.nix # Terminal-based Spotify client with full feature parity
     ./typix.nix # Typst: A markup-based typesetting system
     ./windows-terminal.nix # Windows Terminal settings deployment to Windows

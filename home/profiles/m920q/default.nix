@@ -98,10 +98,6 @@
     ];
   };
 
-  # Required by some shared modules
-
-  accounts.calendar.basePath = lib.mkDefault "$HOME/.local/share/calendar";
-
   # The root vault's .obsidian is a Nextcloud external-storage folder that
   # desktop clients two-way sync, and the running app rewrites its config, so
   # three writers share the same JSON: nix, Obsidian here, and Obsidian on the
