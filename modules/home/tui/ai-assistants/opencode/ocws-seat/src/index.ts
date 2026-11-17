@@ -4,7 +4,7 @@
 // the jj workspace, rewrites the change description and renames the herdr tab
 // in one guarded step. The claim logic lives in ocws so a human or an agent
 // can run the same command by hand; this file only watches for the title.
-import { log, POLL_MS, TIMEOUT_MS } from "./config"
+import { log, POLL_MS } from "./config"
 import { runCommand } from "./process"
 
 type Route = { type: string; sessionID?: string }
@@ -40,7 +40,6 @@ export default {
     let claimed = false
     let attempts = 0
     let disposed = false
-    const deadline = Date.now() + TIMEOUT_MS
 
     let timer: ReturnType<typeof setInterval> | undefined
 
@@ -52,10 +51,6 @@ export default {
 
     const tick = async () => {
       if (disposed || claimed) return
-      if (Date.now() > deadline) {
-        finish("gave up waiting for a session title")
-        return
-      }
       const route = context.ui.router.current()
       if (route.type !== "session" || !route.sessionID) return
       // A fork keeps the root session's title, so read the title from there.
@@ -81,8 +76,11 @@ export default {
       if (attempts >= 3) finish(`stopped after ${attempts} failed claims`)
     }
 
-    // A stale client API or a refused spawn must never surface as an
-    // unhandled rejection inside the TUI: the seat simply keeps its filler.
+    // A seat can sit idle for hours before its first message, so the watch
+    // lasts as long as the TUI: the lookup is in-memory and the interval is
+    // the same order as the zellij indicator's. A stale client API or a
+    // refused spawn must never surface as an unhandled rejection inside the
+    // TUI; the seat simply keeps its filler.
     const run = () => {
       void tick().catch((error) => {
         log(`tick failed: ${error instanceof Error ? error.message : String(error)}`)
