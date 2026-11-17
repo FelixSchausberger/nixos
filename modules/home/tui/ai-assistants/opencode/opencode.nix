@@ -132,8 +132,12 @@
       )
       ["./herdr-opencode"];
     diffs.wrap = "word";
+    # The footer already carries context tokens and percentage, the quota bar,
+    # the model and the cwd, and the pane title names the session; the sidebar's
+    # remaining block is the MCP list, which `/mcps` still opens. Hiding it
+    # returns a full column to the transcript.
     session = {
-      sidebar = "auto";
+      sidebar = "hide";
       scrollbar = false;
       thinking = "show";
     };
