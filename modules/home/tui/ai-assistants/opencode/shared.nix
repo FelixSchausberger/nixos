@@ -34,18 +34,17 @@
       touying-author = "${typstSkillsSrc}/touying-author";
     };
 
-  # OpenCode Go subscription models: planning runs GLM-5.2 and execution runs
-  # DeepSeek V4.1 Flash 1017, both at the max reasoning variant. The root
-  # default is the build model without a variant because the V2 catalog
-  # default cannot retain one; the primary agents below select theirs
-  # explicitly. Hidden maintenance agents and subagents inherit the session
-  # model.
-  buildModel = "opencode-go/deepseek-v4.1-flash";
-  planModel = "opencode-go/glm-5.2";
-  model = buildModel;
+  # OpenCode Go subscription model for both primary agents: DeepSeek V4.1
+  # Flash 1017 at the max reasoning variant. Planning uses the same model
+  # because agentic traffic is ~96% cache reads and GLM's cache-read price is
+  # 87x higher, making a heavy GLM session cost 26x more. The root default is
+  # the same model without a variant because the V2 catalog default cannot
+  # retain one; the primary agents below select theirs explicitly. Hidden
+  # maintenance agents and subagents inherit the session model.
+  model = "opencode-go/deepseek-v4.1-flash";
   agents = {
-    build.model = "${buildModel}#max";
-    plan.model = "${planModel}#max";
+    build.model = "${model}#max";
+    plan.model = "${model}#max";
   };
 
   # Port of the shared OpenCode server: the ai-assistants.opencode managed
