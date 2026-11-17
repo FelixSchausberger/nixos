@@ -121,9 +121,26 @@ in {
       description = "Create Immich admin user from sops secret";
       after = ["immich-server.service"];
       wants = ["immich-server.service"];
+      # immich-server is Type=simple, so `after` only orders against the
+      # process spawn: the API runs database migrations for over a minute at
+      # boot, and a comin switch can restart it at any time, including while
+      # the hourly timer fires. Gate on the liveness endpoint the blackbox
+      # probe already uses so the sign-up POST only runs once it answers.
       serviceConfig = {
         Type = "oneshot";
         User = "immich";
+        ExecStartPre = "${lib.getExe pkgs.curl} --fail --silent --show-error --retry 30 --retry-delay 5 --retry-all-errors --max-time 5 http://localhost:${toString cfg.port}/api/server/ping";
+        # A readiness miss must not leave the unit failed until the next
+        # hourly tick; retrying the POST is safe because sign-up answers 409
+        # once the admin exists.
+        Restart = "on-failure";
+        RestartSec = "30s";
+      };
+      unitConfig = {
+        # Five attempts over half an hour cover a slow boot and a switch,
+        # then stop so a real fault stays visible.
+        StartLimitBurst = 5;
+        StartLimitIntervalSec = 1800;
       };
       script = ''
         PASSWORD=$(cat ${config.sops.secrets."immich/admin-password".path})
