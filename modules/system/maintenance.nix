@@ -294,6 +294,15 @@ in {
               rt_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecRealtime --value)
               mono_elapse=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=NextElapseUSecMonotonic --value)
               if [[ -z "$rt_elapse" && ( -z "$mono_elapse" || "$mono_elapse" == "infinity" ) ]]; then
+                # A timer whose start condition is unmet (fstrim on WSL:
+                # ConditionVirtualization=!container) is deliberately inert:
+                # systemctl start succeeds but the unit stays dead, so the
+                # rearm loop below would retry it on every run and page on a
+                # timer that can never fire on this host.
+                condition=$(${pkgs.systemd}/bin/systemctl show "$unit" --property=ConditionResult --value)
+                if [[ "$condition" == "no" ]]; then
+                  continue
+                fi
                 # A timer that fired moments ago legitimately reports no next
                 # elapse under systemd 261 until the triggered unit settles,
                 # and this check runs on the hour - the same second several
