@@ -1,5 +1,5 @@
 name: "Build host closure"
-description: "Build the NixOS toplevel and home-manager activation for one host. Whether the result is pushed to Cachix is decided by the caller's nix-setup, so the same recipe serves the pre-merge warm-up (daily-updates) and the post-merge warm-up (cachix-push)."
+description: "Build the NixOS toplevel and home-manager activation for one host. Whether the result is pushed to Cachix is decided by the caller's nix-setup; the post-merge warm-up builds one host per call."
 inputs:
   host:
     description: "Host name; must match a nixosConfigurations key"
