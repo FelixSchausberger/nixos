@@ -220,6 +220,11 @@ in {
         User = lib.mkForce "alloy";
         Group = lib.mkForce "alloy";
       };
+      # systemd stops units in reverse start order, so ordering Alloy after
+      # Loki makes Alloy stop first and flush its queue while the sink is still
+      # accepting; without it a switch stops Loki first and Alloy drops the
+      # final batch with "connect: connection refused".
+      systemd.services.alloy.after = lib.optional cfg.enable "loki.service";
       environment.etc."alloy/config.alloy".text =
         alloyConfig alloyEndpoint config.networking.hostName syslogComponent;
       # Alloy keeps its journal read position under its state directory. That

@@ -1031,6 +1031,11 @@ in {
           admin_password = "$__env{GF_SECURITY_ADMIN_PASSWORD}";
           secret_key = "$__file{${config.sops.secrets."grafana/secret-key".path}}";
         };
+        # Grafana 13.3.0's search manifest watcher logs a zero-manifest warning
+        # pair on every poll on installs that publish no app manifests, which
+        # is a normal state here; upstream grafana/grafana#137058 fixed the
+        # logging after 13.3.0, so this filter goes away with that release.
+        log.filters = "search-manifest-watcher:error";
       };
       provision = {
         enable = true;

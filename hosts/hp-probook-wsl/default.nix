@@ -471,10 +471,14 @@ in {
       home.activation.zz-wezterm-windows-deploy = ''
         # The Windows-side account owns the target path; derive it from the
         # c: mount instead of hard-coding the name, so machine-specific
-        # account names stay out of this repo.
+        # account names stay out of this repo. Default, Public and All Users
+        # have AppData directories that are not writable from WSL (the Default
+        # profile aborted the whole activation with a mkdir permission error),
+        # so only profiles this user can write to are deployed to.
         for winhome in /mnt/c/Users/*/AppData; do
           [ -d "$winhome" ] || continue
           winuser="$(basename "$(dirname "$winhome")")"
+          [ -w "/mnt/c/Users/$winuser" ] || continue
           [ -f "$HOME/.config/wezterm/wezterm.lua" ] || continue
           target="/mnt/c/Users/$winuser/.config/wezterm/wezterm.lua"
           mkdir -p "$(dirname "$target")"

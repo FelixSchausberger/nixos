@@ -117,8 +117,11 @@ in {
     # Mark as activation context so health check skips tests that hang
     export HM_ACTIVATION=1
 
-    # Run health check with proper PATH - make it non-fatal (warnings only)
-    if run env PATH="${pkgs.kdlfmt}/bin:$PATH" ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
+    # Run health check with proper PATH - make it non-fatal (warnings only).
+    # procps is not part of the activation PATH the way it is in a login shell
+    # (the NixOS system path supplies it there), so the zellij-detection check
+    # for pgrep would warn on every activation without this entry.
+    if run env PATH="${pkgs.kdlfmt}/bin:${pkgs.procps}/bin:$PATH" ${pkgs.fish}/bin/fish /per/etc/nixos/tools/scripts/shell-health-check.fish; then
       run echo "Shell health check passed"
     else
       run echo "Shell health check found issues (non-fatal during activation)"

@@ -12,10 +12,11 @@
   # The ignore list is a per-device artifact: the file sits in the synced
   # folder root and is never propagated to other devices
   # (https://docs.syncthing.net/users/ignoring.html), so Nix owns it as a
-  # symlink rule (see the tmpfiles rule below). The same churn files the
-  # Nextcloud desktop clients exclude through <vault>/.sync-exclude.lst; the
-  # two lists must agree, or whichever client sees a change resyncs it behind
-  # the other. The phone carries its own matching ignore entries.
+  # regular file refreshed at activation (see the activation script below).
+  # The same churn files the Nextcloud desktop clients exclude through
+  # <vault>/.sync-exclude.lst; the two lists must agree, or whichever client
+  # sees a change resyncs it behind the other. The phone carries its own
+  # matching ignore entries.
   stignore = pkgs.writeText "obsidian-stignore" ''
     // Obsidian rewrites these on every app open; syncing them only makes conflicts
     .obsidian/workspace.json
@@ -113,14 +114,20 @@ in {
       openDefaultPorts = false;
     };
 
-    # L+ (symlink), not f+: on this systemd version f+ writes its argument
-    # as literal content, and ignore patterns span lines. The symlink target
-    # is a read-only store path, which is safe here: Syncthing only reads the
-    # file, it is a per-device artifact not synced anywhere, and the Nextcloud
-    # scan only resolves it to a few small text bytes if it syncs it through.
-    systemd.tmpfiles.rules = [
-      "L+ ${defaults.paths.obsidianVault}/.stignore - - - - ${stignore}"
-    ];
+    # A regular file, not a symlink into the store: the vault is also a
+    # Nextcloud external-storage mount, and Nextcloud rejects any symlink that
+    # resolves outside the mount's datadir, logging an error on every scan for
+    # a link into /nix/store. tmpfiles cannot help here: f+ refuses to follow
+    # or replace a symlink and C only creates missing paths, so the activation
+    # script replaces the path and installs the generated content as an
+    # ordinary file.
+    system.activationScripts.syncthing-stignore = ''
+      if [ -L ${defaults.paths.obsidianVault}/.stignore ] || \
+         ! ${pkgs.diffutils}/bin/cmp -s ${stignore} ${defaults.paths.obsidianVault}/.stignore; then
+        ${pkgs.coreutils}/bin/rm -f ${defaults.paths.obsidianVault}/.stignore
+        ${pkgs.coreutils}/bin/install -m 0644 ${stignore} ${defaults.paths.obsidianVault}/.stignore
+      fi
+    '';
 
     # Sync traffic is tailnet-only: the phone runs Tailscale, so the P2P
     # listener never has to be reachable on the LAN or the internet.

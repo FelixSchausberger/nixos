@@ -170,12 +170,12 @@ in {
       home-assistant = {
         enable = true;
         # These components are compiled into the HA python env; shelly,
-        # octoprint, music_assistant and smlight are discovered integrations
-        # that would otherwise error-loop on missing modules. webdav is
-        # config-entry-only: the UI backup location is not detected from YAML,
-        # so omitting it makes the config flow fail with "Invalid handler
-        # specified".
-        extraComponents = ["mqtt" "shelly" "octoprint" "webdav" "music_assistant" "smlight"];
+        # octoprint, music_assistant, smlight and apple_tv are discovered
+        # integrations that would otherwise error-loop on missing modules
+        # (apple_tv needs pyatv). webdav is config-entry-only: the UI backup
+        # location is not detected from YAML, so omitting it makes the config
+        # flow fail with "Invalid handler specified".
+        extraComponents = ["mqtt" "shelly" "octoprint" "webdav" "music_assistant" "smlight" "apple_tv"];
         config = {
           default_config = {};
           # The WebDAV backup location writes to Nextcloud on dpool, which
