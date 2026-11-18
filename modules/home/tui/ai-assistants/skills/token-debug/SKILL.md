@@ -20,14 +20,15 @@ Activate this skill when the conversation involves:
 - Unexpectedly large session cost or context growth
 - Suspected cache misuse (low hit rate, high fresh input)
 - Oversized tool outputs or skill/subagent bloat
-- Comparing `/tokens_weekly` trend against a single heavy session
+- Comparing a `/quota_usage 7d` trend against `/quota_usage session`
 
-Do not activate for routine quota checks. Those use `/quota_status` and
-`/tokens_*` from `@slkiser/opencode-quota`.
+Do not activate for routine quota checks. Those use `/quota`,
+`/quota_usage`, and `/quota_status` from `@slkiser/opencode-quota`.
 
 ## Workflow
 
-1. Prefer trend first: `/tokens_weekly` or `/tokens_session` for scope.
+1. Prefer trend first: `/quota_usage 7d` or `/quota_usage session` for scope
+   (the legacy `/tokens_*` aliases still work).
 2. Drill down only on request or clear anomaly: run `/tokenscope`.
 3. Call the `tokenscope` tool directly without delegating to other agents.
    Leave `sessionID` unset unless analyzing a different session.
