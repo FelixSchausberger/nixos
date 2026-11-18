@@ -37,4 +37,10 @@
       }
     ];
   };
+
+  # The projector host has a pointer attached, and niri has no per-window
+  # cursor policy: the local pointer would otherwise stay over the fullscreen
+  # AirPlay/Moonlight surface. This session only exists while the projector is
+  # connected, so idle hiding is effectively cast-time hiding.
+  programs.niri.settings.cursor.hide-after-inactive-ms = 1000;
 }
