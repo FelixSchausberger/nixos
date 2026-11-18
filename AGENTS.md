@@ -32,19 +32,21 @@ archived pull refs and cached views (ticket
   tree (including `flake.lock`) and commit descriptions, and `jjpush` runs it
   as a blocking gate; `prek run --all-files` and CI run the same script.
 - Full incident context (restricted file, user-owned, never echoed into tool
-  output): `~/.local/share/ocws/phone-check-incident-notes.md`.
+  output): `~/.local/share/ocws/incident-notes.md`.
 - Remove this section only after the user reports the ticket closed.
 
 ## Repository
 
 Personal NixOS and Home Manager configuration built on flakes and flake-parts.
-The deployed fleet is `desktop`, `m920q`, and `hp-probook-wsl`. Additional
-configs (`surface`, `hp-probook-vmware`) are opt-in under
-`flake.legacyConfigurations`, and `hosts/portable` builds the recovery ISO.
+The deployed fleet is `desktop`, `m920q`, and `hp-probook-wsl`; `surface` is a
+full `nixosConfigurations` member built by CI. The opt-in shelf config is
+`hp-probook-vmware` under `flake.legacyConfigurations`, and `hosts/portable`
+builds the recovery ISO.
 
 Key paths: `modules/system/` and `modules/home/` (modules), `hosts/` (host
 configs), `home/profiles/` (Home Manager profiles), `pkgs/` (custom packages),
-`tests/` (namaka snapshots) and `tests-vm/` (VM tests), `tools/` (utilities).
+`apps/` (flake apps), `tests/` (namaka snapshots), `tests-vm/` (VM tests), and
+`tools/` (utilities).
 
 ## Documentation Policy
 
@@ -101,14 +103,9 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
 - A herdr workspace is the seat and a herdr tab a view inside it; neither owns
   the work. Opening a tab creates nothing, and closing one - even a workspace's
   last tab - never releases the jj claim or an open PR.
-- Leave no orphan processes: clean verification runs with `pkill -f <pattern>`
-  (`kill $PID` only kills a `nix run` wrapper) and confirm with `ps` and `ss`.
-  Never bind a port a deployed service uses - a leftover collector test held
-  8888, the deployed OTel collector's default telemetry port, and crash-looped
-  the unit into `start-limit-hit`.
-- Before `jj describe` and `jjpush`, `jj diff --stat` must list only the files of
-  the stated concern; scratch plans and audits under `.opencode/` stay ignored
-  and never enter a commit. Park a session waiting on the outside world with
+- Scratch plans and audits under `.opencode/` stay ignored and never enter a
+  commit; the global diff rule is what proves the change carries one concern.
+  Park a session waiting on the outside world with
   `ocws wait <task> [reason...]` and release it with `ocws go <task>`: gc keeps
   parked workspaces whatever their commit state, and waits older than
   `OCWS_WAIT_STALE_DAYS` (default 14) resurface in gc output and the prompt
@@ -171,13 +168,14 @@ in this repository: `repo-audit` (flake audit, `.opencode/skills/`) and
 
 ## AI Assistant Configuration
 
-Configuration lives in `modules/home/tui/ai-assistants/opencode/`:
-`shared.nix` is the single source for the harness (model, permissions,
-formatters, skills, behavior context, agent text); `default.nix` holds the
-harness-agnostic shell integration (`oc`, the GitHub token export, sops
-secrets); `opencode.nix` renders the config for `ai-assistants.opencode` into the canonical
-`~/.config/opencode/`. Credentials are database-backed, so `opencode auth login
-<provider>` is needed once.
+Configuration lives in `modules/home/tui/ai-assistants/`:
+`behaviors.nix` owns the global behavior definitions, `opencode/shared.nix`
+assembles them with the model, permissions, formatters and skills,
+`opencode/default.nix` holds the shell integration (`oc`, the GitHub token
+export, sops secrets), and `opencode/opencode.nix` renders the config into the
+canonical `~/.config/opencode/`. Project skills live in `.opencode/skills/`;
+the rest are deployed globally from `ai-assistants/skills/`. Credentials are
+database-backed, so `opencode auth login <provider>` is needed once.
 
 Launch OpenCode through the launcher only: it is exposed as both `opencode` and
 `opencode2`. `nix shell` or an absolute store path skips it and loses the
