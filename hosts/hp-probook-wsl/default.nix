@@ -430,12 +430,12 @@ in {
             },
           },
           {
-            label  = "WSL: TUIOS",
+            label  = "WSL: Herdr",
             domain = { DomainName = "local" },
             args   = {
               "wsl.exe", "-d", "NixOS", "--",
               "/etc/profiles/per-user/${config.hostConfig.user}/bin/fish", "-l", "-c",
-              "sleep 0.2; exec ${pkgs.tuios}/bin/tuios",
+              "sleep 0.2; exec ${pkgs.herdr}/bin/herdr",
             },
           },
 

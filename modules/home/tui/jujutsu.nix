@@ -216,12 +216,13 @@ in {
       };
     };
 
-    # The workspace board one key away from every TUIOS pane: same contributed
+    # The workspace board one key away from every herdr pane: same contributed
     # key pattern the tuicr and TTT modules use, same popup shape. The --board
     # flag degrades to the plain table when the installed ocws predates it, so
     # the key never dies on a host whose home profile is ahead of or behind the
-    # package. popup commands run with sh -c, so the chain uses sh's && and ||.
-    tui.tuios.commandKeys = lib.mkAfter [
+    # package. fish runs panes (herdr detects it from SHELL), so the chain uses
+    # fish's && and ||.
+    tui.herdr.commandKeys = lib.mkAfter [
       {
         key = "prefix+shift+b";
         type = "popup";
@@ -231,20 +232,19 @@ in {
         height = "95%";
       }
 
-      # New agent seat one key away. A pane type runs the command on the
-      # machine that owns the focused session, so the seat lands beside the
-      # herd on m920q even when the key is pressed from the desktop. `ocws
-      # tuios` creates a window in that session and runs ocws inside it; the
-      # transient pane closes when the command exits. The seat names itself: a
-      # filler task at creation, `ocws title` once OpenCode has a session
-      # title. Failures (no tuios binary, a live process in the workspace) land
-      # in the seat log rather than a pane nobody is looking at.
+      # New agent seat one key away. A herdr tab inherits the focused pane's
+      # worktree, so a bare tab plus opencode would share that working copy;
+      # `ocws herdr` creates the tab and runs ocws inside it. The binding runs
+      # detached because the seat names itself: a filler task at creation,
+      # `ocws title` once OpenCode has a session title. Failures (no herdr
+      # binary, a live process in the workspace) land in the seat log rather
+      # than a popup nobody is looking at.
       # prefix+shift+a is free (the defaults use r/n/g/w/d/t/x/p).
       {
         key = "prefix+shift+a";
-        type = "pane";
-        command = "${ocws}/bin/ocws tuios";
-        description = "New agent seat: jj workspace + opencode in a new window";
+        type = "shell";
+        command = "${ocws}/bin/ocws herdr";
+        description = "New agent seat: jj workspace + opencode in a new tab";
       }
     ];
   };

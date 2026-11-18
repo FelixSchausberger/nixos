@@ -149,9 +149,9 @@
       url = "github:Ra77a3l3-jar/nhx";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # TTT (Terminal Text Tool): the terminal IDE bound to prefix+shift+e.
-    # Upstream ships no tagged release with a pinned flake, so the lock pins
-    # the branch head; bump deliberately. The companion plugin repos are
+    # TTT (Terminal Text Tool): the terminal IDE herdr opens as its editor
+    # pane. Upstream ships no tagged release with a pinned flake, so the lock
+    # pins the branch head; bump deliberately. The companion plugin repos are
     # consumed as plain sources (flake = false) and copied into TTT's plugin
     # directory by modules/home/tui/ttt.
     ttt = {

@@ -116,8 +116,8 @@ in {
           "${pkgs.fish}/bin/fish"
         ];
 
-        # Open terminal with TUIOS for AI agent sessions
-        "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.tuios}/bin/tuios"];
+        # Open terminal with herdr for AI agent sessions
+        "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.herdr}/bin/herdr"];
 
         # ===== WINDOW MANAGEMENT =====
         "Mod+Q".action.close-window = {};

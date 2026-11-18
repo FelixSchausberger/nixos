@@ -30,9 +30,9 @@
     # ranges, forge PRs and saved sessions are chosen; pinning -w here would
     # hide every other scope.
     #
-    # prefix+shift+c stands in for the review mnemonic; the TUIOS default
-    # bindings keep prefix+shift+r for a config reload.
-    tui.tuios.commandKeys = lib.mkAfter [
+    # prefix+shift+c stands in for the review mnemonic: herdr already binds
+    # reload_config to prefix+shift+r, and takes r for resize_mode too.
+    tui.herdr.commandKeys = lib.mkAfter [
       {
         key = "prefix+shift+c";
         type = "popup";
