@@ -112,8 +112,6 @@
   # loads them: the indicator paints the pane title, the seat claim renames the
   # workspace its own TUI runs in, and the OSC bridge reports the displayed
   # session's state to the pane's tty for any Program Status Protocol consumer.
-  # The TUIOS lifecycle plugin lives in plugins/ instead, because TUIOS's V2
-  # integration is discovered there; its server entrypoints are stubs.
   indicatorDir = "${config.xdg.configHome}/${configDir}/indicator-v2";
   seatDir = "${config.xdg.configHome}/${configDir}/ocws-seat";
   osc7501Dir = "${config.xdg.configHome}/${configDir}/osc7501";
