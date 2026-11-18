@@ -17,22 +17,28 @@ opt-in state, and sops-nix secret management.
 ```text
 .
 ├── flake.nix              # Main flake configuration with inputs and outputs
+├── flake-parts/           # Per-system outputs (packages, apps, dev shell, checks)
 ├── hosts/                 # System-level configurations per machine
 │   ├── desktop/           # deployed
 │   ├── hp-probook-wsl/    # deployed
 │   ├── m920q/             # deployed
 │   ├── portable/          # portable recovery ISO (.#installer-iso-portable)
-│   └── surface/           # shelf config (flake.legacyConfigurations)
+│   ├── surface/           # full configuration, built by CI
+│   └── hp-probook-vmware/ # shelf config (flake.legacyConfigurations)
 ├── home/profiles/         # User-specific configurations per machine
 ├── modules/               # Reusable system and home manager modules
 │   ├── system/            # System-level modules
 │   └── home/              # Home manager modules
+├── apps/                  # Flake apps (install-remote, nixos-anywhere, keys)
+├── droid/                 # nix-on-droid phone environment
+├── docs/site/             # Generated homelab topology page
 ├── pkgs/                  # Custom package definitions
 ├── tools/                 # Utility scripts, templates, and builders
 ├── system/                # Core system configurations (users, hardware, persistence)
 ├── lib/                   # Custom utility functions and host builders
 ├── secrets/               # Encrypted secrets managed by sops-nix
-└── tests/                 # Snapshot tests using namaka
+├── tests/                 # Snapshot tests using namaka
+└── tests-vm/              # NixOS VM integration tests (packages.test-<name>)
 ```
 
 ### Module System
@@ -57,13 +63,15 @@ Home modules in `modules/home/`:
 - themes: Theme system with TUI/GUI separation
 - wallpapers: Wallpaper configurations
 - wm: Window manager configurations (COSMIC, GNOME, Hyprland)
-- work: Work-specific configurations
+- profiles: Per-host profile fragments and specialisations
 
-### Custom Packages
+### Package Exports
 
-- lumen: AI Git commit message generator
-- mcp-nixos: NixOS MCP server for Claude Code
-- mcp-language-server: Language server MCP integration
+`flake-parts/packages.nix` is the registry. It re-exports a few nixpkgs
+packages the shells use (for example `lumen`) and builds the fleet's own
+tools: `jj-tools` (`jjwork`, `jjpush`, `jjtest`, `ocws`), `pixel-provision`,
+`homelab-topology`, the Zellij plugins, and the three installer ISOs
+(`installer-iso-minimal`, `installer-iso-full`, `installer-iso-portable`).
 
 ### Host Configuration
 
@@ -132,23 +140,12 @@ leave it alone. To see only the actionable set:
 jj log -r 'divergent() & ~::main@origin'
 ```
 
-### Git Workflow (Traditional)
+### Git Interoperability
 
-```bash
-# Create feature branch
-git checkout -b feature/name
-
-# Make changes and test locally
-nix flake check
-
-# Commit (prek hooks run automatically)
-git add -A
-git commit -m "feat: description"
-
-# Push and create pull request
-git push -u origin feature/name
-gh pr create --title "Title" --body "Description"
-```
+Git is present because the repository is colocated and some tooling expects
+it, but the workflow is jj-only. Agents are denied `git commit`, `git rebase`,
+`git stash` and `git push`; bookmarks are created by `jjpush` from the change
+description. Do not push a named branch by hand.
 
 ## Conventions
 
@@ -173,23 +170,6 @@ chore: update flake inputs
 docs: improve emergency recovery guide
 ```
 
-### Branch Names
-
-- `feature/*` - New features
-- `fix/*` - Bug fixes
-- `chore/*` - Maintenance and refactoring
-- `docs/*` - Documentation only
-- `test/*` - Test improvements
-
-Examples:
-
-```text
-feature/add-hyprland-config
-fix/zellij-startup-error
-chore/update-dependencies
-docs/improve-installation-guide
-```
-
 ## Build and Deploy
 
 ### Local Build Commands
@@ -208,7 +188,6 @@ nh os build                                      # Build without activating
 deploy                                           # Build committed config, guard, then switch
 update                                           # Trigger CI lock refresh, wait for merge, converge comin
 clean                                            # Clean old generations
-history                                          # View generation history
 ```
 
 ### Update Flow and Downgrade Guard
@@ -486,7 +465,9 @@ Two ISO variants are available:
 4. **Boot and install**
    - The live system includes the repo at `/per/etc/nixos`
    - SSH is available if you configured keys in step 1
-   - Run `install-nixos` for guided installation (supports all hosts)
+   - Run `/per/etc/nixos/tools/scripts/install-nixos` for guided installation
+     (supports `desktop`, `surface`, and `m920q`; WSL and shelf configs are
+     excluded)
 
 See `hosts/installer/README.md` for complete installation documentation.
 
@@ -527,18 +508,17 @@ nix flake check
 namaka check                                     # Run all tests
 namaka review                                    # Review and update snapshots
 
-# Pre-commit hooks (prek)
+# Pre-commit hooks (prek). jj has no index, so always pass --all-files.
 prek run --all-files                            # Run all hooks
-prek run                                         # Run on staged files
 
 # Flake input health (flake-checker)
 flake-checker                                    # Check flake.lock health
 flake-checker --no-telemetry                     # Disable telemetry
 flake-checker --check-outdated --check-owner     # Specific checks only
 
-# VM testing
-nix run .#install-remote desktop <target-ip>
-nix run .#install-remote m920q <target-ip>
+# VM integration tests: every tests-vm/default.nix entry is packages.test-<name>
+just test-vm caddy-proxy
+just test-vm-all
 ```
 
 ### CI/CD Pipeline
