@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "policies": [
+    {
+      "action": "tool.use",
+      "resource": "shell:jj git push *",
+      "effect": "deny"
+    },
+    {
+      "action": "tool.use",
+      "resource": "shell:git push *",
+      "effect": "deny"
+    }
+  ]
+}

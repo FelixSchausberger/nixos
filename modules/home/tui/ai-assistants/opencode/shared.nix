@@ -9,10 +9,23 @@
   # the isolated config from the same attrs this returns.
   sharedBehaviors = config.ai-assistants.behaviors.definitions;
 
+  # Render in priority order (lower first), with the attribute name as the
+  # tie-breaker so the output is deterministic. Iterating the attrset directly
+  # would sort alphabetically and silently ignore the priority option.
+  orderedBehaviors =
+    builtins.sort (
+      a: b:
+        a.priority
+        < b.priority
+        || (a.priority == b.priority && a.name < b.name)
+    ) (lib.mapAttrsToList (name: behavior: {
+        inherit name;
+        inherit (behavior) priority content description;
+      })
+      (lib.filterAttrs (_n: v: v.enabled) sharedBehaviors));
+
   combinedRules = lib.concatStringsSep "\n\n---\n\n" (
-    lib.mapAttrsToList (_name: behavior: "# ${behavior.description}\n\n${behavior.content}") (
-      lib.filterAttrs (_n: v: v.enabled) sharedBehaviors
-    )
+    map (behavior: "# ${behavior.description}\n\n${behavior.content}") orderedBehaviors
   );
 
   # Typst authoring skills (local docs mirrors for typst + touying).
@@ -54,16 +67,21 @@
   # card monitor.
   webPort = 4096;
 
+  # Absolute store paths so formatting does not depend on the agent PATH.
+  # Alejandra is the repository formatter (treefmt.toml); nixfmt is not
+  # installed and would fight it. Typst formatting is omitted: typstyle is not
+  # part of the harness, and an empty custom entry cannot run.
   formatters = {
-    nixfmt = {};
-    rustfmt = {};
-    typstyle = {};
+    alejandra = {
+      command = ["${pkgs.alejandra}/bin/alejandra" "$FILE"];
+      extensions = [".nix"];
+    };
+    rustfmt = {
+      command = ["${pkgs.rustfmt}/bin/rustfmt" "$FILE"];
+      extensions = [".rs"];
+    };
     taplo = {
-      command = [
-        "taplo"
-        "fmt"
-        "$FILE"
-      ];
+      command = ["${pkgs.taplo}/bin/taplo" "fmt" "$FILE"];
       extensions = [".toml"];
     };
   };
@@ -141,6 +159,70 @@
     {
       action = "shell";
       resource = "git checkout * -- *";
+      effect = "deny";
+    }
+    # Permanent system changes. The global behavior states the same rule; this
+    # is the enforcement layer, so a model slip cannot switch a host. Patterns
+    # use whole-value wildcards and tolerate options before the subcommand;
+    # `nixos-rebuild test` and `nh os test` remain allowed.
+    {
+      action = "shell";
+      resource = "nixos-rebuild *switch*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "sudo nixos-rebuild *switch*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "nixos-rebuild *boot*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "sudo nixos-rebuild *boot*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "nh os *switch*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "sudo nh os *switch*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "nh os *boot*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "sudo nh os *boot*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "home-manager *switch*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "sudo home-manager *switch*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "deploy*";
+      effect = "deny";
+    }
+    {
+      action = "shell";
+      resource = "sudo deploy*";
       effect = "deny";
     }
     {

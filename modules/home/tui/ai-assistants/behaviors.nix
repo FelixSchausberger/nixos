@@ -50,7 +50,7 @@
 
     parallel-agents = {
       content = ''
-        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `ocws` workspace. The primary checkout (/per/etc/nixos) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
+        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `ocws` workspace. The primary checkout (the `default` jj workspace; /per/etc/nixos on this fleet) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
 
         Start of work, always:
         ```bash
@@ -147,7 +147,7 @@
       '';
       enabled = true;
       description = "Blocks automatic system rebuild commands (critical safety feature)";
-      priority = 10; # Highest priority
+      priority = 9; # Above clean-diff; below the workspace-start rules
     };
 
     safe-deletion = {
@@ -181,11 +181,12 @@
       '';
       enabled = true;
       description = "Prefer gh CLI / raw URLs over webfetch for GitHub content";
+      priority = 90;
     };
 
     additional-context = {
       content = ''
-        Unless otherwise specified: DRY, YAGNI, KISS, Pragmatic. Ask questions for clarifications. When doing a plan or research-like request, present your findings and halt for confirmation. Use raggy first to find documentation. Speak the facts, don't sugar coat statements. Your opinion matters. End all responses with an emoji of an animal
+        Unless otherwise specified: DRY, YAGNI, KISS, Pragmatic. Ask questions for clarifications. When doing a plan or research-like request, present your findings and halt for confirmation. Use the nixos MCP server and the repository documentation to find answers; do not guess package names or options. Speak the facts, don't sugar coat statements. Your opinion matters. End all responses with an emoji of an animal
       '';
       enabled = true;
       description = "Default development principles and communication guidelines";
