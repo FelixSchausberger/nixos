@@ -1,10 +1,9 @@
 // A seat opens under a filler name because waiting for a title would put
 // seconds between the keypress and the OpenCode TUI. This plugin closes the
 // loop: once OpenCode names the session, it runs `ocws title`, which renames
-// the jj workspace, rewrites the change description and renames the TUIOS
-// window (or the zellij tab in the fallback) in one guarded step. The claim
-// logic lives in ocws so a human or an agent can run the same command by
-// hand; this file only watches for the title.
+// the jj workspace, rewrites the change description and renames the herdr tab
+// in one guarded step. The claim logic lives in ocws so a human or an agent
+// can run the same command by hand; this file only watches for the title.
 import { log, POLL_MS } from "./config"
 import { runCommand } from "./process"
 
@@ -30,11 +29,11 @@ const FILLER = /^t-\d{4,6}(-\d)?$/
 export default {
   id: "ocws.seat",
   async setup(context: Context) {
-    // Seats are TUIOS windows (or zellij tabs in the fallback), and the window
-    // name is what makes the filler visible. Outside a pane there is nothing
-    // to rename automatically, and `ocws title` stays a manual command.
-    if (!process.env.TUIOS_PANE_ID && !process.env.ZELLIJ) {
-      log("not inside a TUIOS or zellij pane - disabled")
+    // Seats are herdr tabs, and the tab name is what makes the filler
+    // visible. Outside a pane there is nothing to rename automatically, and
+    // `ocws title` stays a manual command.
+    if (!process.env.HERDR_TAB_ID) {
+      log("not inside a herdr pane - disabled")
       return
     }
 

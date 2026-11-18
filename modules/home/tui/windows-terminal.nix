@@ -13,7 +13,7 @@
   dsshGuid = "{e0b0a5b5-4f2a-4a1d-9d88-3c5d9d1b7b01}";
   zellijM920qGuid = "{ddea1859-4521-504c-81d0-0196754902b0}";
   # uuid3 over a stable namespace label; the WT profile registry matches on it.
-  tuiosM920qGuid = "{0188e581-cf5a-31cb-b6a2-07b288087b0f}";
+  herdrM920qGuid = "{0188e581-cf5a-31cb-b6a2-07b288087b0f}";
 
   # wsl.exe sometimes fails before fish starts: it reports "Error code:
   # Wsl/Service/0x8007274c" (timeout on the WSL service socket) and exits -1,
@@ -33,17 +33,17 @@
     + "exit $LASTEXITCODE\"";
 
   # Same WSL-retry wrapper as the zellij profile above, but the remote entry
-  # point is the agent layer: the m920q-tuios fish function lands straight
-  # in the TUIOS client (mosh command override -> fish -c hattach). fish runs
+  # point is the agent layer: the m920q-herdr fish function lands straight
+  # in the herdr TUI (mosh command override -> fish -c hattach). fish runs
   # non-interactive there, which is what keeps the zellij auto-attach hook
   # - it requires `status is-interactive` - from firing on this path.
-  tuiosM920qCommandline =
+  herdrM920qCommandline =
     "powershell.exe -NoProfile -Command \""
-    + "$Host.UI.RawUI.WindowTitle = 'm920q tuios'; "
-    + "& wsl.exe -d NixOS -- fish -c m920q-tuios; "
+    + "$Host.UI.RawUI.WindowTitle = 'm920q herdr'; "
+    + "& wsl.exe -d NixOS -- fish -c m920q-herdr; "
     + "if ($LASTEXITCODE -lt 0) "
     + "{ Write-Host '[wsl] session start failed, retrying'; "
-    + "& wsl.exe -d NixOS -- fish -c m920q-tuios }; "
+    + "& wsl.exe -d NixOS -- fish -c m920q-herdr }; "
     + "exit $LASTEXITCODE\"";
 in {
   options.tui.windows-terminal = {
@@ -90,12 +90,12 @@ in {
         }
         # Agent layer twin (Ctrl+Alt+H): same mosh transports, but the remote
         # command override skips the interactive zellij auto-attach, so the
-        # tab lands straight in the TUIOS client - the same panes, sidebar and
+        # tab lands straight in the herdr TUI - the same panes, sidebar and
         # agent state as the homelab session.
         {
           command = {
             action = "newTab";
-            profile = tuiosM920qGuid;
+            profile = herdrM920qGuid;
           };
           keys = "ctrl+alt+h";
         }
@@ -189,15 +189,15 @@ in {
             icon = builtins.fromJSON ''"\ue701"'';
             name = "m920q zellij";
           }
-          # TUIOS attach, straight over the same mosh chain: same retries and
+          # Herdr attach, straight over the same mosh chain: same retries and
           # wifi glyph. Deliberately no icon/name overlap with the zellij tab
           # so the agent surface reads as its own thing.
           {
-            commandline = tuiosM920qCommandline;
-            guid = tuiosM920qGuid;
+            commandline = herdrM920qCommandline;
+            guid = herdrM920qGuid;
             hidden = false;
             icon = builtins.fromJSON ''"\ue701"'';
-            name = "m920q tuios";
+            name = "m920q herdr";
           }
         ];
       };

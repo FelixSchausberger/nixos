@@ -52,9 +52,9 @@ in {
           desc = "Open Terminal (Safe Mode)";
           niriOnly = true;
         };
-        tuios = {
+        herdr = {
           key = "A";
-          desc = "Open AI Agent Terminal (TUIOS)";
+          desc = "Open AI Agent Terminal (herdr)";
           niriOnly = true;
         };
         launcher = {
