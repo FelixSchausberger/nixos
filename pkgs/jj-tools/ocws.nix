@@ -77,11 +77,17 @@ writeShellApplication {
     Usage:
       ocws <task> [-- <opencode args>...]   create a workspace and run opencode there
       ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
-      ocws herdr [<task>] [-- <opencode args>]
+      ocws herdr [--json] [--no-focus] [--workspace ID] [--wait[=SECONDS]] [<task>] [-- <opencode args>]
                                             start an agent seat: create the workspace
                                             and run opencode in a new herdr tab; an
                                             unnamed seat gets a filler task that
-                                            'ocws title' replaces
+                                            'ocws title' replaces. --json prints the
+                                            tab, pane and workspace for a lead;
+                                            --no-focus keeps the person's view still;
+                                            --wait blocks until the agent is at its
+                                            prompt (180s by default)
+      ocws seat [--json]                    print the calling agent's herdr workspace,
+                                            tab and pane, matched by OPENCODE_SESSION_ID
       ocws title <text...>                  claim the current seat: set the change
                                             description, rename the workspace and the
                                             herdr tab from the session title; a no-op
@@ -599,6 +605,88 @@ writeShellApplication {
         echo "ocws: '$task' resumed; gc reclassifies it on the next pass"
         exit 0
         ;;
+      seat)
+        shift
+        json=0
+        if [ "''${1:-}" = "--json" ]; then
+          json=1
+          shift
+        fi
+        [ "$#" -eq 0 ] || usage
+        # The shell tool runs in the shared opencode server, not in the pane's
+        # client, so its HERDR_* environment can be absent or belong to another
+        # pane. The opencode session id is the one identity every tool call
+        # carries, and herdr's agent list reports it back with the pane, tab and
+        # workspace, so it is the lookup key. A workspace-root match would be
+        # wrong here: the live herd reports the same repository cwd for every
+        # seat, because `ocws herdr` changes directory inside the pane's shell.
+        sid="''${OPENCODE_SESSION_ID:-}"
+        if [ -z "$sid" ]; then
+          echo "ocws seat: OPENCODE_SESSION_ID is unset; run this from an opencode tool call" >&2
+          exit 1
+        fi
+        herdr_bin="''${HERDR_BIN_PATH:-herdr}"
+        command -v "$herdr_bin" >/dev/null 2>&1 || {
+          echo "ocws seat: herdr binary not found: $herdr_bin" >&2
+          exit 1
+        }
+        agents="$("$herdr_bin" agent list 2>&1)" || {
+          echo "ocws seat: cannot read herdr agents: $agents" >&2
+          exit 1
+        }
+        match="$(printf '%s' "$agents" | jq -c --arg sid "$sid" '
+          [.result.agents[]? | select(.agent_session.value == $sid)]
+          | if length == 1 then .[0] else empty end
+        ' 2>/dev/null || true)"
+        if [ -z "$match" ]; then
+          count="$(printf '%s' "$agents" | jq -r --arg sid "$sid" \
+            '[.result.agents[]? | select(.agent_session.value == $sid)] | length' 2>/dev/null || true)"
+          if ! printf '%s' "$count" | grep -Eq '^[0-9]+$'; then
+            count=0
+          fi
+          if [ "$count" -gt 1 ]; then
+            echo "ocws seat: session $sid is registered on more than one herdr pane; refusing to guess" >&2
+            printf '%s' "$agents" | jq -r --arg sid "$sid" \
+              '.result.agents[] | select(.agent_session.value == $sid) | "  \(.pane_id) \(.tab_id) \(.workspace_id) \(.agent_status)"' >&2 || true
+          else
+            echo "ocws seat: no herdr agent reports opencode session $sid" >&2
+            echo "ocws seat: check that tui.herdr.opencodeIntegration is on and the tab is a herdr pane" >&2
+          fi
+          exit 1
+        fi
+        here="$(realpath -m "$PWD")"
+        names="$(jj --ignore-working-copy workspace list -T 'name ++ "\t" ++ root ++ "\n"' 2>/dev/null)"
+        task=""
+        while IFS=$'\t' read -r name ws_root; do
+          case "$here/" in
+            "$(realpath -m "$ws_root")/"*)
+              task="$name"
+              dir="$(realpath -m "$ws_root")"
+              break
+              ;;
+          esac
+        done <<<"$names"
+        [ -n "$task" ] || { echo "ocws seat: not inside a registered jj workspace" >&2; exit 1; }
+        [ "$task" = "default" ] && { echo "ocws seat: the primary checkout is not a seat" >&2; exit 1; }
+        ws="$(printf '%s' "$match" | jq -r '.workspace_id // empty')"
+        tab="$(printf '%s' "$match" | jq -r '.tab_id // empty')"
+        pane="$(printf '%s' "$match" | jq -r '.pane_id // empty')"
+        state="$(printf '%s' "$match" | jq -r '.agent_status // empty')"
+        if [ "$json" = 1 ]; then
+          jq -nc \
+            --arg task "$task" \
+            --arg dir "$dir" \
+            --arg ws "$ws" \
+            --arg tab "$tab" \
+            --arg pane "$pane" \
+            --arg sid "$sid" \
+            --arg state "$state" \
+            '{task:$task,dir:$dir,herdr_workspace:$ws,herdr_tab:$tab,herdr_pane:$pane,agent_session:$sid,agent_status:$state,source:"agent-session"}'
+        else
+          printf '%s\t%s\t%s\t%s\n' "$task" "$tab" "$pane" "$state"
+        fi
+        exit 0
+        ;;
       title)
         shift
         text="$*"
@@ -771,6 +859,30 @@ writeShellApplication {
           fi
           exit 1
         }
+        json=0
+        focus=1
+        workspace=""
+        wait_secs=0
+        while [ "$#" -gt 0 ]; do
+          case "$1" in
+            --json) json=1; shift ;;
+            --no-focus) focus=0; shift ;;
+            --workspace)
+              [ "$#" -ge 2 ] || usage
+              workspace="$2"
+              shift 2
+              ;;
+            --wait) wait_secs=180; shift ;;
+            --wait=*) wait_secs="''${1#--wait=}"; shift ;;
+            --) shift; break ;;
+            -*) usage ;;
+            *) break ;;
+          esac
+        done
+        case "$wait_secs" in
+          *[!0-9]*) usage ;;
+        esac
+        [ -n "$wait_secs" ] || usage
         task="''${1:-}"
         if [ -n "$task" ]; then
           shift
@@ -813,6 +925,7 @@ writeShellApplication {
             inner+=" $(printf '%q' "$arg")"
           done
         else
+          dir="$(ws_dir_for "$task")"
           self="$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")"
           # The seat is created for speed: skip the gc pass and the network
           # fetch the create path would otherwise run before `workspace add`.
@@ -831,14 +944,60 @@ writeShellApplication {
         # with `jj workspace root`, and the workspace base is outside it. The
         # agent still starts only in the workspace ocws creates (or the existing
         # one it cd's to); nothing runs in the tab's initial directory.
-        tab_args=(tab create --cwd "$root" --label "$task" --focus)
+        focus_flag=--focus
+        [ "$focus" = 1 ] || focus_flag=--no-focus
+        tab_args=(tab create --cwd "$root" --label "$task" "$focus_flag")
+        if [ -n "$workspace" ]; then
+          tab_args+=(--workspace "$workspace")
+        fi
         if ! resp="$("$herdr_bin" "''${tab_args[@]}" 2>&1)"; then
           fail "cannot create a herdr tab: $resp"
         fi
         pane="$(printf '%s' "$resp" | jq -r '.result.root_pane.pane_id // empty' 2>/dev/null || true)"
+        tab="$(printf '%s' "$resp" | jq -r '.result.tab.tab_id // empty' 2>/dev/null || true)"
+        ws="$(printf '%s' "$resp" | jq -r '.result.tab.workspace_id // empty' 2>/dev/null || true)"
         [ -n "$pane" ] || fail "herdr did not return a root pane: $resp"
+        [ -n "$tab" ] || fail "herdr did not return a tab: $resp"
+        [ -n "$ws" ] || ws="$workspace"
         if ! "$herdr_bin" pane run "$pane" "$inner"; then
           fail "tab created, but the agent did not start; run 'ocws $task' in it"
+        fi
+        # herdr has no wait for an agent to appear: agent wait and agent prompt
+        # take a target that must already resolve. The pane is the target and
+        # agent list is the observable state, so poll it with a deadline rather
+        # than handing a lead a pane that cannot be prompted yet. A blocked
+        # startup belongs to the person; the tab is kept for inspection.
+        state=""
+        agent_sid=""
+        if [ "$wait_secs" -gt 0 ]; then
+          deadline=$(( $(date +%s) + wait_secs ))
+          while :; do
+            info="$("$herdr_bin" agent list 2>/dev/null || true)"
+            state="$(printf '%s' "$info" | jq -r --arg p "$pane" 'first(.result.agents[]? | select(.pane_id == $p) | .agent_status) // empty' 2>/dev/null || true)"
+            agent_sid="$(printf '%s' "$info" | jq -r --arg p "$pane" 'first(.result.agents[]? | select(.pane_id == $p) | .agent_session.value) // empty' 2>/dev/null || true)"
+            case "$state" in
+              idle|done) break ;;
+              blocked)
+                fail "tab $tab pane $pane is blocked; read it with 'herdr agent read $pane --source recent-unwrapped' and let the person answer"
+                ;;
+            esac
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              fail "tab $tab pane $pane did not reach an agent prompt in ''${wait_secs}s; inspect it before prompting"
+            fi
+            sleep 0.5
+          done
+        fi
+        if [ "$json" = 1 ]; then
+          jq -nc \
+            --arg task "$task" \
+            --arg dir "$(realpath -m "$dir")" \
+            --arg label "$task" \
+            --arg ws "$ws" \
+            --arg tab "$tab" \
+            --arg pane "$pane" \
+            --arg state "$state" \
+            --arg sid "$agent_sid" \
+            '{task:$task,dir:$dir,label:$label,herdr_workspace:$ws,herdr_tab:$tab,herdr_pane:$pane,agent_status:$state,agent_session:$sid}'
         fi
         exit 0
         ;;
