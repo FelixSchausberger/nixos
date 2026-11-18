@@ -165,8 +165,7 @@ Treat these as worked instances of the anti-pattern class:
 
 ### code target
 
-Write the plan to `.opencode/audits/plan-<YYYY-MM-DD>-<mode>.md` (create the
-directory if needed; the directory is gitignored). Per candidate:
+Deliver the plan inline in the conversation. Per candidate:
 
 ```markdown
 ### <N>. <Short title>
@@ -177,7 +176,9 @@ directory if needed; the directory is gitignored). Per candidate:
 ```
 
 Then present the candidate list to the user and halt. Do not write an
-`audit-*.md` report in Phase 1. Do not edit code. Do not create bookmarks.
+`audit-*.md` report in Phase 1. Do not write a plan file, do not edit code, and
+do not create bookmarks: the harness owns any plan document, and concurrent
+sessions collide on a shared path.
 
 ### plan target
 
@@ -209,8 +210,9 @@ it, and halt.
 
 ## Phase 2 — Execute (explicit follow-up only)
 
-Run only when the user says to execute a specific plan file (e.g. "execute
-plan `.opencode/audits/plan-<date>-incremental.md`").
+Run only when the user explicitly approves a named audit plan from the
+conversation (e.g. "execute the documentation audit"). The plan is a message,
+not a file.
 
 For a **plan target** there is no code to fix: re-verify, re-present the
 finalized plan inline (annotate the user-supplied document if one was handed
