@@ -1,0 +1,13 @@
+{
+  "name": "opencode-osc7501",
+  "version": "0.1.0",
+  "description": "Reports the displayed OpenCode session over OSC 7501 (Program Status Protocol) to the pane's terminal, so Zellij's attention inbox and other 7501 consumers can track it without a multiplexer-specific socket. Client-side only; server/rpc stubs keep V2's loader from throwing.",
+  "type": "module",
+  "exports": {
+    "./server": "./server.ts",
+    "./tui": "./src/index.ts",
+    "./rpc": "./rpc.ts",
+    ".": "./src/index.ts"
+  },
+  "license": "MIT"
+}

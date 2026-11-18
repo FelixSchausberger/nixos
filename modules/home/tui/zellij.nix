@@ -145,6 +145,14 @@ in {
       # after changes here.
       env.OPENTUI_NOTIFICATION_PROTOCOL = "osc9";
 
+      # Attention tracking drives the inbox and the frame/tab markers. It is
+      # on by default; declared so a future upstream default cannot remove
+      # the surface the opencode OSC 7501 bridge reports into.
+      attention = {
+        enabled = true;
+        startup_card = "attention";
+      };
+
       # UI settings
       pane_frames = false;
       simplified_ui = true;
@@ -223,6 +231,11 @@ in {
           // ConPTY, mosh)
           bind "Ctrl g" { SwitchToMode "Normal"; }
 
+          // Attention inbox: the fleet's keybinds clear the defaults, so the
+          // 0.46 session card has no key unless it is bound here. Alt i opens
+          // it without unlocking; normal -> o -> i is the mode-preserving path.
+          bind "Alt i" { ToggleSessionCard; }
+
           // Quick plugin access as floating popups (work in locked mode)
           bind "Alt w" { LaunchOrFocusPlugin "forgot" { floating true; }; }
           bind "Alt r" { LaunchOrFocusPlugin "harpoon" { floating true; }; }
@@ -251,6 +264,7 @@ in {
           bind "r" { SwitchToMode "Resize"; }
           bind "s" { SwitchToMode "Scroll"; }
           bind "m" { SwitchToMode "Move"; }
+          bind "o" { SwitchToMode "Session"; }
           bind "q" { Quit; }
 
           // Quick plugin access (also work in normal mode)
@@ -374,6 +388,7 @@ in {
         session {
           bind "Esc" { SwitchToMode "Locked"; }
           bind "d" { Detach; }
+          bind "i" { ToggleSessionCard; }
           bind "w" {
             LaunchOrFocusPlugin "session-manager" {
               floating true
