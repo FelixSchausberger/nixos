@@ -32,6 +32,12 @@ isolation unit is the jj workspace the tab's agent runs in: tabs in one herdr
 workspace each have their own jj workspace when they are created through
 `ocws`.
 
+A lead creates each worker with `ocws herdr --workspace <id>`; the worker gets
+its own jj workspace and a tab in the lead's herdr workspace. The lead prompts
+it, reads the report file, closes only the tabs it created, and releases the
+workspace with `ocws done`. The `herdr-lead` skill owns the delegation protocol;
+`herdr worktree` and fan remain unused.
+
 The claim lives in jj, not in herdr. `ocws <task>` creates the jj workspace,
 writes the change description, and starts opencode rooted at the workspace.
 Opening a tab on its own creates nothing: the tab is where the command runs,
