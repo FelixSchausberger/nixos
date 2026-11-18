@@ -53,6 +53,12 @@
     # systemd service modules.system.homelab.zellijWeb.
     zellij.settings.web_sharing = "on";
   };
+
+  # Paired with the system-side disable in hosts/m920q/default.nix: the niri
+  # modules enable the keyring by default, but this host never has a PAM
+  # password to unlock it and nothing stores secrets there.
+  services.gnome-keyring.enable = lib.mkForce false;
+
   # opencode scopes sessions by working directory, and its web UI lists only
   # the project matching the server's CWD (default $HOME). Pinning the shared
   # server to the config repo makes TUI (`oc`) and phone-facing web UI show

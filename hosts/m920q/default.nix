@@ -543,6 +543,14 @@ in {
 
     dbus.implementation = lib.mkForce "dbus";
 
+    # The on-demand projector session has no PAM password, so the login keyring
+    # cannot be unlocked. A Secret Service request instead leaves a gcr password
+    # dialog on the projector, hidden behind a fullscreen cast until it ends.
+    # Nothing on this host stores secrets there (gh uses hosts.yml, unattended
+    # jobs read sops files), and the niri NixOS module enables the daemon by
+    # default, so turn it off here. mkForce because that module sets it too.
+    gnome.gnome-keyring.enable = lib.mkForce false;
+
     journald = {
       settings.Journal = {
         RateLimitIntervalSec = "30s";

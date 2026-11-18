@@ -76,6 +76,10 @@ in {
       # is running (mutually exclusive with the gui mode by construction).
       systemd.user.services.uxplay = {
         description = "UxPlay AirPlay receiver";
+        # Comin deploys main automatically, so a package change would otherwise
+        # restart the receiver and drop an active client mid-cast. The udev
+        # hotplug cycle starts the new binary on the next display connect.
+        restartIfChanged = false;
         serviceConfig = {
           # stdbuf forces line buffering: uxplay's stdout is block-buffered
           # under journald, so startup logs otherwise only appear (all stamped
@@ -122,6 +126,10 @@ in {
         partOf = ["niri-session.target"];
         bindsTo = ["niri-session.target"];
         wantedBy = ["niri-session.target"];
+        # Comin deploys main automatically, so a package change would otherwise
+        # restart the receiver and drop an active client mid-cast. The session
+        # restarts it (with the new binary) on the next projector hotplug.
+        restartIfChanged = false;
         serviceConfig = {
           # -p keeps uxplay on the legacy AirPlay ports declared in the
           # firewall rules above; see the headless service for details.
