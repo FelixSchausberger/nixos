@@ -55,9 +55,12 @@
       servers = {
         nix-language-server = {
           command = "${pkgs.mcp-language-server}/bin/mcp-language-server";
+          # The MCP client starts a local server in the active workspace (and
+          # `cwd` defaults to it), so `.` roots nixd at the checkout being
+          # edited instead of pinning every session to the primary.
           args = [
             "--workspace"
-            "/per/etc/nixos"
+            "."
             "--lsp"
             "nixd"
           ];
@@ -81,9 +84,11 @@
       nix-language-server = {
         package = pkgs.mcp-language-server;
         command = "mcp-language-server";
+        # Same workspace-relative root as the OpenCode entry; the consumer
+        # starts the process in its project directory.
         args = [
           "--workspace"
-          "/per/etc/nixos"
+          "."
           "--lsp"
           "nixd"
         ];
