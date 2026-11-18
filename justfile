@@ -185,9 +185,9 @@ jj-hygiene:
 
 # === CODE QUALITY ===
 
-# Simplify staged changes via Claude Code CLI
+# Simplify the current change via Claude Code CLI
 simplify:
-    git diff --cached | claude -p "Review the following diff and suggest simplifications: reduce nesting, remove debug artifacts, convert nested ternaries to if/else, remove obvious comments. Preserve all functionality and conditional logging. Output only the simplified file contents for files that need changes." --output-format text
+    jj diff --from 'main@origin' | claude -p "Review the following diff and suggest simplifications: reduce nesting, remove debug artifacts, convert nested ternaries to if/else, remove obvious comments. Preserve all functionality and conditional logging. Output only the simplified file contents for files that need changes." --output-format text
 
 # Format all Nix files
 fmt:
