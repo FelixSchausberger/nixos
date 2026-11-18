@@ -50,27 +50,15 @@
 
     parallel-agents = {
       content = ''
-        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `ocws` workspace. The primary checkout (the `default` jj workspace; /per/etc/nixos on this fleet) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
+        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `ocws` workspace. The primary checkout (the `default` jj workspace) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
 
         Start of work, always:
         ```bash
         ocws ls
         ```
-        This is read-only. Halt and report if the primary or any other workspace shows a described `@` you do not own, or an undescribed non-empty `@` (an unclaimed working copy is a hazard to every session).
+        Halt and report if another workspace shows a described `@` you do not own, or an undescribed non-empty `@`. Create a workspace with `ocws <task>`, claim it with `jj new main@origin` plus an immediate description, then edit. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk. After the PR merges, release the workspace with `ocws done <task>`.
 
-        For isolated work, create a workspace with `ocws <task>`. It creates `<base>/nixos-ws-<task>`, claims it with a change description, starts opencode rooted there, and reclaims finished workspaces. The base is `$OCWS_BASE`, else the parent of the current workspace when writable, else `$XDG_DATA_HOME/ocws` (default `~/.local/share/ocws`), else `/tmp/opencode`. A herdr tab is a view inside a herdr workspace, not a claim: opening a tab alone creates nothing, closing a tab never releases the jj claim or an open PR, and the command is what creates the workspace, the claim, and (on the herdr server host) the board card. `ocws tab` is the zellij variant and does not apply inside herdr. In herdr, `ocws herdr <task>` (prefix+shift+a) opens a new tab and runs ocws there; a bare tab inherits the focused pane's worktree, so never start opencode in one. The fleet uses one herdr workspace per repository and one tab per agent; each ocws tab's agent gets its own jj workspace, and the board's `nixos-ws-<task>` herdr workspaces are dispatch labels, not seats for people. Hand a card to an automatic lane only after the interactive session in its workspace is closed; the board cannot see jj liveness.
-
-        Claim discipline: start work with `jj new main@origin`, describe immediately, then edit — a described commit at `@` silently absorbs every edit made in its working copy, and the description is the ownership claim. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk from a parallel session. Rebasing never loses commits (recover with `jj op log` / `jj undo`); the loss vectors are undescribed WIP and `jj new`/abandon, which the `jjwork` guard blocks.
-
-        Integration runs from the workspace itself: `jjwork`, then `jjpush`. Nothing pushes background work. After the PR merges, release the workspace:
-        ```bash
-        ocws done <task>
-        ```
-        It refuses while unmerged work remains or a session is still active, doubling as a close-out check. `ocws ls` classifies every workspace (empty, merged, unpushed, in-flight, conflict); `ocws gc` reclaims the empty and merged ones once idle, skipping any with a live process, and a systemd user timer runs it daily. See the jj-workspaces skill for the full workflow and concurrency hazards.
-
-        `ocws ls` marks a workspace `live` when a process is rooted in its directory, but a session whose cwd is elsewhere can still hold it silently, so before settling into one check the session database (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) for a session rooted there, and treat such a workspace as taken even when its `@` is empty; never start or move a session into one. jj snapshots the whole tree, so a file another session wrote rides into your commit unnoticed - if files you did not write appear in your working copy, leave for a fresh workspace, report them, and remove them with `rip` (restorable) rather than committing them.
-
-        Scratch output never reaches a commit: planning and audit files under `.opencode/` are ignored, and `jj diff --stat` before `jjpush` is what proves it.
+        The full workspace model — base-directory precedence, herdr and zellij seats, park/wait markers, session-database occupancy, classification states and concurrency hazards — is in the `jj-workspaces` skill. Load it for anything beyond the commands above.
       '';
       enabled = true;
       description = "Isolate parallel agents in jj workspaces via the ocws launcher";
