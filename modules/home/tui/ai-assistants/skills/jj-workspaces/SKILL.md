@@ -228,3 +228,19 @@ A reader can then map any workspace `@` to its session without a registry.
   commit state until `ocws go <task>` clears the marker; waits older than
   `OCWS_WAIT_STALE_DAYS` (default 14) surface as gc nudges and a prompt-badge
   reminder.
+
+## Zellij fallback
+
+`ocws tab` is the zellij variant, used only when herdr is not the surface. The
+0.46 attention inbox tracks panes in the zellij server it runs in; agents in
+herdr never appear there. Zellij reads keybinds, `env` and `attention` at
+server start, so a server that predates a config change keeps the old map.
+Verify in a fresh session, never by restarting a session with live panes:
+
+```bash
+# raw protocol probe: the blocked pane becomes the next attention target
+printf '\e]7501;state=blocked:kind=permission:app=test:msg=QXBwcm92ZT8=\e\\'
+```
+
+The opencode client plugin writes the same sequences to `/dev/tty`;
+`OPENCODE_OSC7501_DEBUG=1` traces it under `[osc7501]`.

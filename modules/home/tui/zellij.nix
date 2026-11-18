@@ -153,6 +153,10 @@ in {
         startup_card = "attention";
       };
 
+      # Keybinds and this block are read only when the server starts; a running
+      # session keeps the map it started with. Zellij has no keybind reload, so
+      # test a change in a fresh session rather than a restart that drops panes.
+
       # UI settings
       pane_frames = false;
       simplified_ui = true;
