@@ -28,24 +28,13 @@ detect_host() {
     fi
 
     # Check if running in VM
-    local is_vm=false
     if systemd-detect-virt -q; then
-        is_vm=true
-        local virt_type=$(systemd-detect-virt)
-        info "Virtualization detected: $virt_type"
+        info "Virtualization detected: $(systemd-detect-virt)"
     fi
 
     # Detect based on hardware characteristics
     local cpu_model=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
     local total_mem_gb=$(free -g | awk '/^Mem:/{print $2}')
-
-    # Auto-detection logic
-    if [[ "$is_vm" == true ]]; then
-        if [[ "$virt_type" == "vmware" ]]; then
-            echo "hp-probook-vmware"
-            return
-        fi
-    fi
 
     # Physical hardware detection
     if lspci | grep -qi "AMD.*Radeon.*6700"; then
@@ -73,11 +62,8 @@ show_hosts() {
     echo "  ${GREEN}surface${NC}           - Surface tablet/laptop"
     echo "                      Disk: EFI + 8GB swap + ext4 root"
     echo
-    echo "  ${GREEN}portable${NC}          - Portable/recovery system"
+    echo "  ${GREEN}m920q${NC}             - Homelab server"
     echo "                      Disk: EFI + ZFS with impermanence"
-    echo
-    echo "  ${GREEN}hp-probook-vmware${NC} - VMware VM on HP ProBook"
-    echo "                      Disk: EFI + ext4 root (no swap, uses zramSwap)"
     echo
 }
 
@@ -128,7 +114,7 @@ main() {
                 echo
                 echo "Examples:"
                 echo "  install-nixos --host desktop --disk /dev/nvme0n1"
-                echo "  install-nixos --host hp-probook-vmware --disk /dev/sda -y"
+                echo "  install-nixos --host m920q --disk /dev/sda -y"
                 echo "  install-nixos  # Interactive mode"
                 exit 0
                 ;;
@@ -154,7 +140,7 @@ main() {
 
     # Validate hostname
     case "$hostname" in
-        desktop|surface|portable|hp-probook-vmware)
+        desktop|surface|m920q)
             success "Host: $hostname"
             ;;
         *)

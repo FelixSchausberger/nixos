@@ -166,7 +166,7 @@ ssh root@<installer-ip>
 The interactive installer auto-detects your hardware:
 
 ```bash
-install-nixos
+sudo /per/etc/nixos/tools/scripts/install-nixos
 ```
 
 Follow the prompts to:
@@ -184,13 +184,12 @@ Specify everything via command line:
 lsblk
 
 # Install with specific options
-install-nixos --host hp-probook-vmware --disk /dev/sda --yes
+sudo /per/etc/nixos/tools/scripts/install-nixos --host m920q --disk /dev/sda --yes
 
 # Available hosts:
-#   desktop           - Desktop PC with AMD RX 6700XT
-#   surface           - Surface tablet/laptop
-#   portable          - Portable/recovery with ZFS
-#   hp-probook-vmware - VMware VM
+#   desktop - Desktop PC with AMD RX 6700XT (ext4)
+#   surface - Surface tablet/laptop (ext4)
+#   m920q   - Homelab server (ZFS with impermanence)
 ```
 
 ### Advanced: Custom Disko Configuration
@@ -326,5 +325,6 @@ The installer configuration is in `hosts/installer/default.nix`. You can:
 After making changes, rebuild:
 
 ```bash
-nix build .#installer-iso
+nix build .#installer-iso-minimal
+# or .#installer-iso-full
 ```
