@@ -19,6 +19,10 @@
   # so the custom-stack daemons gate themselves off.
   wm.shell = "noctalia";
 
+  # The agent herd runs on m920q. TUIOS cannot add a host at runtime because
+  # its config is read-only, so the ssh alias is declared here.
+  tui.tuios.hosts.m920q.addr = "m920q";
+
   # Seed Lutris game entries for the manually-installed Windows games
   # (slugs must match the lutris:rungame/<slug> Moonlight tiles from
   # modules/system/emulation.nix). Copies each seed only when absent so

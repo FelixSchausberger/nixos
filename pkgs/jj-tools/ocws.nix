@@ -77,14 +77,14 @@ writeShellApplication {
     Usage:
       ocws <task> [-- <opencode args>...]   create a workspace and run opencode there
       ocws tab <task> [-- <opencode args>]  create a workspace in a new zellij tab
-      ocws herdr [<task>] [-- <opencode args>]
+      ocws tuios [<task>] [-- <opencode args>]
                                             start an agent seat: create the workspace
-                                            and run opencode in a new herdr tab; an
+                                            and run opencode in a new TUIOS window; an
                                             unnamed seat gets a filler task that
                                             'ocws title' replaces
       ocws title <text...>                  claim the current seat: set the change
                                             description, rename the workspace and the
-                                            herdr tab from the session title; a no-op
+                                            TUIOS window from the session title; a no-op
                                             unless the description is still the filler
       ocws ls [--counts|--board]            list workspaces with their state and claim
                                             (--counts prints the integers "total empty merged
@@ -659,16 +659,13 @@ writeShellApplication {
         # the placeholder intact and the next call retries the whole claim.
         jj workspace rename "$final"
         jj describe -m "$text"
-        # A manual `ocws title` can run from another tab whose shell happens to
-        # be cd'ed into the workspace; relabelling that tab would be wrong. The
-        # seat's own tab is the one whose foreground process runs in the
-        # workspace, so check that before renaming.
-        if [ -n "''${HERDR_TAB_ID:-}" ] && command -v herdr >/dev/null 2>&1; then
-          tab_cwd="$(herdr pane list 2>/dev/null | jq -r --arg tab "$HERDR_TAB_ID" \
-            'first(.result.panes[]? | select(.tab_id == $tab) | (.foreground_cwd // .cwd)) // empty' 2>/dev/null)"
-          case "$(realpath -m "''${tab_cwd:-/nonexistent}")/" in
-            "$here/"*) herdr tab rename "$HERDR_TAB_ID" "$final" >/dev/null 2>&1 || true ;;
-          esac
+        # The opencode process runs in the seat's own TUIOS pane, so its
+        # TUIOS_PANE_ID is the window to rename. The zellij fallback renames
+        # the tab in the same place the indicator plugin paints the title.
+        if [ -n "''${TUIOS_PANE_ID:-}" ] && command -v tuios >/dev/null 2>&1; then
+          tuios set-window -w "$TUIOS_PANE_ID" --name "$final" >/dev/null 2>&1 || true
+        elif [ -n "''${ZELLIJ:-}" ] && command -v zellij >/dev/null 2>&1; then
+          zellij action rename-tab "$final" >/dev/null 2>&1 || true
         fi
         echo "ocws: claimed '$task' as '$final'"
         exit 0
@@ -744,23 +741,23 @@ writeShellApplication {
         echo "Forgot '$task' (directory sent to the graveyard)."
         exit 0
         ;;
-      herdr)
+      tuios)
         shift
-        # A herdr tab is only a layout: with terminal.new_cwd = follow it
-        # inherits the focused pane's worktree, so running opencode in a bare
-        # tab shares that working copy. This subcommand creates the tab and
-        # starts the agent there through the same creation path as `ocws`, so
-        # a seat always gets its own jj workspace. An existing workspace is
-        # reopened only when no process is live in it; a second agent in one
-        # working copy is the interference this workflow exists to prevent.
+        # A TUIOS window starts at the focused pane's cwd unless --cwd is
+        # given, so running opencode in a bare window could share another
+        # agent's working copy. This subcommand creates the window and starts
+        # the agent there through the same creation path as `ocws`, so a seat
+        # always gets its own jj workspace. An existing workspace is reopened
+        # only when no process is live in it; a second agent in one working
+        # copy is the interference this workflow exists to prevent.
         #
-        # The seat runs from a herdr popup, and a popup closes the moment its
-        # command exits: an empty or invalid answer must re-ask instead of
-        # exiting, and a failure after the prompt must hold the popup open
-        # for a keypress, or the user sees only a flash of text.
+        # The seat runs from a TUIOS pane command, and that pane closes the
+        # moment its command exits: an empty or invalid answer must re-ask
+        # instead of exiting, and a failure after the prompt must hold the
+        # pane open for a keypress, or the user sees only a flash of text.
         seat_log="''${XDG_CACHE_HOME:-$HOME/.cache}/ocws/seat.log"
         fail() {
-          printf 'ocws herdr: %s\n' "$*" >&2
+          printf 'ocws tuios: %s\n' "$*" >&2
           if [ -t 0 ]; then
             read -r -p 'press enter to close ' _ || true
           else
@@ -786,7 +783,7 @@ writeShellApplication {
             [ "$n" -gt 9 ] && break
           done
         fi
-        valid_task "$task" || { echo "ocws herdr: invalid task '$task' (use [A-Za-z0-9._-])" >&2; exit 2; }
+        valid_task "$task" || { echo "ocws tuios: invalid task '$task' (use [A-Za-z0-9._-])" >&2; exit 2; }
         extra=()
         if [ "''${1:-}" = "--" ]; then
           shift
@@ -794,10 +791,11 @@ writeShellApplication {
         elif [ "$#" -gt 0 ]; then
           usage
         fi
-        # herdr exports HERDR_BIN_PATH to custom command keybindings, which is
-        # where the seat popup runs; outside one, fall back to the PATH name.
-        herdr_bin="''${HERDR_BIN_PATH:-herdr}"
-        command -v "$herdr_bin" >/dev/null 2>&1 || fail "herdr binary not found: $herdr_bin"
+        # TUIOS command keys run with the daemon's PATH, which is the same
+        # profile the agent panes use. A manually started seat resolves the
+        # binary from the caller's shell instead.
+        tuios_bin="''${TUIOS_BIN_PATH:-tuios}"
+        command -v "$tuios_bin" >/dev/null 2>&1 || fail "tuios binary not found: $tuios_bin"
 
         if workspace_exists "$task"; then
           dir="$(realpath -m "$(ws_root_for "$task")")"
@@ -827,19 +825,22 @@ writeShellApplication {
           fi
         fi
 
-        # The tab starts at a jj workspace root: ocws resolves the repository
-        # with `jj workspace root`, and the workspace base is outside it. The
-        # agent still starts only in the workspace ocws creates (or the existing
-        # one it cd's to); nothing runs in the tab's initial directory.
-        tab_args=(tab create --cwd "$root" --label "$task" --focus)
-        if ! resp="$("$herdr_bin" "''${tab_args[@]}" 2>&1)"; then
-          fail "cannot create a herdr tab: $resp"
+        # The window starts at a jj workspace root: ocws resolves the
+        # repository with `jj workspace root`, and the workspace base is
+        # outside it. The agent still starts only in the workspace ocws
+        # creates (or the existing one it cd's to); nothing runs in the
+        # window's initial directory. sh -c carries the inner line because
+        # new-window runs its argv without a shell; --keep-open leaves the
+        # exit line visible after the agent quits, as the old tab did.
+        tab_args=(new-window "$task" --cwd "$root" --keep-open --print-id)
+        if [ -n "''${TUIOS_SESSION:-}" ]; then
+          tab_args+=(-s "$TUIOS_SESSION")
         fi
-        pane="$(printf '%s' "$resp" | jq -r '.result.root_pane.pane_id // empty' 2>/dev/null || true)"
-        [ -n "$pane" ] || fail "herdr did not return a root pane: $resp"
-        if ! "$herdr_bin" pane run "$pane" "$inner"; then
-          fail "tab created, but the agent did not start; run 'ocws $task' in it"
+        tab_args+=(-- sh -c "$inner")
+        if ! pane="$("$tuios_bin" "''${tab_args[@]}" 2>&1)"; then
+          fail "cannot create a TUIOS window: $pane"
         fi
+        [ -n "$pane" ] || fail "TUIOS did not return a window id"
         exit 0
         ;;
       tab)
@@ -884,12 +885,12 @@ writeShellApplication {
 
     run_hook post_create "$task" "$dir" "''${OCWS_HOOK_POST_CREATE:-}"
 
-    # Herdr tab labels are the navigation key (goto picker, expanded sidebar).
-    # Name the seat after the task so a new tab reads as the task, not as a
-    # generic shell. Guard-silent: HERDR_TAB_ID is unset outside a herdr pane,
-    # and a failed rename must never block the launch.
-    if [ -n "''${HERDR_TAB_ID:-}" ] && command -v herdr >/dev/null 2>&1; then
-      herdr tab rename "$HERDR_TAB_ID" "$task" >/dev/null 2>&1 || true
+    # TUIOS window names are the navigation key (rail, go-to, Inbox). Name
+    # the seat after the task so a new window reads as the task, not as a
+    # generic shell. Guard-silent: TUIOS_PANE_ID is unset outside a TUIOS
+    # pane, and a failed rename must never block the launch.
+    if [ -n "''${TUIOS_PANE_ID:-}" ] && command -v tuios >/dev/null 2>&1; then
+      tuios set-window -w "$TUIOS_PANE_ID" --name "$task" >/dev/null 2>&1 || true
     fi
 
     if [ "''${OCWS_V2:-0}" = "1" ]; then

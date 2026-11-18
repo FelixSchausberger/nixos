@@ -315,14 +315,16 @@ in {
     fi
   '';
 
-  # TTT opens as a tab in the herdr workspace through its herdr-plugin; prefix+e
-  # is already herdr's edit_scrollback default, so the editor takes
-  # prefix+shift+e.
-  tui.herdr.commandKeys = lib.mkAfter [
+  # TTT's herdr plugin loads under TUIOS, but its actions re-dispatch through
+  # `herdr plugin pane open`, so the action cannot be used once herdr is gone.
+  # The plugin's pane entrypoint is a plain `ttt` in a pty; a scratch terminal
+  # gives the same editor-in-a-tab surface and keeps the focused pane's cwd.
+  # prefix+shift+e avoids TUIOS's own prefix+e.
+  tui.tuios.commandKeys = lib.mkAfter [
     {
       key = "prefix+shift+e";
-      type = "plugin_action";
-      command = "ttt.editor.open";
+      type = "scratch";
+      command = "ttt";
       description = "Open TTT editor";
     }
   ];

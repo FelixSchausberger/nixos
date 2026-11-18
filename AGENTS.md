@@ -100,9 +100,8 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
   report them instead of committing them. A seat opened unnamed carries a filler
   `t-<HHMMSS>` description until `ocws title` claims it from the session title.
-- A herdr workspace is the seat and a herdr tab a view inside it; neither owns
-  the work. Opening a tab creates nothing, and closing one - even a workspace's
-  last tab - never releases the jj claim or an open PR.
+- A TUIOS window is a view, not a seat: opening one creates nothing, and closing
+  one - even a session's last window - never releases the jj claim or an open PR.
 - Scratch plans and audits under `.opencode/` stay ignored and never enter a
   commit; the global diff rule is what proves the change carries one concern.
   Park a session waiting on the outside world with
@@ -113,9 +112,9 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
 - `jj workspace add` run from a stale workspace can leave the new working copy at
   jj's root commit; after creating a workspace, check `@-` is `main@origin` and
   run `jj new main@origin` when it is the root.
-- herdr's git-worktree workspaces are deliberately unused: this repository
-  isolates agents with jj workspaces, and a second git-based checkout would
-  fight the jj op log.
+- TUIOS's git-worktree and fan features are deliberately unused: this
+  repository isolates agents with jj workspaces, and a second git-based
+  checkout would fight the jj op log.
 - Close-out check: before wrapping up a session, re-run any task list the
   session started with and verify every item was addressed - committed,
   pushed, or explicitly deferred with a note. Sessions have repeatedly left

@@ -32,7 +32,7 @@ a different review tool.
 The pane belongs to the user, so tell them how to open it rather than opening
 one yourself:
 
-- Under herdr: `prefix+shift+c` opens `tuicr` in a popup bound by
+- Under TUIOS: `prefix+shift+c` opens `tuicr` in a popup bound by
   `modules/home/tui/tuicr/default.nix`.
 - Anywhere else (a bare shell, a Zellij pane): run `tuicr` in the repository
   root.

@@ -16,31 +16,28 @@ produce conflicted bookmarks (observed failure mode).
 The primary checkout (`/per/etc/nixos`) is reserved for the user and the comin
 reconciler. Agents should work in a workspace.
 
-## Herdr model
+## TUIOS model
 
-The fleet runs agents inside herdr, whose three layers do not map onto the
-claim:
+The fleet runs agents inside TUIOS, whose layers do not map onto the claim:
 
-- herdr workspace — the UI container for a repository (the fleet runs one);
-  it is not one per agent.
-- herdr tab — a layout inside a workspace; use tabs for views (agent, logs,
-  server, review).
-- herdr pane — one real terminal.
+- TUIOS session — the UI container for a host's herd; it is not one per agent.
+- TUIOS window — a pane-like view inside a session; use windows for views
+  (agent, logs, server, review).
+- TUIOS pane — one real terminal; a window can be split.
 
-The fleet runs one herdr workspace per repository and one tab per agent. The
-isolation unit is the jj workspace the tab's agent runs in: tabs in one herdr
-workspace each have their own jj workspace when they are created through
-`ocws`.
+The fleet runs one TUIOS session for the herd and one window per agent. The
+isolation unit is the jj workspace the window's agent runs in: windows in one
+session each have their own jj workspace when they are created through `ocws`.
 
-The claim lives in jj, not in herdr. `ocws <task>` creates the jj workspace,
+The claim lives in jj, not in TUIOS. `ocws <task>` creates the jj workspace,
 writes the change description, and starts opencode rooted at the workspace.
-Opening a tab on its own creates nothing: the tab is where the command runs,
-not what owns the work. Closing a tab — even a workspace's last tab, which
-closes the herdr workspace — never releases the jj claim or an open PR.
-`ocws tab` is the zellij variant and does not apply inside herdr, whose panes
-carry no zellij session. With `terminal.new_cwd = follow`, a new tab inherits
-the focused pane's directory, so a tab can start inside another agent's
-worktree; start agents through `ocws`, not a bare tab.
+Opening a window on its own creates nothing: the window is where the command
+runs, not what owns the work. Closing a window — even a session's last window —
+never releases the jj claim or an open PR.
+`ocws tab` is the zellij fallback and does not apply inside TUIOS, whose panes
+carry no zellij session. A new window starts at the focused pane's directory
+unless `--cwd` is given, so a bare window can start inside another agent's
+worktree; start agents through `ocws`, not a bare window.
 
 ## When to Use
 
@@ -73,21 +70,21 @@ benefit for single quick changes.
 
    ```bash
    ocws <task>            # opencode in the current pane, named up front
-   ocws herdr             # new agent seat in a new herdr tab, filler name
-   ocws herdr <task>      # same, with a task name you already know
-   ocws tab <task>        # opencode in a new zellij tab (not inside herdr)
+   ocws tuios             # new agent seat in a new TUIOS window, filler name
+   ocws tuios <task>      # same, with a task name you already know
+   ocws tab <task>        # opencode in a new zellij tab (fallback)
    ```
 
-   Inside herdr, `prefix+shift+a` runs `ocws herdr` with no task, bound
-   detached: the tab appears with a filler task (`t-<HHMMSS>`), the workspace is
-   created without the gc pass and fetch that would delay it, and opencode
-   starts. Once OpenCode names the session, the seat plugin runs
-   `ocws title "<title>"`, which sets the change description, renames the
-   workspace and renames the herdr tab — once, and only while the description is
-   still the placeholder `jj workspace add` wrote. Run `ocws title` by hand if
-   the plugin is off; it is a no-op on an already-claimed workspace. Re-running
-   `ocws herdr <task>` for an existing task reopens the seat only when no process
-   is live in that workspace.
+   Inside TUIOS, `prefix+shift+a` runs `ocws tuios` with no task, bound as a
+   pane command so it runs on the session's host: the window appears with a
+   filler task (`t-<HHMMSS>`), the workspace is created without the gc pass and
+   fetch that would delay it, and opencode starts. Once OpenCode names the
+   session, the seat plugin runs `ocws title "<title>"`, which sets the change
+   description, renames the workspace and renames the TUIOS window — once, and
+   only while the description is still the placeholder `jj workspace add` wrote.
+   Run `ocws title` by hand if the plugin is off; it is a no-op on an
+   already-claimed workspace. Re-running `ocws tuios <task>` for an existing
+   task reopens the seat only when no process is live in that workspace.
 
    The base directory is chosen in this order: `$OCWS_BASE`, the parent of the
    current workspace (the sibling-directory convention) when writable, then
