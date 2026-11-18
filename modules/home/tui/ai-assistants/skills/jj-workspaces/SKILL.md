@@ -135,7 +135,9 @@ benefit for single quick changes.
    `ocws ls` is a read-only status board. Each workspace is classified `empty`
    (nothing outside `main@origin`), `merged` (its content is already absorbed
    into `main@origin`), `unpushed` (content no remote bookmark tracks),
-   `in-flight` (content with an open PR) or `conflict`. Absorption is checked
+   `in-flight` (content with an open PR), `conflict`, or `waiting` (parked with
+   `ocws wait`). The summary's `stale` count is separate: workspaces that gc
+   could reclaim now if not for the age gate. Absorption is checked
    per revision, so a squash-merged PR counts as finished even though its draft
    commit is not an ancestor of `main@origin`; unsnapshotted edits in a foreign
    workspace are invisible by design (ocws never snapshots a workspace it does

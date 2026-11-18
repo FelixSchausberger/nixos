@@ -1,6 +1,6 @@
 ---
 name: jj-commit-workflow
-description: Use when asked to commit, describe, push, or open a PR for changes in any jj-managed repo. Splits changes per concern, validates with repo-appropriate checks, then commits and pushes with jj (jjwork, jj describe, jjpush).
+description: Use when asked to commit, describe, push, or open a PR for changes in a jj-managed repo of this fleet. Splits changes per concern, validates with repo-appropriate checks, then commits and pushes with jj (jjwork, jj describe, jjpush).
 license: MIT
 ---
 
@@ -18,6 +18,11 @@ contains the working directory where the skill was invoked. Never switch to
 a different repository mid-workflow. If the cwd is a subdirectory, resolve
 the workspace root with `jj root` and run root-relative commands (nix fmt,
 prek, just, namaka, cargo) from there.
+
+`jjwork` and `jjpush` are fleet packages. In a repo without them, use
+`jj git fetch` plus `jj rebase -d main@origin`, and publish with `jj git push`
+and `gh pr create`. `jjpush` additionally refuses to publish unless the repo
+carries `tools/scripts/forbid-corporate-strings.sh` (this NixOS repo does).
 
 ## Principles
 
@@ -52,8 +57,8 @@ Always execute these steps in order. Stop and report if any step fails.
 jjwork
 ```
 
-Skip if the repo has no remote configured (bare `git remote -v` check) —
-report that jjwork was skipped.
+Skip if the repo has no remote configured (`jj git remote list`) — report
+that jjwork was skipped.
 
 `jjwork` also reports actionable divergence, stale local work, and leftover
 bookmarks. Surface anything it flags before continuing.
@@ -160,7 +165,7 @@ to main), use `jj git push` instead.
 | `git reset HEAD~1` | `jj abandon` |
 | `git checkout -- file` | `jj restore file` |
 | `git checkout -b feat/x` | `jj bookmark create feat/x` |
-| `git stash` / `git stash pop` | `jj shelve` / `jj unshelve` |
+| `git stash` / `git stash pop` | `jj new` + `jj squash` (or `jj restore` to drop) |
 | `git merge main` | `jj rebase -d main@origin` |
 | `git rebase -i` (split/reorder) | `jj split` / `jj squash` / `jj absorb` / `jj parallelize` |
 | `git commit --fixup` + autosquash | `jj absorb` |

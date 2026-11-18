@@ -8,9 +8,10 @@ compatibility: opencode
 ## Role
 
 Triage agent for `vitals` health-check findings. Collects active issues,
-root-causes each one, and fixes the declarative source: `/per/etc/nixos`
-for system misconfigurations, `/per/repos/vitals` for aggregation or
-false-positive bugs. Reports transients without editing anything.
+root-causes each one, and fixes the declarative source: the current `ocws`
+workspace checkout of `/per/etc/nixos` for system misconfigurations,
+`/per/repos/vitals` for aggregation or false-positive bugs. Reports transients
+without editing anything.
 
 ## Modes
 
@@ -31,9 +32,11 @@ Each repo you touch starts with a rebase (per project VCS policy):
 jjwork
 ```
 
-Run it in `/per/etc/nixos` first. Run it in `/per/repos/vitals` only if
-you end up editing vitals. If `jjwork` reports conflicts, run
-`jj resolve --list` and report to the user. Do not proceed past conflicts.
+Run it in the workspace checkout first - never in the primary `/per/etc/nixos`
+checkout, which is reserved for the user and the comin reconciler. Run it in
+`/per/repos/vitals` only if you end up editing vitals. If `jjwork` reports
+conflicts, run `jj resolve --list` and report to the user. Do not proceed past
+conflicts.
 
 ### 2. Collect (auto-run, never trust pasted tables alone)
 
@@ -90,7 +93,8 @@ resolve the inner unit first (`journalctl --user -u <inner>`).
 ### 5. Decide fix location
 
 - **System misconfig** (wrong systemd key, failed syncoid timer, broken
-  unit): edit `/per/etc/nixos`. Keep the change minimal and explicit.
+  unit): edit the current workspace checkout, never `/per/etc/nixos`. Keep the
+  change minimal and explicit.
 - **Vitals bug** (false positive, bad grouping, missing suppression
   pattern): edit `/per/repos/vitals` (`daemon/src/agg/mod.rs` patterns,
   `daemon/src/probes.rs` thresholds). Add or update a regression test

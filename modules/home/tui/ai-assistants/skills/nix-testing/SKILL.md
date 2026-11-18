@@ -1,53 +1,43 @@
 ---
 name: nix-testing
-description: Use when writing or running tests for Nix derivations, packages, NixOS modules, namaka snapshots, or VM tests. Nix testing and quality assurance best practices.
+description: Use when writing or running tests for this NixOS flake: namaka snapshots, tests-vm integration tests, or package checks. Covers the three test layers and their commands.
 license: MIT
 compatibility: opencode
 ---
 
 ## Role
 
-Nix testing and quality assurance specialist for package derivation and module validation.
+Testing guide for this flake. There are three layers; use the lowest one that
+covers the change.
 
-## When to Use
+## Layers
 
-Activate this skill when the conversation involves:
+| Layer | Location | Run |
+| --- | --- | --- |
+| Namaka snapshots | `tests/` | `namaka check` (update with `namaka review`) |
+| VM integration | `tests-vm/default.nix` | `just test-vm <name>` or `nix build .#packages.x86_64-linux.test-<name>` |
+| Package checks | derivation `passthru.tests` / `doCheck` | `nix build .#<pkg>.passthru.tests`, `nix flake check` |
 
-- Building or packaging Nix derivations (mkDerivation, buildPhase, checkPhase)
-- Writing or running Nix tests (passthru.tests, namaka snapshot tests)
-- Package metadata (meta.tests, meta.platforms, meta.license, meta.maintainers)
-- Test automation and CI for Nix configurations
-- doCheck, installCheckPhase, or test configuration
+## Workflow
 
-## Best Practices
+1. Read the existing test nearest the change before writing a new one.
+2. Namaka: add or update the case in `tests/`; snapshots are committed, so an
+   intentional change needs `namaka review` and the snapshot update in the
+   same change.
+3. VM tests: every attribute in `tests-vm/default.nix` becomes
+   `packages.test-<name>` and is built by `just test-vm-all`; there is no
+   separate registry.
+4. Validate with `nix fmt`, `prek run --all-files`, `namaka check`,
+   `nix flake check`, and the package instantiation eval from `AGENTS.md`
+   (flake check is WHNF-only).
+5. Report which layer ran and what was skipped.
 
-- Enable tests by default with `doCheck = true`
-- Use `checkPhase` for running unit and integration tests
-- Use `installCheckPhase` for post-installation tests
-- Use `passthru.tests` for running additional test suites
-- Use `meta.tests` for documenting test coverage
-- Use `meta.broken` to mark broken packages
-- Use `meta.platforms` to specify supported platforms
-- Use `meta.maintainers` to list package maintainers
-- Use `meta.license` to specify package licenses
-- Use `meta.homepage` to link to package documentation
+## Conventions
 
-## Key Rationale
-
-Comprehensive testing ensures package reliability. Post-installation tests
-verify correct installation. Additional test suites (passthru.tests) catch
-integration issues, while proper metadata prevents installation failures and
-ensures appropriate package stewardship.
-
-## Good Practice Example
-
-A well-constructed derivation enables testing (`doCheck = true`), implements
-test phases, includes post-installation verification, defines additional
-test suites via `passthru.tests`, and populates comprehensive metadata with
-descriptions, licensing, platform specifications, and maintainer
-information.
-
-## Anti-Pattern
-
-Packages lacking test configuration, metadata information, and platform
-specifications represent inadequate quality assurance practices.
+- `passthru.tests` is the nixpkgs convention; there is no `meta.tests`.
+- `doCheck` defaults to false (`doCheckByDefault`); enable it only when the
+  upstream suite is hermetic in the sandbox.
+- VM tests must assert the layer production uses; do not enable a mode the
+  host disables just to make the test pass.
+- Prefer a CLI diagnostic (`nix flake check`, `statix`, `deadnix`) over a new
+  test when it already catches the failure.
