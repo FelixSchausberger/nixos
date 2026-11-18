@@ -1,5 +1,4 @@
 {
-  config,
   inputs,
   lib,
   pkgs,
@@ -141,25 +140,4 @@
   ];
 
   programs.nix-index-database.comma.enable = true;
-
-  # GitHub token configuration (optional - only when sops is available)
-  sops.secrets."github/token" = lib.mkIf (config.sops.age.keyFile != null) {
-    mode = "0440";
-    group = "wheel";
-  };
-
-  # Use sops template to generate nix.conf with GitHub token (only when sops available)
-  sops.templates."nix-access-tokens.conf" = lib.mkIf (config.sops.age.keyFile != null) {
-    content = ''
-      access-tokens = github.com=${config.sops.placeholder."github/token"}
-    '';
-    owner = "root";
-    group = "wheel";
-    mode = "0440";
-  };
-
-  # Include the generated config in Nix's extraOptions (only when template exists)
-  nix.extraOptions = lib.mkIf (config.sops.age.keyFile != null) ''
-    !include ${config.sops.templates."nix-access-tokens.conf".path}
-  '';
 }
