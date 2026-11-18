@@ -110,38 +110,31 @@
   # reads. Client-side plugins are referenced by absolute path and deliberately
   # sit outside the auto-discovered plugins/ directory so the server role never
   # loads them: the indicator paints the pane title, the seat claim renames the
-  # workspace its own TUI runs in.
+  # workspace its own TUI runs in, and the OSC bridge reports the displayed
+  # session's state to the pane's tty for any Program Status Protocol consumer.
+  # The TUIOS lifecycle plugin lives in plugins/ instead, because TUIOS's V2
+  # integration is discovered there; its server entrypoints are stubs.
   indicatorDir = "${config.xdg.configHome}/${configDir}/indicator-v2";
   seatDir = "${config.xdg.configHome}/${configDir}/ocws-seat";
+  osc7501Dir = "${config.xdg.configHome}/${configDir}/osc7501";
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
     theme.name = "stylix";
     # CLI-only plugins, loaded by the terminal client and never by the server
-    # role. Only the Zellij indicator remains here: the status-line plugin was
-    # removed because its 1s heartbeat re-render exhausts the opentui
-    # TextBuffer handle pool and freezes the TUI. An A/B test with two
+    # role. The status-line plugin was removed because its 1s heartbeat
+    # re-render exhausts the opentui TextBuffer handle pool and freezes the
+    # TUI. An A/B test with two
     # concurrent `-c` sessions (full config vs. quota surfaces off vs. no
     # status-line) crashed both status-line arms with "Failed to create
     # TextBuffer" ~4:14 after start while the arm without the plugin survived
     # the whole window, matching 19 historical crashes that all began with the
     # plugin's introduction in 1b6dda9. The render leak itself is upstream
     # (opentui #1493); until it is fixed the plugin must not come back.
-    plugins =
-      [
-        indicatorDir
-        seatDir
-      ]
-      # herdr's opencode lifecycle integration, vendored by the herdr module
-      # (option tui.herdr.opencodeIntegration). Upstream registers the V2
-      # integration as this directory path in cli.json; here it resolves
-      # against the rendered config root. Never ship the auto-discovered
-      # server-side herdr plugin alongside it: pane-local TUI reporting must
-      # remain the only state reporter (herdr integration docs).
-      ++ lib.optionals
-      (
-        config.tui.herdr.opencodeIntegration.enable or false
-      )
-      ["./herdr-opencode"];
+    plugins = [
+      indicatorDir
+      seatDir
+      osc7501Dir
+    ];
     diffs.wrap = "word";
     # The footer already carries context tokens and percentage, the quota bar,
     # the model and the cwd, and the pane title names the session; the sidebar's
@@ -309,6 +302,7 @@ in {
       );
       "${configDir}/indicator-v2".source = ./zellij-indicator-v2;
       "${configDir}/ocws-seat".source = ./ocws-seat;
+      "${configDir}/osc7501".source = ./osc7501;
     };
   };
 }

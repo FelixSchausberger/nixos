@@ -4,7 +4,7 @@
     ./lsp-config.nix
     ./behaviors.nix
     ./safe-rm.nix
-    ./herdr
+    ./tuios
     ./obsidian-skills.nix
     ./opencode
     ./opencode/opencode.nix

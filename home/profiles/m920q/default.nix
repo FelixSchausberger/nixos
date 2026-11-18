@@ -9,16 +9,14 @@
   # the on-demand niri projector session (see ./niri.nix). The full desktop app
   # suite is deliberately not imported here.
 
-  # Agent control plane: the herd of opencode agents lives in the herdr
-  # session server (tui.herdr.server - an always-on user unit with
-  # reboot-like restart semantics, see the unit comment) so the desktop
-  # and remote SSH attaches view the same panes. The vendored
-  # opencode integration feeds herdr lifecycle state (working/blocked/done)
-  # and records session ids for resume-after-restart; without it the state
-  # sidebar falls back to screen-manifest detection and a deploy loses
-  # resumable sessions.
-  tui.herdr.server.enable = true;
-  tui.herdr.opencodeIntegration.enable = true;
+  # Agent control plane: the herd of opencode agents lives in the TUIOS
+  # daemon (tui.tuios.server - an always-on user unit with reboot-like restart
+  # semantics, see the unit comment) so the desktop and remote SSH attaches
+  # view the same panes. The vendored opencode integration feeds TUIOS
+  # lifecycle state (working/needs_input/done) and records session ids for
+  # resume-after-restart; without it the rail falls back to screen rules and a
+  # deploy loses resumable sessions.
+  tui.tuios.server.enable = true;
 
   # The phone subscribes to the homelab-alerts topic; the daily board digest
   # rides that broker so waiting/in-review/unclean workspaces reach the phone
