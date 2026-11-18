@@ -103,6 +103,12 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
 - A herdr workspace is the seat and a herdr tab a view inside it; neither owns
   the work. Opening a tab creates nothing, and closing one - even a workspace's
   last tab - never releases the jj claim or an open PR.
+- Lead/worker orchestration: a lead resolves its seat with `ocws seat --json`,
+  creates one worker per task with `ocws herdr --workspace <id> --json
+  --no-focus --wait <task>`, prompts it with `herdr agent prompt <pane>
+  --wait`, and reads the report file it names. Each worker owns its jj
+  workspace; the lead never edits it and never answers a `blocked` agent. The
+  protocol, report format and cleanup live in the `herdr-lead` skill.
 - Scratch plans and audits under `.opencode/` stay ignored and never enter a
   commit; the global diff rule is what proves the change carries one concern.
   Park a session waiting on the outside world with
