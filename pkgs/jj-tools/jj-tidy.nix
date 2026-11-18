@@ -36,6 +36,10 @@ writeShellApplication {
     for bm in $(jj bookmark list -T 'name ++ "\n"' 2>/dev/null | sort -u); do
       [ "$bm" = "main" ] && continue
 
+      # Audit baselines deliberately point at main@origin; deleting one would
+      # break the next incremental audit's diff.
+      case "$bm" in audit/*) continue ;; esac
+
       # Remote branch still exists on origin -> active work, keep it.
       # With fetch.prune enabled, a remote-only deletion also lands here as a
       # failed @origin lookup.
