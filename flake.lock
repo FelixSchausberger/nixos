@@ -1786,7 +1786,6 @@
         "vitals": "vitals",
         "walker": "walker",
         "wired": "wired",
-        "yazi": "yazi",
         "yazi-clipboard": "yazi-clipboard",
         "yazi-eza-preview": "yazi-eza-preview",
         "yazi-mount": "yazi-mount",
@@ -2394,32 +2393,6 @@
       "original": {
         "owner": "Supreeeme",
         "repo": "xwayland-satellite",
-        "type": "github"
-      }
-    },
-    "yazi": {
-      "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "rust-overlay": [
-          "rust-overlay"
-        ]
-      },
-      "locked": {
-        "lastModified": 1794489933,
-        "narHash": "sha256-shsRyY1D1CLCODB1FXbpv1L+sT6QnlRPb1u0ffxlc2U=",
-        "owner": "sxyazi",
-        "repo": "yazi",
-        "rev": "d5e4beb6b5212c28d1026d8e7d4ae985dcf174cb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "sxyazi",
-        "repo": "yazi",
         "type": "github"
       }
     },

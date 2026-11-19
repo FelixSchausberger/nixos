@@ -1,24 +1,11 @@
 {
   config,
-  inputs,
   pkgs,
   ...
 }: let
-  # The cargo setup hook forces the system copy of common native libraries
-  # (RUSTONIG_SYSTEM_LIBONIG), so onig_sys probes pkg-config instead of
-  # building its vendored copy and aborts when the inputs are absent. The
-  # upstream flake builds yazi-unwrapped with buildRustPackage and supplies
-  # neither, so override the unwrapped build and hand it to the wrapper.
-  yaziFlake = inputs.yazi.packages.${pkgs.stdenv.hostPlatform.system};
-  yaziPackage = yaziFlake.yazi.override {
-    yazi-unwrapped = yaziFlake.yazi-unwrapped.overrideAttrs (old: {
-      nativeBuildInputs = (old.nativeBuildInputs or []) ++ [pkgs.pkg-config];
-      buildInputs = (old.buildInputs or []) ++ [pkgs.oniguruma];
-    });
-  };
   noteLauncher = pkgs.writeShellApplication {
     name = "yazi-notes";
-    runtimeInputs = [pkgs.coreutils yaziPackage];
+    runtimeInputs = [pkgs.coreutils pkgs.yazi];
     checkPhase = ''
       # Skip shellcheck - it doesn't recognize trap usage
       runHook preCheck
@@ -46,7 +33,7 @@
         set -- "$note_dir"
       fi
 
-      ${yaziPackage}/bin/yazi "$@" --chooser-file="$tmp" --cwd-file="$cwd_tmp"
+      ${pkgs.yazi}/bin/yazi "$@" --chooser-file="$tmp" --cwd-file="$cwd_tmp"
       status=$?
 
       if [ -s "$tmp" ]; then
@@ -79,8 +66,6 @@ in {
 
   programs.yazi = {
     enable = true;
-
-    package = yaziPackage;
 
     enableBashIntegration = config.programs.bash.enable;
     enableFishIntegration = config.programs.fish.enable;

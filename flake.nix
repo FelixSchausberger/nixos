@@ -168,13 +168,9 @@
       flake = false;
     };
 
-    # File manager (used by both TUI and GUI)
-    yazi = {
-      url = "github:sxyazi/yazi";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.flake-utils.follows = "flake-utils";
-    };
+    # File manager (used by both TUI and GUI). The package comes from
+    # nixpkgs because the Home Manager yazi module overrides it with
+    # extraPackages, a shape the upstream flake package does not accept.
 
     # Rex Rune: unofficial native Linux client for the Rex terminal
     # multiplexer. It attaches to an existing Rex server and keeps sessions
