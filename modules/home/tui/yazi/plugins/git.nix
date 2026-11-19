@@ -1,7 +1,10 @@
 {inputs, ...}: {
   programs.yazi = {
     plugins = {
-      git = "${inputs.yazi-plugins}/git.yazi";
+      git = {
+        package = "${inputs.yazi-plugins}/git.yazi";
+        setup = true;
+      };
     };
 
     # Schema per git.yazi README at the pinned revision; yazi 26.5.6 renamed
@@ -18,9 +21,5 @@
         group = "git";
       }
     ];
-
-    initLua = ''
-      require("git"):setup()
-    '';
   };
 }
