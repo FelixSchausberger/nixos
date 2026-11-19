@@ -113,7 +113,7 @@
         deployer_commit="$(printf '%s\n' "$deployer" | sed -n 's/^    Commit ID //p' | head -n1 | awk '{print $1}')"
         deployer_op="$(printf '%s\n' "$deployer" | sed -n 's/^    Operation //p' | head -n1)"
 
-        if printf '%s\n' "$builder" | grep -q 'Build canceled'; then
+        if printf '%s\n' "$builder" | grep -qE 'Evaluation canceled|Build canceled'; then
           stuck=1
           reason="build-canceled"
           detail="generation $builder_uuid for $builder_commit was canceled without a replacement"
