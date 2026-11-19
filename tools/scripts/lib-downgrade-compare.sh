@@ -25,6 +25,12 @@
 
 is_downgrade() {
 	local old_v=$1 new_v=$2
+	# One name can appear with several versions when the closure carries more
+	# than one build of it (Nextcloud's plain and -with-apps outputs are the
+	# common case here). diff-closures lists them comma-separated and sorted;
+	# compare the lowest of each side, the version that regressed first.
+	old_v="${old_v%%, *}"
+	new_v="${new_v%%, *}"
 	# sort -V ranks ref suffixes lexically (b7f1d68 < f435b0b), which would
 	# flag an ordinary grammar bump as a regression; compare the numeric
 	# base instead so 1.2.3+rev=x -> 1.2.2+rev=y still reports.

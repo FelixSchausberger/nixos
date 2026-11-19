@@ -45,12 +45,25 @@ reset_profiles() {
 	ln -sfn "system-50-link" "$tmp/profiles/system"
 }
 
-run_detector() { # $1 = state file, $2 = fixture; prints stderr output
-	local state=$1 fixture=$2
+# comin names its generations `comin-<n>-link` and skips numbers for
+# deployments that never became a generation (failed or test operations), so
+# the predecessor is not necessarily `n - 1`.
+reset_comin_profiles() { # $1 = "gap" | "only"
+	rm -f "$tmp/profiles/comin" "$tmp/profiles/comin-"*-link
+	mkdir -p "$tmp/store/c503" "$tmp/store/c505"
+	ln -sfn "$tmp/store/c505" "$tmp/profiles/comin-505-link"
+	if [[ "${1:-gap}" == "gap" ]]; then
+		ln -sfn "$tmp/store/c503" "$tmp/profiles/comin-503-link"
+	fi
+	ln -sfn "comin-505-link" "$tmp/profiles/comin"
+}
+
+run_detector() { # $1 = state file, $2 = fixture, [$3 = profile]; prints stderr output
+	local state=$1 fixture=$2 profile=${3:-$tmp/profiles/system}
 	{
 		env COMIN_STATUS=done COMIN_HOSTNAME=testhost \
 			COMIN_GIT_SHA=deadbee \
-			COMIN_PROFILE="$tmp/profiles/system" \
+			COMIN_PROFILE="$profile" \
 			COMIN_DOWNGRADES_STATE="$state" \
 			DIFF_CLOSURES_OUTPUT="$fixture" \
 			PATH="$tmp/bin:$PATH" \
@@ -130,6 +143,38 @@ expect_report \
 	$'openssl: 20250101 → 20240101, -5 KiB\n' \
 	"openssl: 20250101 → 20240101" \
 	"pure-decimal versions still compared as versions"
+
+# A closure can carry several builds of one name (Nextcloud's plain and
+# -with-apps outputs); diff-closures lists them comma-separated and the
+# regression must still be reported, not dropped by the line parser.
+expect_report \
+	$'nextcloud: 35.0.3, 35.0.3-with → 35.0.2, 35.0.2-with, -2.8 MiB\n' \
+	"nextcloud: 35.0.3, 35.0.3-with → 35.0.2" \
+	"multi-version closure regression reported"
+
+expect_silent \
+	$'pkg: 1.2, 1.3 → 1.2, 1.3, +0 B\n' \
+	"unchanged multi-version closure stays silent"
+
+# Production reads comin's own profile, whose links carry a `comin-` prefix
+# and skip numbers that never became a generation. Falling back to the
+# highest existing link keeps the detector working when the predecessor
+# number is absent; the first deployment has no predecessor and stays silent.
+reset_comin_profiles gap
+err=$(run_detector "$(fresh_state)" "$DOWN_OPENSSL" "$tmp/profiles/comin") || true
+if [[ "$err" == *"openssl: 3.5.1 → 3.5.0"* ]]; then
+	ok "comin profile reports despite a missing predecessor number"
+else
+	fail "comin profile reports despite a missing predecessor number (got: $err)"
+fi
+
+reset_comin_profiles only
+err=$(run_detector "$(fresh_state)" "$DOWN_OPENSSL" "$tmp/profiles/comin") || true
+if [[ -z "$err" ]]; then
+	ok "first comin deployment stays silent"
+else
+	fail "first comin deployment stays silent (got: $err)"
+fi
 
 # Repeat suppression against one shared state file, mirroring production:
 # comin deploys repeatedly while the bad lock sits on main.
