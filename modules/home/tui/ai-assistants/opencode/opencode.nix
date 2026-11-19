@@ -222,6 +222,10 @@
     destination = "/bin/bash";
     text = ''
       #!${pkgs.bash}/bin/bash
+      # The direnv wrappers set CI=1 for the dev-shell load so its shellHook
+      # skips the interactive prek hook install; agent commands must not
+      # inherit it.
+      unset CI
       exec ${pkgs.coreutils}/bin/env PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" ${pkgs.bash}/bin/bash "$@"
     '';
   };
@@ -236,8 +240,8 @@
         destination = "/bin/bash";
         text = ''
           #!${pkgs.bash}/bin/bash
-          if ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${pkgs.coreutils}/bin/true 2>/dev/null; then
-            exec ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${toolShell}/bin/bash "$@"
+          if CI=1 ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${pkgs.coreutils}/bin/true 2>/dev/null; then
+            exec ${pkgs.coreutils}/bin/env CI=1 ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${toolShell}/bin/bash "$@"
           fi
           exec ${toolShell}/bin/bash "$@"
         '';
