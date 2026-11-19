@@ -27,24 +27,41 @@ if [[ "${COMIN_STATUS:-}" != "done" ]]; then
 	exit 0
 fi
 
-# COMIN_PROFILE overrides the system profile location; production always
-# uses the default. It exists so the diffing logic can be unit-tested
+# COMIN_PROFILE overrides the profile to read; production always uses
+# comin's own profile. It exists so the diffing logic can be unit-tested
 # against fixture generation links.
-profile="${COMIN_PROFILE:-/nix/var/nix/profiles/system}"
+#
+# comin's profile, not the NixOS system profile, is the deployment record:
+# every successful switch adds one numbered link beside it and points the
+# profile at it, while test deployments add none. The NixOS `system` profile
+# only tracks comin where persistSwitch mirrors it, so hosts that leave that
+# off keep pointing at their last nixos-rebuild generation and would compare
+# two stale generations instead of this deployment.
+profile="${COMIN_PROFILE:-/nix/var/nix/profiles/system-profiles/comin}"
 
 # COMIN_DOWNGRADES_STATE overrides where seen downgrades are recorded;
 # production always uses comin's persisted state directory.
 seen_file="${COMIN_DOWNGRADES_STATE:-/var/lib/comin/detected-downgrades}"
 
-# The just-activated generation is the highest numbered link; the one before
-# it is what was running until this deployment.
+# Parse `<prefix>-<n>-link` and walk down to the highest existing link below
+# it: comin numbers its generations without gaps only for successes, and a
+# pruned link must not silently disable the detector.
 target=$(readlink "$profile")
-cur_num=${target//[^0-9]/}
-if [[ -z "$cur_num" || "$cur_num" -le 1 ]]; then
+name=$(basename -- "$target")
+if [[ ! "$name" =~ ^(.+)-([0-9]+)-link$ ]]; then
 	exit 0
 fi
-prev="$(dirname "$profile")/system-$((cur_num - 1))-link"
-if [[ ! -e "$prev" ]]; then
+prefix="${BASH_REMATCH[1]}-"
+cur_num=$((10#${BASH_REMATCH[2]}))
+prev=""
+for ((num = cur_num - 1; num > 0; num--)); do
+	candidate="$(dirname "$profile")/${prefix}${num}-link"
+	if [[ -e "$candidate" ]]; then
+		prev="$candidate"
+		break
+	fi
+done
+if [[ -z "$prev" ]]; then
 	exit 0
 fi
 
@@ -61,11 +78,12 @@ diff_output=$(nix store diff-closures "$old" "$new" 2>/dev/null) || true
 
 downgrades=""
 while IFS= read -r line; do
-	[[ "$line" =~ ^([^:]+):\ ([^ →]+)\ →\ ([^ ,]+) ]] || continue
+	[[ "$line" =~ ^([^:]+):\ (.+)\ →\ ([^ ,]+) ]] || continue
+	pkg="${BASH_REMATCH[1]}"
 	old_v="${BASH_REMATCH[2]}"
 	new_v="${BASH_REMATCH[3]}"
 	if is_downgrade "$old_v" "$new_v"; then
-		downgrades+="${line%%,*}"$'\n'
+		downgrades+="$pkg: $old_v → $new_v"$'\n'
 	fi
 done <<<"$diff_output"
 

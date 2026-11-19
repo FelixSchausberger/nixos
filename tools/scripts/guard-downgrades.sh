@@ -59,7 +59,7 @@ mapfile -t diff_lines < <(nix store diff-closures "$OLD" "$NEW" 2>/dev/null)
 
 declare -a downgrades=()
 while IFS= read -r line; do
-	[[ "$line" =~ ^([^:]+):\ ([^ →]+)\ →\ ([^ ,]+) ]] || continue
+	[[ "$line" =~ ^([^:]+):\ (.+)\ →\ ([^ ,]+) ]] || continue
 	pkg="${BASH_REMATCH[1]}"
 	old="${BASH_REMATCH[2]}"
 	new="${BASH_REMATCH[3]}"
