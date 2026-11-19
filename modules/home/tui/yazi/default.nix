@@ -62,6 +62,7 @@
 in {
   imports = [
     ./plugins
+    ./vfs.nix
   ];
 
   home = {
