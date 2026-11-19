@@ -65,8 +65,9 @@
   # the same sessions.
   systemd.user.services.opencode-web.Service.WorkingDirectory = "/per/etc/nixos";
 
-  # Agent tool calls run in the shared server, not in the pty, so preload the
-  # repo dev shell there once instead of relying on the tab's direnv.
+  # Agent tool calls run in the shared server, but their shell environment
+  # comes from the login shell; this directory warms the profile there and the
+  # tool-shell wrapper loads it per call instead of relying on the tab's direnv.
   ai-assistants.opencode.sharedServer.devShell = "/per/etc/nixos";
 
   home = {

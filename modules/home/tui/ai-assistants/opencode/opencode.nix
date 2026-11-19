@@ -205,17 +205,43 @@
   # never breaks automation. The shim therefore has to be on PATH instead, and
   # only a shell we own can put it there for tool calls alone.
   #
+  # Tool shells inherit the login environment, not the shared server's, so on
+  # hosts with a configured dev shell the outer wrapper loads it per call; the
+  # server preload only covers the server's own processes. The shim must stay
+  # ahead of the dev shell's PATH, so the shell that prepends it runs *inside*
+  # the direnv environment. The check falls back to the plain login
+  # environment when the flake is broken.
+  #
   # Named `bash`: opencode inspects the shell name to choose its command
   # dialect, and discovering the fleet's login shell already selects bash.
-  agentShell = pkgs.writeTextFile {
-    name = "opencode-agent-shell";
+  devShellDir = config.ai-assistants.opencode.sharedServer.devShell;
+
+  toolShell = pkgs.writeTextFile {
+    name = "opencode-tool-shell";
     executable = true;
     destination = "/bin/bash";
     text = ''
       #!${pkgs.bash}/bin/bash
-      exec env PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" ${pkgs.bash}/bin/bash "$@"
+      exec ${pkgs.coreutils}/bin/env PATH="${config.ai-assistants.safeRm.package}/bin:$PATH" ${pkgs.bash}/bin/bash "$@"
     '';
   };
+
+  agentShell =
+    if devShellDir == null
+    then toolShell
+    else
+      pkgs.writeTextFile {
+        name = "opencode-agent-shell";
+        executable = true;
+        destination = "/bin/bash";
+        text = ''
+          #!${pkgs.bash}/bin/bash
+          if ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${pkgs.coreutils}/bin/true 2>/dev/null; then
+            exec ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${toolShell}/bin/bash "$@"
+          fi
+          exec ${toolShell}/bin/bash "$@"
+        '';
+      };
 
   launcher = pkgs.writeShellScript "opencode-launcher" ''
     exec env -u GITHUB_TOKEN \
@@ -234,11 +260,11 @@
     ln -s ${launcher} $out/bin/opencode2
   '';
 
-  # The shared server hands its environment to every agent tool shell. A
-  # direnv wrapper loads the repo dev shell once at server start, so tools
-  # such as just, prek and namaka are present without a per-tab load; a failed
-  # load falls back to the static PATH below so a broken flake cannot take the
-  # agent server down.
+  # The shared server runs MCP/LSP and warms the dev-shell profile; agent tool
+  # shells get their environment from the login shell, which the agentShell
+  # below handles. This wrapper still loads the dev shell once at server start
+  # so the server's own processes have it; a failed load falls back to the
+  # static PATH below so a broken flake cannot take the agent server down.
   sharedServerExec = let
     dir = config.ai-assistants.opencode.sharedServer.devShell;
     cmd = "${opencode}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
@@ -264,10 +290,10 @@ in {
       type = lib.types.nullOr lib.types.str;
       default = null;
       description = ''
-        Directory whose direnv environment wraps the shared server. Agent
-        tool shells inherit that environment, so the repository tools are
-        present without loading direnv in every tab. A failed load falls
-        back to the static server PATH.
+        Directory whose direnv environment wraps the shared server and the
+        agent tool shell. Tool shells load it per call because opencode builds
+        their environment from the login shell, not the server's. A failed
+        load falls back to the plain login/server environment.
       '';
     };
   };
