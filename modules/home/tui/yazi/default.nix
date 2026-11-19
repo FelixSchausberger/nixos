@@ -72,7 +72,6 @@ in {
   home = {
     packages = [
       pkgs.exiftool # General file info
-      pkgs.skim # Skim (sk) fuzzy finder for quick note selection
       noteLauncher
     ];
 
