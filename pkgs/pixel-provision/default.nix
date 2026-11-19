@@ -1,7 +1,7 @@
 # GrapheneOS provisioning for the Pixel 10a, built from lib/phone.nix. A
 # desktop-side (m920q) helper: `pair` wires up wireless adb, `apply` pushes the
-# manifest settings and the F-Droid lane for the owner, the private space or the
-# Google user and prints the interactive-lane checklists, `links` renders the
+# manifest settings and the F-Droid lane for the owner or the private space and
+# prints the interactive-lane checklists, `links` renders the
 # Obtainium bulk import, `check` audits the result against the manifest,
 # `reset-aurora` clears a stuck Aurora install state in one profile, and
 # `widgets` stages the Termux desktop-power shortcuts. Android-side state
@@ -37,8 +37,8 @@ in
             set_profile() {
               PROFILE="''${1:-owner}"
               case "$PROFILE" in
-                owner|private|google) ;;
-                *) echo "unknown profile: $PROFILE (use owner, private or google)" >&2; exit 1 ;;
+                owner|private) ;;
+                *) echo "unknown profile: $PROFILE (use owner or private)" >&2; exit 1 ;;
               esac
             }
 
@@ -46,7 +46,6 @@ in
               case "$PROFILE" in
                 owner) echo ".lanes" ;;
                 private) echo ".privateSpace.lanes" ;;
-                google) echo ".googleAccount.lanes" ;;
               esac
             }
 
@@ -88,16 +87,6 @@ in
                   fi
                   echo "$u"
                   ;;
-                google)
-                  # Full secondary user, not a profile: resolve it by type so a
-                  # renumbered user id still works.
-                  u=$("$ADB" shell cmd user list -v | sed -n 's/.*id=\([0-9]\+\).*type=full\.SECONDARY.*/\1/p' | head -n1)
-                  if [ -z "$u" ]; then
-                    echo "no secondary full user (Google user) on the device" >&2
-                    exit 1
-                  fi
-                  echo "$u"
-                  ;;
               esac
             }
 
@@ -134,28 +123,26 @@ in
                   # always-on without lockdown for every profile.
                   "$ADB" shell settings --user "$u" put secure "$key" "$value" || true
                 done < <(jq -r '.settings.secure[] | @tsv' "$MANIFEST")
-                if [ "$PROFILE" != google ]; then
-                  echo "== F-Droid lane"
-                  for id in $(lane fdroid); do
-                    fdroidcl install -user "$u" "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
-                  done
-                  # Aurora raises the system install prompt through the
-                  # installer appop. Without it the first aurora-lane install
-                  # never shows that prompt and parks as a permanent
-                  # "Installing" entry that only an app data reset clears.
-                  # appops set exits 0 even when the package is absent for the
-                  # user, so read the value back instead of trusting the exit
-                  # code.
-                  "$ADB" shell appops set --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES allow
-                  if ! "$ADB" shell cmd appops get --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES | grep -q allow; then
-                    echo "FAILED: install-apps appop for Aurora (its lane will hang)" >&2
-                  fi
-                  echo
-                  echo "== Obtainium lane (interactive)"
-                  echo "Bulk import link (imports all ids at once):"
-                  obtainium_bulk_link
-                  echo
+                echo "== F-Droid lane"
+                for id in $(lane fdroid); do
+                  fdroidcl install -user "$u" "$id" || echo "FAILED: $id (fall back to the F-Droid app)" >&2
+                done
+                # Aurora raises the system install prompt through the
+                # installer appop. Without it the first aurora-lane install
+                # never shows that prompt and parks as a permanent
+                # "Installing" entry that only an app data reset clears.
+                # appops set exits 0 even when the package is absent for the
+                # user, so read the value back instead of trusting the exit
+                # code.
+                "$ADB" shell appops set --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES allow
+                if ! "$ADB" shell cmd appops get --user "$u" com.aurora.store REQUEST_INSTALL_PACKAGES | grep -q allow; then
+                  echo "FAILED: install-apps appop for Aurora (its lane will hang)" >&2
                 fi
+                echo
+                echo "== Obtainium lane (interactive)"
+                echo "Bulk import link (imports all ids at once):"
+                obtainium_bulk_link
+                echo
                 echo "== Aurora lane (install manually in an anonymous session)"
                 lane aurora
                 if [ "$PROFILE" = private ]; then
@@ -166,11 +153,9 @@ in
                 echo
                 echo "== manual checklist"
                 jq -r "$(lanes_path).manual[] | \"- \(.)\"" "$MANIFEST"
-                if [ "$PROFILE" != google ]; then
-                  echo
-                  echo "== dropped by decision (reference, do not install)"
-                  jq -r '.dropped[]' "$MANIFEST"
-                fi
+                echo
+                echo "== dropped by decision (reference, do not install)"
+                jq -r '.dropped[]' "$MANIFEST"
                 echo
                 echo "re-run 'pixel-provision check $PROFILE' after the manual lanes."
                 exit 0
@@ -195,10 +180,6 @@ in
                 ;;
               links)
                 set_profile "''${2:-owner}"
-                if [ "$PROFILE" = google ]; then
-                  echo "no obtainium lane for the google profile" >&2
-                  exit 1
-                fi
                 echo "Per-app (bulk below is authoritative for ids):"
                 jq -r "$(lanes_path).obtainium[] | \"obtainium://add?url=\(.url)\"" "$MANIFEST"
                 echo
@@ -256,9 +237,6 @@ in
                   printf '%s\n' "$google" | grep . || true
                   echo "-- fdroid lane coverage:"
                   ids=$(lane fdroid)
-                elif [ "$PROFILE" = google ]; then
-                  echo "-- aurora lane coverage:"
-                  ids=$(lane aurora)
                 else
                   echo "-- sandboxed Google Play:"
                   for id in com.google.android.gms com.android.vending com.google.android.projection.gearhead; do
@@ -286,14 +264,14 @@ in
           pixel-provision pair <pair-ip:port> <code> [main-ip:port]
               pair wireless debugging (code from the pairing dialog) and
               connect the main port from the wireless debugging screen.
-          pixel-provision apply [owner|private|google]
+          pixel-provision apply [owner|private]
               settings + lane + interactive checklists (default: owner)
-          pixel-provision reset-aurora [owner|private|google]
+          pixel-provision reset-aurora [owner|private]
               clear Aurora's app data in a profile (a stuck "Installing"
               entry) and re-grant its install-apps appop (default: owner)
           pixel-provision links [owner|private]
               obtainium deep links (bulk + per app, default: owner)
-          pixel-provision check [owner|private|google]
+          pixel-provision check [owner|private]
               Google-free owner audit or per-profile lane coverage
           pixel-provision widgets  stage the termux power-on/power-off shortcuts
                                    via Download (Tailscale SSH, no key)
