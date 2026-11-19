@@ -290,6 +290,9 @@
       (mkRuleFor "10m" "CominStuck" "urgent" "comin is stuck"
         "The comin healthcheck reports {{ $labels.reason }}; deployments are not converging (a restart was attempted)"
         ''comin_health_stuck == 1'')
+      (mkRuleFor "5m" "CominHealthStale" "high" "comin healthcheck is stale"
+        "The comin healthcheck has not updated its metric for {{ $value | humanizeDuration }}; the timer or service is not running"
+        ''time() - comin_health_last_check_timestamp_seconds > 1200'')
     ]
     ++ [
       # A FlakeHub static token cannot renew itself, and the first symptom of

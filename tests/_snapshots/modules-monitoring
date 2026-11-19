@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 33;
+  rule_count = 34;
   rules = [
     {
       alert = "NextcloudDown";
@@ -208,6 +208,11 @@
       alert = "CominStuck";
       expr = "comin_health_stuck == 1";
       priority = "urgent";
+    }
+    {
+      alert = "CominHealthStale";
+      expr = "time() - comin_health_last_check_timestamp_seconds > 1200";
+      priority = "high";
     }
     {
       alert = "FlakehubTokenExpiringSoon";
