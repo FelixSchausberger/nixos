@@ -82,21 +82,6 @@ in {
     };
   };
 
-  programs.bash = {
-    enable = true;
-
-    bashrcExtra = ''
-      function y() {
-      	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")"
-      	yazi "$@" --cwd-file="$tmp"
-      	if cwd="$(${pkgs.coreutils}/bin/cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-      		builtin cd -- "$cwd"
-      	fi
-      	rm -f -- "$tmp"
-      }
-    '';
-  };
-
   programs.yazi = {
     enable = true;
 
@@ -109,7 +94,7 @@ in {
 
     settings = {
       mgr = {
-        layout = [1 4 3];
+        ratio = [1 4 3];
         sort_by = "alphabetical";
         sort_sensitive = true;
         sort_reverse = false;
@@ -123,7 +108,6 @@ in {
         tab_size = 2;
         max_width = 600;
         max_height = 900;
-        cache_dir = config.xdg.cacheHome;
       };
     };
   };
