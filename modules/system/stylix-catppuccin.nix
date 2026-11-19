@@ -79,6 +79,9 @@
           # Enable stylix theming for applications
           stylix.targets = {
             firefox.profileNames = ["default"];
+            # Yazi owns no hand-written theme; this target derives theme.toml,
+            # including filetype and icon rules, from the Catppuccin palette.
+            yazi.enable = true;
           };
         }
       )
