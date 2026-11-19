@@ -231,10 +231,6 @@
       url = "github:ahkohd/eza-preview.yazi";
       flake = false;
     };
-    yazi-fg = {
-      url = "github:DreamMaoMao/fg.yazi";
-      flake = false;
-    };
     yazi-mount = {
       url = "github:SL-RU/mount.yazi";
       flake = false;

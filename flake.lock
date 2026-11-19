@@ -1789,7 +1789,6 @@
         "yazi": "yazi",
         "yazi-clipboard": "yazi-clipboard",
         "yazi-eza-preview": "yazi-eza-preview",
-        "yazi-fg": "yazi-fg",
         "yazi-mount": "yazi-mount",
         "yazi-plugins": "yazi-plugins",
         "yazi-starship": "yazi-starship",
@@ -2453,22 +2452,6 @@
       "original": {
         "owner": "ahkohd",
         "repo": "eza-preview.yazi",
-        "type": "github"
-      }
-    },
-    "yazi-fg": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1789901270,
-        "narHash": "sha256-ZoIYzXATPjLYSF7kH5UXgj6Ax1+HwL007iSG59x17qA=",
-        "owner": "DreamMaoMao",
-        "repo": "fg.yazi",
-        "rev": "629ee224ab027a7dece548ebac3618a8a9b0bc16",
-        "type": "github"
-      },
-      "original": {
-        "owner": "DreamMaoMao",
-        "repo": "fg.yazi",
         "type": "github"
       }
     },
