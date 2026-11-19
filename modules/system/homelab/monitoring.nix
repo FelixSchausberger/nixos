@@ -270,6 +270,27 @@
         "PostgreSQL exporter is unreachable"
         ''up{job="postgres"} == 0'')
     ]
+    ++ lib.optionals (config.services.comin.enable or false) [
+      # The exporter's explicit failure gauges. A wedged-but-active daemon
+      # keeps them at 0; that state is covered by comin_health_stuck below.
+      (mkRule "CominBuildFailed" "high" "comin build failed"
+        "comin could not build the latest generation; the host is not converging"
+        ''comin_last_build_failed == 1'')
+      (mkRule "CominEvalFailed" "high" "comin evaluation failed"
+        "comin could not evaluate the latest generation"
+        ''comin_last_eval_failed == 1'')
+      (mkRule "CominDeploymentFailed" "urgent" "comin deployment failed"
+        "comin could not activate the latest generation"
+        ''comin_last_deployment_failed == 1'')
+      (mkRuleFor "15m" "CominFetchFailed" "high" "comin fetch failed"
+        "comin could not fetch {{ $labels.remote_name }}; convergence is stalled"
+        ''comin_last_fetch_failed == 1'')
+      # Backstop for the healthcheck's direct notification: the timer also
+      # writes this metric, so a lost ntfy message still pages.
+      (mkRuleFor "10m" "CominStuck" "urgent" "comin is stuck"
+        "The comin healthcheck reports {{ $labels.reason }}; deployments are not converging (a restart was attempted)"
+        ''comin_health_stuck == 1'')
+    ]
     ++ [
       # A FlakeHub static token cannot renew itself, and the first symptom of
       # expiry is every flake operation failing with 401 (2026-11-11).

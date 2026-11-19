@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 28;
+  rule_count = 33;
   rules = [
     {
       alert = "NextcloudDown";
@@ -183,6 +183,31 @@
       alert = "PostgresDown";
       expr = "up{job=\"postgres\"} == 0";
       priority = "high";
+    }
+    {
+      alert = "CominBuildFailed";
+      expr = "comin_last_build_failed == 1";
+      priority = "high";
+    }
+    {
+      alert = "CominEvalFailed";
+      expr = "comin_last_eval_failed == 1";
+      priority = "high";
+    }
+    {
+      alert = "CominDeploymentFailed";
+      expr = "comin_last_deployment_failed == 1";
+      priority = "urgent";
+    }
+    {
+      alert = "CominFetchFailed";
+      expr = "comin_last_fetch_failed == 1";
+      priority = "high";
+    }
+    {
+      alert = "CominStuck";
+      expr = "comin_health_stuck == 1";
+      priority = "urgent";
     }
     {
       alert = "FlakehubTokenExpiringSoon";
