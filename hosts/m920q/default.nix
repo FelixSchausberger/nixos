@@ -10,7 +10,7 @@
 #  Startup:  UEFI Only, CSM Disabled, Secure Boot Disabled (systemd-boot unsigned),
 #            Boot Priority: NVMe rpool first, USB last, Network Boot Disabled
 #  Devices:  SATA AHCI, Serial Port Enabled 3F8/IRQ4 (for console=ttyS0 SOL),
-#            Video: Auto, Audio Disabled (headless), USB Legacy Enabled
+#            Video: Auto, Audio Enabled (projector HDMI + front jack), USB Legacy Enabled
 #  Advanced: CPU: VT-x Enabled, VT-d Enabled, TXT Disabled, Hyper-Threading Enabled,
 #            C-States Enabled, Turbo Enabled, Above 4G Decoding Disabled
 #            Intel Manageability: Enabled, Ctrl-P Enabled, SOL/IDER/KVM Enabled,
@@ -563,10 +563,14 @@ in {
     };
   };
 
-  # Bluetooth drives the JBL Flip 6 audio sink (projector kiosk and general
-  # music playback) and a BT Steam Controller if one is used. Pairings persist
-  # via environment.persistence."/per" below. Experimental exposes device
-  # battery; KernelExperimental enables ISO sockets for recent controllers.
+  # Bluetooth serves the JBL Flip 6 audio sink (projector kiosk and general
+  # music playback) and a BT Steam Controller if one is used. The USB CSR8510
+  # dongle is attached (controller 00:0A:CD:34:9D:7A); the optional M.2
+  # WLAN/BT card is not installed. The persisted state holds the MX Anywhere
+  # 2S only, so the JBL needs pairing after the dongle appears. Pairings
+  # persist via environment.persistence."/per" below. Experimental exposes
+  # device battery; KernelExperimental enables ISO sockets for recent
+  # controllers.
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;

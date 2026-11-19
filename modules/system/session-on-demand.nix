@@ -30,10 +30,13 @@ in {
       }
     ];
 
-    # No login session exists, so the compositor gets DRM access from seatd.
+    # No login session exists, so the compositor gets DRM access from seatd
+    # and PipeWire gets /dev/snd from the audio group; without the group
+    # WirePlumber has no seat, falls back to Dummy Output, and UxPlay's
+    # AirPlay audio is discarded.
     services.seatd.enable = true;
     users.users.${user} = {
-      extraGroups = [config.services.seatd.group "video" "render" "input"];
+      extraGroups = [config.services.seatd.group "video" "render" "input" "audio"];
       # The hotplug handlers reach the user manager with `systemctl --user -M`,
       # which requires it to be running outside a login session.
       linger = true;
