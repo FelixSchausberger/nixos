@@ -46,6 +46,7 @@
   writeShellApplication,
   jujutsu,
   coreutils,
+  direnv,
   gnugrep,
   gnused,
   findutils,
@@ -60,6 +61,7 @@ writeShellApplication {
   runtimeInputs = [
     jujutsu
     coreutils
+    direnv
     gnugrep
     gnused
     findutils
@@ -466,6 +468,17 @@ writeShellApplication {
       [ -n "$cmd" ] || return 0
       OCWS_TASK="$task" OCWS_DIR="$dir" OCWS_ROOT="$root" OCWS_BASE="$base" \
         bash -c "$cmd" || echo "ocws: '$hook' hook failed" >&2
+    }
+    # A workspace inherits the tracked .envrc, but direnv has never approved
+    # the new path: an interactive shell prints a block error on every prompt
+    # and never enters the dev shell. Approve only content that still matches
+    # main@origin, so an agent-edited .envrc keeps the normal direnv prompt.
+    approve_envrc() {
+      local dir="$1"
+      [ -f "$dir/.envrc" ] || return 0
+      (cd "$dir" && jj --ignore-working-copy file show -r main@origin .envrc 2>/dev/null) \
+        | cmp -s - "$dir/.envrc" || return 0
+      "${direnv}/bin/direnv" allow "$dir" >/dev/null 2>&1 || true
     }
     rip_workspace() {
       local task="$1" dir wait_marker
@@ -911,8 +924,20 @@ writeShellApplication {
         herdr_bin="''${HERDR_BIN_PATH:-herdr}"
         command -v "$herdr_bin" >/dev/null 2>&1 || fail "herdr binary not found: $herdr_bin"
 
+        # Start the tab in the primary workspace, not the caller's workspace:
+        # the primary's direnv profile is cached, so the seat does not pay a
+        # first-load nix develop before the agent starts. The agent still runs
+        # only in the workspace ocws creates (or the existing one it cd's to).
+        tab_root="$root"
+        if workspace_exists default; then
+          tab_root="$(realpath -m "$(ws_root_for default)")"
+        fi
+        [ -d "$tab_root" ] || tab_root="$root"
+        approve_envrc "$tab_root"
+
         if workspace_exists "$task"; then
           dir="$(realpath -m "$(ws_root_for "$task")")"
+          approve_envrc "$dir"
           if ws_live "$dir"; then
             fail "'$task' already has a live session in $dir; refusing a second agent in the same workspace"
           fi
@@ -940,13 +965,14 @@ writeShellApplication {
           fi
         fi
 
-        # The tab starts at a jj workspace root: ocws resolves the repository
-        # with `jj workspace root`, and the workspace base is outside it. The
-        # agent still starts only in the workspace ocws creates (or the existing
-        # one it cd's to); nothing runs in the tab's initial directory.
+        # The tab starts at the primary workspace root: ocws resolves the
+        # repository with `jj workspace root`, and the workspace base is
+        # outside it. The agent still starts only in the workspace ocws
+        # creates (or the existing one it cd's to); nothing runs in the tab's
+        # initial directory.
         focus_flag=--focus
         [ "$focus" = 1 ] || focus_flag=--no-focus
-        tab_args=(tab create --cwd "$root" --label "$task" "$focus_flag")
+        tab_args=(tab create --cwd "$tab_root" --label "$task" "$focus_flag")
         if [ -n "$workspace" ]; then
           tab_args+=(--workspace "$workspace")
         fi
@@ -1042,6 +1068,7 @@ writeShellApplication {
     jj workspace add "$dir" --name "$task" -r 'main@origin' -m "$task: started from main@origin"
 
     run_hook post_create "$task" "$dir" "''${OCWS_HOOK_POST_CREATE:-}"
+    approve_envrc "$dir"
 
     # Herdr tab labels are the navigation key (goto picker, expanded sidebar).
     # Name the seat after the task so a new tab reads as the task, not as a

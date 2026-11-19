@@ -233,12 +233,42 @@
     ln -s ${launcher} $out/bin/opencode
     ln -s ${launcher} $out/bin/opencode2
   '';
+
+  # The shared server hands its environment to every agent tool shell. A
+  # direnv wrapper loads the repo dev shell once at server start, so tools
+  # such as just, prek and namaka are present without a per-tab load; a failed
+  # load falls back to the static PATH below so a broken flake cannot take the
+  # agent server down.
+  sharedServerExec = let
+    dir = config.ai-assistants.opencode.sharedServer.devShell;
+    cmd = "${opencode}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
+  in
+    if dir == null
+    then cmd
+    else
+      pkgs.writeShellScript "opencode-web-start" ''
+        if ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg dir} ${pkgs.coreutils}/bin/true; then
+          exec ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg dir} ${cmd}
+        fi
+        exec ${cmd}
+      '';
 in {
   options.ai-assistants.opencode = {
     package = lib.mkOption {
       type = lib.types.package;
       readOnly = true;
       description = "Launcher package exposing opencode and opencode2 with the fleet config root, graveyard path and rm shim applied";
+    };
+
+    sharedServer.devShell = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Directory whose direnv environment wraps the shared server. Agent
+        tool shells inherit that environment, so the repository tools are
+        present without loading direnv in every tab. A failed load falls
+        back to the static server PATH.
+      '';
     };
   };
 
@@ -261,12 +291,9 @@ in {
         After = ["network.target"];
       };
       Service = {
-        # A single command string, never a multi-element argv list: Home
-        # Manager renders one systemd ExecStart= line per list element, and
-        # systemd rejects a Type=simple unit with more than one ("more than
-        # one ExecStart= setting"). The option coerces the string into a
-        # one-element list, which is exactly what the unit needs.
-        ExecStart = "${opencode}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
+        # A single ExecStart value: either the direct command or the wrapper
+        # that loads the configured dev shell before starting the server.
+        ExecStart = sharedServerExec;
         Environment = [
           "PATH=${config.home.profileDirectory}/bin:/run/wrappers/bin:/run/current-system/sw/bin"
         ];
