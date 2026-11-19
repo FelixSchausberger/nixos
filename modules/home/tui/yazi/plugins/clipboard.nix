@@ -1,14 +1,13 @@
 {inputs, ...}: {
-  home.file.".config/yazi/plugins/clipboard" = {
-    source = inputs.yazi-clipboard;
-    recursive = true;
-  };
-
   programs.yazi = {
-    keymap.manager.prepend_keymap = [
+    # `clipboard` is a built-in plugin name; the loader checks its own cache
+    # before the config directory, so a user plugin with that name never runs.
+    plugins.clip = "${inputs.yazi-clipboard}";
+
+    keymap.mgr.prepend_keymap = [
       {
         on = ["C" "y"];
-        run = ["plugin clipboard"];
+        run = "plugin clip";
         desc = "Copy files to clipboard";
       }
     ];

@@ -4,7 +4,7 @@
       chmod = "${inputs.yazi-plugins}/chmod.yazi";
     };
 
-    keymap.manager.prepend_keymap = [
+    keymap.mgr.prepend_keymap = [
       {
         on = ["c" "m"];
         run = "plugin chmod";
