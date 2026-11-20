@@ -169,16 +169,18 @@
     {
       "ZFS backups" = {
         icon = "mdi-database-sync";
-        description = "Last success · snapshots 15 min, replicas 20:00";
+        description = "Last success · snapshots hourly, replicas 20:00";
         widget = {
           type = "prometheusmetric";
           url = local hl.monitoring.prometheusPort;
           refreshInterval = 60000;
           metrics = [
-            (backupAge "Snapshots" ''backup_last_success_timestamp_seconds{route="snapshots"}'')
-            (backupAge "Data" ''backup_last_success_timestamp_seconds{route="data"}'')
-            (backupAge "Per" ''backup_last_success_timestamp_seconds{route="per"}'')
-            (backupAge "Home" ''backup_last_success_timestamp_seconds{route="home"}'')
+            # Scoped to this host: the desktop exports home/per too, and an
+            # unscoped query would show its age (or a second series) here.
+            (backupAge "Snapshots" ''backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route="snapshots"}'')
+            (backupAge "Data" ''backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route="data"}'')
+            (backupAge "Per" ''backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route="per"}'')
+            (backupAge "Home" ''backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route="home"}'')
           ];
         };
       };
@@ -193,10 +195,10 @@
           refreshInterval = 60000;
           metrics = [
             # min() reports the laggard: each database is its own route.
-            (backupAge "PostgreSQL" ''min(backup_last_success_timestamp_seconds{route=~"postgres-.*"})'')
-            (backupAge "Zigbee" ''backup_last_success_timestamp_seconds{route="zigbee"}'')
-            (backupAge "Archive" ''backup_last_success_timestamp_seconds{route="archive"}'')
-            (backupAge "Off-site" ''min(backup_last_success_timestamp_seconds{route=~"archive-pull|vault-dr-pull"})'')
+            (backupAge "PostgreSQL" ''min(backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route=~"postgres-.*"})'')
+            (backupAge "Zigbee" ''backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route="zigbee"}'')
+            (backupAge "Archive" ''backup_last_success_timestamp_seconds{host="${config.networking.hostName}",route="archive"}'')
+            (backupAge "Off-site" ''min(backup_last_success_timestamp_seconds{host="desktop",route=~"archive-pull|vault-dr-pull"})'')
           ];
         };
       };

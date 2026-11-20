@@ -188,16 +188,29 @@
       # Success, not attempts: each unit stamps its route only when it exits
       # 0, so this age measures the last completed backup. A failed run keeps
       # the previous stamp and the route stays stale until it succeeds.
+      # Joins are scoped to (host, route): the m920q and the desktop both
+      # export route="home" and route="per", and on(route) alone would compare
+      # each host's timestamp with the other host's max age. That applied the
+      # m920q's 26h threshold to the desktop's 8d routes and let a success on
+      # one host hide a never-succeeded route on the other.
       (mkRuleFor "10m" "BackupStale" "high" "A backup route is stale"
         "{{ $labels.description }} last succeeded {{ $value | humanizeDuration }} ago"
-        ''time() - backup_last_success_timestamp_seconds > on(route) backup_max_age_seconds'')
+        ''time() - backup_last_success_timestamp_seconds > on(host, route) backup_max_age_seconds'')
       # A route that never succeeded has no last-success sample to age, so it
       # gets its own rule after a day from first configuration. Alertmanager
       # repeats this one weekly instead of every 4h: the fix is a
       # configuration change, not patience.
       (mkRuleFor "10m" "BackupNeverSucceeded" "high" "A backup route has never succeeded"
         "{{ $labels.description }} has had no successful run in {{ $value | humanizeDuration }} since it was configured"
-        ''(time() - backup_route_first_seen_timestamp_seconds > on(route) backup_first_run_grace_seconds) and on(route) (backup_route_expected unless on(route) backup_last_success_timestamp_seconds)'')
+        ''(time() - backup_route_first_seen_timestamp_seconds > on(host, route) backup_first_run_grace_seconds) and on(host, route) (backup_route_expected unless on(host, route) backup_last_success_timestamp_seconds)'')
+      # The desktop is normally off, and its node-exporter series disappear
+      # with it: the route rules cannot age a sample that is not being
+      # scraped. This measures the absence itself. Three missed weekly pulls
+      # is well past a gap between gaming sessions and means the archive and
+      # vault DR copies have stopped leaving the chassis.
+      (mkRuleFor "21d" "DesktopIdle" "default" "The desktop has not been online for 21 days"
+        "The desktop holds the only archive and vault-DR copies outside the m920q chassis; it has not answered the node-exporter scrape for 21 days, so those copies are not being refreshed"
+        ''up{job="node-desktop"} == 0'')
     ])
     ++ (lib.optionals cfg.fritzbox.enable [
       (mkRule "FritzboxWanDown" "urgent" "Fritz!Box WAN link is down"

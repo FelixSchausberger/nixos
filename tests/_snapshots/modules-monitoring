@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 34;
+  rule_count = 35;
   rules = [
     {
       alert = "NextcloudDown";
@@ -101,13 +101,18 @@
     }
     {
       alert = "BackupStale";
-      expr = "time() - backup_last_success_timestamp_seconds > on(route) backup_max_age_seconds";
+      expr = "time() - backup_last_success_timestamp_seconds > on(host, route) backup_max_age_seconds";
       priority = "high";
     }
     {
       alert = "BackupNeverSucceeded";
-      expr = "(time() - backup_route_first_seen_timestamp_seconds > on(route) backup_first_run_grace_seconds) and on(route) (backup_route_expected unless on(route) backup_last_success_timestamp_seconds)";
+      expr = "(time() - backup_route_first_seen_timestamp_seconds > on(host, route) backup_first_run_grace_seconds) and on(host, route) (backup_route_expected unless on(host, route) backup_last_success_timestamp_seconds)";
       priority = "high";
+    }
+    {
+      alert = "DesktopIdle";
+      expr = "up{job=\"node-desktop\"} == 0";
+      priority = "default";
     }
     {
       alert = "FritzboxWanDown";
