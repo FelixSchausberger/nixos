@@ -15,4 +15,5 @@
   loki = 3100; # modules/system/homelab/logging.nix
   syslog = 1514; # modules/system/homelab/logging.nix
   octoprint = 5000; # modules/system/homelab/octoprint.nix
+  mediaKiosk = 8790; # modules/system/media-kiosk (loopback kiosk API)
 }

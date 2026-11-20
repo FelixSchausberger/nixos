@@ -106,7 +106,7 @@ in {
 
     # Homepage widget credential: consumed as a sops template placeholder,
     # so no service user needs the file and it stays root-owned.
-    sops.secrets."immich/api-key" = {};
+    sops.secrets."immich/homepage-api-key" = {};
 
     systemd.timers.immich-admin-setup = {
       description = "Timer for Immich admin user creation (non-blocking)";

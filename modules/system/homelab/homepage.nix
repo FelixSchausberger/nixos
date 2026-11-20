@@ -1102,7 +1102,7 @@
     ++ lib.optional hl.adguardhome.enable "HOMEPAGE_VAR_ADGUARD_PASSWORD=${config.sops.placeholder."adguard/password"}"
     ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_APP_PASSWORD=${config.sops.placeholder."nextcloud/calendar-app-password"}"
     ++ lib.optional hl.nextcloud.enable "HOMEPAGE_VAR_NEXTCLOUD_ICS_URL=${config.sops.placeholder."nextcloud/calendar-ics-share-url"}"
-    ++ lib.optional hl.immich.enable "HOMEPAGE_VAR_IMMICH_API_KEY=${config.sops.placeholder."immich/api-key"}"
+    ++ lib.optional hl.immich.enable "HOMEPAGE_VAR_IMMICH_API_KEY=${config.sops.placeholder."immich/homepage-api-key"}"
     ++ lib.optional hl.jellyfin.enable "HOMEPAGE_VAR_JELLYFIN_API_KEY=${config.sops.placeholder."jellyfin/api-key"}"
     ++ lib.optional hl.navidrome.enable "HOMEPAGE_VAR_NAVIDROME_TOKEN=${config.sops.placeholder."navidrome/token"}"
     ++ lib.optional (cfg.enable && githubAvailable) "HOMEPAGE_VAR_GITHUB_TOKEN=${config.sops.placeholder."github/token"}"

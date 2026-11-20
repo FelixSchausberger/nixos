@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Kiosk</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <svg class="svg-defs" aria-hidden="true">
+      <defs>
+        <symbol id="i-play" viewBox="0 0 24 24">
+          <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
+        </symbol>
+        <symbol id="i-photo" viewBox="0 0 24 24">
+          <path
+            d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5zm2.5-.5a.5.5 0 0 0-.5.5v8.7l3.6-3.6a1.4 1.4 0 0 1 2 0l1.6 1.6 2.3-2.7a1.4 1.4 0 0 1 2.1-.1L19 14V6.5a.5.5 0 0 0-.5-.5zM9 9.5A1.75 1.75 0 1 1 5.5 9.5 1.75 1.75 0 0 1 9 9.5"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-film" viewBox="0 0 24 24">
+          <path
+            d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM6 6v2h2V6zm4 0v2h4V6zm6 0v2h2V6zM6 10v4h2v-4zm10 0v4h2v-4zM6 16v2h2v-2zm4 0v2h4v-2zm6 0v2h2v-2z"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-monitor" viewBox="0 0 24 24">
+          <path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H15v2h2v2H7v-2h2v-2H6.5A2.5 2.5 0 0 1 4 13.5zm2.5-.5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24">
+          <path
+            d="M4 5.5A1.5 1.5 0 0 1 5.5 4h4A1.5 1.5 0 0 1 11 5.5v4A1.5 1.5 0 0 1 9.5 11h-4A1.5 1.5 0 0 1 4 9.5zm9 0A1.5 1.5 0 0 1 14.5 4h4A1.5 1.5 0 0 1 20 5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 13 9.5zm-9 9A1.5 1.5 0 0 1 5.5 13h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9.5 20h-4A1.5 1.5 0 0 1 4 18.5zm9 0A1.5 1.5 0 0 1 14.5 13h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5z"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-home" viewBox="0 0 24 24">
+          <path
+            d="M11.3 3.6a1.1 1.1 0 0 1 1.4 0l7.5 6.2a1 1 0 0 1 .4.8V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.1h-5.8v5.1H5.5A1.5 1.5 0 0 1 4 19v-8.4a1 1 0 0 1 .4-.8z"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-window" viewBox="0 0 24 24">
+          <path
+            d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5zm2 0V8h12V6.5a.5.5 0 0 0-.5-.5h-11a.5.5 0 0 0-.5.5M6 10v7.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V10z"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path
+            d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4z"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-power" viewBox="0 0 24 24">
+          <path
+            d="M11 3h2v9h-2zM7.3 5.8l1.4 1.4a7 7 0 1 0 6.6 0l1.4-1.4a9 9 0 1 1-9.4 0"
+            fill="currentColor"
+          />
+        </symbol>
+        <symbol id="i-speaker" viewBox="0 0 24 24">
+          <path
+            d="M4 9.5A1.5 1.5 0 0 1 5.5 8H8l4-3.2A1 1 0 0 1 13.6 5.6v12.8a1 1 0 0 1-1.6.8L8 16H5.5A1.5 1.5 0 0 1 4 14.5zm12.2-2.2 1.5-1.3a7.5 7.5 0 0 1 0 12l-1.5-1.3a5.5 5.5 0 0 0 0-9.4"
+            fill="currentColor"
+          />
+        </symbol>
+      </defs>
+    </svg>
+
+    <header class="topbar">
+      <div class="clock-block">
+        <span class="eyebrow">Bedroom projector</span>
+        <div class="clock-row">
+          <h1 id="clock">--:--</h1>
+          <span id="date" class="date"></span>
+        </div>
+      </div>
+      <div class="status-row">
+        <span class="status-pill" title="The MacBook finds this receiver as Projector">
+          <span class="dot dot-accent"></span>
+          AirPlay · Projector
+        </span>
+        <span class="status-pill" id="desktop-pill">
+          <span class="dot" id="desktop-dot"></span>
+          <span id="desktop-label">Desktop</span>
+        </span>
+      </div>
+    </header>
+
+    <main class="stage">
+      <section id="home-view" class="view home-view" aria-label="Media kiosk">
+        <div class="hero-grid">
+          <button class="card hero jellyfin" id="jellyfin-card">
+            <img id="jellyfin-preview" class="card-image" alt="" />
+            <span class="card-shade"></span>
+            <span class="card-body">
+              <span class="card-kicker" id="jellyfin-kicker">Continue watching</span>
+              <span class="card-title" id="jellyfin-title">Jellyfin</span>
+              <span class="card-subtitle" id="jellyfin-subtitle">Movies &amp; shows</span>
+            </span>
+            <span class="play-badge" aria-hidden="true">
+              <svg><use href="#i-play"></use></svg>
+            </span>
+            <span class="progress-track" aria-hidden="true">
+              <span class="progress-fill" id="jellyfin-progress"></span>
+            </span>
+          </button>
+
+          <button class="card hero immich" id="immich-card">
+            <img id="immich-preview" class="card-image" alt="" />
+            <span class="card-shade"></span>
+            <span class="card-body">
+              <span class="card-kicker">Recent photo</span>
+              <span class="card-title" id="immich-title">Immich</span>
+              <span class="card-subtitle" id="immich-subtitle">Photo library</span>
+            </span>
+            <span class="corner-icon" aria-hidden="true">
+              <svg><use href="#i-photo"></use></svg>
+            </span>
+          </button>
+        </div>
+
+        <div class="app-grid">
+          <button class="card app cinejoy" id="cinejoy-card">
+            <span class="app-icon" aria-hidden="true">
+              <svg><use href="#i-film"></use></svg>
+            </span>
+            <span class="card-body">
+              <span class="card-title">Cinejoy</span>
+              <span class="card-subtitle">Movies &amp; shows</span>
+            </span>
+            <span class="card-note">Opens a kiosk window</span>
+          </button>
+
+          <button class="card app moonlight" id="moonlight-card">
+            <span class="app-icon" aria-hidden="true">
+              <svg><use href="#i-monitor"></use></svg>
+            </span>
+            <span class="card-body">
+              <span class="card-title">Steam stream</span>
+              <span class="card-subtitle" id="moonlight-subtitle">Wake desktop &amp; stream</span>
+            </span>
+            <span class="card-note">Moonlight</span>
+          </button>
+
+          <button class="card app moonlight-ui" id="moonlight-ui-card">
+            <span class="app-icon" aria-hidden="true">
+              <svg><use href="#i-grid"></use></svg>
+            </span>
+            <span class="card-body">
+              <span class="card-title">Choose a game</span>
+              <span class="card-subtitle">Moonlight library</span>
+            </span>
+            <span class="card-note">Wake desktop first</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="app-view" class="view app-view" hidden aria-label="Application">
+        <div class="appbar">
+          <button class="ghost-button" id="home-button">
+            <svg><use href="#i-home"></use></svg>
+            Home
+          </button>
+          <span class="app-title" id="app-title"></span>
+          <div class="appbar-actions">
+            <button class="ghost-button" id="open-window-button">
+              <svg><use href="#i-window"></use></svg>
+              Open in window
+            </button>
+          </div>
+        </div>
+        <div class="frame">
+          <iframe
+            id="frame-jellyfin"
+            class="app-frame"
+            title="Jellyfin"
+            tabindex="-1"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+            allowfullscreen
+            hidden
+          ></iframe>
+          <iframe
+            id="frame-immich"
+            class="app-frame"
+            title="Immich"
+            tabindex="-1"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+            allowfullscreen
+            hidden
+          ></iframe>
+          <span class="frame-loading" id="frame-loading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            Loading…
+          </span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="dock">
+      <div class="audio-block">
+        <span class="dock-label">
+          <svg><use href="#i-speaker"></use></svg>
+          Audio
+        </span>
+        <div id="audio-outputs" class="audio-outputs">
+          <span class="audio-hint">Audio hub offline</span>
+        </div>
+      </div>
+      <div class="dock-actions">
+        <button class="dock-button" id="close-apps-button">
+          <svg><use href="#i-close"></use></svg>
+          Close app
+        </button>
+        <button class="dock-button danger" id="exit-button">
+          <svg><use href="#i-power"></use></svg>
+          Exit kiosk
+        </button>
+      </div>
+    </footer>
+
+    <dialog id="action-dialog" class="dialog">
+      <form method="dialog" class="dialog-panel">
+        <span class="dialog-kicker" id="action-kicker">Moonlight</span>
+        <h2 id="action-title">Waking the desktop…</h2>
+        <p class="dialog-status" id="action-status" aria-live="polite">
+          This can take a minute after the desktop was powered off.
+        </p>
+        <div class="dialog-actions">
+          <button class="dialog-button" id="action-cancel" value="cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="dialog">
+      <form method="dialog" class="dialog-panel">
+        <span class="dialog-kicker">Exit kiosk</span>
+        <h2>Reveal the niri desktop?</h2>
+        <p class="dialog-status">
+          The kiosk returns automatically on the next projector session.
+        </p>
+        <div class="dialog-actions">
+          <button class="dialog-button" value="cancel">Stay</button>
+          <button class="dialog-button danger" id="confirm-exit" value="exit">
+            Exit kiosk
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

@@ -4,6 +4,7 @@
     # for managed desktop hosts (see home/profiles/shared.nix).
     ../../../modules/home/gui/browsers
     ../../../modules/home/gui/terminals
+    ../../../modules/home/gui/media-kiosk.nix
     ../../persistence.nix
   ];
 
@@ -35,8 +36,21 @@
         matches = [{app-id = "^uxplay$";}];
         open-fullscreen = true;
       }
+      # The kiosk shell and the chromeless app windows it opens (Cinejoy) are
+      # both Zen toplevels. niri hides the top layer-shell layer (ironbar,
+      # notifications) while a focused fullscreen window covers the screen.
+      {
+        matches = [{app-id = "^(zen|zen-beta)$";}];
+        open-fullscreen = true;
+      }
     ];
   };
+
+  # The 2026 Steam Controller's lizard mode maps Steam+D-pad-right to Alt+Tab
+  # (the firmware emits the key combination itself). Binding it to the previous
+  # window is the controller-only return path from a Cinejoy app window; a real
+  # keyboard gets the same behaviour as a side effect.
+  programs.niri.settings.binds."Alt+Tab".action.focus-window-previous = {};
 
   # The projector host has a pointer attached, and niri has no per-window
   # cursor policy: the local pointer would otherwise stay over the fullscreen
