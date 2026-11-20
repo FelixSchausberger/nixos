@@ -332,7 +332,12 @@ in {
 
   modules.system.homelab.backup = {
     enable = true;
-    syncoidInterval = "weekly";
+    # The desktop is on irregularly. With Persistent=true a daily timer runs
+    # at the first boot after midnight, so the replica follows the sessions
+    # instead of waiting for a fixed weekday the machine may not be on. A
+    # weekly timer can leave a Tuesday session unbacked-up until the next
+    # Monday even though the machine booted several times in between.
+    syncoidInterval = "daily";
     # rpool/eyd/per is sanoid-only here too: the persistent
     # com.sun:auto-snapshot=false dataset property opts zfstools out
     # (one-time `zfs set`; retained history destroyed once manually).
@@ -358,6 +363,38 @@ in {
       daily = 2;
       weekly = 2;
       monthly = 1;
+      yearly = 0;
+    };
+    # Replica retention. syncoid never deletes a target snapshot, so without
+    # a policy here each replica keeps everything the source ever pruned and
+    # the 1TB pool fills with stale nightlies. Monthlies are the long-term
+    # layer; the finer layers stay on the source.
+    sanoidDatasets."bpool/desktop/home" = {
+      hourly = 0;
+      daily = 0;
+      weekly = 0;
+      monthly = 24;
+      yearly = 0;
+    };
+    sanoidDatasets."bpool/desktop/per" = {
+      hourly = 0;
+      daily = 0;
+      weekly = 0;
+      monthly = 24;
+      yearly = 0;
+      # The replica is recursive (per/repos and future children). Without
+      # this, sanoid prunes only the parent and every received child
+      # snapshot the source ages out stays pinned here forever.
+      recursive = true;
+    };
+    sanoidDatasets."bpool/desktop/games" = {
+      # Each game snapshot pins the depots Steam replaced. Six monthlies
+      # keep a restore point beyond the current update cycle without
+      # letting a year of updates pin the backup disk.
+      hourly = 0;
+      daily = 0;
+      weekly = 0;
+      monthly = 6;
       yearly = 0;
     };
     syncoidCommands = {
