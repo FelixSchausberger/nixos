@@ -127,6 +127,18 @@ _: {
         author = "futo-org";
         url = "https://github.com/futo-org/android-keyboard";
       }
+      {
+        # Weather app of the fleet, Obtainium rather than the fdroid lane: the
+        # official F-Droid repo only publishes the free-network flavor, which
+        # drops GeoSphere Austria (the national source carrying official
+        # alerts). Pin the arm64-v8a asset; the universal APK re-picks flavors
+        # on every update. First install was an adb sideload of the same
+        # upstream build, certificate 29d435f7..., so updates land in place.
+        id = "org.breezyweather";
+        name = "Breezy Weather";
+        author = "breezy-weather";
+        url = "https://github.com/breezy-weather/breezy-weather";
+      }
     ];
 
     # Play-only proprietary apps, installed through Aurora Store's anonymous
