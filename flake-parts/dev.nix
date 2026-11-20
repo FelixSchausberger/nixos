@@ -96,6 +96,25 @@
           ${pkgs.bash}/bin/bash scripts/test-detect-downgrades.sh
           touch $out
         '';
+
+        # The board's classification, cache key and freshness rules against a
+        # fixture repository: cold/warm/serial/parallel output equality,
+        # invalidation on describe, push, fetch and workspace add, and live,
+        # session and wait state that must never come from the cache.
+        ocws-board =
+          pkgs.runCommand "ocws-board-test" {
+            nativeBuildInputs = [
+              self.packages.${pkgs.stdenv.hostPlatform.system}.ocws
+              pkgs.jujutsu
+              pkgs.git
+              pkgs.sqlite
+            ];
+          } ''
+            cp ${../tools/scripts/test-ocws-board.sh} test-ocws-board.sh
+            chmod +x test-ocws-board.sh
+            bash test-ocws-board.sh
+            touch $out
+          '';
       };
 
     devShells.default = pkgs.mkShell {
