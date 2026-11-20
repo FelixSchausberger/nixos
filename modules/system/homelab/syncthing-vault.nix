@@ -58,25 +58,9 @@ in {
     };
 
     whatsapp = {
-      enable = lib.mkEnableOption "receiving WhatsApp local database backups from the phone's private space";
-
-      deviceId = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        # The private space is a separate Android user, so its Syncthing-Fork
-        # instance is a second Syncthing node with its own device ID. The
-        # owner-profile instance cannot read the private space's storage.
-        description = "Syncthing device ID of the Syncthing-Fork instance inside the private space; unset until paired";
-      };
-
-      address = lib.mkOption {
-        type = lib.types.str;
-        default = "dynamic";
-        # The phone dials the server's static address, so the server does not
-        # need discovery to accept the connection. Set a static address only
-        # if the server should also dial the private space.
-        description = "Address the server dials for the private-space instance";
-      };
+      # WhatsApp runs in the owner profile, so the existing `phone` device
+      # shares the folder; no second Syncthing node is involved.
+      enable = lib.mkEnableOption "sharing the phone's WhatsApp local database backups with the server";
 
       path = lib.mkOption {
         type = lib.types.str;
@@ -108,22 +92,14 @@ in {
       configDir = "${defaults.paths.homeDir}/.config/syncthing";
 
       settings = {
-        devices =
-          lib.optionalAttrs (cfg.phoneDeviceId != null) {
-            phone = {
-              id = cfg.phoneDeviceId;
-              addresses = [cfg.phoneAddress];
-              # Folder shares must be accepted deliberately on the phone.
-              autoAcceptFolders = false;
-            };
-          }
-          // lib.optionalAttrs (cfg.whatsapp.enable && cfg.whatsapp.deviceId != null) {
-            phone-private = {
-              id = cfg.whatsapp.deviceId;
-              addresses = [cfg.whatsapp.address];
-              autoAcceptFolders = false;
-            };
+        devices = lib.optionalAttrs (cfg.phoneDeviceId != null) {
+          phone = {
+            id = cfg.phoneDeviceId;
+            addresses = [cfg.phoneAddress];
+            # Folder shares must be accepted deliberately on the phone.
+            autoAcceptFolders = false;
           };
+        };
 
         folders =
           {
@@ -134,16 +110,16 @@ in {
               devices = lib.optionals (cfg.phoneDeviceId != null) ["phone"];
             };
           }
-          // lib.optionalAttrs (cfg.whatsapp.enable && cfg.whatsapp.deviceId != null) {
+          // lib.optionalAttrs (cfg.whatsapp.enable && cfg.phoneDeviceId != null) {
             "whatsapp-backups" = {
               label = "WhatsApp local backups";
               path = cfg.whatsapp.path;
               # The phone is the only writer; the server keeps the history.
               type = "receiveonly";
-              devices = ["phone-private"];
-              # WhatsApp overwrites msgstore.db.crypt15 on every backup, so
-              # without versioning the previous backup is gone the moment a
-              # new one lands. Staggered versions keep a month of them.
+              devices = ["phone"];
+              # WhatsApp overwrites the database on every backup, so without
+              # versioning the previous backup is gone the moment a new one
+              # lands. Staggered versions keep a month of them.
               versioning = {
                 type = "staggered";
                 params = {

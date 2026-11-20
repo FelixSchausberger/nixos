@@ -1023,9 +1023,9 @@ in {
       # pixel-10a; device IDs are public certificate fingerprints, not secrets
       # (pairing also requires the phone's private key and share acceptance).
       phoneDeviceId = "AXUGMSS-2YR4EIS-3MNLW6R-BMB6ZXO-DHGQAJU-PYYZWJM-YASNFNY-TRPDBQ2";
-      # WhatsApp's local DB backups come from the private-space profile, whose
-      # Syncthing-Fork is a separate node. The receive folder is declared once
-      # the pairing step in lib/phone.nix provides the device ID.
+      # WhatsApp runs in the owner profile, so the existing phone device
+      # shares its local DB backups; the folder is declared once
+      # phoneDeviceId is present.
       whatsapp.enable = true;
     };
     homepage.enable = true;
