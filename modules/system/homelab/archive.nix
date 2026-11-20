@@ -182,8 +182,15 @@ in {
         # an empty directory and --delete would wipe the local copy.
         unitConfig.RequiresMountsFor = [cfg.pull.mountPoint];
         path = with pkgs; [coreutils curl findutils gawk gnugrep rsync util-linux];
+        # Fail closed. The pull mirrors with --delete, so a readable but
+        # empty share (fresh archive dataset, unmounted dataset, cleared
+        # tree) must abort before rsync runs: without the manifests the
+        # space check and the verification loop are both skipped, and the
+        # desktop would delete its only copy and stamp a success. errexit
+        # also makes a failed rsync fail the unit instead of exiting 0
+        # after the alert trap.
         script = ''
-          set -o errtrace
+          set -euo pipefail
 
           alert() {
             curl -fsS \
@@ -200,11 +207,36 @@ in {
           mountpoint -q "$src" || { alert "share is not mounted (tailnet or Samba down?)"; exit 1; }
           mountpoint -q "$(dirname "$dest")" || { alert "backup pool is not mounted"; exit 1; }
 
+          # The archive's own inventory files are the proof that the share
+          # carries the complete tree, not a mounted empty directory.
+          for manifest in MANIFEST.txt MANIFEST.sha256 app/MANIFEST.sha256; do
+            if [ ! -s "$src/$manifest" ]; then
+              alert "source is missing $manifest; refusing to mirror an unverified share"
+              exit 1
+            fi
+          done
+
           # The manifest's total is the size oracle; refuse to start a pull
           # that cannot finish.
           need=$(awk '/^TOTAL / {print $4}' "$src/MANIFEST.txt")
+          case "$need" in
+            "" | *[!0-9]*)
+              alert "cannot parse TOTAL from MANIFEST.txt"
+              exit 1
+              ;;
+          esac
+          if [ "$need" -eq 0 ]; then
+            alert "MANIFEST.txt reports an empty archive"
+            exit 1
+          fi
           avail=$(df --output=avail -B1 "$(dirname "$dest")" | tail -n1 | tr -d ' ')
-          if [ -n "$need" ] && [ "$avail" -lt $(( need + need / 20 )) ]; then
+          case "$avail" in
+            "" | *[!0-9]*)
+              alert "cannot read free space on the backup pool"
+              exit 1
+              ;;
+          esac
+          if [ "$avail" -lt $(( need + need / 20 )) ]; then
             alert "not enough space: need $need bytes, have $avail"
             exit 1
           fi
@@ -213,9 +245,13 @@ in {
           rsync -a --delete --chown=root:root --chmod=D0755,F0644 "$src/" "$dest/"
 
           # Verify what landed, not what was read: a truncated transfer shows
-          # up here, and the manifest names every file.
+          # up here, and the manifest names every file. Both manifests exist
+          # by the guard above, so a missing one after the copy is a failure.
           for manifest in MANIFEST.sha256 app/MANIFEST.sha256; do
-            [ -f "$dest/$manifest" ] || continue
+            if [ ! -f "$dest/$manifest" ]; then
+              alert "manifest $manifest did not arrive"
+              exit 1
+            fi
             ( cd "$dest/$(dirname "$manifest")" && sha256sum -c "$(basename "$manifest")" >/dev/null ) \
               || { alert "checksum mismatch in $manifest"; exit 1; }
           done
@@ -227,7 +263,10 @@ in {
         timerConfig = {
           OnCalendar = cfg.pull.interval;
           Persistent = true;
-          RandomizedDelaySec = "1h";
+          # The desktop is on irregularly, so the missed-run pickup must fit
+          # inside a short session; an hour of randomized delay can outlast
+          # it. The vault pull uses the same bound.
+          RandomizedDelaySec = "10m";
         };
       };
     })
