@@ -56,6 +56,40 @@ in {
       default = "tcp://100.78.213.64:22000";
       description = "Static address the server uses to reach the phone";
     };
+
+    whatsapp = {
+      enable = lib.mkEnableOption "receiving WhatsApp local database backups from the phone's private space";
+
+      deviceId = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        # The private space is a separate Android user, so its Syncthing-Fork
+        # instance is a second Syncthing node with its own device ID. The
+        # owner-profile instance cannot read the private space's storage.
+        description = "Syncthing device ID of the Syncthing-Fork instance inside the private space; unset until paired";
+      };
+
+      address = lib.mkOption {
+        type = lib.types.str;
+        default = "dynamic";
+        # The phone dials the server's static address, so the server does not
+        # need discovery to accept the connection. Set a static address only
+        # if the server should also dial the private space.
+        description = "Address the server dials for the private-space instance";
+      };
+
+      path = lib.mkOption {
+        type = lib.types.str;
+        default = "/per/mnt/data/backups/whatsapp";
+        description = "Receive-only folder for WhatsApp's local database backups";
+      };
+
+      keepDays = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 30;
+        description = "Days of staggered versions to keep for each backup file";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -74,23 +108,51 @@ in {
       configDir = "${defaults.paths.homeDir}/.config/syncthing";
 
       settings = {
-        devices = lib.optionalAttrs (cfg.phoneDeviceId != null) {
-          phone = {
-            id = cfg.phoneDeviceId;
-            addresses = [cfg.phoneAddress];
-            # Folder shares must be accepted deliberately on the phone.
-            autoAcceptFolders = false;
+        devices =
+          lib.optionalAttrs (cfg.phoneDeviceId != null) {
+            phone = {
+              id = cfg.phoneDeviceId;
+              addresses = [cfg.phoneAddress];
+              # Folder shares must be accepted deliberately on the phone.
+              autoAcceptFolders = false;
+            };
+          }
+          // lib.optionalAttrs (cfg.whatsapp.enable && cfg.whatsapp.deviceId != null) {
+            phone-private = {
+              id = cfg.whatsapp.deviceId;
+              addresses = [cfg.whatsapp.address];
+              autoAcceptFolders = false;
+            };
           };
-        };
 
-        folders = {
-          "obsidian-vault" = {
-            label = "Obsidian vault";
-            path = defaults.paths.obsidianVault;
-            type = "sendreceive";
-            devices = lib.optionals (cfg.phoneDeviceId != null) ["phone"];
+        folders =
+          {
+            "obsidian-vault" = {
+              label = "Obsidian vault";
+              path = defaults.paths.obsidianVault;
+              type = "sendreceive";
+              devices = lib.optionals (cfg.phoneDeviceId != null) ["phone"];
+            };
+          }
+          // lib.optionalAttrs (cfg.whatsapp.enable && cfg.whatsapp.deviceId != null) {
+            "whatsapp-backups" = {
+              label = "WhatsApp local backups";
+              path = cfg.whatsapp.path;
+              # The phone is the only writer; the server keeps the history.
+              type = "receiveonly";
+              devices = ["phone-private"];
+              # WhatsApp overwrites msgstore.db.crypt15 on every backup, so
+              # without versioning the previous backup is gone the moment a
+              # new one lands. Staggered versions keep a month of them.
+              versioning = {
+                type = "staggered";
+                params = {
+                  cleanupIntervalS = "3600";
+                  maxAge = toString (cfg.whatsapp.keepDays * 86400);
+                };
+              };
+            };
           };
-        };
 
         options = {
           # Discovery and relays are off: the tailnet already provides both
@@ -113,6 +175,13 @@ in {
       # open the same ports on every interface.
       openDefaultPorts = false;
     };
+
+    # Syncthing creates a missing folder itself, but the directory then
+    # inherits the service umask. Pin the mode and owner so the backups stay
+    # closed to other local users while the share group keeps access.
+    systemd.tmpfiles.rules = lib.optionals cfg.whatsapp.enable [
+      "d ${cfg.whatsapp.path} 0750 ${user} sambashare -"
+    ];
 
     # A regular file, not a symlink into the store: the vault is also a
     # Nextcloud external-storage mount, and Nextcloud rejects any symlink that

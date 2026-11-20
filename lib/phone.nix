@@ -252,6 +252,7 @@ _: {
       fdroid = [
         "org.fdroid.fdroid"
         "com.aurora.store"
+        "com.github.catfriend1.syncthingfork"
       ];
 
       obtainium = [
@@ -311,6 +312,8 @@ _: {
         "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
         "Grant Play services and WhatsApp an unrestricted battery exception in the private space, and unlock the private space after every reboot: push only arrives while it is unlocked."
         "WhatsApp lives here for FCM push through sandboxed Play; the owner copy has no Play services and only polls its own socket, which is why messages arrived late. Transfer the chat history from the owner copy before uninstalling it, and keep the private space unlocked after a reboot so push keeps arriving."
+        "WhatsApp backups: the Google Drive upload cannot succeed in the private space because Aurora's anonymous session installs no Google account, so the failing-backup notification is expected. Turn off Back up to Google Drive and keep the local backup. Install Syncthing-Fork in the private space, grant All Files Access, add the m920q as a device, and share Android/media/com.whatsapp/WhatsApp/Databases as send-only. The m920q keeps 30 days of staggered versions under /per/mnt/data/backups/whatsapp. Store the 64-digit end-to-end backup key offline: msgstore.db.crypt15 is unreadable without it. The database backup excludes media; media stays on the phone."
+        "After pairing Syncthing-Fork in the private space, set its device ID as modules.system.homelab.syncthingVault.whatsapp.deviceId in hosts/m920q/default.nix; the server declares the receive folder only when the ID is present. On the phone, point the m920q device at tcp://m920q.tailf2f0ca.ts.net:22000 (the m920q GUI shows its device ID under Actions > Show ID)."
         "Banking and government apps re-bind the device. Keep the Pixel 9a available until every app is verified; the Google secondary user stays for TF Bank. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
         "Aegis stays in the owner: import the token export from the Google user before deleting it. Banking logins in the private space use the owner's Aegis; copy the code across the shared clipboard."
         "FUTO Keyboard is also in the private lane; the owner keeps its working copy. Duolingo is private-lane only. Spotify, Telegram and Aegis stay in the owner. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
