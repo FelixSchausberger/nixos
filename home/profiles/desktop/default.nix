@@ -1,7 +1,6 @@
 {
   lib,
   pkgs,
-  inputs,
   ...
 }: {
   imports = [
@@ -94,9 +93,6 @@
       wineWow64Packages.waylandFull # An Open Source implementation of the Windows API on top of X, OpenGL, and Unix
       libwacom # Libraries, configuration, and diagnostic tools for Wacom tablets running under Linux
       vial # Open-source GUI and QMK fork for configuring your keyboard in real time
-      # Unofficial native Linux client for the Rex terminal multiplexer; it
-      # attaches to an existing Rex server and keeps the sessions there.
-      inputs.rex-rune.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
   };
 }

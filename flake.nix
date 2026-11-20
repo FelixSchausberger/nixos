@@ -172,16 +172,6 @@
     # nixpkgs because the Home Manager yazi module overrides it with
     # extraPackages, a shape the upstream flake package does not accept.
 
-    # Rex Rune: unofficial native Linux client for the Rex terminal
-    # multiplexer. It attaches to an existing Rex server and keeps sessions
-    # there, so it is a GUI attachment client for the graphical host, not a
-    # server. Built from source (Rust plus libghostty through Zig), so the
-    # first deploy compiles it there.
-    rex-rune = {
-      url = "github:shuv1337/rex-rune";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # AI assistants (hourly updates)
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
