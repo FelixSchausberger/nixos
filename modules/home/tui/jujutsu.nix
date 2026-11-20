@@ -222,11 +222,16 @@ in {
     # the key never dies on a host whose home profile is ahead of or behind the
     # package. fish runs panes (herdr detects it from SHELL), so the chain uses
     # fish's && and ||.
+    #
+    # The board scans every jj workspace (about 12 seconds with the current
+    # fleet), so the popup prints a loading line before the scan. A popup whose
+    # command exits closes at once (herdr closes it on PaneDied), which would
+    # hide the result; the trailing read holds it until Enter.
     tui.herdr.commandKeys = lib.mkAfter [
       {
         key = "prefix+shift+b";
         type = "popup";
-        command = "cd ${lib.escapeShellArg defaults.paths.nixosConfig} && ocws ls --board 2>/dev/null || ocws ls";
+        command = "printf 'ocws board: reading workspace state...\\n'; cd ${lib.escapeShellArg defaults.paths.nixosConfig} && ocws ls --board 2>/dev/null || ocws ls; printf 'press enter to close\\n'; read ignored";
         description = "Show the ocws workspace board";
         width = "95%";
         height = "95%";
