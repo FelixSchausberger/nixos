@@ -56,7 +56,9 @@
         [ -d "$repo" ] || exit 0
         cd "$repo"
         state=${lib.escapeShellArg digestStateFile}
-        read -r total empty merged unpushed inflight conflict stale waitold < <(${ocws}/bin/ocws ls --counts)
+        # The alerting path decides nothing from the classification cache: both
+        # calls rescan, so a transition is judged on the state that is published.
+        read -r total empty merged unpushed inflight conflict stale waitold < <(${ocws}/bin/ocws ls --counts --refresh)
         waitold=''${waitold:-0}
         if [ "$((stale + unpushed + conflict + waitold))" -eq 0 ]; then
           # A clean board removes the stored signature so the same mess
@@ -76,7 +78,7 @@
             exit 0
           fi
         fi
-        if ! board=$(${ocws}/bin/ocws ls --board 2>/dev/null); then
+        if ! board=$(${ocws}/bin/ocws ls --board --refresh 2>/dev/null); then
           board=$(${ocws}/bin/ocws ls)
         fi
         body="$(${pkgs.coreutils}/bin/printf 'stale %s unpushed %s conflict %s old waits %s\n\n%s' "$stale" "$unpushed" "$conflict" "$waitold" "$board")"
@@ -223,10 +225,13 @@ in {
     # package. fish runs panes (herdr detects it from SHELL), so the chain uses
     # fish's && and ||.
     #
-    # The board scans every jj workspace (about 12 seconds with the current
-    # fleet), so the popup prints a loading line before the scan. A popup whose
-    # command exits closes at once (herdr closes it on PaneDied), which would
-    # hide the result; the trailing read holds it until Enter.
+    # The board classifies every jj workspace. That pass used to take about
+    # twelve seconds on a full fleet; it is now a single jj log plus bounded
+    # parallel absorption and process/session probes, cached on the jj op id
+    # (roughly 0.4 s cold, 0.2 s cached). The popup still prints a loading
+    # line before the scan because a cold run is long enough to see, and a
+    # popup whose command exits closes at once (herdr closes it on PaneDied),
+    # which would hide the result; the trailing read holds it until Enter.
     tui.herdr.commandKeys = lib.mkAfter [
       {
         key = "prefix+shift+b";
