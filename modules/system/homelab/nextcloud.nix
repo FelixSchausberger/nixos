@@ -31,6 +31,12 @@
     # Planted by the NixOS nextcloud module. Patterns match basenames at
     # any depth below the sync root.
     workspace.json
+    # Phone backup trees are server-side restore material, not documents
+    # every client should download: Seedvault chunks run to several GB and
+    # the two export folders are refreshed by the phone's own jobs.
+    .SeedVaultAndroidBackup
+    .Calendar-Backup
+    .Contacts-Backup
   '';
 in {
   options.modules.system.homelab.nextcloud = {
