@@ -27,6 +27,14 @@ _: {
           yearly = 1;
           recursive = false;
         };
+        # Every syncoid target needs a policy; the module asserts it.
+        "bpool/backup/data" = {
+          hourly = 0;
+          daily = 0;
+          weekly = 0;
+          monthly = 12;
+          yearly = 0;
+        };
       };
       syncoidCommands = {
         "dpool-to-bpool" = {
@@ -54,17 +62,20 @@ _: {
     # 3. Write initial data
     machine.succeed("echo 'homelab secret data' > /dpool/data/important.txt")
 
-    # 4. Take Sanoid snapshot
+    # 4. Run Syncoid first: the full receive creates the target dataset. A
+    # pre-created target that sanoid already snapshotted would reject the
+    # stream as non-empty.
+    machine.succeed("systemctl start --wait syncoid-dpool-to-bpool.service")
+
+    # 5. Take Sanoid snapshots now that the target dataset exists; its policy
+    # is part of the module config, and sanoid fails on a missing dataset.
     machine.succeed("sanoid --take-snapshots")
     snapshots = machine.succeed("zfs list -t snapshot")
     assert "dpool/data@autosnap" in snapshots, f"Expected snapshot not found: {snapshots}"
 
-    # 5. Verify snapshot retention matches configured policy
+    # 6. Verify snapshot retention matches configured policy
     snap_count = machine.succeed("zfs list -t snapshot -o name | grep -c 'dpool/data@autosnap_'")
     assert int(snap_count) >= 1, f"Expected at least 1 snapshot, got {snap_count}"
-
-    # 6. Run Syncoid replication service
-    machine.succeed("systemctl start --wait syncoid-dpool-to-bpool.service")
 
     # Ensure dataset is mounted after replication
     machine.succeed("zfs mount -a")
