@@ -52,20 +52,20 @@ in {
       };
 
       custom = {
+        # jj-starship picks the backend itself, so one invocation carries both
+        # symbols and no `jj root`/`git rev-parse` probe is needed. `when = true`
+        # with a conditional format replaces the per-prompt detection subprocess:
+        # outside a repository the tool prints nothing and the group collapses.
+        # The module stays under command_timeout like every other segment; an
+        # unbounded module is one that can freeze the shell on a slow repository.
         vcs = {
-          when = "${pkgs.jj-starship}/bin/jj-starship detect";
+          when = true;
           command = ''
-            if ${pkgs.jujutsu}/bin/jj root >/dev/null 2>&1; then
-              ${pkgs.jj-starship}/bin/jj-starship \
-                --jj-symbol "󱗆 " --git-symbol "" --truncate-name 15
-            elif git rev-parse --git-dir >/dev/null 2>&1; then
-              ${pkgs.jj-starship}/bin/jj-starship \
-                --git-symbol " " --jj-symbol "" --truncate-name 15
-            fi
+            ${pkgs.jj-starship}/bin/jj-starship \
+              --jj-symbol "󱗆 " --git-symbol " " --truncate-name 15
           '';
           shell = ["bash"];
-          format = "$output ";
-          ignore_timeout = true;
+          format = "($output )";
         };
 
         health = lib.mkIf (!(hostConfig.isGui or false)) {
