@@ -104,6 +104,9 @@
       # Remote coding from phone via SSH
       (config.ai-assistants.safeRm.wrap inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default)
 
+      # Terminal reader for the Obsidian vault; editing opens in NixVim
+      basalt
+
       # Vitals health monitoring CLI
       inputs.vitals.packages.${pkgs.stdenv.hostPlatform.system}.cli
     ];
@@ -181,6 +184,33 @@
         ${lib.concatMapStringsSep "\n" (f: ''[ -e "$vault/${f.name}" ] || install -m 0644 ${f.src} "$vault/${f.name}"'') files}
       fi
     '';
+
+  # Basalt resolves vaults through Obsidian's desktop registry, so seed the
+  # registry instead of relying on an interactive first run. The file is
+  # host-local: the desktop's Obsidian config belongs to a different machine
+  # and stays under Obsidian's control. tabs.sync = "read" keeps Basalt from
+  # rewriting the vault's .obsidian/workspace.json, which Obsidian and the
+  # synced devices also own.
+  xdg.configFile."obsidian/obsidian.json".text = builtins.toJSON {
+    vaults.notes = {
+      path = config.modules.home.tui.vault.path;
+      ts = 0;
+      open = true;
+    };
+  };
+
+  xdg.configFile."basalt/config.toml".text = ''
+    [note_editor]
+    vim_mode = true
+
+    [tabs]
+    sync = "read"
+
+    [global]
+    key_bindings = [
+      { key = "<leader>e", command = "exec:nvim %note_path" },
+    ]
+  '';
 
   # Convenience links into the data pool (dpool, hosts/m920q/disko.nix) so the
   # canonical locations (/per/mnt/data/...) are reachable under the XDG names.
