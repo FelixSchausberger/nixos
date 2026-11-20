@@ -535,7 +535,10 @@ writeShellApplication {
     board_lock() {
       command -v flock >/dev/null 2>&1 || return 1
       mkdir -p "$board_cache_dir" 2>/dev/null || return 1
-      exec {board_lock_fd}>"$board_lock_file" 2>/dev/null || {
+      # A read-only cache directory cannot hold the lock; classify without it.
+      # The group, not a trailing 2>/dev/null, silences the open's own failure.
+      [ -w "$board_cache_dir" ] || return 1
+      { exec {board_lock_fd}>"$board_lock_file"; } 2>/dev/null || {
         board_lock_fd=""
         return 1
       }
