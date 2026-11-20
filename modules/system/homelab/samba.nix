@@ -63,6 +63,13 @@ in {
           "recycle:repository" = ".recycle";
           "recycle:keeptree" = "yes";
           "recycle:versions" = "yes";
+          # ZFS snapshots stay reachable by direct path even with
+          # snapdir=hidden, and the private data directory is a sibling of
+          # the Nextcloud mounts but still inside this share. Samba vetoes by
+          # basename at every depth, so this also hides unrelated code
+          # directories named private; they remain on disk.
+          "veto files" = "/.zfs//private/";
+          "delete veto files" = "no";
         };
       };
     };
