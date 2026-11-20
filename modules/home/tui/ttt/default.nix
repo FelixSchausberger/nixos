@@ -317,13 +317,21 @@ in {
 
   # TTT opens as a tab in the herdr workspace through its herdr-plugin; prefix+e
   # is already herdr's edit_scrollback default, so the editor takes
-  # prefix+shift+e.
+  # prefix+shift+e. The second binding opens the same entrypoint as a right
+  # split: the plugin resolves checkout_path or focused_pane_cwd, so the editor
+  # lands in the agent's jj workspace.
   tui.herdr.commandKeys = lib.mkAfter [
     {
       key = "prefix+shift+e";
       type = "plugin_action";
       command = "ttt.editor.open";
       description = "Open TTT editor";
+    }
+    {
+      key = "prefix+shift+i";
+      type = "shell";
+      command = "${pkgs.herdr}/bin/herdr plugin pane open --plugin ttt.editor --entrypoint editor --placement split --direction right --focus";
+      description = "Open TTT beside the agent";
     }
   ];
 }

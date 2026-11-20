@@ -114,11 +114,16 @@ in {
             size = 14;
           };
           useAcrylic = true;
+          # Acrylic alone leaves the profile at the schema's effective
+          # opacity, which has been version-dependent; pin it so the
+          # frosted background is not silently opaque. Windows Settings >
+          # Personalization > Colors > Transparency effects must also be on.
+          opacity = 90;
           # A BEL becomes sound plus window/taskbar flash on every channel;
-          # on builds whose BellStyle carries the notification flag (canary
+          # on builds whose BellStyle carries the notification flag (Preview
           # 1.26, All = 0xffffffff) the same value also raises a Windows
-          # toast. "all" is valid on stable's enum today, so one value
-          # covers all channels.
+          # toast. Stable 1.25 only has sound/flash. "all" is valid on both
+          # enums, so one value covers every installed channel.
           bellStyle = "all";
         };
 
@@ -205,6 +210,9 @@ in {
       schemes = [];
       theme = "dark";
       themes = [];
+      # The tab row stays opaque by default even when the profile uses
+      # acrylic; frost it too so the window reads as one surface.
+      useAcrylicInTabRow = true;
     };
 
     # Named with zz- prefix to run after writeBoundary (alphabetical ordering),
