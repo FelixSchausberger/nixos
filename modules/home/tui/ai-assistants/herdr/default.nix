@@ -45,6 +45,20 @@
     cp $TMPDIR/.config/opencode/herdr-opencode/tui.js $out/herdr-opencode/
   '';
 
+  # A session-modal scratch shell. The TUI has no docked bottom drawer; a
+  # popup leaves the tab layout untouched, while prefix+minus remains the way
+  # to get a persistent bottom split.
+  scratchKeys = [
+    {
+      key = "prefix+shift+m";
+      type = "popup";
+      command = "fish";
+      description = "Scratch shell";
+      width = "90%";
+      height = "35%";
+    }
+  ];
+
   # herdr detects the default shell from SHELL and spawns panes with it;
   # agents (opencode2, claude) must resolve like a login shell. Pane
   # environments contributed by other modules (tui.herdr.paneEnvironment)
@@ -173,6 +187,16 @@ in {
           >/dev/null 2>&1 || true
       '';
 
+      # config.toml is a read-only store symlink; the running server keeps the
+      # old copy until it is told to reread. Reload only when a server is
+      # already up, and never during a dry-run activation.
+      home.activation.reloadHerdrConfig = lib.hm.dag.entryAfter ["linkTttHerdrPlugin"] ''
+        if [ -z "''${DRY_RUN_CMD:-}" ] \
+          && ${pkgs.herdr}/bin/herdr status server >/dev/null 2>&1; then
+          ${pkgs.herdr}/bin/herdr server reload-config >/dev/null 2>&1 || true
+        fi
+      '';
+
       # herdr ships a built-in catppuccin theme, so it needs no generated palette
       # to match the fleet. The file is a read-only store symlink, and herdr
       # writes `onboarding = false` back to it when its first-run setup finishes:
@@ -196,6 +220,15 @@ in {
       # New tabs are agent seats and ocws renames the tab to the task when it
       # creates the workspace, so the native tab-name prompt would only ask for
       # the same name twice. Plain non-agent tabs are renamed with prefix+shift+t.
+      #
+      # Notifications use in-app toasts: "herdr" is the only delivery that
+      # survives mosh (the terminal backend recognizes only Ghostty, iTerm2,
+      # Kitty and WezTerm, while mosh drops OSC 9/99/777). "system" would notify
+      # the machine running the client, which is m920q for an mosh attach.
+      #
+      # The UI knobs take the zellij layout's shape: a bottom status/tab bar,
+      # framed split panes, shared dividers and agent labels on pane borders.
+      # Herdr draws square box glyphs; there is no custom border-glyph option.
       xdg.configFile."herdr/config.toml".text =
         lib.concatStringsSep "\n" (
           [
@@ -211,8 +244,16 @@ in {
             "sidebar_start_collapsed = true"
             ''sidebar_collapsed_mode = "compact"''
             "prompt_new_tab_name = false"
+            ''pane_borders = "always"''
+            "pane_gaps = false"
+            "show_agent_labels_on_pane_borders = true"
+            ''tab_bar_position = "bottom"''
+            ''status_indicators = "symbols"''
+            ""
+            "[ui.toast]"
+            ''delivery = "herdr"''
           ]
-          ++ lib.concatMap (key: [""] ++ renderCommandKey key) config.tui.herdr.commandKeys
+          ++ lib.concatMap (key: [""] ++ renderCommandKey key) (scratchKeys ++ config.tui.herdr.commandKeys)
         )
         + "\n";
     })
