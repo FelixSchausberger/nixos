@@ -111,6 +111,12 @@ in {
       "a+ ${dataPath}/projects - - - - g:sambashare:rwx,d:g:sambashare:rwx,u:nextcloud:x,d:u:nextcloud:x"
       "a+ ${dataPath}/projects/cad - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       "a+ ${dataPath}/inbox - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      # backups is SMB-only (no Nextcloud mount) and collects device and
+      # service dumps, so it stays closed to other local users while the
+      # share group keeps access. The default ACL closes children created
+      # outside Samba (an agent's umask would otherwise make them 0755).
+      "d ${dataPath}/backups 0750 ${defaults.system.user} sambashare -"
+      "a+ ${dataPath}/backups - - - - d:u::rwx,d:g::rwx,d:o::---"
     ];
 
     environment.persistence."/per".directories = [
