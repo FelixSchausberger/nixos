@@ -28,7 +28,7 @@ command -v jj >/dev/null 2>&1 || fail "jj not on PATH"
 command -v sqlite3 >/dev/null 2>&1 || fail "sqlite3 not on PATH"
 
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+trap 'chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"' EXIT
 export HOME="$work/home"
 export XDG_CACHE_HOME="$work/cache"
 export XDG_DATA_HOME="$work/data"
@@ -158,6 +158,19 @@ cache=$(find "$XDG_CACHE_HOME/ocws" -name 'board-*' ! -name '*.lock' | head -1)
 [ -n "$cache" ] || fail "no board cache was written"
 printf 'garbage\n' >"$cache"
 [ "$(ocws ls --board)" = "$expected" ] || fail "corrupt cache changed the board"
+
+# An unwritable cache directory is a miss, not a failure or stderr noise. Drop
+# the lock too: an existing lock file stays writable through a read-only
+# directory and would hide the open failure this guards against.
+rm -f "$cache" "$cache.lock"
+chmod 500 "$XDG_CACHE_HOME/ocws"
+if ! out=$(ocws ls --board 2>"$work/unwritable.err"); then
+	fail "unwritable cache failed the board"
+fi
+[ "$out" = "$expected" ] || fail "unwritable cache changed the board"
+[ -s "$work/unwritable.err" ] && fail "unwritable cache wrote to stderr"
+chmod 700 "$XDG_CACHE_HOME/ocws"
+[ "$(ocws ls --board)" = "$expected" ] || fail "board did not recover after the cache became writable"
 
 # Two concurrent cold scans agree and leave a valid cache behind.
 rm -f "$cache"
