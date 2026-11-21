@@ -47,7 +47,7 @@
     "logs"
     "garmin"
   ];
-  rule_count = 35;
+  rule_count = 38;
   rules = [
     {
       alert = "NextcloudDown";
@@ -183,6 +183,21 @@
       alert = "VitalsScoreLow";
       expr = "vitals_health_score{type=\"raw\"} < 60";
       priority = "high";
+    }
+    {
+      alert = "NixpkgsVulnerability";
+      expr = "nixpkgs_vulnerabilities_direct_cves{severity=~\"critical|high\"} > 0";
+      priority = "high";
+    }
+    {
+      alert = "NixpkgsVulnerabilityScanStale";
+      expr = "time() - nixpkgs_vulnerabilities_last_success_timestamp_seconds > 8 * 86400";
+      priority = "default";
+    }
+    {
+      alert = "NixpkgsVulnerabilityTrackerStale";
+      expr = "nixpkgs_vulnerabilities_tracker_age_seconds > 14 * 86400";
+      priority = "default";
     }
     {
       alert = "PostgresDown";

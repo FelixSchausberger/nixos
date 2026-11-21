@@ -169,6 +169,10 @@ in {
     headless = true;
   };
 
+  # The tracker scan needs the node exporter textfile collector that this
+  # host's monitoring stack already runs; it feeds the homepage Nix band.
+  services.nixpkgsVulnerabilityScan.enable = true;
+
   environment.systemPackages = with pkgs;
     [
       wakeonlan # Send magic packets to wake desktop from homelab

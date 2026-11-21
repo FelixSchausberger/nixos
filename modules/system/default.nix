@@ -18,6 +18,7 @@
     ./night-quiet.nix
     ./persistence-postgresql.nix
     ./nix.nix
+    ./nixpkgs-vulnerability-scan.nix
     ./security-hardening.nix
     ./session-on-demand.nix
     ./ssl-config.nix
