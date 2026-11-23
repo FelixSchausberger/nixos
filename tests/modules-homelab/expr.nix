@@ -86,6 +86,15 @@ in {
   smart_home_z2m_frontend_port = config.modules.system.homelab.smartHome.frontendPort;
   smart_home_lan_clients = config.modules.system.homelab.smartHome.lanClients;
   smart_home_http_yaml_absent = !(config.services.home-assistant.config ? http);
+  # The UI writes automations, scripts and scenes to the config directory; the
+  # includes are what make HA load them. Without them the files are dead.
+  smart_home_ha_yaml_includes = let
+    ha = config.services.home-assistant.config;
+  in {
+    automation = ha.automation or null;
+    script = ha.script or null;
+    scene = ha.scene or null;
+  };
   smart_home_mosquitto = let
     l = builtins.head config.services.mosquitto.listeners;
   in {
