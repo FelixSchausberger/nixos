@@ -97,24 +97,24 @@
           touch $out
         '';
 
-        # The ocws project owns the full classifier test. This repo reads the
-        # binary in the badge, the digest, the keybindings and the lead/worker
-        # protocol, so its shapes are pinned here: the eight-field counts
-        # order, the board headings, the wait marker round trip, gc's refusal
-        # to reclaim unpushed work, and every `seat --json` field.
-        ocws-consumer-contract =
-          pkgs.runCommand "ocws-consumer-contract" {
+        # The Rookery project owns the full classifier test. This repo reads
+        # the binary in the badge, the digest, the keybindings and the
+        # lead/worker protocol, so its shapes are pinned here: the eight-field
+        # counts order, the board headings, the wait marker round trip, gc's
+        # refusal to reclaim unpushed work, and every `seat --json` field.
+        rookery-consumer-contract =
+          pkgs.runCommand "rookery-consumer-contract" {
             nativeBuildInputs = [
-              self.packages.${pkgs.stdenv.hostPlatform.system}.ocws
+              self.packages.${pkgs.stdenv.hostPlatform.system}.rookery
               pkgs.jujutsu
               pkgs.git
               pkgs.sqlite
               pkgs.jq
             ];
           } ''
-            cp ${../tools/scripts/test-ocws-contract.sh} test-ocws-contract.sh
-            chmod +x test-ocws-contract.sh
-            bash test-ocws-contract.sh
+            cp ${../tools/scripts/test-rookery-contract.sh} test-rookery-contract.sh
+            chmod +x test-rookery-contract.sh
+            bash test-rookery-contract.sh
             touch $out
           '';
       };

@@ -30,23 +30,23 @@ claim:
 The fleet runs one herdr workspace per repository and one tab per agent. The
 isolation unit is the jj workspace the tab's agent runs in: tabs in one herdr
 workspace each have their own jj workspace when they are created through
-`ocws`.
+`rookery`.
 
-A lead creates each worker with `ocws herdr --workspace <id>`; the worker gets
+A lead creates each worker with `rookery herdr --workspace <id>`; the worker gets
 its own jj workspace and a tab in the lead's herdr workspace. The lead prompts
 it, reads the report file, closes only the tabs it created, and releases the
-workspace with `ocws done`. The `herdr-lead` skill owns the delegation protocol;
+workspace with `rookery done`. The `herdr-lead` skill owns the delegation protocol;
 `herdr worktree` and fan remain unused.
 
-The claim lives in jj, not in herdr. `ocws <task>` creates the jj workspace,
+The claim lives in jj, not in herdr. `rookery <task>` creates the jj workspace,
 writes the change description, and starts opencode rooted at the workspace.
 Opening a tab on its own creates nothing: the tab is where the command runs,
 not what owns the work. Closing a tab — even a workspace's last tab, which
 closes the herdr workspace — never releases the jj claim or an open PR.
-`ocws tab` is the zellij variant and does not apply inside herdr, whose panes
+`rookery tab` is the zellij variant and does not apply inside herdr, whose panes
 carry no zellij session. With `terminal.new_cwd = follow`, a new tab inherits
 the focused pane's directory, so a tab can start inside another agent's
-worktree; start agents through `ocws`, not a bare tab.
+worktree; start agents through `rookery`, not a bare tab.
 
 ## When to Use
 
@@ -66,7 +66,7 @@ benefit for single quick changes.
    identify who owns which workspace and on what task:
 
    ```bash
-   ocws ls
+   rookery ls
    # or: jj log -r 'working_copies()' --no-graph
    ```
 
@@ -78,34 +78,34 @@ benefit for single quick changes.
 2. Create the workspace, claim it, and start opencode rooted there in one step:
 
    ```bash
-   ocws <task>            # opencode in the current pane, named up front
-   ocws herdr             # new agent seat in a new herdr tab, filler name
-   ocws herdr <task>      # same, with a task name you already know
-   ocws tab <task>        # opencode in a new zellij tab (not inside herdr)
+   rookery <task>            # opencode in the current pane, named up front
+   rookery herdr             # new agent seat in a new herdr tab, filler name
+   rookery herdr <task>      # same, with a task name you already know
+   rookery tab <task>        # opencode in a new zellij tab (not inside herdr)
    ```
 
-   Inside herdr, `prefix+shift+a` runs `ocws herdr` with no task, bound
+   Inside herdr, `prefix+shift+a` runs `rookery herdr` with no task, bound
    detached: the tab appears with a filler task (`t-<HHMMSS>`), the workspace is
    created without the gc pass and fetch that would delay it, and opencode
    starts. Once OpenCode names the session, the seat plugin runs
-   `ocws title "<title>"`, which sets the change description, renames the
+   `rookery title "<title>"`, which sets the change description, renames the
    workspace and renames the herdr tab — once, and only while the description is
-   still the placeholder `jj workspace add` wrote. Run `ocws title` by hand if
+   still the placeholder `jj workspace add` wrote. Run `rookery title` by hand if
    the plugin is off; it is a no-op on an already-claimed workspace. Re-running
-   `ocws herdr <task>` for an existing task reopens the seat only when no process
+   `rookery herdr <task>` for an existing task reopens the seat only when no process
    is live in that workspace.
 
-   The base directory is chosen in this order: `$OCWS_BASE`, the parent of the
+   The base directory is chosen in this order: `$ROOKERY_BASE`, the parent of the
    current workspace (the sibling-directory convention) when writable, then
    `$XDG_DATA_HOME/ocws` (default `~/.local/share/ocws`, created on demand), then
    `/tmp/opencode`. On this host `/per/etc` is root-owned, so the default base is
    `~/.local/share/ocws` — persistent and user-owned; a workspace lives at
-   `<base>/nixos-ws-<task>`. Set `OCWS_BASE` to a persistent path for long-lived
+   `<base>/nixos-ws-<task>`. Set `ROOKERY_BASE` to a persistent path for long-lived
    work. jj commits are stored in the shared repo regardless of where the
    working directory lives, so even the `/tmp/opencode` fallback never loses a
    revision.
 
-   By hand (when `ocws` is unavailable):
+   By hand (when `rookery` is unavailable):
 
    ```bash
    jj workspace add /abs/path/nixos-ws-<task> --name <task> \
@@ -113,7 +113,7 @@ benefit for single quick changes.
    cd /abs/path/nixos-ws-<task>
    ```
 
-3. The change description **is** the claim. `ocws` writes it at creation. If you
+3. The change description **is** the claim. `rookery` writes it at creation. If you
    created the workspace by hand, describe before editing:
 
    ```bash
@@ -134,31 +134,32 @@ benefit for single quick changes.
 5. Cleanup after the PR merges:
 
    ```bash
-   ocws ls            # classify every workspace; empty/merged are reclaimable
-   ocws done <task>   # fetch, refuse if unmerged or live, then forget + rip
+   rookery ls            # classify every workspace; empty/merged are reclaimable
+   rookery done <task>   # fetch, refuse if unmerged or live, then forget + rip
    ```
 
-   `ocws ls` is a read-only status board. Each workspace is classified `empty`
+   `rookery ls` is a read-only status board. Each workspace is classified `empty`
    (nothing outside `main@origin`), `merged` (its content is already absorbed
    into `main@origin`), `unpushed` (content no remote bookmark tracks),
    `in-flight` (content with an open PR), `conflict`, or `waiting` (parked with
-   `ocws wait`). The summary's `stale` count is separate: workspaces that gc
+   `rookery wait`). The summary's `stale` count is separate: workspaces that gc
    could reclaim now if not for the age gate. Absorption is checked
    per revision, so a squash-merged PR counts as finished even though its draft
    commit is not an ancestor of `main@origin`; unsnapshotted edits in a foreign
-   workspace are invisible by design (ocws never snapshots a workspace it does
+   workspace are invisible by design (rookery never snapshots a workspace it does
    not own). The `HOLD` column shows `live` (a process rooted in the workspace),
    `session` (an unarchived opencode session under it updated within
-   `OCWS_GC_SESSION_AGE`, default 604800s), or `-` (idle).
+   `ROOKERY_GC_SESSION_AGE`, default 604800s), or `-` (idle).
 
    `done` refuses while unmerged work remains or a process is still rooted in
    the workspace (`--force` overrides both), so it doubles as a close-out
-   check. `ocws gc` reclaims `empty`/`merged` workspaces, skipping any with a
+   check. `rookery gc` reclaims `empty`/`merged` workspaces, skipping any with a
    live process, any held by a recent session, and any touched within the age
-   gate: an empty unclaimed workspace after `OCWS_GC_EMPTY_AGE` (default
-   21600s), one that held work after `OCWS_GC_AGE` (default 86400s). It runs on `ocws <task>` and daily
-   from a systemd user timer. `ocws rm [--force] <task>` removes without the
-   fetch/check; `--force` discards unmerged work and live sessions.
+   gate: an empty unclaimed workspace after `ROOKERY_GC_EMPTY_AGE` (default
+   21600s), one that held work after `ROOKERY_GC_AGE` (default 86400s). It runs
+   on `rookery <task>` and daily from a systemd user timer. `rookery rm
+   [--force] <task>` removes without the fetch/check; `--force` discards
+   unmerged work and live sessions.
 
    By hand: `jj workspace forget <task>` then `rip <dir>`. `forget` never
    deletes work — commits stay in the repo.
@@ -167,17 +168,17 @@ benefit for single quick changes.
    device shipment) instead of keeping its pane alive as the only preservation:
 
    ```bash
-   ocws wait <task> [reason...]   # mark parked; gc then keeps it whatever
+   rookery wait <task> [reason...]   # mark parked; gc then keeps it whatever
                                   # its commit state
-   ocws go <task>                 # release; gc reclassifies on the next pass
+   rookery go <task>                 # release; gc reclassifies on the next pass
    ```
 
    The wait marker (`<base>/<task>.wait`, reason + timestamp) lives outside
    the working copy, so no snapshot can absorb it into a claim commit, and
    every removal path (`done`, `rm`, `gc`) clears it with the workspace. A
-   parked workspace resurfaces when the wait passes `OCWS_WAIT_STALE_DAYS`
+   parked workspace resurfaces when the wait passes `ROOKERY_WAIT_STALE_DAYS`
    (default 14): gc nudges to resume or release, the prompt badge shows a
-   reminder count, and `ocws ls --board` lists it under PARKED.
+   reminder count, and `rookery ls --board` lists it under PARKED.
 
 ## Naming Convention
 
@@ -230,14 +231,14 @@ A reader can then map any workspace `@` to its session without a registry.
   from the primary checkout. CI runs the full hook set on the PR.
 - `jj workspace list` shows every workspace and its `@`.
 - `jj workspace forget` never deletes work — commits stay in the repo.
-- A parked workspace (`ocws wait <task>`) is kept by `ocws gc` whatever its
-  commit state until `ocws go <task>` clears the marker; waits older than
-  `OCWS_WAIT_STALE_DAYS` (default 14) surface as gc nudges and a prompt-badge
+- A parked workspace (`rookery wait <task>`) is kept by `rookery gc` whatever its
+  commit state until `rookery go <task>` clears the marker; waits older than
+  `ROOKERY_WAIT_STALE_DAYS` (default 14) surface as gc nudges and a prompt-badge
   reminder.
 
 ## Zellij fallback
 
-`ocws tab` is the zellij variant, used only when herdr is not the surface. The
+`rookery tab` is the zellij variant, used only when herdr is not the surface. The
 0.46 attention inbox tracks panes in the zellij server it runs in; agents in
 herdr never appear there. Zellij reads keybinds, `env` and `attention` at
 server start, so a server that predates a config change keeps the old map.

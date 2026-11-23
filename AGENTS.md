@@ -48,10 +48,10 @@ configs), `home/profiles/` (Home Manager profiles), `pkgs/` (custom packages),
 `apps/` (flake apps), `tests/` (namaka snapshots), `tests-vm/` (VM tests), and
 `tools/` (utilities).
 
-`ocws` (the jj workspace seat manager) is consumed from the `ocws` flake input
+`Rookery` (the jj workspace manager) is consumed from the `rookery` flake input
 and configured in `modules/home/tui/jujutsu.nix`. Its classifier test lives in
 the project; this repo pins the consumer shapes in the
-`ocws-consumer-contract` check (`flake-parts/dev.nix`).
+`rookery-consumer-contract` check (`flake-parts/dev.nix`).
 
 ## Documentation Policy
 
@@ -83,33 +83,33 @@ Documentation, comments, and committed artifacts contain no emojis.
 
 The global rules cover `jjwork` and workspace isolation. Repository specifics:
 
-- Work in an `ocws` workspace by default (`ocws <task>`). Editing the primary
+- Work in a `rookery` workspace by default (`rookery <task>`). Editing the primary
   checkout directly is only for user-directed sessions, and only after
-  `ocws ls` shows no other active claim. If another session's unpushed commit
+  `rookery ls` shows no other active claim. If another session's unpushed commit
   sits at `@`, halt and report: jj snapshots the working copy into `@`, so
   parallel edits merge silently into someone else's described commit. The V2
   config denies primary-checkout edits (absolute paths), though
   location-relative paths bypass that gate and a workspace cwd resolves them
-  outside the primary - `ocws` remains the real boundary.
+  outside the primary - `rookery` remains the real boundary.
 - Agents run as the owning user and never need `sudo`: deploys happen through
   comin (origin `main`, `switch`) or `jjtest` (testing bookmark,
   `switch-to-configuration test`); rebuild validation commands stay with the
   user.
-- Keep the claim honest: `ocws ls` marks a workspace `live` when a process is
+- Keep the claim honest: `rookery ls` marks a workspace `live` when a process is
   rooted in its directory and `session` when an unarchived opencode session
-  under it was updated within `OCWS_GC_SESSION_AGE` (default 7 days), so gc
+  under it was updated within `ROOKERY_GC_SESSION_AGE` (default 7 days), so gc
   keeps a paused conversation after its TUI exits. An older session whose cwd
   is elsewhere still holds it silently, so check the session database
   (`~/.local/share/opencode/opencode.db`, `session_v2.directory`) before
   settling in. Two sessions in one directory cost a foreign plan file in a push
   and a re-claimed `@`; when foreign files appear, move to a fresh workspace and
   report them instead of committing them. A seat opened unnamed carries a filler
-  `t-<HHMMSS>` description until `ocws title` claims it from the session title.
+  `t-<HHMMSS>` description until `rookery title` claims it from the session title.
 - A herdr workspace is the seat and a herdr tab a view inside it; neither owns
   the work. Opening a tab creates nothing, and closing one - even a workspace's
   last tab - never releases the jj claim or an open PR.
-- Lead/worker orchestration: a lead resolves its seat with `ocws seat --json`,
-  creates one worker per task with `ocws herdr --workspace <id> --json
+- Lead/worker orchestration: a lead resolves its seat with `rookery seat --json`,
+  creates one worker per task with `rookery herdr --workspace <id> --json
   --no-focus --wait <task>`, prompts it with `herdr agent prompt <pane>
   --wait`, and reads the report file it names. Each worker owns its jj
   workspace; the lead never edits it and never answers a `blocked` agent. The
@@ -117,9 +117,9 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
 - Scratch plans and audits under `.opencode/` stay ignored and never enter a
   commit; the global diff rule is what proves the change carries one concern.
   Park a session waiting on the outside world with
-  `ocws wait <task> [reason...]` and release it with `ocws go <task>`: gc keeps
+  `rookery wait <task> [reason...]` and release it with `rookery go <task>`: gc keeps
   parked workspaces whatever their commit state, and waits older than
-  `OCWS_WAIT_STALE_DAYS` (default 14) resurface in gc output and the prompt
+  `ROOKERY_WAIT_STALE_DAYS` (default 14) resurface in gc output and the prompt
   badge.
 - `jj workspace add` run from a stale workspace can leave the new working copy at
   jj's root commit; after creating a workspace, check `@-` is `main@origin` and
@@ -131,11 +131,11 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   session started with and verify every item was addressed - committed,
   pushed, or explicitly deferred with a note. Sessions have repeatedly left
   half-staged work reported as done; this check is the remedy. After the PR
-  merges, release the workspace with `ocws done <task>` (it refuses while
-  unmerged work remains or a session is still rooted there). `ocws ls`
-  classifies every workspace; `ocws gc` reclaims the empty/merged ones idle
+  merges, release the workspace with `rookery done <task>` (it refuses while
+  unmerged work remains or a session is still rooted there). `rookery ls`
+  classifies every workspace; `rookery gc` reclaims the empty/merged ones idle
   past the age gate, skipping any with a live process or a recent opencode
-  session, and runs on `ocws <task>` and daily from a systemd user timer.
+  session, and runs on `rookery <task>` and daily from a systemd user timer.
 - `jjpush` only pushes changes descended from `main`. If it refuses, run
   `jjwork` first.
 - One long-lived branch: `main`. Every other branch is ephemeral and

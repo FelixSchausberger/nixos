@@ -52,8 +52,8 @@
         # jj workspace workflow commands (jj-tidy, jjwork, jjpush, jjtest)
         inherit (jjTools) jj-tidy jjwork jjpush jjtest;
 
-        # Workspace seat manager, extracted to its own project
-        ocws = inputs.ocws.packages.${pkgs.stdenv.hostPlatform.system}.ocws;
+        # Workspace manager, extracted to its own project
+        rookery = inputs.rookery.packages.${pkgs.stdenv.hostPlatform.system}.rookery;
 
         # TUI cockpit for jj workspaces; pinned to the jj 0.47.1 PR until it
         # merges and a release contains the bump.

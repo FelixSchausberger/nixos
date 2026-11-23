@@ -121,7 +121,7 @@
   # Empirically (scratch-config probes, 2026-09-21) the edit resource is the
   # literal path string the model supplies: absolute paths match this rule,
   # location-relative paths bypass it and stay allowed - but a session whose cwd
-  # is an `ocws` workspace resolves relative paths there, not in the primary.
+  # is a Rookery workspace resolves relative paths there, not in the primary.
   # The rule is defence in depth, not a boundary; working in a workspace is the
   # real boundary. V1 cannot express path-scoped edit rules (its permission
   # schema is a per-tool map), so the guard is V2-only there.

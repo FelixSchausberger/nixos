@@ -269,13 +269,13 @@
       # vitals' treefmt-nix pins its own nixpkgs; follow the root input.
       inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     };
-    # jj workspace seats for OpenCode agents. The command, its board test and
+    # jj workspace manager for coding agents. The command, its board test and
     # the generic Home Manager module live in the project; this repo pins it
     # and keeps the fleet badge, digest, keybindings and gc unit.
-    ocws = {
-      url = "github:FelixSchausberger/ocws";
+    rookery = {
+      url = "github:FelixSchausberger/rookery/v0.2.0";
       inputs.nixpkgs.follows = "nixpkgs";
-      # ocws' treefmt-nix pins its own nixpkgs; follow the root input.
+      # rookery's treefmt-nix pins its own nixpkgs; follow the root input.
       inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     };
     ala-lape = {

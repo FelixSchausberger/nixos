@@ -50,18 +50,18 @@
 
     parallel-agents = {
       content = ''
-        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `ocws` workspace. The primary checkout (the `default` jj workspace) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
+        Assume several opencode agents share this jj repository in parallel. Never share a working copy: each agent works in its own `rookery` workspace. The primary checkout (the `default` jj workspace) is reserved for the user and the comin reconciler — never edit it, and never run jj mutations there.
 
         Start of work, always:
         ```bash
-        ocws ls
+        rookery ls
         ```
-        Halt and report if another workspace shows a described `@` you do not own, or an undescribed non-empty `@`. Create a workspace with `ocws <task>`, claim it with `jj new main@origin` plus an immediate description, then edit. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk. After the PR merges, release the workspace with `ocws done <task>`.
+        Halt and report if another workspace shows a described `@` you do not own, or an undescribed non-empty `@`. Create a workspace with `rookery <task>`, claim it with `jj new main@origin` plus an immediate description, then edit. Validate and `jjpush` promptly; the shorter the window an unpushed commit sits at `@`, the smaller the pollution risk. After the PR merges, release the workspace with `rookery done <task>`.
 
         The full workspace model — base-directory precedence, herdr and zellij seats, park/wait markers, session-database occupancy, classification states and concurrency hazards — is in the `jj-workspaces` skill. Load it for anything beyond the commands above.
       '';
       enabled = true;
-      description = "Isolate parallel agents in jj workspaces via the ocws launcher";
+      description = "Isolate parallel agents in jj workspaces via the Rookery launcher";
       priority = 6; # Just after jjwork-first, before starting edits
     };
 

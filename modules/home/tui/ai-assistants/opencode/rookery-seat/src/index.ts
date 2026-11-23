@@ -1,8 +1,8 @@
 // A seat opens under a filler name because waiting for a title would put
 // seconds between the keypress and the OpenCode TUI. This plugin closes the
-// loop: once OpenCode names the session, it runs `ocws title`, which renames
+// loop: once OpenCode names the session, it runs `rookery title`, which renames
 // the jj workspace, rewrites the change description and renames the herdr tab
-// in one guarded step. The claim logic lives in ocws so a human or an agent
+// in one guarded step. The claim logic lives in rookery so a human or an agent
 // can run the same command by hand; this file only watches for the title.
 import { log, POLL_MS } from "./config"
 import { runCommand } from "./process"
@@ -21,17 +21,17 @@ type Context = {
   }
 }
 
-// ocws names an unnamed seat `t-<HHMMSS>` with an optional collision suffix.
+// rookery names an unnamed seat `t-<HHMMSS>` with an optional collision suffix.
 // A title that still looks like one means OpenCode has not named the session
 // yet, so claiming it would replace a filler with a filler.
 const FILLER = /^t-\d{4,6}(-\d)?$/
 
 export default {
-  id: "ocws.seat",
+  id: "rookery.seat",
   async setup(context: Context) {
     // Seats are herdr tabs, and the tab name is what makes the filler
     // visible. Outside a pane there is nothing to rename automatically, and
-    // `ocws title` stays a manual command.
+    // `rookery title` stays a manual command.
     if (!process.env.HERDR_TAB_ID) {
       log("not inside a herdr pane - disabled")
       return
@@ -65,13 +65,13 @@ export default {
       if (!title || FILLER.test(title)) return
 
       attempts += 1
-      const result = await runCommand("ocws", ["title", title])
+      const result = await runCommand("rookery", ["title", title])
       if (result.exitCode === 0) {
         finish(`claimed the seat as ${JSON.stringify(title)}`)
         return
       }
       // A non-zero exit means the workspace was already described (the agent
-      // or the user got there first) or this is not an ocws workspace at all.
+      // or the user got there first) or this is not a Rookery workspace at all.
       // Retrying cannot fix either, so stop after a short grace period.
       if (attempts >= 3) finish(`stopped after ${attempts} failed claims`)
     }
