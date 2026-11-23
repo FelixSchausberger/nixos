@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wallpaper-conditions"
+version = "0.1.0"
+description = "Condition-aware wallpaper selection for awww"
+requires-python = ">=3.11"
+dependencies = ["astral>=3.2"]
+
+[project.scripts]
+wallpaper-conditions = "wallpaper_conditions.cli:main"
+
+[tool.setuptools]
+packages = ["wallpaper_conditions"]

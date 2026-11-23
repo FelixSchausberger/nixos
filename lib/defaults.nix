@@ -17,6 +17,13 @@ rec {
     locale = "en_US.UTF-8";
   };
 
+  # Shared geographic defaults for solar and weather calculations. The
+  # dashboard's Open-Meteo widget currently carries its own copy.
+  location = {
+    latitude = 48.2082;
+    longitude = 16.3738;
+  };
+
   # Personal information (used for git config, etc.)
   personalInfo = {
     name = "Felix Schausberger";
