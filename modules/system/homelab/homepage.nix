@@ -1178,9 +1178,19 @@ in {
       default = inputs.self.lib.wallpapers.default;
       defaultText = lib.literalExpression "inputs.self.lib.wallpapers.default";
       description = ''
-        Wallpaper shown behind the dashboard, by name in lib/wallpapers.nix.
-        Defaults to the window manager's wallpaper; the *_blurred overview
-        variant is never used for the dashboard.
+        Static fallback wallpaper, by name in lib/wallpapers.nix. Used only
+        when backgroundWallpaperDir is null; the *_blurred overview variant is
+        never used for the dashboard.
+      '';
+    };
+    backgroundWallpaperDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/per/mnt/data/media/pictures/wallpapers";
+      description = ''
+        Directory containing current.jpg, the live wallpaper published by the
+        condition-aware selector (wallpapers.dynamic.publish). When set, the
+        dashboard follows that file instead of the static backgroundWallpaper.
       '';
     };
   };
@@ -1349,13 +1359,16 @@ in {
         disableIndexing = true;
         # The version/update footer is noise on a private dashboard.
         hideVersion = true;
-        # Wallpaper served by the caddy proxy (the module's config directory is
-        # read-only, so the file ships from modules/home/wallpapers instead).
-        # backgroundFile is the crisp variant of backgroundWallpaper; opacity
-        # blends the image towards the theme colour so the light card text
-        # stays legible.
+        # Wallpaper served by the caddy proxy. With backgroundWallpaperDir set,
+        # the selector publishes current.jpg there on every change; otherwise
+        # the static file from modules/home/wallpapers is used. Opacity blends
+        # the image towards the theme colour so the light card text stays
+        # legible.
         background = {
-          image = "https://${hl.caddyProxy.tailnetDomain}/bg/${backgroundFile}";
+          image =
+            if cfg.backgroundWallpaperDir != null
+            then "https://${hl.caddyProxy.tailnetDomain}/bg/current.jpg"
+            else "https://${hl.caddyProxy.tailnetDomain}/bg/${backgroundFile}";
           opacity = 60;
         };
         target = "_blank";

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import io
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from support import touch
 from wallpaper_conditions.apply import (
@@ -13,6 +15,7 @@ from wallpaper_conditions.apply import (
     backdrop_command,
     blurred_for,
     crisp_command,
+    publish_current,
 )
 from wallpaper_conditions.model import Collection
 from wallpaper_conditions.resolve import Match, Resolution
@@ -117,6 +120,37 @@ class BlurTests(unittest.TestCase):
         self.assertFalse(result.applied)
         self.assertIn("awww img", output.getvalue())
         self.assertFalse(self.cache.exists())
+
+
+class PublishTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.base = Path(self.temporary.name)
+
+    def test_publish_writes_a_jpeg_copy(self) -> None:
+        source = touch(self.base / "wallpapers" / "night" / "source.png")
+        target = self.base / "wallpapers" / "current.jpg"
+
+        def fake_run(command: list[str]) -> subprocess.CompletedProcess[str]:
+            Path(command[-1]).write_bytes(b"\xff\xd8\xff")
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with patch("wallpaper_conditions.apply._run", side_effect=fake_run):
+            self.assertTrue(publish_current(source, target))
+        self.assertEqual(target.read_bytes(), b"\xff\xd8\xff")
+        self.assertFalse(target.with_name("current.tmp.jpg").exists())
+
+    def test_publish_failure_keeps_previous_target(self) -> None:
+        source = touch(self.base / "wallpapers" / "night" / "source.png")
+        target = touch(self.base / "wallpapers" / "current.jpg")
+        target.write_bytes(b"old")
+        with patch(
+            "wallpaper_conditions.apply._run",
+            return_value=subprocess.CompletedProcess([], 1, "", "boom"),
+        ):
+            self.assertFalse(publish_current(source, target))
+        self.assertEqual(target.read_bytes(), b"old")
 
 
 if __name__ == "__main__":

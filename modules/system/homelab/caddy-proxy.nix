@@ -73,6 +73,20 @@
       file_server
     }
   '';
+
+  # Dynamic route for the selector-published image. The exact path handler is
+  # declared before the static /bg* handler; Caddy's handle blocks are
+  # mutually exclusive, so current.jpg is served from the live directory
+  # instead of the store copy. no-store makes the browser refetch on reload
+  # rather than reuse the previous wallpaper.
+  mkDynamicWallpaperRoute = ''
+    handle /bg/current.jpg {
+      root * ${hl.homepage.backgroundWallpaperDir}
+      rewrite * /current.jpg
+      header Cache-Control "no-store"
+      file_server
+    }
+  '';
 in {
   options.modules.system.homelab.caddyProxy = {
     enable = lib.mkEnableOption "Caddy reverse proxy for Tailscale-accessible homelab services";
@@ -193,6 +207,7 @@ in {
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
           + lib.optionalString cfg.calibreWeb (mkScriptNameRoute "books" hl.calibreWeb.port)
+          + lib.optionalString (hl.homepage.enable && hl.homepage.backgroundWallpaperDir != null) mkDynamicWallpaperRoute
           + lib.optionalString hl.homepage.enable mkWallpaperRoute
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.

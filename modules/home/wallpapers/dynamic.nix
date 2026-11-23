@@ -26,6 +26,7 @@
     weather = cfg.weather.enable;
     inherit (cfg) order;
     inherit (cfg) collections;
+    inherit (cfg) publish;
     fallback = {
       file = "${config.wallpapers.wallpaperPath}/${config.wallpapers.available.${config.wallpapers.defaultWallpaper}}";
       blurred = "${config.wallpapers.wallpaperPath}/${config.wallpapers.availableBlurred.${config.wallpapers.defaultWallpaper}}";
@@ -54,6 +55,19 @@ in {
         every timer run, so adding images to an existing folder needs no
         rebuild. Absolute paths only; a missing root is reported by
         `wallpaper-conditions doctor` and falls back to the default wallpaper.
+      '';
+    };
+
+    publish = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default =
+        if cfg.roots == []
+        then null
+        else "${builtins.head cfg.roots}/current.jpg";
+      description = ''
+        Stable JPEG copy of the selected crisp wallpaper, for consumers outside
+        the session such as the homepage dashboard. Defaults to current.jpg in
+        the first root; set to null to disable publishing.
       '';
     };
 
@@ -177,6 +191,20 @@ in {
       wallpaper-status = "wallpaper-conditions status";
       wallpaper-next = "wallpaper-conditions next";
     };
+
+    # The homepage and any other out-of-session consumer needs a stable file
+    # before the first niri session runs. Seed it with the Nix default; the
+    # selector overwrites the same path after the first apply. The zz- prefix
+    # runs after writeBoundary or any earlier home.file activation.
+    home.activation.zz-wallpaper-current = lib.optionalString (cfg.publish != null) ''
+      publish="${cfg.publish}"
+      fallback="${config.wallpapers.wallpaperPath}/${config.wallpapers.available.${config.wallpapers.defaultWallpaper}}"
+      if [ ! -e "$publish" ] && [ -f "$fallback" ]; then
+        mkdir -p "$(dirname "$publish")"
+        cp "$fallback" "$publish"
+        chmod 0644 "$publish"
+      fi
+    '';
 
     # Timer-driven run. The session-start unit below forces the selection even
     # when the previous session left the same image in the state file, because

@@ -15,6 +15,7 @@ def write_manifest(
     order: list[str] | None = None,
     fallback_file: Path | None = None,
     fallback_blurred: Path | None = None,
+    publish: Path | None = None,
 ) -> Path:
     payload = {
         "roots": [str(root) for root in roots],
@@ -28,6 +29,8 @@ def write_manifest(
             "blurred": str(fallback_blurred or (path.parent / "fallback_blurred.jpg")),
         },
     }
+    if publish is not None:
+        payload["publish"] = str(publish)
     path.write_text(json.dumps(payload), encoding="utf-8")
     return path
 

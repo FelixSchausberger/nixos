@@ -21,6 +21,7 @@ class CliTests(unittest.TestCase):
         self.base = Path(self.temporary.name)
         self.root = self.base / "wallpapers"
         self.cache = self.base / "cache"
+        self.publish = self.base / "current.jpg"
         self.fallback = touch(self.base / "fallback.jpg")
         self.fallback_blurred = touch(self.base / "fallback_blurred.jpg")
         touch(self.root / "night" / "one.jpg")
@@ -35,6 +36,7 @@ class CliTests(unittest.TestCase):
             roots=[self.root],
             fallback_file=self.fallback,
             fallback_blurred=self.fallback_blurred,
+            publish=self.publish,
         )
 
     def run_cli(self, *args: str) -> str:
@@ -72,6 +74,7 @@ class CliTests(unittest.TestCase):
             roots=[self.root],
             fallback_file=self.fallback,
             fallback_blurred=self.fallback_blurred,
+            publish=self.publish,
         )
         output = io.StringIO()
         with redirect_stdout(output):
@@ -103,6 +106,7 @@ class CliTests(unittest.TestCase):
         output = self.run_cli("--now", NIGHT, "apply", "--dry-run")
         self.assertIn("awww img", output)
         self.assertFalse((self.cache / "state.json").exists())
+        self.assertFalse(self.publish.exists())
 
     def test_version(self) -> None:
         self.assertEqual(self.run_cli("version").strip(), "0.1.0")

@@ -73,6 +73,24 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ManifestError, "permutation"):
             load_manifest(self.manifest_path)
 
+    def test_parses_publish_path(self) -> None:
+        publish = self.base / "current.jpg"
+        write_manifest(
+            self.manifest_path,
+            {"night": {"phase": ["night"]}},
+            roots=[self.root],
+            publish=publish,
+        )
+        self.assertEqual(load_manifest(self.manifest_path).publish, publish)
+
+    def test_publish_is_optional(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {"night": {"phase": ["night"]}},
+            roots=[self.root],
+        )
+        self.assertIsNone(load_manifest(self.manifest_path).publish)
+
     def test_rejects_missing_file(self) -> None:
         with self.assertRaisesRegex(ManifestError, "cannot read manifest"):
             load_manifest(self.base / "absent.json")

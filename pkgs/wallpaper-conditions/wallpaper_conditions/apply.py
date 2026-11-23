@@ -124,6 +124,44 @@ def blurred_for(
     return target
 
 
+def publish_current(source: Path, target: Path) -> bool:
+    """Write a stable JPEG copy for consumers such as the homepage."""
+
+    try:
+        source.stat()
+    except OSError as exc:
+        LOGGER.warning("cannot read wallpaper %s: %s", source, exc)
+        return False
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(f"{target.stem}.tmp.jpg")
+    command = [
+        "magick",
+        str(source),
+        "-auto-orient",
+        "-resize",
+        "3840x2160>",
+        "-strip",
+        "-quality",
+        "92",
+        str(temporary),
+    ]
+    try:
+        result = _run(command)
+    except OSError as exc:
+        LOGGER.warning("cannot execute ImageMagick: %s", exc)
+        return False
+    if result.returncode != 0:
+        LOGGER.warning("publish failed for %s: %s", source, result.stderr.strip())
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+        return False
+    os.replace(temporary, target)
+    return True
+
+
 def apply(
     resolution: Resolution,
     chosen: Path,
