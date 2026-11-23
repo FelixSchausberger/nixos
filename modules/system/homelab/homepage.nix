@@ -1228,11 +1228,13 @@ in {
         User = lib.mkForce "homepage-dashboard";
         Group = lib.mkForce "homepage-dashboard";
       };
-      # Homepage reads services.yaml once at startup. environment.etc only
-      # rewrites the file, so without this a dashboard edit stays invisible
-      # until the next reboot.
+      # Homepage reads both YAML files once at startup. environment.etc only
+      # rewrites them, so without these triggers a dashboard edit stays
+      # invisible until the next restart; settings.yaml carries the
+      # background URL and needs the same watch as services.yaml.
       restartTriggers = [
         config.environment.etc."homepage-dashboard/services.yaml".source
+        config.environment.etc."homepage-dashboard/settings.yaml".source
       ];
     };
 
