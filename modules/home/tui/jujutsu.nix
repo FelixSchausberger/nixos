@@ -9,7 +9,9 @@
 
   cfg = config.tui.jujutsu;
 
-  ocws = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.ocws;
+  # The configured wrapper from the ocws project module: the fleet values
+  # (base, prefix, trunk) are baked in, and runtime OCWS_* still override.
+  ocws = config.programs.ocws.finalPackage;
   jjfx = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jjfx;
   # Single-line badge the starship prompt renders; written by the ocws-gc
   # timer below so the prompt never pays for the jj classification itself.
@@ -111,6 +113,7 @@ in {
 
   imports = [
     ../shells/fish/functions/jj.nix
+    inputs.ocws.homeManagerModules.default
   ];
 
   config = {
@@ -173,6 +176,19 @@ in {
           "immutable_heads()" = "builtin_immutable_heads() | only_if(not_default(), other_workspaces())";
         };
       };
+    };
+
+    # The project module installs the configured binary and documents the
+    # OCWS_* contract. Its own gc timer stays off: this module owns ocws-gc
+    # below because the unit also writes the prompt badge and runs the digest.
+    programs.ocws = {
+      enable = true;
+      base = "${config.home.homeDirectory}/.local/share/ocws";
+      # Historical fleet prefix: existing workspaces live at
+      # <base>/nixos-ws-<task> and must not be migrated.
+      workspacePrefix = "nixos-ws-";
+      trunk = "main@origin";
+      gc.enable = false;
     };
 
     # Reclaim finished jj workspaces daily and refresh the prompt badge. The

@@ -14,7 +14,6 @@ in {
     jjTools.jjwork
     jjTools.jjpush
     jjTools.jjtest
-    jjTools.ocws
   ];
 
   programs.fish.functions = {
@@ -40,14 +39,6 @@ in {
       body = ''
         # Run the shell-agnostic wrapper so automation and non-fish shells behave the same.
         command jjtest $argv
-      '';
-    };
-
-    ocws = {
-      description = "Create a jj workspace and run opencode in it (isolated parallel agent)";
-      body = ''
-        # Run the shell-agnostic wrapper so automation and non-fish shells behave the same.
-        command ocws $argv
       '';
     };
 
