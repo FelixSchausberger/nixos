@@ -704,7 +704,7 @@
           # The tracker is the source of truth; the card carries the counts for
           # the running closure. Per-package detail lives in the scan's JSON
           # report under /var/lib/nixpkgs-vulnerability-scan/vulnerabilities.json.
-          href = "https://tracker.security.nixos.org/issues";
+          href = "https://tracker.security.nixos.org/issues?state=open";
           description = "Running closure vs. Nixpkgs security tracker";
           widget = {
             type = "prometheusmetric";
