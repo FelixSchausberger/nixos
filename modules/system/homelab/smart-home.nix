@@ -178,6 +178,15 @@ in {
         extraComponents = ["mqtt" "shelly" "octoprint" "webdav" "music_assistant" "smlight" "apple_tv"];
         config = {
           default_config = {};
+          # The UI editors write automations, scripts and scenes to the config
+          # directory, but HA only loads them through an explicit include.
+          # Without these keys the files exist on disk and never become
+          # entities: the Honolulu scene sat in scenes.yaml unloaded from
+          # October until 2026-11-23. Absolute paths because configuration.yaml
+          # is a Nix store symlink, so a relative include resolves in the store.
+          automation = "!include /var/lib/hass/automations.yaml";
+          script = "!include /var/lib/hass/scripts.yaml";
+          scene = "!include /var/lib/hass/scenes.yaml";
           # The WebDAV backup location writes to Nextcloud on dpool, which
           # sanoid snapshots and syncoid replicates to the bpool backup disk.
           # No http section: HA 2026.10 migrated the HTTP configuration to
@@ -222,11 +231,14 @@ in {
         };
       };
 
-      # Zigbee2MQTT keeps its network cache and entity state as plain JSON
-      # files, so a copy is the whole backup; the per dataset's sanoid
+      # Zigbee2MQTT 2.x keeps the network cache and entity state in
+      # database.db/state.json, but per-device friendly names and member lists
+      # live only in devices.yaml and groups.yaml: without them a restore
+      # renames every device and loses the four room groups, and the archive
+      # copy at /per/mnt/backup inherits the gap. The per dataset's sanoid
       # snapshots are the consistent point-in-time layer underneath.
       zigbee2mqtt-db-backup = lib.mkIf (cfg.coordinatorUrl != null) {
-        description = "Copy the Zigbee2MQTT database, state and radio backup";
+        description = "Copy the Zigbee2MQTT database, state, radio backup and device/group references";
         after = ["zigbee2mqtt.service"];
         serviceConfig = {
           Type = "oneshot";
@@ -238,6 +250,8 @@ in {
           install -m 0600 /per/var/lib/zigbee2mqtt/database.db /per/var/backup/zigbee2mqtt/database.db
           install -m 0600 /per/var/lib/zigbee2mqtt/state.json /per/var/backup/zigbee2mqtt/state.json
           install -m 0600 /per/var/lib/zigbee2mqtt/coordinator_backup.json /per/var/backup/zigbee2mqtt/coordinator_backup.json
+          install -m 0600 /per/var/lib/zigbee2mqtt/devices.yaml /per/var/backup/zigbee2mqtt/devices.yaml
+          install -m 0600 /per/var/lib/zigbee2mqtt/groups.yaml /per/var/backup/zigbee2mqtt/groups.yaml
         '';
       };
 
@@ -299,6 +313,14 @@ in {
       [
         "d /per/var/lib/hass 0700 hass hass -"
         "d /per/var/lib/mosquitto 0700 mosquitto mosquitto -"
+        # The includes in configuration.yaml fail config validation when the
+        # file is missing, and a rebuilt state directory has none of them.
+        # `f` writes the argument only while the file is absent, so anything
+        # the UI saved survives; `[]` matches HA's own automations template,
+        # while scene/script accept an empty file.
+        "f /per/var/lib/hass/automations.yaml 0600 hass hass - []"
+        "f /per/var/lib/hass/scenes.yaml 0600 hass hass -"
+        "f /per/var/lib/hass/scripts.yaml 0600 hass hass -"
       ]
       ++ lib.optionals (cfg.coordinatorUrl != null) [
         "d /per/var/lib/zigbee2mqtt 0700 zigbee2mqtt zigbee2mqtt -"

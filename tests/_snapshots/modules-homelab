@@ -74,6 +74,11 @@
   smart_home_coordinator_url = "tcp://192.168.178.74:6638";
   smart_home_enabled = true;
   smart_home_ha_port = 8123;
+  smart_home_ha_yaml_includes = {
+    automation = "!include /var/lib/hass/automations.yaml";
+    scene = "!include /var/lib/hass/scenes.yaml";
+    script = "!include /var/lib/hass/scripts.yaml";
+  };
   smart_home_http_yaml_absent = true;
   smart_home_lan_clients = [
     "192.168.178.72"
