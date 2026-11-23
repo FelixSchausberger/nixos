@@ -17,12 +17,13 @@ buildGoModule rec {
 
   vendorHash = "sha256-PZo3pKNXDIHvR2KNTaAL+pFi1LNMxGF8/f/dTdye5gk=";
 
-  ldflags = [
-    "-s"
-    "-w"
-  ];
+  # Upstream stamps its release version into main.version; the stripping
+  # (-s -w) the Makefile also passes happens in the default fixup phase.
+  ldflags = ["-X main.version=${version}"];
 
-  doCheck = false;
+  # Upstream's test suite is pure Go (no TTY or keyring); buildGoModule runs
+  # it with `go test ./...` in the sandbox.
+  doCheck = true;
 
   # Upstream publishes tagged releases; the update is a version-and-hash bump.
   passthru.updateScript = nix-update-script {extraArgs = ["--flake"];};
