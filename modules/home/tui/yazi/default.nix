@@ -86,8 +86,15 @@ in {
 
       preview = {
         tab_size = 2;
-        max_width = 600;
-        max_height = 900;
+        # Windows terminals cannot report their pixel size over SSH, so Yazi
+        # uses only these caps; 600 px was upscaled into a visibly soft
+        # preview. 1920 covers a 4K terminal at the 3/8 preview ratio.
+        max_width = 1920;
+        max_height = 1080;
+        # Highest-quality downscale; the 4K sources are cached after the first
+        # preview, so the extra CPU is paid once per image.
+        image_filter = "lanczos3";
+        image_quality = 90;
       };
     };
   };
