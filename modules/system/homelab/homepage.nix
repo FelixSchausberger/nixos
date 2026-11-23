@@ -650,7 +650,33 @@
       }
     ];
   # Config Health and Nix Telemetry describe the configuration, so they sit in
-  # the Nix band next to the repository card.
+  # the Nix band next to the repository card. The vulnerability card joins them
+  # only when the scan service is enabled: its metrics come from the running
+  # closure, not from the configuration.
+  vulnerabilityScanEnabled =
+    (config.services.nixpkgsVulnerabilityScan.enable or false) && hl.monitoring.enable;
+  vulnerabilityMetrics = [
+    {
+      label = "Critical";
+      query = ''nixpkgs_vulnerabilities_cves{severity="critical",host="${config.networking.hostName}"}'';
+      format.type = "number";
+    }
+    {
+      label = "High";
+      query = ''nixpkgs_vulnerabilities_cves{severity="high",host="${config.networking.hostName}"}'';
+      format.type = "number";
+    }
+    {
+      label = "Direct pkgs";
+      query = ''nixpkgs_vulnerabilities_direct_packages{host="${config.networking.hostName}"}'';
+      format.type = "number";
+    }
+    {
+      label = "Scanned";
+      query = ''time() - nixpkgs_vulnerabilities_last_success_timestamp_seconds{host="${config.networking.hostName}"}'';
+      format.type = "duration";
+    }
+  ];
   nixServices =
     codeServices
     ++ lib.optionals hl.monitoring.enable [
@@ -670,7 +696,29 @@
           href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
         };
       }
+    ]
+    ++ lib.optionals vulnerabilityScanEnabled [
+      {
+        "Vulnerabilities" = {
+          icon = "mdi-shield-alert";
+          # The tracker is the source of truth; the card carries the counts for
+          # the running closure. Per-package detail lives in the scan's JSON
+          # report under /var/lib/nixpkgs-vulnerability-scan/vulnerabilities.json.
+          href = "https://tracker.security.nixos.org/issues";
+          description = "Running closure vs. Nixpkgs security tracker";
+          widget = {
+            type = "prometheusmetric";
+            url = local hl.monitoring.prometheusPort;
+            refreshInterval = 300000;
+            metrics = vulnerabilityMetrics;
+          };
+        };
+      }
     ];
+  nixBandColumns =
+    if nixServices == []
+    then 1
+    else builtins.length nixServices;
   systemServices =
     lib.optionals (cloudServices != []) [{"Cloud" = cloudServices;}]
     ++ lib.optionals (terminalServices != []) [{"Terminal" = terminalServices;}]
@@ -1077,7 +1125,7 @@
       };
       Nix = {
         style = "row";
-        columns = 3;
+        columns = nixBandColumns;
       };
       Health = {
         style = "row";

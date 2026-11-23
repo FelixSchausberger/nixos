@@ -278,6 +278,20 @@
         "The vitals health score is {{ $value | humanize }} (below 60); issues are accumulating across units and resources"
         ''vitals_health_score{type="raw"} < 60'')
     ]
+    ++ lib.optionals (config.services.nixpkgsVulnerabilityScan.enable or false) [
+      # A finding is a point-in-time fact, not a log line: the scan rewrites the
+      # series daily, so the hold only suppresses a scan that overlaps a deploy.
+      # The priorities are ntfy's names, not CVSS levels.
+      (mkRuleFor "1h" "NixpkgsVulnerability" "high" "Known CVEs affect the running system"
+        "{{ $value }} {{ $labels.severity }} CVE(s) affect direct packages in the running closure"
+        ''nixpkgs_vulnerabilities_direct_cves{severity=~"critical|high"} > 0'')
+      (mkRuleFor "1h" "NixpkgsVulnerabilityScanStale" "default" "The vulnerability scan is stale"
+        "No successful scan in {{ $value | humanizeDuration }}; the homepage card is showing old data"
+        ''time() - nixpkgs_vulnerabilities_last_success_timestamp_seconds > 8 * 86400'')
+      (mkRuleFor "1h" "NixpkgsVulnerabilityTrackerStale" "default" "The vulnerability tracker index is stale"
+        "The tracker index is {{ $value | humanizeDuration }} old; the weekly refresh has been failing"
+        ''nixpkgs_vulnerabilities_tracker_age_seconds > 14 * 86400'')
+    ]
     ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
       (mkRule "PostgresDown" "high" "PostgreSQL exporter is unreachable"
         "PostgreSQL exporter is unreachable"
