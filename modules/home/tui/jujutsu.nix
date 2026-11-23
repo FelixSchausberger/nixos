@@ -196,9 +196,10 @@ in {
     # checkout and no-ops on a host that lacks it. `rookery gc` fetches, keeps
     # unpushed/in-flight/conflicted workspaces, any workspace with a live
     # process and any parked one, and reclaims empty/merged ones past the age
-    # gate.
+    # gate. The explicit cleanup marks from /done are swept afterwards, with the
+    # same safety checks.
     systemd.user.services.ocws-gc = {
-      Unit.Description = "Reclaim finished jj workspaces and refresh the Rookery status badge";
+      Unit.Description = "Reclaim finished jj workspaces, sweep cleanup marks, and refresh the Rookery status badge";
       Service = {
         Type = "oneshot";
         ExecStart = toString (pkgs.writeShellScript "ocws-gc" ''
@@ -208,6 +209,10 @@ in {
           [ -d "$repo" ] || exit 0
           cd "$repo"
           ${rookery}/bin/rookery gc
+          # The explicit cleanup marks are swept after gc's fetch, so absorption
+          # is judged against current origin. A skip keeps the workspace and is
+          # reported in the unit log.
+          ${rookery}/bin/rookery clean --apply
           read -r total empty merged unpushed inflight conflict stale waitold < <(${rookery}/bin/rookery ls --counts)
           waitold=''${waitold:-0}
           attention=$((unpushed + conflict))

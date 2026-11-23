@@ -1746,16 +1746,16 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1795445604,
-        "narHash": "sha256-X71qsat5Uk+k4e92cY64KJ21UKhxITd1XtLsvRO/CDE=",
+        "lastModified": 1795451141,
+        "narHash": "sha256-eR0r6WdHfNPwQ8PAS2ZIYq8LVsbCRrayR7PjnDzHvb0=",
         "owner": "FelixSchausberger",
         "repo": "rookery",
-        "rev": "248d53d7b4577d12a5375290a66bdb91ff2609be",
+        "rev": "666f579aaa8c66bf31e2981ed1913ee09b7728df",
         "type": "github"
       },
       "original": {
         "owner": "FelixSchausberger",
-        "ref": "v0.2.0",
+        "ref": "v0.3.0",
         "repo": "rookery",
         "type": "github"
       }
