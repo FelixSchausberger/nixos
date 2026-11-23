@@ -14,6 +14,7 @@
   zellijM920qGuid = "{ddea1859-4521-504c-81d0-0196754902b0}";
   # uuid3 over a stable namespace label; the WT profile registry matches on it.
   herdrM920qGuid = "{0188e581-cf5a-31cb-b6a2-07b288087b0f}";
+  m920qPlainGuid = "{e562bbda-5dbc-3276-9a8c-f05a1d604d03}";
 
   # wsl.exe sometimes fails before fish starts: it reports "Error code:
   # Wsl/Service/0x8007274c" (timeout on the WSL service socket) and exits -1,
@@ -45,6 +46,13 @@
     + "{ Write-Host '[wsl] session start failed, retrying'; "
     + "& wsl.exe -d NixOS -- fish -c m920q-herdr }; "
     + "exit $LASTEXITCODE\"";
+
+  # Native Windows OpenSSH rather than the WSL/mosh path: the remote command
+  # runs bash directly, so fish's zellij auto-attach never fires and the
+  # session stays a plain SSH shell. The Windows `m920q` SSH alias supplies
+  # the host, key and LAN/tailnet routing; no extra .ssh/config entry is
+  # required.
+  m920qPlainCommandline = "ssh.exe -t m920q \"exec /run/current-system/sw/bin/bash --noprofile --norc -i\"";
 in {
   options.tui.windows-terminal = {
     enable =
@@ -203,6 +211,15 @@ in {
             hidden = false;
             icon = builtins.fromJSON ''"\ue701"'';
             name = "m920q herdr";
+          }
+          # Native Windows OpenSSH into m920q running a plain bash: no fish,
+          # no Zellij, no prompt framework. Uses the existing Windows `m920q`
+          # SSH alias.
+          {
+            commandline = m920qPlainCommandline;
+            guid = m920qPlainGuid;
+            hidden = false;
+            name = "m920q plain";
           }
         ];
       };
