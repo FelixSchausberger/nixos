@@ -101,4 +101,11 @@ in {
   # precedence in hosts/shared.nix depends on.
   trippy_wrapper_program = config.security.wrappers.trip.program or null;
   trippy_wrapper_capabilities = config.security.wrappers.trip.capabilities or null;
+
+  # Test: the Mac's AirPlay client reports uptime instead of wall-clock time
+  # in its timestamps; with UxPlay's default timestamp sync the first mirror
+  # after the client has been idle stalls on its first frame. The gui unit is
+  # the one m920q runs.
+  uxplay_vsync_disabled =
+    builtins.match ".*-vsync no.*" (toString config.systemd.user.services.uxplay.serviceConfig.ExecStart) != null;
 }

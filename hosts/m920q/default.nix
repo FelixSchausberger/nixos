@@ -669,6 +669,13 @@ in {
   modules.system.airplayReceiver = {
     enable = true;
     mode = "gui";
+    # The MacBook's AirPlay client reports its own uptime in the audio
+    # timestamps (journal 2026-11-18: ntp_time 1795018220 against a pipeline
+    # base_time of 1795036918, a 5 h 12 min gap). With timestamp sync enabled
+    # the first mirror after the client has been idle stalls on its first
+    # frame and only a reconnect recovers it. -vsync no is UxPlay's
+    # documented mode for a Mac second monitor; it does not drop late frames.
+    timestampSync = false;
   };
 
   hardware.steam-hardware.enable = true;
