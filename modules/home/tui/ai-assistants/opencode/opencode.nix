@@ -342,6 +342,15 @@ in {
       "${configDir}/cli.json".text = builtins.toJSON cliConfig;
       "${configDir}/AGENTS.md".text = shared.combinedRules;
       "${configDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
+      # Marks the calling workspace for the cleanup sweep. The shell block runs
+      # in the session's directory, so the command resolves the workspace from
+      # the cwd and refuses the primary checkout.
+      "${configDir}/commands/done.md".text = ''
+        ---
+        description: Mark this workspace to clean up
+        ---
+        !`rookery clean --current`
+      '';
       # TokenScope reads this from the canonical $XDG_CONFIG_HOME/opencode
       # rather than the plugin host, so declaring it here keeps the fleet's
       # flags explicit instead of inheriting the plugin's defaults. The schema

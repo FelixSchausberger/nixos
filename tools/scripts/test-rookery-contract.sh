@@ -81,6 +81,22 @@ rookery go alpha >/dev/null
 # gc keeps unpushed work.
 rookery gc 2>&1 | grep -Fq "keeping 'alpha'" || fail "gc did not keep alpha"
 
+# Clean marks: /done marks the calling workspace, and the daily unit sweeps the
+# marks after gc. The sweep removes finished work and keeps unpushed work.
+jj workspace add "$ROOKERY_BASE/nixos-ws-clean" --name clean -r main@origin -m "clean: started" >/dev/null 2>&1
+(
+	cd "$ROOKERY_BASE/nixos-ws-clean"
+	rookery clean --current >/dev/null
+)
+[ -f "$ROOKERY_BASE/clean.clean" ] || fail "clean --current did not write the marker"
+rookery clean alpha >/dev/null
+sweep=$(rookery clean --apply)
+printf '%s\n' "$sweep" | grep -Fq "keeping 'alpha' (unpushed)" || fail "clean --apply did not keep unpushed work: $sweep"
+printf '%s\n' "$sweep" | grep -Fq "removed 'clean'" || fail "clean --apply did not remove the marked workspace: $sweep"
+[ -d "$ROOKERY_BASE/nixos-ws-clean" ] && fail "clean --apply kept a finished marked workspace"
+[ -f "$ROOKERY_BASE/clean.clean" ] && fail "the clean marker survived removal"
+rookery clean --unmark alpha >/dev/null
+
 # seat --json: the lead/worker protocol reads these fields by name. A fake
 # herdr reports the calling session on one pane; the workspace lookup uses the
 # fixture's registered alpha workspace.
