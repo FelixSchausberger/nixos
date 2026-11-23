@@ -44,6 +44,12 @@ jj config set --repo user.email "ocws@example.invalid" >/dev/null 2>&1
 git remote add origin "$work/origin"
 jj git fetch >/dev/null 2>&1
 jj bookmark track main@origin >/dev/null 2>&1
+
+# A fresh repository has only the primary workspace; the badge and digest
+# still call counts, so both shapes must work before any seat exists.
+[ "$(ocws ls --counts --refresh)" = "0 0 0 0 0 0 0 0" ] || fail "fresh repo counts"
+ocws ls --board --refresh | grep -Fq "ocws board -" || fail "fresh repo board"
+
 jj workspace add "$OCWS_BASE/nixos-ws-alpha" --name alpha -r main@origin -m "alpha: started" >/dev/null 2>&1
 jj workspace add "$OCWS_BASE/nixos-ws-beta" --name beta -r main@origin -m "beta: started" >/dev/null 2>&1
 (
