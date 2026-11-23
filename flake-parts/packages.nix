@@ -6,7 +6,7 @@
     jj-slug = pkgs.callPackage ../pkgs/jj-slug {};
 
     # jj workspace workflow commands, split out of the home-manager module so
-    # each tool is a reviewable derivation. ocws/jjpush depend on jj-slug.
+    # each tool is a reviewable derivation. jjpush depends on jj-slug.
     jjTools = pkgs.callPackage ../pkgs/jj-tools {inherit jj-slug;};
 
     makeISO = modules:
@@ -47,8 +47,11 @@
         # Bookmark slug derivation used by jjpush
         inherit jj-slug;
 
-        # jj workspace workflow commands (jj-tidy, jjwork, jjpush, jjtest, ocws)
-        inherit (jjTools) jj-tidy jjwork jjpush jjtest ocws;
+        # jj workspace workflow commands (jj-tidy, jjwork, jjpush, jjtest)
+        inherit (jjTools) jj-tidy jjwork jjpush jjtest;
+
+        # Workspace seat manager, extracted to its own project
+        ocws = inputs.ocws.packages.${pkgs.stdenv.hostPlatform.system}.ocws;
 
         # TUI cockpit for jj workspaces; pinned to the jj 0.47.1 PR until it
         # merges and a release contains the bump.

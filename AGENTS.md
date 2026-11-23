@@ -48,6 +48,11 @@ configs), `home/profiles/` (Home Manager profiles), `pkgs/` (custom packages),
 `apps/` (flake apps), `tests/` (namaka snapshots), `tests-vm/` (VM tests), and
 `tools/` (utilities).
 
+`ocws` (the jj workspace seat manager) is consumed from the `ocws` flake input
+and configured in `modules/home/tui/jujutsu.nix`. Its classifier test lives in
+the project; this repo pins the consumer shapes in the
+`ocws-consumer-contract` check (`flake-parts/dev.nix`).
+
 ## Documentation Policy
 
 Every fact has one authoritative source: project usage in `README.md`, AI

@@ -97,22 +97,24 @@
           touch $out
         '';
 
-        # The board's classification, cache key and freshness rules against a
-        # fixture repository: cold/warm/serial/parallel output equality,
-        # invalidation on describe, push, fetch and workspace add, and live,
-        # session and wait state that must never come from the cache.
-        ocws-board =
-          pkgs.runCommand "ocws-board-test" {
+        # The ocws project owns the full classifier test. This repo reads the
+        # binary in the badge, the digest, the keybindings and the lead/worker
+        # protocol, so its shapes are pinned here: the eight-field counts
+        # order, the board headings, the wait marker round trip, gc's refusal
+        # to reclaim unpushed work, and every `seat --json` field.
+        ocws-consumer-contract =
+          pkgs.runCommand "ocws-consumer-contract" {
             nativeBuildInputs = [
               self.packages.${pkgs.stdenv.hostPlatform.system}.ocws
               pkgs.jujutsu
               pkgs.git
               pkgs.sqlite
+              pkgs.jq
             ];
           } ''
-            cp ${../tools/scripts/test-ocws-board.sh} test-ocws-board.sh
-            chmod +x test-ocws-board.sh
-            bash test-ocws-board.sh
+            cp ${../tools/scripts/test-ocws-contract.sh} test-ocws-contract.sh
+            chmod +x test-ocws-contract.sh
+            bash test-ocws-contract.sh
             touch $out
           '';
       };
