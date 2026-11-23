@@ -20,7 +20,7 @@ class LibraryTests(unittest.TestCase):
             {
                 "night": {"phase": ["night"]},
                 "rain": {"weather": ["rain"]},
-                "empty": {"season": ["winter"]},
+                "empty": {},
             },
             roots=[self.root],
         )

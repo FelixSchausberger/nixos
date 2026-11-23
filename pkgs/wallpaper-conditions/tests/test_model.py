@@ -25,7 +25,7 @@ class ManifestTests(unittest.TestCase):
         manifest = load_manifest(self.manifest_path)
         self.assertEqual(manifest.roots, (self.root,))
         self.assertFalse(manifest.weather_enabled)
-        self.assertEqual(manifest.order, ("phase", "weather", "season"))
+        self.assertEqual(manifest.order, ("phase", "weather"))
         self.assertEqual(len(manifest.collections), 1)
         self.assertEqual(manifest.collections[0].phase, frozenset({"night"}))
         self.assertEqual(manifest.collections[0].specificity, 1)
@@ -40,6 +40,15 @@ class ManifestTests(unittest.TestCase):
         write_manifest(
             self.manifest_path,
             {"night": {"phase": ["night"], "moon": ["full"]}},
+            roots=[self.root],
+        )
+        with self.assertRaisesRegex(ManifestError, "unknown keys"):
+            load_manifest(self.manifest_path)
+
+    def test_rejects_season_predicate(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {"winter": {"season": ["winter"]}},
             roots=[self.root],
         )
         with self.assertRaisesRegex(ManifestError, "unknown keys"):

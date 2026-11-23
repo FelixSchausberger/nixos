@@ -21,7 +21,7 @@ def write_manifest(
         "latitude": 48.2082,
         "longitude": 16.3738,
         "weather": weather,
-        "order": order or ["phase", "weather", "season"],
+        "order": order or ["phase", "weather"],
         "collections": collections,
         "fallback": {
             "file": str(fallback_file or (path.parent / "fallback.jpg")),

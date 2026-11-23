@@ -52,7 +52,7 @@ WMO_CATEGORIES: dict[int, str] = {
 # call it more often than the conditions can change.
 REFRESH = timedelta(minutes=5)
 # When the network is down, keep the last observation for this long before
-# falling back to phase and season only.
+# falling back to phase only.
 MAX_AGE = timedelta(hours=6)
 
 

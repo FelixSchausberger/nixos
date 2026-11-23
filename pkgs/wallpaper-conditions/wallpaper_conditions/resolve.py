@@ -22,7 +22,6 @@ class Match:
 class Resolution:
     phase: str
     weather: str | None
-    season: str
     matches: tuple[Match, ...]
     chosen: Match | None
     fallback_file: Path
@@ -60,11 +59,10 @@ def resolve(
     *,
     phase: str,
     weather: str | None,
-    season: str,
 ) -> Resolution:
     matches = []
     for collection in manifest.collections:
-        if not collection.matches(phase=phase, weather=weather, season=season):
+        if not collection.matches(phase=phase, weather=weather):
             continue
         files = library.get(collection.name)
         if not files:
@@ -94,7 +92,6 @@ def resolve(
     return Resolution(
         phase=phase,
         weather=weather,
-        season=season,
         matches=tuple(matches),
         chosen=matches[0] if matches else None,
         fallback_file=manifest.fallback_file,

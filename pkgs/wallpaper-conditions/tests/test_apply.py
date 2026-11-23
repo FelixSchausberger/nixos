@@ -25,7 +25,6 @@ def make_resolution(files: tuple[Path, ...], *, fallback: bool = False) -> Resol
         return Resolution(
             phase="day",
             weather=None,
-            season="winter",
             matches=(),
             chosen=None,
             fallback_file=files[0],
@@ -35,7 +34,6 @@ def make_resolution(files: tuple[Path, ...], *, fallback: bool = False) -> Resol
     return Resolution(
         phase="night",
         weather=None,
-        season="winter",
         matches=(match,),
         chosen=match,
         fallback_file=Path("/fallback.jpg"),
@@ -94,7 +92,6 @@ class BlurTests(unittest.TestCase):
         resolution = Resolution(
             phase="day",
             weather=None,
-            season="winter",
             matches=(),
             chosen=None,
             fallback_file=fallback,
