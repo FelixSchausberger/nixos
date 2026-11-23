@@ -134,6 +134,7 @@ in {
       ../../modules/system/backup.nix
       ../../modules/system/hardware/power-management.nix
       ../../modules/system/media-client.nix
+      ../../modules/system/media-kiosk
       ../../modules/system/airplay-receiver.nix
       inputs.stylix.nixosModules.stylix
       ../../modules/system/stylix-catppuccin.nix
@@ -636,6 +637,13 @@ in {
   };
 
   modules.system.mediaClient.enable = true;
+
+  # Controller-first kiosk inside the on-demand niri session. desktopPower is
+  # passed in so the Moonlight tile reuses the host's WoL + ping + ntfy path.
+  modules.system.mediaKiosk = {
+    enable = true;
+    inherit desktopPower;
+  };
 
   # Bedroom quiet window (00:00-09:00): EPP drop + no turbo keeps the single
   # chassis blower on its slowest curve overnight. Timers below move every

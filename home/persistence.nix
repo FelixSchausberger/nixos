@@ -30,6 +30,15 @@
       ".config/zen/browsers"
       ".config/zen/default"
       ".config/zen/Profile Groups"
+
+      # Kiosk profile: cookies/sessions for the one-time Jellyfin and Immich
+      # logins plus the Cinejoy window. The default profile above is managed
+      # separately; this one carries no pins or session data.
+      ".config/zen/kiosk"
+
+      # Moonlight pairing state, otherwise every reboot needs a new PIN.
+      ".config/Moonlight Game Streaming Project"
+      ".local/share/Moonlight Game Streaming Project"
     ];
 
     # Additional config files for GUI applications
