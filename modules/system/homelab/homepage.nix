@@ -559,6 +559,8 @@
     }
     {
       "Calendar" = {
+        # CSS hook for the weekend colour override in customCSS below.
+        id = "calendar-card";
         icon = "mdi-calendar";
         href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/calendar/dayGridMonth/now";
         description = "Scheduling";
@@ -1370,6 +1372,17 @@ in {
         html, body {
           background: linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #0f172a 100%) !important;
           background-attachment: fixed;
+        }
+
+        /* Weekend day numbers in the Calendar card. monthly.jsx hardcodes
+           text-red-500 and has no weekend colour option, so the override is
+           CSS. The compound selector outranks the plain class for weekend
+           days of the neighbouring month, which carry both classes. */
+        #calendar-card .text-red-500 {
+          color: #f59e0b;
+        }
+        #calendar-card .text-red-500.text-red-500\/40 {
+          color: rgb(245 158 11 / 40%);
         }
       '';
     };
