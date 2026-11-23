@@ -1048,6 +1048,7 @@ in {
       whatsapp.enable = true;
     };
     homepage.enable = true;
+    homepage.backgroundWallpaperDir = "/per/mnt/data/media/pictures/wallpapers";
     smartHome = {
       enable = true;
       # SLZB-MR4U radio 1 (EFR32MG26) serves its serial port over TCP in

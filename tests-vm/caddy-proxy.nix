@@ -174,12 +174,17 @@
             type = lib.types.str;
             default = inputs.self.lib.wallpapers.default;
           };
+          backgroundWallpaperDir = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+          };
         };
       };
     };
 
     config = {
       environment.systemPackages = [pkgs.curl];
+      modules.system.homelab.homepage.backgroundWallpaperDir = "/var/lib/homepage-wallpaper";
 
       # Mock upstreams on real ports from homelab modules
       systemd.services.mock-navidrome = {
@@ -267,5 +272,12 @@
     machine.succeed("curl -s -o /tmp/wallpaper.jpg -H 'Host: m920q.test.local' http://127.0.0.1/bg/solar-system.jpg")
     magic = machine.succeed("od -An -tx1 -N3 /tmp/wallpaper.jpg | tr -d ' \\n'")
     assert magic == "ffd8ff", f"wallpaper route did not serve a JPEG: {magic!r}"
+
+    # 8. Test the dynamic route serves the selector-published current.jpg
+    machine.succeed("mkdir -p /var/lib/homepage-wallpaper")
+    machine.succeed("cp /tmp/wallpaper.jpg /var/lib/homepage-wallpaper/current.jpg")
+    machine.succeed("curl -s -o /tmp/current-wallpaper.jpg -H 'Host: m920q.test.local' http://127.0.0.1/bg/current.jpg")
+    magic = machine.succeed("od -An -tx1 -N3 /tmp/current-wallpaper.jpg | tr -d ' \\n'")
+    assert magic == "ffd8ff", f"dynamic wallpaper route did not serve a JPEG: {magic!r}"
   '';
 }

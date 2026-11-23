@@ -54,6 +54,7 @@ class Manifest:
     collections: tuple[Collection, ...]
     fallback_file: Path
     fallback_blurred: Path | None
+    publish: Path | None = None
 
 
 def _require(condition: bool, message: str) -> None:
@@ -147,6 +148,8 @@ def load_manifest(path: Path) -> Manifest:
     fallback_file = _absolute_path(fallback_raw.get("file"), "fallback.file")
     blurred_raw = fallback_raw.get("blurred")
     fallback_blurred = _absolute_path(blurred_raw, "fallback.blurred") if blurred_raw is not None else None
+    publish_raw = raw.get("publish")
+    publish = _absolute_path(publish_raw, "publish") if publish_raw is not None else None
 
     return Manifest(
         roots=roots,
@@ -157,4 +160,5 @@ def load_manifest(path: Path) -> Manifest:
         collections=tuple(collections),
         fallback_file=fallback_file,
         fallback_blurred=fallback_blurred,
+        publish=publish,
     )

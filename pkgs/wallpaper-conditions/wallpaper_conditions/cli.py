@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Iterator
 
 from . import __version__
-from .apply import ApplyError, apply, backend_ready
+from .apply import ApplyError, apply, backend_ready, publish_current
 from .library import Library, scan
 from .model import PHASES, WEATHERS, Manifest, ManifestError, load_manifest
 from .resolve import Resolution, resolve
@@ -141,7 +141,10 @@ def command_apply(args: argparse.Namespace, manifest: Manifest) -> int:
             apply(plan.resolution, plan.chosen, cache_dir, dry_run=True)
             return 0
 
+        publish = plan.manifest.publish
         if not args.force and state.applied_file == str(plan.chosen):
+            if publish is not None and not publish.exists():
+                publish_current(plan.chosen, publish)
             save(state_path, state)
             LOGGER.debug("already applied: %s", plan.chosen)
             return 0
@@ -156,6 +159,8 @@ def command_apply(args: argparse.Namespace, manifest: Manifest) -> int:
 
         if result.applied:
             state.applied_file = str(plan.chosen)
+            if publish is not None:
+                publish_current(plan.chosen, publish)
             LOGGER.info("%s", result.reason)
         else:
             LOGGER.info("%s; not applied", result.reason)
