@@ -33,6 +33,8 @@
       {
         jj-lsp = pkgs.callPackage ../pkgs/jj-lsp {};
 
+        wallpaper-conditions = pkgs.callPackage ../pkgs/wallpaper-conditions {};
+
         # Instant AI Git Commit message generator (from nixpkgs)
         inherit (pkgs) lumen;
 

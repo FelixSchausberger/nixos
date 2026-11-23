@@ -8,6 +8,8 @@
   # (homepage.nix) resolves the same set without a second hardcoded list.
   inherit (inputs.self.lib) wallpapers;
 in {
+  imports = [./dynamic.nix];
+
   options.wallpapers = {
     enable = lib.mkEnableOption "centralized wallpaper management" // {default = true;};
 

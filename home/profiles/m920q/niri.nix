@@ -46,6 +46,36 @@
     ];
   };
 
+  # Condition-aware wallpaper selection. The pool lives on the data share; the
+  # unconstrained nature-studies collection is the fallback until condition
+  # folders are populated. `clear`, `rain` and `snow` are restricted to
+  # daylight phases so a daylit scene cannot replace a night wallpaper; add a
+  # `night-rain` collection (phase + weather) for night rain art.
+  wallpapers.dynamic = {
+    enable = true;
+    roots = ["/per/mnt/data/media/pictures/wallpapers"];
+    collections = {
+      nature-studies = {};
+      dawn = {phase = ["dawn"];};
+      day = {phase = ["day"];};
+      dusk = {phase = ["dusk"];};
+      night = {phase = ["night"];};
+      clear = {
+        weather = ["clear" "partly"];
+        phase = ["day"];
+      };
+      rain = {
+        weather = ["rain" "thunder"];
+        phase = ["day" "dawn" "dusk"];
+      };
+      snow = {
+        weather = ["snow"];
+        phase = ["day" "dawn" "dusk"];
+      };
+      winter = {season = ["winter"];};
+    };
+  };
+
   # The 2026 Steam Controller's lizard mode maps Steam+D-pad-right to Alt+Tab
   # (the firmware emits the key combination itself). Binding it to the previous
   # window is the controller-only return path from a Cinejoy app window; a real

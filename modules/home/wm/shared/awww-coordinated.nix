@@ -124,8 +124,9 @@ in {
       };
     };
 
-    # Rotate both wallpapers together (30 min schedule)
-    systemd.user.timers.awww-wallpaper-rotate = {
+    # Rotate both wallpapers together (30 min schedule) unless the
+    # condition-aware selector owns the wallpaper; two writers would fight.
+    systemd.user.timers.awww-wallpaper-rotate = lib.mkIf (!(config.wallpapers.dynamic.enable or false)) {
       Unit = {
         Description = "Timer for rotating synchronized wallpapers";
       };
@@ -139,7 +140,7 @@ in {
       Install.WantedBy = ["timers.target"];
     };
 
-    systemd.user.services.awww-wallpaper-rotate = {
+    systemd.user.services.awww-wallpaper-rotate = lib.mkIf (!(config.wallpapers.dynamic.enable or false)) {
       Unit = {
         Description = "Rotate synchronized wallpapers";
       };

@@ -65,6 +65,13 @@ Home modules in `modules/home/`:
 - wm: Window manager configurations (COSMIC, GNOME, Hyprland)
 - profiles: Per-host profile fragments and specialisations
 
+Wallpapers are runtime data: `wallpapers.dynamic` scans one or more roots for
+collection folders, and `wallpapers.dynamic.collections` declares the
+phase/weather/season predicates each folder satisfies. The folder name is only
+a label; a collection with no predicates is the fallback. `wallpaper-conditions
+status` explains the current choice and `wallpaper-conditions doctor` validates
+the layout; new images need no rebuild.
+
 ### Package Exports
 
 `flake-parts/packages.nix` is the registry. It re-exports a few nixpkgs
