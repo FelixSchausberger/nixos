@@ -68,6 +68,10 @@ in {
           enable = true;
           user = "schausberger";
           mode = "headless";
+          # m920q disables timestamp sync for the MacBook client, whose
+          # AirPlay timestamps carry client uptime; exercise that production
+          # setting rather than the module default.
+          timestampSync = false;
         };
 
         # Mock game streaming listener on Moonshine HTTP port
@@ -183,6 +187,17 @@ in {
 
     # 6. Verify uxplay package is installed on server
     server.succeed("which uxplay")
+
+    # 6b. Verify the shipped UxPlay unit disables timestamp sync. The
+    #     MacBook client reports uptime instead of wall-clock time in its
+    #     AirPlay timestamps, which stalls the first mirror on its first
+    #     frame without -vsync no.
+    server.succeed("grep -q -- '-vsync no' /etc/systemd/user/uxplay.service")
+
+    # 6c. Verify the receiver selects the projector's HDMI sink before the
+    #     audio stream is created; WirePlumber's configured default is the
+    #     analog front jack.
+    server.succeed("grep -q -- 'uxplay-prefer-hdmi-sink' /etc/systemd/user/uxplay.service")
 
     # 7. Verify mock AirPlay listener is bound to RAOP port 7000
     server.wait_for_unit("mock-airplay.service")

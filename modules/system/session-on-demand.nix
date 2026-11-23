@@ -33,7 +33,10 @@ in {
     # No login session exists, so the compositor gets DRM access from seatd
     # and PipeWire gets /dev/snd from the audio group; without the group
     # WirePlumber has no seat, falls back to Dummy Output, and UxPlay's
-    # AirPlay audio is discarded.
+    # AirPlay audio is discarded. A group change reaches only processes
+    # started after the next user-manager start: switch-to-configuration
+    # cannot add supplementary groups to a running manager, so reboot (or
+    # restart user@1000) after editing this list.
     services.seatd.enable = true;
     users.users.${user} = {
       extraGroups = [config.services.seatd.group "video" "render" "input" "audio"];

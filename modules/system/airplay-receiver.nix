@@ -14,6 +14,33 @@
 }: let
   cfg = config.modules.system.airplayReceiver;
   hotplug = import ./display-hotplug.nix {inherit pkgs;};
+
+  # UxPlay's default timestamp sync stalls the first mirror from a client
+  # whose AirPlay clock is not wall-clock; see the option description.
+  vsyncFlag = lib.optionalString (!cfg.timestampSync) "-vsync no ";
+
+  # The on-demand session starts with the projector, but WirePlumber
+  # enumerates the HDMI sink asynchronously after the DRM hotplug. UxPlay's
+  # pulsesink follows the default sink when the audio stream is created, and
+  # WirePlumber's configured default is the analog front jack. Select the
+  # HDMI sink first and keep the configured default when no HDMI output
+  # exists (projector off, or a display whose EDID carries no audio).
+  preferHdmiSink = pkgs.writeShellScript "uxplay-prefer-hdmi-sink" ''
+    set -u
+    pactl=${pkgs.pulseaudio}/bin/pactl
+    attempts=20
+    while [ "$attempts" -gt 0 ]; do
+      sink=$("$pactl" list short sinks 2>/dev/null | ${pkgs.gnugrep}/bin/grep -m1 hdmi | ${pkgs.coreutils}/bin/cut -f2 || true)
+      if [ -n "$sink" ]; then
+        "$pactl" set-default-sink "$sink"
+        echo "selected HDMI sink $sink"
+        exit 0
+      fi
+      attempts=$((attempts - 1))
+      ${pkgs.coreutils}/bin/sleep 0.5
+    done
+    echo "no HDMI sink found; keeping the configured default sink"
+  '';
 in {
   options.modules.system.airplayReceiver = {
     enable = lib.mkEnableOption "AirPlay receiver support (UxPlay + Avahi)";
@@ -30,6 +57,19 @@ in {
       description = ''
         headless: kmssink direct-to-DRM rendering started by HDMI hotplug.
         gui: waylandsink inside the compositor session.
+      '';
+    };
+
+    timestampSync = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Use the AirPlay client's timestamps for A/V synchronization (UxPlay
+        -vsync, its default). Disable it for clients whose AirPlay
+        timestamps are not wall-clock: the first mirror after the client has
+        been idle stalls on its first frame until the receiver is
+        reconnected. Without timestamps the receiver stops dropping late
+        frames, at the cost of timestamp-based lip-sync correction.
       '';
     };
   };
@@ -88,7 +128,8 @@ in {
           # random ephemeral ports each run, so clients discover the service
           # via mDNS but fail to connect through the fixed-port firewall rules
           # declared above.
-          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vs kmssink -as pulsesink -n Projector -nh";
+          ExecStartPre = "${preferHdmiSink}";
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p ${vsyncFlag}-vs kmssink -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";
@@ -133,7 +174,8 @@ in {
         serviceConfig = {
           # -p keeps uxplay on the legacy AirPlay ports declared in the
           # firewall rules above; see the headless service for details.
-          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p -vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
+          ExecStartPre = "${preferHdmiSink}";
+          ExecStart = "${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.uxplay}/bin/uxplay -p ${vsyncFlag}-vs \"waylandsink fullscreen=true\" -as pulsesink -n Projector -nh";
           StandardOutput = "journal";
           StandardError = "journal";
           Restart = "on-failure";
