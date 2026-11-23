@@ -121,6 +121,7 @@ in {
       ]
       ++ [
         inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jj-lsp # Conflict resolution LSP for jj
+        inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jjfx # TUI cockpit for jj workspaces
       ];
 
     programs.jujutsu = {

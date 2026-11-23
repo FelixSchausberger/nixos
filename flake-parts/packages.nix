@@ -50,6 +50,10 @@
         # jj workspace workflow commands (jj-tidy, jjwork, jjpush, jjtest, ocws)
         inherit (jjTools) jj-tidy jjwork jjpush jjtest ocws;
 
+        # TUI cockpit for jj workspaces; pinned to the jj 0.47.1 PR until it
+        # merges and a release contains the bump.
+        jjfx = pkgs.callPackage ../pkgs/jjfx {};
+
         inherit
           (zellijPlugins)
           harpoon
