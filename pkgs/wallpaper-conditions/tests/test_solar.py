@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from astral import Observer
 from astral.sun import dawn, dusk
 
-from wallpaper_conditions.solar import phase, season
+from wallpaper_conditions.solar import phase
 
 VIENNA = (48.2082, 16.3738)
 TROMSO = (69.6492, 18.9553)
@@ -38,26 +38,6 @@ class PhaseTests(unittest.TestCase):
     def test_naive_datetime_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             phase(datetime(2026, 6, 21, 11, 0), *VIENNA)
-
-
-class SeasonTests(unittest.TestCase):
-    def test_months(self) -> None:
-        expected = {
-            1: "winter",
-            2: "winter",
-            3: "spring",
-            4: "spring",
-            5: "spring",
-            6: "summer",
-            7: "summer",
-            8: "summer",
-            9: "autumn",
-            10: "autumn",
-            11: "autumn",
-            12: "winter",
-        }
-        for month, value in expected.items():
-            self.assertEqual(season(datetime(2026, month, 15, 12, 0, tzinfo=timezone.utc)), value)
 
 
 if __name__ == "__main__":

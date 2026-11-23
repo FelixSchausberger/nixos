@@ -72,7 +72,6 @@
         weather = ["snow"];
         phase = ["day" "dawn" "dusk"];
       };
-      winter = {season = ["winter"];};
     };
   };
 

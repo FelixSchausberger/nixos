@@ -13,7 +13,6 @@ COLLECTIONS = {
     "night": {"phase": ["night"]},
     "rain": {"weather": ["rain"]},
     "rain-night": {"phase": ["night"], "weather": ["rain"]},
-    "winter": {"season": ["winter"]},
 }
 
 
@@ -23,7 +22,7 @@ class ResolveTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.base = Path(self.temporary.name)
         self.root = self.base / "wallpapers"
-        for folder in ("night", "rain", "rain-night", "winter"):
+        for folder in ("night", "rain", "rain-night"):
             touch(self.root / folder / "one.jpg")
         self.fallback = touch(self.base / "fallback.jpg")
         self.manifest_path = write_manifest(
@@ -41,7 +40,6 @@ class ResolveTests(unittest.TestCase):
             self.library,
             phase="night",
             weather="rain",
-            season="winter",
         )
         self.assertEqual(resolution.collection_name, "rain-night")
         self.assertEqual(resolution.chosen.specificity, 2)
@@ -52,14 +50,13 @@ class ResolveTests(unittest.TestCase):
             {"night": {"phase": ["night"]}, "rain": {"weather": ["rain"]}},
             roots=[self.root],
             fallback_file=self.fallback,
-            order=["phase", "weather", "season"],
+            order=["phase", "weather"],
         )
         resolution = resolve(
             load_manifest(manifest_path),
             self.library,
             phase="night",
             weather="rain",
-            season="winter",
         )
         self.assertEqual(resolution.collection_name, "night")
 
@@ -68,14 +65,13 @@ class ResolveTests(unittest.TestCase):
             {"night": {"phase": ["night"]}, "rain": {"weather": ["rain"]}},
             roots=[self.root],
             fallback_file=self.fallback,
-            order=["weather", "phase", "season"],
+            order=["weather", "phase"],
         )
         resolution = resolve(
             load_manifest(manifest_path),
             self.library,
             phase="night",
             weather="rain",
-            season="winter",
         )
         self.assertEqual(resolution.collection_name, "rain")
 
@@ -95,7 +91,6 @@ class ResolveTests(unittest.TestCase):
             library,
             phase="night",
             weather="rain",
-            season="winter",
         )
         self.assertEqual(resolution.collection_name, "night")
 
@@ -105,7 +100,6 @@ class ResolveTests(unittest.TestCase):
             self.library,
             phase="night",
             weather=None,
-            season="winter",
         )
         self.assertEqual(resolution.collection_name, "night")
         self.assertNotIn("rain-night", [match.collection.name for match in resolution.matches])
@@ -127,20 +121,19 @@ class ResolveTests(unittest.TestCase):
             scan(load_manifest(manifest_path)),
             phase="day",
             weather="rain",
-            season="winter",
         )
         self.assertEqual(resolution.collection_name, "rain-high")
         self.assertEqual(resolution.matches[0].priority, 1)
 
     def test_no_match_uses_nix_fallback(self) -> None:
         manifest_path = write_manifest(
-            self.base / "summer-only.json",
-            {"summer": {"season": ["summer"]}},
+            self.base / "snow-only.json",
+            {"snow": {"weather": ["snow"]}},
             roots=[self.root],
             fallback_file=self.fallback,
         )
         manifest = load_manifest(manifest_path)
-        resolution = resolve(manifest, scan(manifest), phase="day", weather=None, season="winter")
+        resolution = resolve(manifest, scan(manifest), phase="day", weather=None)
         self.assertIsNone(resolution.chosen)
         self.assertEqual(resolution.files, (self.fallback,))
         self.assertEqual(resolution.blurred, self.base / "fallback_blurred.jpg")

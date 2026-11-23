@@ -10,8 +10,7 @@ from typing import Any
 
 PHASES = ("dawn", "day", "dusk", "night")
 WEATHERS = ("clear", "partly", "overcast", "fog", "rain", "snow", "thunder")
-SEASONS = ("spring", "summer", "autumn", "winter")
-DIMENSIONS = ("phase", "weather", "season")
+DIMENSIONS = ("phase", "weather")
 IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp"})
 COLLECTION_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -31,21 +30,18 @@ class Collection:
     name: str
     phase: frozenset[str] = frozenset()
     weather: frozenset[str] = frozenset()
-    season: frozenset[str] = frozenset()
     priority: int = 0
 
-    def matches(self, *, phase: str, weather: str | None, season: str) -> bool:
+    def matches(self, *, phase: str, weather: str | None) -> bool:
         if self.phase and phase not in self.phase:
             return False
         if self.weather and (weather is None or weather not in self.weather):
-            return False
-        if self.season and season not in self.season:
             return False
         return True
 
     @property
     def specificity(self) -> int:
-        return sum(1 for values in (self.phase, self.weather, self.season) if values)
+        return sum(1 for values in (self.phase, self.weather) if values)
 
 
 @dataclass(frozen=True)
@@ -142,7 +138,6 @@ def load_manifest(path: Path) -> Manifest:
                 name=name,
                 phase=_values(spec.get("phase", []), PHASES, f"{name}.phase"),
                 weather=_values(spec.get("weather", []), WEATHERS, f"{name}.weather"),
-                season=_values(spec.get("season", []), SEASONS, f"{name}.season"),
                 priority=priority,
             )
         )

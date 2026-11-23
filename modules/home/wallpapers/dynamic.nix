@@ -78,14 +78,14 @@ in {
         description = ''
           Fetch the current weather code from Open-Meteo (no API key). When the
           network is unavailable the last observation is reused for a few
-          hours, then selection falls back to phase and season.
+          hours, then selection falls back to phase only.
         '';
       };
     };
 
     order = lib.mkOption {
-      type = lib.types.listOf (lib.types.enum ["phase" "weather" "season"]);
-      default = ["phase" "weather" "season"];
+      type = lib.types.listOf (lib.types.enum ["phase" "weather"]);
+      default = ["phase" "weather"];
       description = ''
         Tie-break order when two matching collections constrain the same number
         of dimensions, e.g. a phase-only `night` folder and a weather-only
@@ -115,11 +115,6 @@ in {
             default = [];
             description = "Weather categories this folder is valid for; empty means any.";
           };
-          season = lib.mkOption {
-            type = lib.types.listOf (lib.types.enum ["spring" "summer" "autumn" "winter"]);
-            default = [];
-            description = "Seasons this folder is valid for; empty means any.";
-          };
           priority = lib.mkOption {
             type = lib.types.int;
             default = 0;
@@ -144,7 +139,7 @@ in {
           night = {phase = ["night"];};
           clear = {weather = ["clear" "partly"]; phase = ["day"];};
           rain = {weather = ["rain" "thunder"]; phase = ["day" "dawn" "dusk"];};
-          winter = {season = ["winter"];};
+          snow = {weather = ["snow"];};
           default = {};
         }
       '';
@@ -162,8 +157,8 @@ in {
         message = "wallpapers.dynamic.roots must list at least one wallpaper root.";
       }
       {
-        assertion = lib.sort (a: b: a < b) cfg.order == lib.sort (a: b: a < b) ["phase" "weather" "season"];
-        message = "wallpapers.dynamic.order must contain phase, weather and season exactly once each.";
+        assertion = lib.sort (a: b: a < b) cfg.order == lib.sort (a: b: a < b) ["phase" "weather"];
+        message = "wallpapers.dynamic.order must contain phase and weather exactly once each.";
       }
       {
         assertion = lib.all (name: builtins.match "[A-Za-z0-9_-]+" name != null) (lib.attrNames cfg.collections);

@@ -26,7 +26,6 @@ def make_resolution(name: str, files: tuple[Path, ...] = FILES) -> Resolution:
     return Resolution(
         phase="night",
         weather=None,
-        season="winter",
         matches=(match,),
         chosen=match,
         fallback_file=Path("/fallback.jpg"),
@@ -38,7 +37,6 @@ def fallback_resolution() -> Resolution:
     return Resolution(
         phase="day",
         weather=None,
-        season="winter",
         matches=(),
         chosen=None,
         fallback_file=Path("/fallback.jpg"),

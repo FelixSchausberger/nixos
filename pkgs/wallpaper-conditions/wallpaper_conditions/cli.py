@@ -17,9 +17,9 @@ from typing import Iterator
 from . import __version__
 from .apply import ApplyError, apply, backend_ready
 from .library import Library, scan
-from .model import PHASES, SEASONS, WEATHERS, Manifest, ManifestError, load_manifest
+from .model import PHASES, WEATHERS, Manifest, ManifestError, load_manifest
 from .resolve import Resolution, resolve
-from .solar import elevation_degrees, phase, season
+from .solar import elevation_degrees, phase
 from .state import State, choose_file, load, save, stabilize_weather
 from .weather import CachedWeather, read_cache
 from .weather import resolve as resolve_weather
@@ -82,7 +82,6 @@ def _build_plan(
     library = scan(manifest)
     local_solar_elevation = elevation_degrees(now, manifest.latitude, manifest.longitude)
     local_phase = phase(now, manifest.latitude, manifest.longitude)
-    local_season = season(now)
     raw_weather = resolve_weather(
         manifest,
         cache_dir / "weather.json",
@@ -95,7 +94,6 @@ def _build_plan(
         library,
         phase=local_phase,
         weather=effective_weather,
-        season=local_season,
     )
     chosen = choose_file(state, resolution, now, reroll=reroll)
     return Plan(
@@ -190,7 +188,6 @@ def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
         "now": plan.now.isoformat(),
         "phase": plan.resolution.phase,
         "solar_elevation_degrees": round(plan.solar_elevation, 2),
-        "season": plan.resolution.season,
         "weather": {
             "raw": plan.raw_weather,
             "effective": plan.effective_weather,
@@ -219,7 +216,6 @@ def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
 
     print(f"now:     {plan.now.isoformat()}")
     print(f"phase:   {plan.resolution.phase} (sun {plan.solar_elevation:.1f} deg)")
-    print(f"season:  {plan.resolution.season}")
     print(
         "weather: "
         f"raw={plan.raw_weather} effective={plan.effective_weather} "
@@ -280,16 +276,14 @@ def command_doctor(args: argparse.Namespace, manifest: Manifest) -> int:
     wins: Counter[str] = Counter()
     for candidate_phase in PHASES:
         for candidate_weather in (*WEATHERS, None):
-            for candidate_season in SEASONS:
-                result = resolve(
-                    manifest,
-                    library,
-                    phase=candidate_phase,
-                    weather=candidate_weather,
-                    season=candidate_season,
-                )
-                if result.chosen is not None:
-                    wins[result.chosen.collection.name] += 1
+            result = resolve(
+                manifest,
+                library,
+                phase=candidate_phase,
+                weather=candidate_weather,
+            )
+            if result.chosen is not None:
+                wins[result.chosen.collection.name] += 1
     for collection in manifest.collections:
         if wins[collection.name] == 0 and library.get(collection.name):
             print(
@@ -309,7 +303,7 @@ def command_version(_args: argparse.Namespace, _manifest: Manifest) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wallpaper-conditions",
-        description="Select a wallpaper folder by solar phase, weather and season.",
+        description="Select a wallpaper folder by solar phase and weather.",
     )
     parser.add_argument("--manifest", type=Path, help="generated collection manifest")
     parser.add_argument("--cache-dir", type=Path, help="state and weather cache directory")

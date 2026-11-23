@@ -1,4 +1,4 @@
-"""Solar phase and season classification."""
+"""Solar phase classification."""
 
 from __future__ import annotations
 
@@ -11,21 +11,6 @@ from astral.sun import elevation
 # night, which is also the safe boundary at high latitudes: elevation is always
 # defined, unlike sunrise/sunset events that can be absent for a whole day.
 TWILIGHT_ELEVATION = -6.0
-
-SEASONS = {
-    12: "winter",
-    1: "winter",
-    2: "winter",
-    3: "spring",
-    4: "spring",
-    5: "spring",
-    6: "summer",
-    7: "summer",
-    8: "summer",
-    9: "autumn",
-    10: "autumn",
-    11: "autumn",
-}
 
 
 def elevation_degrees(now: datetime, latitude: float, longitude: float) -> float:
@@ -47,7 +32,3 @@ def phase(now: datetime, latitude: float, longitude: float) -> str:
         return "night"
     previous_elevation = elevation(observer, current - timedelta(minutes=1))
     return "dawn" if current_elevation > previous_elevation else "dusk"
-
-
-def season(now: datetime) -> str:
-    return SEASONS[now.month]
