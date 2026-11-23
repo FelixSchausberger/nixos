@@ -568,6 +568,13 @@ in {
     };
   };
 
+  # Keychron K6 HE raw HID (VID 0x3434) for VIA and Keychron Launcher; the
+  # STM32 DFU rules (0483:df11) come from the base QMK rules.
+  hardware.keyboard.qmk = {
+    enable = true;
+    keychronSupport = true;
+  };
+
   # Bluetooth serves the JBL Flip 6 audio sink (projector kiosk and general
   # music playback) and a BT Steam Controller if one is used. The USB CSR8510
   # dongle is attached (controller 00:0A:CD:34:9D:7A); the optional M.2
