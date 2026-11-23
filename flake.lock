@@ -1698,11 +1698,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1795436407,
-        "narHash": "sha256-uH9iSRgVzYioBnhyz1pz+ya6X58xtxIoTy2qZIiPgdE=",
+        "lastModified": 1795440920,
+        "narHash": "sha256-aarPg3NpntGIA5rCJ+O5Whiq/GhhDMBcUvFONvaL5vw=",
         "owner": "FelixSchausberger",
         "repo": "ocws",
-        "rev": "d5beb79337c35cd817ac062863a0d58b33fb25a1",
+        "rev": "1e1bed9821f4a9256af1f9c57d74402f0f1b189a",
         "type": "github"
       },
       "original": {
