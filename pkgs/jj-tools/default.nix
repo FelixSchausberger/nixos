@@ -3,8 +3,8 @@
 # jjwork rebases onto main@origin and calls jj-tidy; jjpush turns a described
 # change into an auto-merge PR; jjtest points comin's per-host testing bookmark
 # at a change. All are shell-agnostic writeShellApplication wrappers so
-# automation and non-fish shells behave the same. The workspace seat manager
-# (ocws) lives in its own flake input and is wired in the jujutsu home module.
+# automation and non-fish shells behave the same. The workspace manager
+# (Rookery) lives in its own flake input and is wired in the jujutsu home module.
 {
   callPackage,
   jj-slug,

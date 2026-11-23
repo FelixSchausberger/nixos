@@ -1,7 +1,7 @@
 # jjfx reads the jj store through jj-lib, so its version must match the jj in
 # the flake. Pinned to the head of FelixSchausberger/jjfx#209 (jj/jj-lib
 # 0.47.1) until the PR merges and a release contains it. Trial cockpit only:
-# ocws keeps the claim, the review gate and the cleanup; jjfx's delete, tidy,
+# rookery keeps the claim, the review gate and the cleanup; jjfx's delete, tidy,
 # pool and dispatch paths are not used, and its lifecycle hooks are not
 # installed because the OpenCode config root is rendered read-only.
 {

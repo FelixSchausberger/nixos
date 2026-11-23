@@ -217,7 +217,7 @@ in {
       # agent state rows visible. prefix+b toggles the full sidebar; the start
       # value applies on the next launch, reload-config covers the rest.
       #
-      # New tabs are agent seats and ocws renames the tab to the task when it
+      # New tabs are agent seats and rookery renames the tab to the task when it
       # creates the workspace, so the native tab-name prompt would only ask for
       # the same name twice. Plain non-agent tabs are renamed with prefix+shift+t.
       #

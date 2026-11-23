@@ -4,7 +4,7 @@
   pkgs,
   ...
 }: let
-  # Herdr launches a popup in the focused pane shell's cwd, and an ocws seat
+  # Herdr launches a popup in the focused pane shell's cwd, and a Rookery seat
   # keeps that shell at the primary checkout while the agent process runs in
   # its jj workspace, so bare tuicr would review the wrong repository. The
   # wrapper changes to the pane's foreground process cwd before starting the

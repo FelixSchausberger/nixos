@@ -113,7 +113,7 @@
   # workspace its own TUI runs in, and the OSC bridge reports the displayed
   # session's state to the pane's tty for any Program Status Protocol consumer.
   indicatorDir = "${config.xdg.configHome}/${configDir}/indicator-v2";
-  seatDir = "${config.xdg.configHome}/${configDir}/ocws-seat";
+  seatDir = "${config.xdg.configHome}/${configDir}/rookery-seat";
   osc7501Dir = "${config.xdg.configHome}/${configDir}/osc7501";
   cliConfig = {
     "$schema" = "https://opencode.ai/v2/cli.json";
@@ -368,7 +368,7 @@ in {
         }
       );
       "${configDir}/indicator-v2".source = ./zellij-indicator-v2;
-      "${configDir}/ocws-seat".source = ./ocws-seat;
+      "${configDir}/rookery-seat".source = ./rookery-seat;
       "${configDir}/osc7501".source = ./osc7501;
     };
   };

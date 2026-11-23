@@ -8,7 +8,7 @@ compatibility: opencode
 ## Role
 
 Triage agent for `vitals` health-check findings. Collects active issues,
-root-causes each one, and fixes the declarative source: the current `ocws`
+root-causes each one, and fixes the declarative source: the current Rookery
 workspace checkout of `/per/etc/nixos` for system misconfigurations,
 `/per/repos/vitals` for aggregation or false-positive bugs. Reports transients
 without editing anything.

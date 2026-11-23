@@ -1689,28 +1689,6 @@
         "type": "github"
       }
     },
-    "ocws": {
-      "inputs": {
-        "flake-parts": "flake-parts_8",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "treefmt-nix": "treefmt-nix_3"
-      },
-      "locked": {
-        "lastModified": 1795440920,
-        "narHash": "sha256-aarPg3NpntGIA5rCJ+O5Whiq/GhhDMBcUvFONvaL5vw=",
-        "owner": "FelixSchausberger",
-        "repo": "ocws",
-        "rev": "1e1bed9821f4a9256af1f9c57d74402f0f1b189a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "FelixSchausberger",
-        "repo": "ocws",
-        "type": "github"
-      }
-    },
     "opencode-v2": {
       "inputs": {
         "nixpkgs": [
@@ -1759,6 +1737,29 @@
         "type": "github"
       }
     },
+    "rookery": {
+      "inputs": {
+        "flake-parts": "flake-parts_8",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "treefmt-nix": "treefmt-nix_3"
+      },
+      "locked": {
+        "lastModified": 1795445604,
+        "narHash": "sha256-X71qsat5Uk+k4e92cY64KJ21UKhxITd1XtLsvRO/CDE=",
+        "owner": "FelixSchausberger",
+        "repo": "rookery",
+        "rev": "248d53d7b4577d12a5375290a66bdb91ff2609be",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FelixSchausberger",
+        "ref": "v0.2.0",
+        "repo": "rookery",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "ala-lape": "ala-lape",
@@ -1791,8 +1792,8 @@
         "nixvim": "nixvim",
         "noctalia": "noctalia",
         "nur": "nur",
-        "ocws": "ocws",
         "opencode-v2": "opencode-v2",
+        "rookery": "rookery",
         "rust-overlay": "rust-overlay",
         "sops-nix": "sops-nix",
         "spicetify-nix": "spicetify-nix",

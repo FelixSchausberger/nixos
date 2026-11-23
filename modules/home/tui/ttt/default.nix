@@ -294,7 +294,7 @@
     markdown.wrapWidth = 100;
   };
 
-  # Herdr's plugin context reports the focused pane shell's cwd, and an ocws
+  # Herdr's plugin context reports the focused pane shell's cwd, and a Rookery
   # seat keeps that shell at the primary checkout while the agent process runs
   # in its jj workspace, so the plugin's focused_pane_cwd points at the wrong
   # tree. The wrapper resolves the pane's foreground process cwd instead and

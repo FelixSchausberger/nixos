@@ -76,7 +76,7 @@ the layout; new images need no rebuild.
 
 `flake-parts/packages.nix` is the registry. It re-exports a few nixpkgs
 packages the shells use (for example `lumen`) and builds the fleet's own
-tools: `jj-tools` (`jjwork`, `jjpush`, `jjtest`, `ocws`), `pixel-provision`,
+tools: `jj-tools` (`jjwork`, `jjpush`, `jjtest`) and `rookery`, `pixel-provision`,
 `homelab-topology`, the Zellij plugins, and the three installer ISOs
 (`installer-iso-minimal`, `installer-iso-full`, `installer-iso-portable`).
 

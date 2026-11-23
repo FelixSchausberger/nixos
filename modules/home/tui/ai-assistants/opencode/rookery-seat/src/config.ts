@@ -6,12 +6,12 @@ const env = (key: string, def: string) => {
   return v && v.length > 0 ? v : def
 }
 
-const pollParsed = Number.parseInt(env("OCWS_SEAT_POLL_MS", "2000"), 10)
+const pollParsed = Number.parseInt(env("ROOKERY_SEAT_POLL_MS", "2000"), 10)
 export const POLL_MS = Number.isFinite(pollParsed) && pollParsed >= 250 ? pollParsed : 2000
 
 // Debug logging goes to OpenCode's server log, not the TUI: the answer to
-// "why did my tab not rename?" is usually a non-zero `ocws title` exit.
-const DEBUG = process.env.OCWS_SEAT_DEBUG === "1"
+// "why did my tab not rename?" is usually a non-zero `rookery title` exit.
+const DEBUG = process.env.ROOKERY_SEAT_DEBUG === "1"
 export const log = (msg: string) => {
-  if (DEBUG) console.error(`[ocws-seat] ${msg}`)
+  if (DEBUG) console.error(`[rookery-seat] ${msg}`)
 }

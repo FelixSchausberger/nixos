@@ -9,9 +9,9 @@
 
   cfg = config.tui.jujutsu;
 
-  # The configured wrapper from the ocws project module: the fleet values
-  # (base, prefix, trunk) are baked in, and runtime OCWS_* still override.
-  ocws = config.programs.ocws.finalPackage;
+  # The configured wrapper from the rookery project module: the fleet values
+  # (base, prefix, trunk) are baked in, and runtime ROOKERY_* still override.
+  rookery = config.programs.rookery.finalPackage;
   jjfx = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jjfx;
   # Single-line badge the starship prompt renders; written by the ocws-gc
   # timer below so the prompt never pays for the jj classification itself.
@@ -25,7 +25,7 @@
   # Board digest for the phone, driven by an alerting lifecycle rather than
   # a clock: publish on a state transition, stay silent while the mess is
   # unchanged, and re-nudge once the last published mess has stood past
-  # OCWS_DIGEST_REPEAT_DAYS. Repetition without delta is alarm fatigue: a
+  # ROOKERY_DIGEST_REPEAT_DAYS. Repetition without delta is alarm fatigue: a
   # channel that says the same sentence every day gets muted, and a count
   # threshold alone would let a small mess rot below the line forever. A
   # clean board removes the signature, so a rematch of an old mess
@@ -33,9 +33,9 @@
   # broker as primary; the digest is deliberately not an alert and never an
   # urgency, it rides the subscribed topic with an hourglass tag. Count
   # fields are read defensively so the digest keeps working across minor
-  # ocws count-shape growth.
+  # Rookery count-shape growth.
   boardDigest =
-    pkgs.writeShellScript "ocws-board-digest"
+    pkgs.writeShellScript "rookery-board-digest"
     (
       (import ../../../lib/ntfy-send.nix {inherit pkgs lib;} {
         primary = "${cfg.boardDigest.ntfyUrl}/${cfg.boardDigest.topic}";
@@ -43,7 +43,7 @@
       + ''
         set -euo pipefail
         repeat_days() {
-          v="''${OCWS_DIGEST_REPEAT_DAYS:-7}"
+          v="''${ROOKERY_DIGEST_REPEAT_DAYS:-7}"
           if printf '%s' "$v" | ${pkgs.gnugrep}/bin/grep -Eq '^[0-9]+$'; then
             printf '%s' "$v"
           else
@@ -61,7 +61,7 @@
         state=${lib.escapeShellArg digestStateFile}
         # The alerting path decides nothing from the classification cache: both
         # calls rescan, so a transition is judged on the state that is published.
-        read -r total empty merged unpushed inflight conflict stale waitold < <(${ocws}/bin/ocws ls --counts --refresh)
+        read -r total empty merged unpushed inflight conflict stale waitold < <(${rookery}/bin/rookery ls --counts --refresh)
         waitold=''${waitold:-0}
         if [ "$((stale + unpushed + conflict + waitold))" -eq 0 ]; then
           # A clean board removes the stored signature so the same mess
@@ -81,11 +81,11 @@
             exit 0
           fi
         fi
-        if ! board=$(${ocws}/bin/ocws ls --board --refresh 2>/dev/null); then
-          board=$(${ocws}/bin/ocws ls)
+        if ! board=$(${rookery}/bin/rookery ls --board --refresh 2>/dev/null); then
+          board=$(${rookery}/bin/rookery ls)
         fi
         body="$(${pkgs.coreutils}/bin/printf 'stale %s unpushed %s conflict %s old waits %s\n\n%s' "$stale" "$unpushed" "$conflict" "$waitold" "$board")"
-        ntfy_send "ocws board ($(${pkgs.coreutils}/bin/uname -n))" low hourglass "$body"
+        ntfy_send "rookery board ($(${pkgs.coreutils}/bin/uname -n))" low hourglass "$body"
         ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$state")"
         ${pkgs.coreutils}/bin/printf '%s\n%s\n' "$sig" "$(${pkgs.coreutils}/bin/date +%s)" > "$state"
       ''
@@ -97,7 +97,7 @@ in {
     # reports waiting, in-review and unclean workspaces. Off by default:
     # only hosts whose ntfy broker the phone subscribes to publish.
     boardDigest = {
-      enable = lib.mkEnableOption "ntfy digest of unclean ocws workspaces, published on state transitions";
+      enable = lib.mkEnableOption "ntfy digest of unclean Rookery workspaces, published on state transitions";
       ntfyUrl = lib.mkOption {
         type = lib.types.str;
         default = "http://127.0.0.1:2586";
@@ -113,7 +113,7 @@ in {
 
   imports = [
     ../shells/fish/functions/jj.nix
-    inputs.ocws.homeManagerModules.default
+    inputs.rookery.homeManagerModules.default
   ];
 
   config = {
@@ -179,9 +179,9 @@ in {
     };
 
     # The project module installs the configured binary and documents the
-    # OCWS_* contract. Its own gc timer stays off: this module owns ocws-gc
+    # ROOKERY_* contract. Its own gc timer stays off: this module owns ocws-gc
     # below because the unit also writes the prompt badge and runs the digest.
-    programs.ocws = {
+    programs.rookery = {
       enable = true;
       base = "${config.home.homeDirectory}/.local/share/ocws";
       # Historical fleet prefix: existing workspaces live at
@@ -193,12 +193,12 @@ in {
 
     # Reclaim finished jj workspaces daily and refresh the prompt badge. The
     # classification is jj against main@origin, so the job runs from the primary
-    # checkout and no-ops on a host that lacks it. `ocws gc` fetches, keeps
+    # checkout and no-ops on a host that lacks it. `rookery gc` fetches, keeps
     # unpushed/in-flight/conflicted workspaces, any workspace with a live
     # process and any parked one, and reclaims empty/merged ones past the age
     # gate.
     systemd.user.services.ocws-gc = {
-      Unit.Description = "Reclaim finished jj workspaces and refresh the ocws status badge";
+      Unit.Description = "Reclaim finished jj workspaces and refresh the Rookery status badge";
       Service = {
         Type = "oneshot";
         ExecStart = toString (pkgs.writeShellScript "ocws-gc" ''
@@ -207,8 +207,8 @@ in {
           badge=${lib.escapeShellArg badgeFile}
           [ -d "$repo" ] || exit 0
           cd "$repo"
-          ${ocws}/bin/ocws gc
-          read -r total empty merged unpushed inflight conflict stale waitold < <(${ocws}/bin/ocws ls --counts)
+          ${rookery}/bin/rookery gc
+          read -r total empty merged unpushed inflight conflict stale waitold < <(${rookery}/bin/rookery ls --counts)
           waitold=''${waitold:-0}
           attention=$((unpushed + conflict))
           out=""
@@ -223,7 +223,7 @@ in {
         '');
         # The digest runs as its own step so a broken publish cannot abort the
         # reclamation pass. Its own count parse reads past the last field that
-        # ocws today emits, so the digest keeps working when the count shape
+        # Rookery today emits, so the digest keeps working when the count shape
         # grows. Silent by design on a clean board.
         ExecStartPost = lib.mkIf cfg.boardDigest.enable (toString boardDigest);
       };
@@ -238,7 +238,7 @@ in {
 
     # The workspace board one key away from every herdr pane: same contributed
     # key pattern the tuicr and TTT modules use, same popup shape. The --board
-    # flag degrades to the plain table when the installed ocws predates it, so
+    # flag degrades to the plain table when the installed Rookery predates it, so
     # the key never dies on a host whose home profile is ahead of or behind the
     # package. fish runs panes (herdr detects it from SHELL), so the chain uses
     # fish's && and ||.
@@ -254,14 +254,14 @@ in {
       {
         key = "prefix+shift+b";
         type = "popup";
-        command = "printf 'ocws board: reading workspace state...\\n'; cd ${lib.escapeShellArg defaults.paths.nixosConfig} && ocws ls --board 2>/dev/null || ocws ls; printf 'press enter to close\\n'; read ignored";
-        description = "Show the ocws workspace board";
+        command = "printf 'rookery board: reading workspace state...\\n'; cd ${lib.escapeShellArg defaults.paths.nixosConfig} && rookery ls --board 2>/dev/null || rookery ls; printf 'press enter to close\\n'; read ignored";
+        description = "Show the Rookery workspace board";
         width = "95%";
         height = "95%";
       }
 
       # jjfx is a trial cockpit, not the board: it has no review gate, and
-      # its delete, tidy, forge and pool keys mutate outside ocws. Open it
+      # its delete, tidy, forge and pool keys mutate outside Rookery. Open it
       # read-only, use the list/diff/graph, and quit with q.
       # prefix+shift+j is free (the defaults use r/n/g/w/d/t/x/p).
       {
@@ -275,16 +275,16 @@ in {
 
       # New agent seat one key away. A herdr tab inherits the focused pane's
       # worktree, so a bare tab plus opencode would share that working copy;
-      # `ocws herdr` creates the tab and runs ocws inside it. The binding runs
+      # `rookery herdr` creates the tab and runs Rookery inside it. The binding runs
       # detached because the seat names itself: a filler task at creation,
-      # `ocws title` once OpenCode has a session title. Failures (no herdr
+      # `rookery title` once OpenCode has a session title. Failures (no herdr
       # binary, a live process in the workspace) land in the seat log rather
       # than a popup nobody is looking at.
       # prefix+shift+a is free (the defaults use r/n/g/w/d/t/x/p).
       {
         key = "prefix+shift+a";
         type = "shell";
-        command = "${ocws}/bin/ocws herdr";
+        command = "${rookery}/bin/rookery herdr";
         description = "New agent seat: jj workspace + opencode in a new tab";
       }
     ];

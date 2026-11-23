@@ -1,6 +1,6 @@
 ---
 name: herdr-lead
-description: Use when a lead opencode agent orchestrates worker agents in herdr. Resolves the lead's tab with `ocws seat`, creates workers in their own jj workspaces with `ocws herdr`, prompts them with `herdr agent prompt`, and collects report files. Also covers blocked workers, cleanup, and the replacement for the manual handoff loop.
+description: Use when a lead opencode agent orchestrates worker agents in herdr. Resolves the lead's tab with `rookery seat`, creates workers in their own jj workspaces with `rookery herdr`, prompts them with `herdr agent prompt`, and collects report files. Also covers blocked workers, cleanup, and the replacement for the manual handoff loop.
 license: MIT
 compatibility: opencode
 ---
@@ -9,7 +9,7 @@ compatibility: opencode
 
 The shell tool runs in the shared opencode server, not in the TUI client, so
 the `HERDR_ENV=1` guard in `herdr --skill` does not describe this process.
-Resolve the seat with `ocws seat` instead: it matches `OPENCODE_SESSION_ID`
+Resolve the seat with `rookery seat` instead: it matches `OPENCODE_SESSION_ID`
 against `herdr agent list`, which is the mapping the daemon already keeps. Run
 `herdr --skill` for the full command reference; this file is the fleet
 protocol.
@@ -17,7 +17,7 @@ protocol.
 ## Resolve the seat
 
 ```sh
-seat=$(ocws seat --json)
+seat=$(rookery seat --json)
 ws=$(jq -r .herdr_workspace <<<"$seat")
 me=$(jq -r .herdr_pane <<<"$seat")
 ```
@@ -29,13 +29,13 @@ guess a pane or inspect the person's focused tab.
 ## Create one worker
 
 ```sh
-worker=$(ocws herdr --workspace "$ws" --json --no-focus --wait trial-a)
+worker=$(rookery herdr --workspace "$ws" --json --no-focus --wait trial-a)
 tab=$(jq -r .herdr_tab <<<"$worker")
 pane=$(jq -r .herdr_pane <<<"$worker")
 dir=$(jq -r .dir <<<"$worker")
 ```
 
-`ocws herdr` creates the jj workspace at `main@origin` and starts opencode in a
+`rookery herdr` creates the jj workspace at `main@origin` and starts opencode in a
 new tab. `--no-focus` leaves the person's view where it is. `--wait` returns
 when herdr recognizes the opencode agent at its prompt; a `blocked` startup is
 the person's, not yours. `agent_session` is empty until opencode creates its
@@ -49,7 +49,7 @@ put two agents in one.
 The brief is one message. It must contain:
 
 - the task and the report path, absolute and outside the jj workspace (a file
-  inside the workspace makes `@` non-empty and `ocws done` refuses);
+  inside the workspace makes `@` non-empty and `rookery done` refuses);
 - "do not edit the repository, do not commit, never touch /per/etc/nixos";
 - the fixed report format;
 - "end your turn when the report is written; a person's approval is never
@@ -106,10 +106,10 @@ On success:
 session=$(herdr agent get "$pane" | jq -r '.result.agent.agent_session.value // empty')
 [ -n "$session" ] && opencode2 session delete "$session"
 herdr tab close "$tab"
-ocws done trial-a
+rookery done trial-a
 ```
 
-`ocws done` still checks for unmerged work; `--force` bypasses only the liveness
+`rookery done` still checks for unmerged work; `--force` bypasses only the liveness
 check, never the work check. Use it when a leaked per-project LSP or MCP daemon
 (`nixd`, `mcp-language-server`) still holds the workspace cwd.
 

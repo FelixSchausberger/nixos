@@ -81,7 +81,7 @@ const kindOf = (members: Member[]) =>
   members.some((member) => member.permissions > 0) ? "permission" : "question"
 
 export default {
-  id: "ocws.osc7501",
+  id: "rookery.osc7501",
   async setup(context: Context) {
     // Windows has no /dev/tty; the protocol has nothing to attach to there.
     if (process.platform === "win32") {

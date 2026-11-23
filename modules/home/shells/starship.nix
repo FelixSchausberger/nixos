@@ -87,7 +87,7 @@ in {
         # workspaces holding work that needs a push (arrow glyph) and parked
         # waits older than the reminder gate (hourglass glyph). Hidden while
         # the badge is empty.
-        ocws = {
+        rookery = {
           when = "test -s ${badgeFile}";
           command = "cat ${badgeFile}";
           shell = ["bash"];
