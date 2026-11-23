@@ -293,6 +293,41 @@
     formatters = tttFormatters;
     markdown.wrapWidth = 100;
   };
+
+  # Herdr's plugin context reports the focused pane shell's cwd, and an ocws
+  # seat keeps that shell at the primary checkout while the agent process runs
+  # in its jj workspace, so the plugin's focused_pane_cwd points at the wrong
+  # tree. The wrapper resolves the pane's foreground process cwd instead and
+  # passes it as TTT_TARGET_DIR, the plugin's supported override. It also pins
+  # the target pane: the keybinding is detached, and a focus change during the
+  # CLI round-trip would otherwise retarget the split.
+  tttHerdrOpen = pkgs.writeShellApplication {
+    name = "ttt-herdr-open";
+    runtimeInputs = [pkgs.herdr pkgs.jq];
+    text = ''
+      set -euo pipefail
+
+      herdr_bin="''${HERDR_BIN_PATH:-herdr}"
+      pane="''${HERDR_ACTIVE_PANE_ID:-}"
+      args=(
+        plugin pane open
+        --plugin ttt.editor
+        --entrypoint editor
+        --placement split
+        --direction right
+        --focus
+      )
+      if [ -n "$pane" ]; then
+        target="$("$herdr_bin" pane get "$pane" \
+          | jq -r '.result.pane.foreground_cwd // .result.pane.cwd // empty')"
+        args+=(--target-pane "$pane")
+        if [ -n "$target" ]; then
+          args+=(--env "TTT_TARGET_DIR=$target")
+        fi
+      fi
+      exec "$herdr_bin" "''${args[@]}"
+    '';
+  };
 in {
   home.packages = [ttt];
 
@@ -318,8 +353,10 @@ in {
   # TTT opens as a tab in the herdr workspace through its herdr-plugin; prefix+e
   # is already herdr's edit_scrollback default, so the editor takes
   # prefix+shift+e. The second binding opens the same entrypoint as a right
-  # split: the plugin resolves checkout_path or focused_pane_cwd, so the editor
-  # lands in the agent's jj workspace.
+  # split beside the agent, with the wrapper above supplying the agent's
+  # workspace. TTT stays a normal split rather than a popup because it is the
+  # editor: a popup has no pane identity, so plugin pane APIs and the
+  # right-click routing the plugin installs do not apply to it.
   tui.herdr.commandKeys = lib.mkAfter [
     {
       key = "prefix+shift+e";
@@ -330,7 +367,7 @@ in {
     {
       key = "prefix+shift+i";
       type = "shell";
-      command = "${pkgs.herdr}/bin/herdr plugin pane open --plugin ttt.editor --entrypoint editor --placement split --direction right --focus";
+      command = "${tttHerdrOpen}/bin/ttt-herdr-open";
       description = "Open TTT beside the agent";
     }
   ];
