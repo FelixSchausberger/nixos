@@ -1,10 +1,12 @@
 # Intel LMS (Local Manageability Service): proxies /dev/mei0 to loopback
 # HTTP 16992 / TLS 16993 so the AMT stack can reach the ME from the host
-# (see the AMT block in hosts/m920q). Upstream ships an Ubuntu-jammy deb only
-# (rgl/lms-binaries), so the deb is unpacked and wrapped in an FHS
+# (see the AMT block in hosts/m920q). Upstream ships debs for several
+# distributions (rgl/lms-binaries); the jammy one is used because the library
+# versions below are matched to it. The deb is unpacked and wrapped in an FHS
 # environment supplying its library closure - the native replacement for the
 # docker image the AMT relay used before it moved to a systemd service.
 {
+  lib,
   stdenv,
   fetchurl,
   dpkg,
@@ -13,7 +15,7 @@
   ace,
   xercesc,
 }: let
-  version = "2550.0.0";
+  version = "2625.0.0";
 
   # LMS was built against Debian's exact library versions. Two of its C++
   # dependencies are ABI-incompatible with the nixpkgs versions (xerces-c
@@ -46,8 +48,8 @@
     pname = "intel-lms-deb";
     inherit version;
     src = fetchurl {
-      url = "https://github.com/rgl/lms-binaries/releases/download/v0.0.20251226/lms-2550.0.0-ubuntu-22.04.deb";
-      hash = "sha256-RkqxxJnVBklzVsudBXMYzxQW4w86yWdLUgTaMx0CAKE=";
+      url = "https://github.com/rgl/lms-binaries/releases/download/v0.0.20260715/lms-2625.0.0-ubuntu-22.04.deb";
+      hash = "sha256-QVANSHy/yAp68oZM8JSmrWVoQtpvmcBAYUV8oT0QiE4=";
     };
     dontUnpack = true;
     nativeBuildInputs = [dpkg patchelf];
@@ -91,4 +93,12 @@ in
     ];
     includeClosures = true;
     runScript = "lms";
+    # No license field: the package is unfree, and CI evaluates every flake
+    # package without allowUnfree, so declaring it fails the derivation gate.
+    meta = {
+      description = "Intel Local Manageability Service for the AMT stack";
+      homepage = "https://github.com/rgl/lms-binaries";
+      platforms = lib.platforms.linux;
+      mainProgram = "intel-lms";
+    };
   }
