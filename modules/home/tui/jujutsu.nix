@@ -10,6 +10,7 @@
   cfg = config.tui.jujutsu;
 
   ocws = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.ocws;
+  jjfx = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jjfx;
   # Single-line badge the starship prompt renders; written by the ocws-gc
   # timer below so the prompt never pays for the jj classification itself.
   badgeFile = "${config.xdg.cacheHome}/ocws/badge";
@@ -239,6 +240,19 @@ in {
         type = "popup";
         command = "printf 'ocws board: reading workspace state...\\n'; cd ${lib.escapeShellArg defaults.paths.nixosConfig} && ocws ls --board 2>/dev/null || ocws ls; printf 'press enter to close\\n'; read ignored";
         description = "Show the ocws workspace board";
+        width = "95%";
+        height = "95%";
+      }
+
+      # jjfx is a trial cockpit, not the board: it has no review gate, and
+      # its delete, tidy, forge and pool keys mutate outside ocws. Open it
+      # read-only, use the list/diff/graph, and quit with q.
+      # prefix+shift+j is free (the defaults use r/n/g/w/d/t/x/p).
+      {
+        key = "prefix+shift+j";
+        type = "popup";
+        command = "cd ${lib.escapeShellArg defaults.paths.nixosConfig} && exec ${jjfx}/bin/jjfx tui";
+        description = "Open jjfx (trial jj workspace cockpit)";
         width = "95%";
         height = "95%";
       }
