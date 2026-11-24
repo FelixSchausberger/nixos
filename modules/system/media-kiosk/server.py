@@ -17,8 +17,10 @@ ignored (a desktop proxy would otherwise try to relay 127.0.0.1).
 import json
 import mimetypes
 import os
+import select
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import threading
@@ -322,6 +324,91 @@ def preview_loop():
         refresh_jellyfin()
         refresh_immich()
         time.sleep(60)
+
+
+# The controller's lizard mode exposes keyboard and mouse interfaces only; the
+# Steam and QAM buttons never reach the host. B (Escape) is therefore the only
+# spare key, so two presses inside the window close every kiosk-opened window
+# and niri focuses the shell again. A single Escape still reaches the page.
+STEAM_VENDOR_ID = "28de"
+STEAM_DEVICE_NAME = "Steam Controller Puck"
+EV_KEY = 1
+ESC_KEY = 1
+DOUBLE_ESC_SECONDS = 0.7
+INPUT_EVENT = struct.Struct("llHHi")
+
+
+def steam_keyboards():
+    paths = []
+    for event in sorted(Path("/sys/class/input").glob("event*")):
+        try:
+            vendor = (event / "device/id/vendor").read_text().strip()
+            name = (event / "device/name").read_text().strip()
+        except OSError:
+            continue
+        if (
+            vendor == STEAM_VENDOR_ID
+            and STEAM_DEVICE_NAME in name
+            and "Keyboard" in name
+        ):
+            paths.append(Path("/dev/input") / event.name)
+    return paths
+
+
+def controller_loop():
+    handles = {}
+    last_esc = 0.0
+    while True:
+        try:
+            if not handles:
+                for path in steam_keyboards():
+                    try:
+                        handles[path] = open(path, "rb", buffering=0)
+                    except OSError:
+                        pass
+                if not handles:
+                    # No controller connected yet; the puck also disappears on
+                    # a reconnect, so poll instead of exiting the thread.
+                    time.sleep(5)
+                    continue
+                log(f"controller: watching {len(handles)} keyboard interfaces")
+
+            ready, _, _ = select.select(list(handles.values()), [], [], 5.0)
+            for handle in ready:
+                data = handle.read(INPUT_EVENT.size * 8)
+                if not data:
+                    for path, candidate in list(handles.items()):
+                        if candidate is handle:
+                            del handles[path]
+                    handle.close()
+                    continue
+                for offset in range(0, len(data), INPUT_EVENT.size):
+                    chunk = data[offset : offset + INPUT_EVENT.size]
+                    if len(chunk) < INPUT_EVENT.size:
+                        continue
+                    _, _, kind, code, value = INPUT_EVENT.unpack(chunk)
+                    if kind != EV_KEY or code != ESC_KEY or value != 1:
+                        continue
+                    now = time.monotonic()
+                    if now - last_esc <= DOUBLE_ESC_SECONDS:
+                        last_esc = 0.0
+                        try:
+                            closed = close_app_windows()
+                        except Exception as error:
+                            log(f"controller: closing app windows failed ({error})")
+                            continue
+                        log(f"controller: double B, closed {closed} app window(s)")
+                    else:
+                        last_esc = now
+        except (OSError, ValueError) as error:
+            log(f"controller: input device lost ({error}); rescanning")
+            for handle in handles.values():
+                try:
+                    handle.close()
+                except OSError:
+                    pass
+            handles = {}
+            time.sleep(2)
 
 
 def highlights():
@@ -885,6 +972,7 @@ def main():
 
     threading.Thread(target=preview_loop, daemon=True).start()
     threading.Thread(target=set_initial_audio, daemon=True).start()
+    threading.Thread(target=controller_loop, daemon=True).start()
 
     try:
         server.serve_forever()
