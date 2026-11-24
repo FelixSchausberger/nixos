@@ -127,6 +127,12 @@ in {
     builtins.elem "music_assistant" config.services.home-assistant.extraComponents;
   smart_home_smlight_component =
     builtins.elem "smlight" config.services.home-assistant.extraComponents;
+  smart_home_upnp_component =
+    builtins.elem "upnp" config.services.home-assistant.extraComponents;
+  smart_home_fritz_component =
+    builtins.elem "fritz" config.services.home-assistant.extraComponents;
+  smart_home_fritzbox_component =
+    builtins.elem "fritzbox" config.services.home-assistant.extraComponents;
 
   opencode_web_enabled = config.modules.system.homelab.opencodeWeb.enable;
   opencode_web_port = config.modules.system.homelab.opencodeWeb.port;
