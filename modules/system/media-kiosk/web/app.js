@@ -58,6 +58,7 @@ const state = {
   lastFocus: null,
   toastTimer: null,
   padLast: 0,
+  wheelLast: 0,
   padA: false,
   padB: false,
 };
@@ -549,6 +550,22 @@ function handleKeydown(event) {
   }
 }
 
+/* Lizard mode reports the left stick as scroll, so the stick reaches the page
+ * as wheel events. Feed the dominant axis into the same navigator the D-pad
+ * uses; the stick repeats while held, hence the debounce. A panel or dialog
+ * owns the input and must not move the tile selection. */
+function handleWheel(event) {
+  if (state.app || document.querySelector("dialog[open]")) return;
+  const dx = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? Math.sign(event.deltaX) : 0;
+  const dy = dx ? 0 : Math.sign(event.deltaY);
+  if (!dx && !dy) return;
+  event.preventDefault();
+  const now = performance.now();
+  if (now - state.wheelLast < 180) return;
+  state.wheelLast = now;
+  moveFocus(dx, dy);
+}
+
 /* Gamepad: the 2026 Steam Controller only appears here on a kernel that
  * exposes hid-steam (7.3+). On the m920q's ZFS-supported 6.18 line the
  * firmware's lizard mode delivers arrow/Enter/Escape and pointer events
@@ -650,6 +667,7 @@ function wire() {
   els.frameImmich.addEventListener("load", () => frameLoaded("immich"));
 
   document.addEventListener("keydown", handleKeydown);
+  window.addEventListener("wheel", handleWheel, { passive: false });
 
   document.addEventListener("focusin", (event) => {
     if (event.target instanceof HTMLElement) {
