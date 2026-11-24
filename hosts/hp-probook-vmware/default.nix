@@ -48,16 +48,9 @@ in {
         "vmware"
         "modesetting"
       ];
-      xkb = {
-        layout = "de";
-        variant = "";
-      };
     };
     smartd.enable = lib.mkForce false;
   };
-
-  # Sync console keyboard layout with X11 configuration
-  console.useXkbConfig = true;
 
   # System modules configuration
   modules.system = {

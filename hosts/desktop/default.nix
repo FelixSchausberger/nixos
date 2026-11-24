@@ -63,6 +63,9 @@ in {
 
   hardware = {
     keyboard.qmk.enable = true;
+    # Keychron K6 HE raw HID (VID 0x3434) for VIA and Keychron Launcher;
+    # the STM32 DFU rules (0483:df11) come from the base QMK rules.
+    keyboard.qmk.keychronSupport = true;
 
     # DDC/CI brightness control for the external monitors (no internal
     # backlight): exposes /dev/i2c-* for noctalia's ddcutil backend.

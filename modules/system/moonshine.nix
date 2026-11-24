@@ -107,8 +107,9 @@ in {
       settings = {
         name = "Moonshine";
 
-        # German keyboard for in-game chat (upstream default is "us").
-        compositor.keyboard.layout = "de";
+        # EurKey for in-game chat and European characters (upstream default
+        # is "us").
+        compositor.keyboard.layout = "eu";
 
         application =
           map applyPowerHooks

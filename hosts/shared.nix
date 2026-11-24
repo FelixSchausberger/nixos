@@ -181,6 +181,17 @@ in {
     # Set networking hostname
     networking.hostName = cfg.hostName;
 
+    # EurKey first, German second, toggled with Alt+Shift. The Wayland
+    # compositors set the same layout for their sessions; this covers the
+    # console, the tuigreet greeter and X11 applications.
+    services.xserver.xkb = {
+      layout = lib.mkDefault "eu,de";
+      variant = lib.mkDefault ",";
+      options = lib.mkDefault "grp:alt_shift_toggle,terminate:ctrl_alt_bksp";
+      model = lib.mkDefault "pc104";
+    };
+    console.useXkbConfig = lib.mkDefault true;
+
     # Basic hardware graphics configuration
     hardware.graphics = lib.mkDefault {
       enable = true;
