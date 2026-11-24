@@ -187,7 +187,14 @@ def apply(
     except OSError as exc:
         raise ApplyError(f"cannot execute awww: {exc}") from exc
     if result.returncode != 0:
-        raise ApplyError(f"awww rejected {chosen}: {result.stderr.strip()}")
+        stderr = result.stderr.strip()
+        if "none of the requested outputs are valid" in stderr:
+            # A session start races the display hotplug: the daemon answers
+            # queries before it has an output, and awww rejects the image.
+            # The ten-minute timer retries, so a monitor that is not ready
+            # must not turn the start unit into a failure.
+            return ApplyResult(False, "no output available yet")
+        raise ApplyError(f"awww rejected {chosen}: {stderr}")
 
     # The crisp surface is already visible; the backdrop follows once the blur
     # is ready. A missing backdrop daemon is normal for shells that own the
