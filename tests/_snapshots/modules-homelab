@@ -73,6 +73,8 @@
   prometheus_port = 9090;
   smart_home_coordinator_url = "tcp://192.168.178.74:6638";
   smart_home_enabled = true;
+  smart_home_fritz_component = true;
+  smart_home_fritzbox_component = true;
   smart_home_ha_port = 8123;
   smart_home_ha_yaml_includes = {
     automation = "!include /var/lib/hass/automations.yaml";
@@ -103,6 +105,7 @@
     ];
   };
   smart_home_smlight_component = true;
+  smart_home_upnp_component = true;
   smart_home_webdav_component = true;
   smart_home_z2m_frontend_port = 8085;
   smart_home_zigbee_enabled = true;
