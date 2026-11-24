@@ -113,6 +113,10 @@
   # provisions neither.
   loggingEnabled = hl ? logging && hl.logging.enable;
 
+  # Alloy ships the journal on the aggregator and on every host pointed at a
+  # remote Loki, so its scrape gate differs from the Loki one.
+  alloyEnabled = hl ? logging && (hl.logging.enable || hl.logging.shipEndpoint != null);
+
   # Prometheus alert rules: evaluated by the local Prometheus and routed by
   # Alertmanager to alertmanager-ntfy, which reads the ntfy priority verbatim
   # from `alert.labels.priority`. `for = 2m` matches the former Grafana rule
@@ -793,6 +797,38 @@ in {
             static_configs = [
               {
                 targets = ["127.0.0.1:8080"];
+                labels.host = localHost;
+              }
+            ];
+          }
+        ]
+        ++ lib.optionals alloyEnabled [
+          {
+            # Alloy's own pipeline counters: write retries, dropped entries
+            # and journal read errors are the only way to tell a silent
+            # shipping gap from a quiet host. The HTTP server listens on
+            # Alloy's default loopback address, and the logging module does
+            # not change it.
+            job_name = "alloy";
+            scrape_interval = "60s";
+            static_configs = [
+              {
+                targets = ["127.0.0.1:12345"];
+                labels.host = localHost;
+              }
+            ];
+          }
+        ]
+        ++ lib.optionals loggingEnabled [
+          {
+            # Loki's ingester and request metrics: the self-observability the
+            # logs dashboard lacks when a push is rejected or a chunk flush
+            # stalls. Scraped on the aggregator only.
+            job_name = "loki";
+            scrape_interval = "60s";
+            static_configs = [
+              {
+                targets = ["127.0.0.1:${toString hl.logging.lokiPort}"];
                 labels.host = localHost;
               }
             ];

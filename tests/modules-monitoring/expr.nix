@@ -62,6 +62,10 @@ in
         config.services.prometheus.scrapeConfigs));
     vitals_scrape_enabled =
       builtins.any (j: j.job_name == "vitals") config.services.prometheus.scrapeConfigs;
+    alloy_scrape_enabled =
+      builtins.any (j: j.job_name == "alloy") config.services.prometheus.scrapeConfigs;
+    loki_scrape_enabled =
+      builtins.any (j: j.job_name == "loki") config.services.prometheus.scrapeConfigs;
     dashboard_providers =
       map (p: p.name) config.services.grafana.provision.dashboards.settings.providers;
     alertmanager = {
