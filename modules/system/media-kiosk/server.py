@@ -127,14 +127,16 @@ def refresh_jellyfin():
 
     try:
         users = http_json(f"{JELLYFIN_BASE}/Users", headers=jellyfin_headers())
+        # IsHidden only drops a user from the login screen; the API key still
+        # acts as that user, so a hidden administrator remains a valid library
+        # owner for the preview.
         visible = [
             user
             for user in users
             if not (user.get("Policy") or {}).get("IsDisabled")
-            and not (user.get("Policy") or {}).get("IsHidden")
         ]
         if not visible:
-            raise RuntimeError("Jellyfin has no visible users")
+            raise RuntimeError("Jellyfin has no enabled users")
 
         # The kiosk is a single-user appliance. Prefer the administrator so a
         # fresh install with a disabled guest still resolves a library owner.
@@ -248,13 +250,15 @@ def refresh_immich():
 
     try:
         search = http_json(
-            f"{IMMICH_BASE}/search/metadata",
+            # Immich serves its API under /api: the bare paths answer GET with
+            # the web app and POST with an Express 404.
+            f"{IMMICH_BASE}/api/search/metadata",
             headers=immich_headers(),
             body={
                 "size": 8,
-                # v3.2+ takes an orderBy object; the old order field is
-                # deprecated. Newest first keeps the tile a "recent photo".
-                "orderBy": {"field": "takenAt", "direction": "desc"},
+                # Newest first keeps the tile a "recent photo". Immich accepts
+                # fileCreatedAt, localDateTime, fileSizeInBytes and rating.
+                "orderBy": {"field": "localDateTime", "direction": "desc"},
             },
         )
         items = (search.get("assets") or {}).get("items") or []
@@ -264,7 +268,7 @@ def refresh_immich():
 
         asset_id = item["id"]
         thumbnail = http_bytes(
-            f"{IMMICH_BASE}/assets/{asset_id}/thumbnail?size=preview",
+            f"{IMMICH_BASE}/api/assets/{asset_id}/thumbnail?size=preview",
             immich_headers(),
         )
         write_atomic(CACHE / "immich.jpg", thumbnail)
