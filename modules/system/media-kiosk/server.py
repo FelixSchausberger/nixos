@@ -691,12 +691,13 @@ class KioskHandler(BaseHTTPRequestHandler):
     def send_cookies(self, status, cookies):
         self.send_response(status)
         for name, value, http_only in cookies:
-            header = f"{name}={value}; Path=/; SameSite=Lax"
+            # Immich's own login persists the session for 400 days; a session
+            # cookie would log the panel out on every browser restart.
+            header = f"{name}={value}; Path=/; SameSite=Lax; Max-Age=34560000"
             if http_only:
                 header += "; HttpOnly"
             self.send_header("Set-Cookie", header)
         self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", "0")
         security_headers(self)
         self.end_headers()
 
