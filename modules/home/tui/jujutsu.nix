@@ -12,9 +12,10 @@
   # The configured wrapper from the rookery project module: the fleet values
   # (base, prefix, trunk) are baked in, and runtime ROOKERY_* still override.
   rookery = config.programs.rookery.finalPackage;
-  # The board client installed by the same module. It reads the CLI's JSON
-  # streams and writes only through the CLI, so it is terminal-agnostic.
-  rookeryTui = config.programs.rookery.tui.package;
+  # The board installed by the same module. It links rookery-core and renders
+  # the same read model; the wrapper supplies the fleet environment and the
+  # configured CLI path a seat pane re-enters.
+  rookeryTui = config.programs.rookery.tui.finalPackage;
   # Single-line badge the starship prompt renders; written by the ocws-gc
   # timer below so the prompt never pays for the jj classification itself.
   badgeFile = "${config.xdg.cacheHome}/ocws/badge";
@@ -244,17 +245,16 @@ in {
     };
 
     # The board one key away from every herdr pane: same contributed key
-    # pattern the tuicr and TTT modules use, same popup shape. The TUI reads
-    # `rookery ls --json` and `task list --json` and writes only through the
-    # CLI, so it is terminal-agnostic; `rookery ls --board` remains the CLI
-    # fallback. The popup runs from the primary checkout so the CLI resolves
-    # the fleet repository, and pins the configured wrapper through
-    # ROOKERY_BIN instead of trusting PATH.
+    # pattern the tuicr and TTT modules use, same popup shape. The board links
+    # rookery-core in process, and its configured wrapper supplies the fleet
+    # base, prefix and trunk. `rookery ls --board` remains the CLI fallback.
+    # The popup runs from the primary checkout so jj and the task store resolve
+    # the fleet repository.
     tui.herdr.commandKeys = lib.mkAfter [
       {
         key = "prefix+shift+b";
         type = "popup";
-        command = "cd ${lib.escapeShellArg defaults.paths.nixosConfig} && env ROOKERY_BIN=${rookery}/bin/rookery ${rookeryTui}/bin/rookery-tui";
+        command = "cd ${lib.escapeShellArg defaults.paths.nixosConfig} && ${rookeryTui}/bin/rookery-tui";
         description = "Show the Rookery board";
         width = "95%";
         height = "95%";
