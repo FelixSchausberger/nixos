@@ -117,6 +117,70 @@
             bash test-rookery-contract.sh
             touch $out
           '';
+
+        # The kiosk profile lives on the persistence dataset, where Home
+        # Manager's seed entries are read-only: the extensions directory is
+        # 0555 with 0444 files and the rest are symlinks into the store. The
+        # seed therefore only fills gaps. An earlier revision reinstalled every
+        # file, which replaced the links with regular files (the next
+        # activation moved them aside as .backup) and then failed to remove the
+        # extension tree, leaving the browser unit in a restart loop.
+        media-kiosk-profile-seed = let
+          fixture = pkgs.runCommand "media-kiosk-profile-seed-fixture" {} ''
+            mkdir -p $out/chrome $out/extensions
+            printf 'user_pref("kiosk.fixture", true);\n' > $out/user.js
+            printf '#navigator-toolbox { display: none; }\n' > $out/chrome/userChrome.css
+            printf 'fixture extension\n' > $out/extensions/uBlock0@raymondhill.net.xpi
+            : > $out/.keep
+          '';
+          seed = pkgs.callPackage ../modules/home/gui/media-kiosk-seed.nix {
+            userJs = "${fixture}/user.js";
+            userChrome = "${fixture}/chrome/userChrome.css";
+            extensions = "${fixture}/extensions";
+          };
+        in
+          pkgs.runCommand "media-kiosk-profile-seed-test" {} ''
+            seed=${seed}/bin/media-kiosk-profile-seed
+
+            # 1. A profile Home Manager already seeded: symlinks plus the
+            #    read-only extensions directory, exactly as activation leaves
+            #    it. The seed must change nothing and succeed.
+            seeded=$TMPDIR/seeded
+            profile=$seeded/.config/zen/kiosk
+            mkdir -p "$profile/chrome" "$profile/extensions"
+            ln -s ${fixture}/user.js "$profile/user.js"
+            ln -s ${fixture}/.keep "$profile/.keep"
+            ln -s ${fixture}/chrome/userChrome.css "$profile/chrome/userChrome.css"
+            ln -s ${fixture}/extensions/uBlock0@raymondhill.net.xpi "$profile/extensions/uBlock0@raymondhill.net.xpi"
+            chmod 0555 "$profile/extensions"
+            HOME=$seeded $seed
+            test -L "$profile/user.js"
+            test -L "$profile/.keep"
+            test -L "$profile/chrome/userChrome.css"
+            test -L "$profile/extensions/uBlock0@raymondhill.net.xpi"
+            test "$(stat -c %a "$profile/extensions")" = 555
+
+            # 2. A profile the persistence mount emptied: the seed populates it
+            #    from the store paths and exits 0.
+            fresh=$TMPDIR/fresh
+            profile=$fresh/.config/zen/kiosk
+            mkdir -p "$profile"
+            HOME=$fresh $seed
+            cmp ${fixture}/user.js "$profile/user.js"
+            cmp ${fixture}/chrome/userChrome.css "$profile/chrome/userChrome.css"
+            cmp ${fixture}/extensions/uBlock0@raymondhill.net.xpi "$profile/extensions/uBlock0@raymondhill.net.xpi"
+            test -e "$profile/.keep"
+
+            # 3. A later start leaves existing entries alone, including one an
+            #    older activation or the browser left as a regular file.
+            rm "$profile/user.js"
+            printf 'user_pref("kiosk.local", true);\n' > "$profile/user.js"
+            HOME=$fresh $seed
+            grep -q kiosk.local "$profile/user.js"
+            test -L "$profile/extensions/uBlock0@raymondhill.net.xpi"
+
+            touch $out
+          '';
       };
 
     devShells.default = pkgs.mkShell {
