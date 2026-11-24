@@ -12,7 +12,9 @@
   # The configured wrapper from the rookery project module: the fleet values
   # (base, prefix, trunk) are baked in, and runtime ROOKERY_* still override.
   rookery = config.programs.rookery.finalPackage;
-  jjfx = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.jjfx;
+  # The board client installed by the same module. It reads the CLI's JSON
+  # streams and writes only through the CLI, so it is terminal-agnostic.
+  rookeryTui = config.programs.rookery.tui.package;
   # Single-line badge the starship prompt renders; written by the ocws-gc
   # timer below so the prompt never pays for the jj classification itself.
   badgeFile = "${config.xdg.cacheHome}/ocws/badge";
@@ -189,6 +191,7 @@ in {
       workspacePrefix = "nixos-ws-";
       trunk = "main@origin";
       gc.enable = false;
+      tui.enable = true;
     };
 
     # Reclaim finished jj workspaces daily and refresh the prompt badge. The
@@ -241,39 +244,19 @@ in {
       };
     };
 
-    # The workspace board one key away from every herdr pane: same contributed
-    # key pattern the tuicr and TTT modules use, same popup shape. The --board
-    # flag degrades to the plain table when the installed Rookery predates it, so
-    # the key never dies on a host whose home profile is ahead of or behind the
-    # package. fish runs panes (herdr detects it from SHELL), so the chain uses
-    # fish's && and ||.
-    #
-    # The board classifies every jj workspace. That pass used to take about
-    # twelve seconds on a full fleet; it is now a single jj log plus bounded
-    # parallel absorption and process/session probes, cached on the jj op id
-    # (roughly 0.4 s cold, 0.2 s cached). The popup still prints a loading
-    # line before the scan because a cold run is long enough to see, and a
-    # popup whose command exits closes at once (herdr closes it on PaneDied),
-    # which would hide the result; the trailing read holds it until Enter.
+    # The board one key away from every herdr pane: same contributed key
+    # pattern the tuicr and TTT modules use, same popup shape. The TUI reads
+    # `rookery ls --json` and `task list --json` and writes only through the
+    # CLI, so it is terminal-agnostic; `rookery ls --board` remains the CLI
+    # fallback. The popup runs from the primary checkout so the CLI resolves
+    # the fleet repository, and pins the configured wrapper through
+    # ROOKERY_BIN instead of trusting PATH.
     tui.herdr.commandKeys = lib.mkAfter [
       {
         key = "prefix+shift+b";
         type = "popup";
-        command = "printf 'rookery board: reading workspace state...\\n'; cd ${lib.escapeShellArg defaults.paths.nixosConfig} && rookery ls --board 2>/dev/null || rookery ls; printf 'press enter to close\\n'; read ignored";
-        description = "Show the Rookery workspace board";
-        width = "95%";
-        height = "95%";
-      }
-
-      # jjfx is a trial cockpit, not the board: it has no review gate, and
-      # its delete, tidy, forge and pool keys mutate outside Rookery. Open it
-      # read-only, use the list/diff/graph, and quit with q.
-      # prefix+shift+j is free (the defaults use r/n/g/w/d/t/x/p).
-      {
-        key = "prefix+shift+j";
-        type = "popup";
-        command = "cd ${lib.escapeShellArg defaults.paths.nixosConfig} && exec ${jjfx}/bin/jjfx tui";
-        description = "Open jjfx (trial jj workspace cockpit)";
+        command = "cd ${lib.escapeShellArg defaults.paths.nixosConfig} && env ROOKERY_BIN=${rookery}/bin/rookery ${rookeryTui}/bin/rookery-tui";
+        description = "Show the Rookery board";
         width = "95%";
         height = "95%";
       }

@@ -273,7 +273,7 @@
     # the generic Home Manager module live in the project; this repo pins it
     # and keeps the fleet badge, digest, keybindings and gc unit.
     rookery = {
-      url = "github:FelixSchausberger/rookery/v0.3.0";
+      url = "github:FelixSchausberger/rookery/v0.4.0";
       inputs.nixpkgs.follows = "nixpkgs";
       # rookery's treefmt-nix pins its own nixpkgs; follow the root input.
       inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
