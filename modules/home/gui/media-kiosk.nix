@@ -89,9 +89,9 @@ in {
       # uBlock ships as an XPI in the profile's extensions directory, which
       # Firefox installs disabled unless the profile opts out of the sideload
       # auto-disable scopes. Kiosk mode has no add-on manager to approve it.
-      # A profile that already recorded the disabled state keeps it, so the
-      # entry has to be dropped once (extensions.json) for the rescan to pick
-      # the pref up.
+      # A profile that already recorded the disabled state keeps it across
+      # rescans, so extensions.json and addonStartup.json.lz4 have to be
+      # dropped once for the pref to take effect.
       "extensions.autoDisableScopes" = 0;
     };
 
