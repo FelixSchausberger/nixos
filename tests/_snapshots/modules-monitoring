@@ -39,6 +39,7 @@
     title = "{{ if eq .Status \"resolved\" }}Resolved: {{ end }}{{ index .Labels \"alertname\" }} on {{ index .Labels \"host\" }}";
     topic = "homelab-alerts";
   };
+  alloy_scrape_enabled = true;
   dashboard_providers = [
     "fritz"
     "config-health"
@@ -47,6 +48,7 @@
     "logs"
     "garmin"
   ];
+  loki_scrape_enabled = true;
   rule_count = 38;
   rules = [
     {
@@ -251,6 +253,8 @@
     "otel"
     "comin"
     "vitals"
+    "alloy"
+    "loki"
     "fritz"
     "adguard"
     "blackbox"
