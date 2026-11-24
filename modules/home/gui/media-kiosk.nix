@@ -24,6 +24,10 @@
 
   kioskProfile = "${config.xdg.configHome}/zen/kiosk";
 
+  # nixpkgs' Jellyfin module has no port option and keeps upstream 8096; the
+  # system module hardcodes the same constant for the preview client.
+  jellyfinPort = 8096;
+
   # The kiosk profile is persisted, and the switch that installs its
   # persistence mount starts the mount after Home Manager has written the
   # declarative profile, which hides user.js, the chrome CSS and the uBlock XPI
@@ -45,7 +49,7 @@
     name = "media-kiosk-jellyfin-session";
     runtimeInputs = [pkgs.python3];
     text = ''
-      exec python3 ${./media-kiosk-jellyfin-session.py} ${lib.escapeShellArg "http://127.0.0.1:${toString port}"} /run/secrets/media-kiosk/env
+      exec python3 ${./media-kiosk-jellyfin-session.py} ${lib.escapeShellArg "http://127.0.0.1:${toString jellyfinPort}"} /run/secrets/media-kiosk/env
     '';
   };
 in {

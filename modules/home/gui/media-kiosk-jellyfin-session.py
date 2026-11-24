@@ -17,6 +17,7 @@ import os
 import sqlite3
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -72,8 +73,12 @@ def request_json(url, body=None, headers=None, timeout=10):
         method="POST" if data is not None else "GET",
     )
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with opener.open(request, timeout=timeout) as response:
-        payload = response.read()
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode(errors="replace")[:200]
+        raise RuntimeError(f"HTTP {error.code} from {url}: {detail}") from error
     return json.loads(payload) if payload else {}
 
 
