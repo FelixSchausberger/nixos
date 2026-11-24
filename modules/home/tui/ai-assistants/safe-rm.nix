@@ -176,7 +176,10 @@ in {
             printf '%s\t%s\t%s\n' "$stamp" "$orig" "$dest" >> "$tmp"
           done < "$record"
           while [ "$(du -sb "$graveyard" | cut -f1)" -gt "${toString (cfgGraveyard.maxSizeGib * 1073741824)}" ]; do
-            oldest=$(tail -n+2 "$tmp" | head -1 | cut -f3)
+            # sed, not `tail | head`: head closes the pipe after one line,
+            # tail dies with SIGPIPE, and `set -o pipefail` turned that into
+            # exit 1 on every run, so the cap never pruned anything.
+            oldest=$(sed -n '2p' "$tmp" | cut -f3)
             [ -n "$oldest" ] || break
             rm -rf -- "$oldest"
             sed -i '2d' "$tmp"
