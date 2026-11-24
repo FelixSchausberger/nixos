@@ -24,25 +24,17 @@
 
   kioskProfile = "${config.xdg.configHome}/zen/kiosk";
 
-  # The kiosk profile is persisted, and a comin live switch mounts its
-  # persistence directory after Home Manager has written the declarative
-  # profile, which hides user.js, the chrome CSS and the uBlock XPI behind an
-  # empty directory. Re-seed from the Home Manager store paths before every
-  # browser start so a deploy (or a boot) always has the same profile. Firefox
-  # keeps cookies, logins and storage in the mounted directory untouched.
-  seedProfile = pkgs.writeShellApplication {
-    name = "media-kiosk-profile-seed";
-    runtimeInputs = [pkgs.coreutils];
-    text = ''
-      profile="$HOME/.config/zen/kiosk"
-      mkdir -p "$profile/chrome"
-      install -m 0644 ${lib.escapeShellArg (toString config.home.file."${kioskProfile}/user.js".source)} "$profile/user.js"
-      install -m 0644 ${lib.escapeShellArg (toString config.home.file."${kioskProfile}/chrome/userChrome.css".source)} "$profile/chrome/userChrome.css"
-      rm -rf "$profile/extensions"
-      mkdir -p "$profile/extensions"
-      cp -a ${lib.escapeShellArg (toString config.home.file."${kioskProfile}/extensions".source)}/. "$profile/extensions/"
-      touch "$profile/.keep"
-    '';
+  # The kiosk profile is persisted, and the switch that installs its
+  # persistence mount starts the mount after Home Manager has written the
+  # declarative profile, which hides user.js, the chrome CSS and the uBlock XPI
+  # behind an empty directory. The seed fills the missing entries from the Home
+  # Manager store paths before every browser start so a deploy (or a boot)
+  # always has the same profile. Firefox keeps cookies, logins and storage in
+  # the mounted directory untouched.
+  seedProfile = pkgs.callPackage ./media-kiosk-seed.nix {
+    userJs = config.home.file."${kioskProfile}/user.js".source;
+    userChrome = config.home.file."${kioskProfile}/chrome/userChrome.css".source;
+    extensions = config.home.file."${kioskProfile}/extensions".source;
   };
 in {
   assertions = [
@@ -127,6 +119,11 @@ in {
       Wants = ["media-kiosk-api.service"];
       PartOf = ["niri-session.target"];
       BindsTo = ["niri-session.target"];
+      # RestartSec=3 spaces restarts outside systemd's default 10s window, so
+      # a failing ExecStartPre restarts forever; cap the loop instead and leave
+      # the unit failed until an explicit reset-failed.
+      StartLimitIntervalSec = 300;
+      StartLimitBurst = 5;
     };
     Service = {
       ExecStartPre = "${lib.getExe seedProfile}";
