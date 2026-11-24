@@ -42,9 +42,17 @@ in
   # systemd demands.
   assert !m920q.config.systemd.services.alloy.serviceConfig.DynamicUser;
   assert m920q.config.systemd.services.alloy.serviceConfig.User == "alloy";
-  assert m920q.config.users.users.alloy.isSystemUser; {
+  assert m920q.config.users.users.alloy.isSystemUser;
+  # Loki's own query log would be shipped back into itself by Alloy, so query
+  # text would resurface as log content and match later searches.
+  assert m920q.config.services.loki.configuration.server.log_level == "warn";
+  # The tool that reads the journal must also lift user-unit names and
+  # normalise severity; both are load-bearing for the error views.
+  assert lib.hasInfix "loki.process \"levels\"" m920q.config.environment.etc."alloy/config.alloy".text;
+  assert lib.hasInfix "user_unit" m920q.config.environment.etc."alloy/config.alloy".text; {
     loki_enabled = m920q.config.services.loki.enable;
     loki_port = ml.lokiPort;
+    loki_log_level = m920q.config.services.loki.configuration.server.log_level;
     loki_http_listen_address =
       m920q.config.services.loki.configuration.server.http_listen_address;
     loki_retention = m920q.config.services.loki.configuration.limits_config.retention_period;
