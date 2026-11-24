@@ -95,6 +95,9 @@ in {
     script = ha.script or null;
     scene = ha.scene or null;
   };
+  # The plugs report every ~2 s and already reach Prometheus; their recorder
+  # rows dwarf everything else in the database.
+  smart_home_recorder_exclude = config.services.home-assistant.config.recorder.exclude;
   smart_home_mosquitto = let
     l = builtins.head config.services.mosquitto.listeners;
   in {

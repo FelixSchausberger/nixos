@@ -187,6 +187,16 @@ in {
           automation = "!include /var/lib/hass/automations.yaml";
           script = "!include /var/lib/hass/scripts.yaml";
           scene = "!include /var/lib/hass/scenes.yaml";
+          # The Shelly plugs report power every ~2 s: sensor.m920q_plug_power
+          # alone wrote 318k rows in seven days, ~93% of all state rows.
+          # Prometheus scrapes the same values every 30 s (monitoring.nix) and
+          # Homepage reads the plug directly, so Home Assistant needs no copy;
+          # the printer camera's state churn adds nothing either. Lights and
+          # switches stay on the default ten-day purge.
+          recorder.exclude = {
+            entity_globs = ["sensor.m920q_plug_*" "sensor.desktop_plug_*"];
+            entities = ["camera.octoprint_camera"];
+          };
           # The WebDAV backup location writes to Nextcloud on dpool, which
           # sanoid snapshots and syncoid replicates to the bpool backup disk.
           # No http section: HA 2026.10 migrated the HTTP configuration to
