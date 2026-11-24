@@ -80,6 +80,23 @@ async function api(path, options = {}) {
   return data;
 }
 
+/* Immich authenticates its web UI with host cookies. The API logs in with the
+ * sops credentials and answers with the same Set-Cookie values a manual login
+ * sets; cookies ignore ports, so the kiosk origin sets them for the Immich
+ * origin on 127.0.0.1. The panel must not load before they exist, or Immich
+ * renders a login form and never retries. */
+let immichSession = null;
+
+function primeImmichSession() {
+  if (!immichSession) {
+    immichSession = api("/api/session/immich", { method: "POST" }).catch((error) => {
+      immichSession = null;
+      throw error;
+    });
+  }
+  return immichSession;
+}
+
 function toast(message, isError = false) {
   els.toast.textContent = message;
   els.toast.classList.toggle("is-error", isError);
@@ -301,12 +318,23 @@ function showApp(name, resume = false) {
     }
   }
 
-  if (frame.dataset.src !== source) {
-    frame.dataset.src = source;
-    els.frameLoading.hidden = false;
-    frame.src = source;
+  const load = () => {
+    if (frame.dataset.src !== source) {
+      frame.dataset.src = source;
+      els.frameLoading.hidden = false;
+      frame.src = source;
+    } else {
+      els.frameLoading.hidden = true;
+    }
+  };
+
+  if (name === "immich") {
+    primeImmichSession().then(load, (error) => {
+      toast(error.message, true);
+      load();
+    });
   } else {
-    els.frameLoading.hidden = true;
+    load();
   }
 
   setTimeout(() => frame.focus(), 60);
@@ -657,6 +685,7 @@ function boot() {
   loadHighlights();
   loadAudio();
   loadDesktop();
+  primeImmichSession().catch(() => {});
 
   setInterval(loadHighlights, 20000);
   setInterval(loadAudio, 20000);

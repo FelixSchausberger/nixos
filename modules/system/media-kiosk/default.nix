@@ -193,17 +193,28 @@ in {
       }
     ];
 
-    # The scoped preview key is declared here, next to its only consumer. It
-    # must exist in secrets/secrets.yaml before activation; the underlying file
-    # stays root-owned and the rendered environment file is user-owned.
-    sops.secrets = lib.mkIf (cfg.immichKioskApiKeySecret != null) {
-      ${cfg.immichKioskApiKeySecret} = {};
-    };
+    # The preview keys and the web-login credentials are declared here, next to
+    # their only consumer. They must exist in secrets/secrets.yaml before
+    # activation; the underlying files stay root-owned and the rendered
+    # environment file is user-owned.
+    sops.secrets =
+      {
+        "jellyfin/password" = {};
+        "immich/admin-email" = {};
+        "immich/admin-password" = {};
+      }
+      // lib.optionalAttrs (cfg.immichKioskApiKeySecret != null) {
+        ${cfg.immichKioskApiKeySecret} = {};
+      };
 
     sops.templates."media-kiosk/env" = {
       content = ''
         JELLYFIN_API_KEY=${config.sops.placeholder."jellyfin/api-key"}
+        JELLYFIN_USER=jellyfin
+        JELLYFIN_PASSWORD=${config.sops.placeholder."jellyfin/password"}
         IMMICH_API_KEY=${config.sops.placeholder.${immichKeyName}}
+        IMMICH_EMAIL=${config.sops.placeholder."immich/admin-email"}
+        IMMICH_PASSWORD=${config.sops.placeholder."immich/admin-password"}
       '';
       path = "/run/secrets/media-kiosk/env";
       owner = cfg.user;
