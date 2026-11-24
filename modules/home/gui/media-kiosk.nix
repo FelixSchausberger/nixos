@@ -86,6 +86,13 @@ in {
       "gfx.webrender.all" = true;
       "widget.dmabuf.force-enabled" = true;
       "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+      # uBlock ships as an XPI in the profile's extensions directory, which
+      # Firefox installs disabled unless the profile opts out of the sideload
+      # auto-disable scopes. Kiosk mode has no add-on manager to approve it.
+      # A profile that already recorded the disabled state keeps it, so the
+      # entry has to be dropped once (extensions.json) for the rescan to pick
+      # the pref up.
+      "extensions.autoDisableScopes" = 0;
     };
 
     # --new-window must produce a chromeless top-level window for Cinejoy,
