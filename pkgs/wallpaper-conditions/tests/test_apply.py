@@ -118,6 +118,19 @@ class BlurTests(unittest.TestCase):
         self.assertIn("awww img", output.getvalue())
         self.assertFalse(self.cache.exists())
 
+    def test_missing_output_is_not_an_error(self) -> None:
+        resolution = make_resolution((self.source,))
+        rejected = subprocess.CompletedProcess(
+            [], 1, "", 'Error: "none of the requested outputs are valid"'
+        )
+        with (
+            patch("wallpaper_conditions.apply.backend_ready", return_value=True),
+            patch("wallpaper_conditions.apply._run", return_value=rejected),
+        ):
+            result = apply(resolution, self.source, self.cache)
+        self.assertFalse(result.applied)
+        self.assertIn("no output", result.reason)
+
 
 class PublishTests(unittest.TestCase):
     def setUp(self) -> None:
