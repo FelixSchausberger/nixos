@@ -36,6 +36,18 @@
     userChrome = config.home.file."${kioskProfile}/chrome/userChrome.css".source;
     extensions = config.home.file."${kioskProfile}/extensions".source;
   };
+
+  # Jellyfin keeps its web session in localStorage and has no cookie or URL
+  # login. This writes the record a manual login stores, using the credentials
+  # the system module renders into the sops environment file, so a wiped
+  # profile or a rotated password heals on the next browser start.
+  jellyfinSession = pkgs.writeShellApplication {
+    name = "media-kiosk-jellyfin-session";
+    runtimeInputs = [pkgs.python3];
+    text = ''
+      exec python3 ${./media-kiosk-jellyfin-session.py} ${lib.escapeShellArg "http://127.0.0.1:${toString port}"} /run/secrets/media-kiosk/env
+    '';
+  };
 in {
   assertions = [
     {
@@ -118,7 +130,9 @@ in {
 
   # niri-session.target guarantees WAYLAND_DISPLAY, exactly like the uxplay
   # service. The browser is not restarted on deploy (Home Manager only reloads
-  # units); a comin switch therefore leaves a running kiosk untouched.
+  # units); a comin switch therefore leaves a running kiosk untouched. The two
+  # pre-start steps seed the profile and refresh the Jellyfin web session
+  # before Zen opens the profile.
   systemd.user.services.media-kiosk-browser = {
     Unit = {
       Description = "Projector media kiosk browser (Zen)";
@@ -133,7 +147,10 @@ in {
       StartLimitBurst = 5;
     };
     Service = {
-      ExecStartPre = "${lib.getExe seedProfile}";
+      ExecStartPre = [
+        (lib.getExe seedProfile)
+        (lib.getExe jellyfinSession)
+      ];
       ExecStart = "${zen}/bin/zen-beta -P kiosk --kiosk ${kioskUrl}";
       Environment = ["MOZ_ENABLE_WAYLAND=1"];
       # /api/exit stops this unit explicitly; on-failure keeps a crash

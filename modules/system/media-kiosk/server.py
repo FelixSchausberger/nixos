@@ -38,6 +38,8 @@ JELLYFIN_BASE = ""
 IMMICH_BASE = ""
 JELLYFIN_KEY = ""
 IMMICH_KEY = ""
+IMMICH_EMAIL = ""
+IMMICH_PASSWORD = ""
 
 CSP_FRAME_SRC = ""
 
@@ -242,6 +244,26 @@ def refresh_jellyfin():
         metadata["online"] = False
         metadata.setdefault("updated", int(time.time()))
         write_json(CACHE / "jellyfin.json", metadata)
+
+
+def immich_web_login():
+    """Return a user session token for the Immich web client.
+
+    Immich authenticates its web UI with host cookies instead of localStorage,
+    so the kiosk hands the browser the same cookies a manual login returns.
+    Cookies ignore ports, which is how the kiosk origin can set them for the
+    Immich origin on 127.0.0.1.
+    """
+    if not IMMICH_EMAIL or not IMMICH_PASSWORD:
+        raise RuntimeError("Immich credentials are not configured")
+    response = http_json(
+        f"{IMMICH_BASE}/api/auth/login",
+        body={"email": IMMICH_EMAIL, "password": IMMICH_PASSWORD},
+    )
+    token = response.get("accessToken")
+    if not token:
+        raise RuntimeError("Immich login returned no access token")
+    return token
 
 
 def refresh_immich():
@@ -666,6 +688,18 @@ class KioskHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def send_cookies(self, status, cookies):
+        self.send_response(status)
+        for name, value, http_only in cookies:
+            header = f"{name}={value}; Path=/; SameSite=Lax"
+            if http_only:
+                header += "; HttpOnly"
+            self.send_header("Set-Cookie", header)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        security_headers(self)
+        self.end_headers()
+
     def send_bytes(self, status, payload, content_type, cache):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -750,6 +784,23 @@ class KioskHandler(BaseHTTPRequestHandler):
             body = json.loads(raw) if raw else {}
             path = urllib.parse.urlparse(self.path).path
 
+            if path == "/api/session/immich":
+                # POST-only and behind the kiosk request header, so a page on
+                # another origin cannot mint a session with a plain GET. Local
+                # processes share the kiosk user's trust boundary anyway.
+                try:
+                    token = immich_web_login()
+                except Exception as error:
+                    log(f"Immich web login failed: {error}")
+                    return self.send_json(502, {"error": "Immich login failed"})
+                return self.send_cookies(
+                    204,
+                    [
+                        ("immich_access_token", token, True),
+                        ("immich_auth_type", "password", False),
+                        ("immich_is_authenticated", "true", False),
+                    ],
+                )
             if path == "/api/open":
                 open_target(body.get("target"))
                 return self.send_json(200, {"ok": True})
@@ -792,6 +843,7 @@ class KioskHandler(BaseHTTPRequestHandler):
 def load_config():
     global CONFIG, WEB_ROOT, CACHE
     global JELLYFIN_BASE, IMMICH_BASE, JELLYFIN_KEY, IMMICH_KEY, CSP_FRAME_SRC
+    global IMMICH_EMAIL, IMMICH_PASSWORD
 
     config_path = os.environ.get("KIOSK_CONFIG")
     web_root = os.environ.get("KIOSK_WEB_ROOT")
@@ -809,12 +861,16 @@ def load_config():
     IMMICH_BASE = CONFIG["immich"]["url"].rstrip("/")
     JELLYFIN_KEY = os.environ.get("JELLYFIN_API_KEY", "").strip()
     IMMICH_KEY = os.environ.get("IMMICH_API_KEY", "").strip()
+    IMMICH_EMAIL = os.environ.get("IMMICH_EMAIL", "").strip()
+    IMMICH_PASSWORD = os.environ.get("IMMICH_PASSWORD", "")
     CSP_FRAME_SRC = f"{JELLYFIN_BASE} {IMMICH_BASE}"
 
     if not JELLYFIN_KEY:
         log("JELLYFIN_API_KEY missing; Jellyfin preview disabled")
     if not IMMICH_KEY:
         log("IMMICH_API_KEY missing; Immich preview disabled")
+    if not IMMICH_EMAIL or not IMMICH_PASSWORD:
+        log("IMMICH_EMAIL/IMMICH_PASSWORD missing; Immich web session disabled")
     return True
 
 
