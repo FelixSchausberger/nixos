@@ -24,6 +24,21 @@
   # becomes the `host` stream label, so {host="desktop"} scopes a query to one
   # machine. `unit` and `level` are lifted from journal fields so the error view
   # can filter by service and severity without pattern-matching the message.
+  #
+  # Two journald properties need correcting before the labels are usable:
+  #
+  #   - A process that writes to stderr without a syslog prefix reaches the
+  #     journal as PRIORITY=6, so a Postgres ERROR or a Go/Rust `level=error`
+  #     line is stored as info. The process stages below read the severity the
+  #     application itself printed and override the journald guess; lines that
+  #     match neither shape keep their journald level.
+  #   - The priority keyword is "err", not "error" (and "warning" rather than
+  #     "warn"), so a dashboard filtering level="error" saw nothing even for
+  #     real journald errors. The relabel rules normalise it first.
+  #
+  # User units carry their own service name in __journal__systemd_user_unit;
+  # without that label every kiosk or status-bar line collapses into
+  # user@1000.service and per-service views cannot name the failing unit.
   alloyConfig = endpoint: host: syslog: ''
     loki.relabel "journal" {
       forward_to = []
@@ -37,10 +52,74 @@
         source_labels = ["__journal_priority_keyword"]
         target_label  = "level"
       }
+
+      rule {
+        source_labels = ["level"]
+        regex         = "err|crit|alert|emerg"
+        target_label  = "level"
+        replacement   = "error"
+      }
+
+      rule {
+        source_labels = ["level"]
+        regex         = "warning"
+        target_label  = "level"
+        replacement   = "warn"
+      }
+
+      rule {
+        source_labels = ["level"]
+        regex         = "notice"
+        target_label  = "level"
+        replacement   = "info"
+      }
+
+      // `regex = ".+"` makes the rule a no-op for system units instead of
+      // attaching an empty label to every one of them.
+      rule {
+        source_labels = ["__journal__systemd_user_unit"]
+        regex         = ".+"
+        target_label  = "user_unit"
+      }
+    }
+
+    loki.process "levels" {
+      forward_to = [loki.write.loki.receiver]
+
+      // logfmt shape: `level=error`, `level="warning"`, `level=DEBUG`.
+      stage.regex {
+        expression = "(?i)(?:^|\\s)level=(?P<app_level>error|warn(?:ing)?|info|debug|trace|fatal|crit(?:ical)?|alert|emerg|notice)\\b"
+      }
+
+      // `with .Value` keeps a non-matching line from acquiring an empty
+      // app_level, which the labels stage would otherwise write as level="".
+      stage.template {
+        source   = "app_level"
+        template = "{{ with .Value }}{{ if eq (. | ToLower) \"warning\" }}warn{{ else if or (eq (. | ToLower) \"fatal\") (eq (. | ToLower) \"critical\") (eq (. | ToLower) \"crit\") (eq (. | ToLower) \"alert\") (eq (. | ToLower) \"emerg\") }}error{{ else if eq (. | ToLower) \"notice\" }}info{{ else }}{{ . | ToLower }}{{ end }}{{ end }}"
+      }
+
+      stage.labels {
+        values = { level = "app_level" }
+      }
+
+      // Postgres writes `[pid] ERROR: ...` to stderr without a level prefix;
+      // this is the shape behind the oc_mounts duplicate-key flood.
+      stage.regex {
+        expression = "^\\[[0-9]+\\] (?P<pg_level>ERROR|FATAL|PANIC|WARNING|NOTICE|INFO|LOG|DEBUG[1-5]?|STATEMENT|DETAIL|HINT):"
+      }
+
+      stage.template {
+        source   = "pg_level"
+        template = "{{ with .Value }}{{ if eq . \"WARNING\" }}warn{{ else if or (eq . \"ERROR\") (eq . \"FATAL\") (eq . \"PANIC\") }}error{{ else }}info{{ end }}{{ end }}"
+      }
+
+      stage.labels {
+        values = { level = "pg_level" }
+      }
     }
 
     loki.source.journal "journal" {
-      forward_to    = [loki.write.loki.receiver]
+      forward_to    = [loki.process.levels.receiver]
       relabel_rules = loki.relabel.journal.rules
       labels        = {host = "${host}"}
       max_age       = "24h"
@@ -138,6 +217,11 @@ in {
             http_listen_address = "0.0.0.0";
             http_listen_port = cfg.lokiPort;
             grpc_listen_port = 9095;
+            # Loki logs every query it answers at info, and Alloy ships its
+            # journal back into Loki: the query text becomes a log line whose
+            # own searches then match, inflating storage and returning the
+            # search itself as a hit. Warnings and errors still ship.
+            log_level = "warn";
           };
           common = {
             instance_addr = "127.0.0.1";
