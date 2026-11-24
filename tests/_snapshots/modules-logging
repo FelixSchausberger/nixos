@@ -35,11 +35,12 @@
         replacement   = "info"
       }
     
-      // `regex = ".+"` makes the rule a no-op for system units instead of
-      // attaching an empty label to every one of them.
+      // The capture group is load-bearing: relabel's default replacement is
+      // `$1`, so a bare `.+` matches but expands to an empty label value.
+      // Systems units have no user unit and do not match at all.
       rule {
         source_labels = ["__journal__systemd_user_unit"]
-        regex         = ".+"
+        regex         = "(.+)"
         target_label  = "user_unit"
       }
     }
