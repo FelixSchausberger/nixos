@@ -392,7 +392,6 @@
     .volume label {
       font-size: 18px;
       min-width: 18px;
-      margin: auto;
     }
 
     /* Network */
@@ -550,8 +549,13 @@ in {
         ExecStart = "${ironbarPkg}/bin/ironbar";
         # The overview-bar watcher only reacts to state changes, so the
         # default-visible bar is hidden once mapped (clean desktop at
-        # login; the watcher shows it when the overview opens).
-        ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 1; ${ironbarPkg}/bin/ironbar bar main hide'";
+        # login; the watcher shows it when the overview opens). The IPC
+        # socket exists before the bar is registered, and a loaded host
+        # (deploy, nix build) can take longer than a second to get there;
+        # `bar main hide` then exits 3 with "Invalid bar name" and, with
+        # Type=simple, kills the unit. Retry until the bar answers and
+        # never fail the unit on a bar that is merely still starting.
+        ExecStartPost = "${pkgs.bash}/bin/bash -c 'for _ in $(seq 1 20); do ${ironbarPkg}/bin/ironbar bar main hide && exit 0; sleep 0.5; done; exit 0'";
         Restart = "on-failure";
         RestartSec = 5;
       };
