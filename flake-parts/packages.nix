@@ -55,10 +55,6 @@
         # Workspace manager, extracted to its own project
         rookery = inputs.rookery.packages.${pkgs.stdenv.hostPlatform.system}.rookery;
 
-        # TUI cockpit for jj workspaces; pinned to the jj 0.47.1 PR until it
-        # merges and a release contains the bump.
-        jjfx = pkgs.callPackage ../pkgs/jjfx {};
-
         inherit
           (zellijPlugins)
           harpoon
