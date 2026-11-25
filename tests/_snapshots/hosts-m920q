@@ -4,7 +4,7 @@
   auto_start_session = false;
   backup_enabled = true;
   caddy_proxy_enabled = true;
-  containers_enabled = true;
+  containers_enabled = false;
   deferred_restarts_enabled = true;
   desktop_power_helper = true;
   has_192_168_178_route = true;

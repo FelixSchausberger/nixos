@@ -481,6 +481,9 @@ in {
             User = "root";
             Group = "root";
           };
+          # The script calls zpool through PATH; without the package the
+          # `command -v zpool` guard silently skipped the whole ZFS check.
+          path = [pkgs.zfs];
         };
 
         # Crash forensics: stamps a file at every clean shutdown, consumed by

@@ -337,6 +337,25 @@ in {
       '';
     };
 
+    systemd.services.nextcloud-trash-retention = {
+      after = ["nextcloud-setup.service"];
+      requires = ["nextcloud-setup.service"];
+      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        User = "nextcloud";
+        Group = "nextcloud";
+      };
+      script = ''
+        # The stock "auto" obligation keeps deleted files indefinitely while
+        # the pool has free space. The 30-day floor makes the ExpireTrash job
+        # actually reclaim them; this was 18G of trash on m920q.
+        ${lib.getExe config.services.nextcloud.occ} config:app:set files_trashbin trashbin_retention_obligation \
+          --value "30, auto"
+      '';
+    };
+
     systemd.services.nextcloud-update-plugins = {
       after = [
         "postgresql.service"

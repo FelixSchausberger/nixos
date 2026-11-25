@@ -320,6 +320,10 @@ in {
 
   networking.hostId = lib.mkForce "b580701b";
 
+  # Wired-only server; no Wi-Fi device is installed (the M.2 slot is empty).
+  # iwd otherwise runs a station-mode daemon that can never find a device.
+  networking.wireless.iwd.enable = lib.mkForce false;
+
   networking.useNetworkd = true;
   networking.networkmanager.enable = lib.mkForce false;
 
@@ -456,6 +460,66 @@ in {
       OnUnitActiveSec = "2min";
       AccuracySec = "5s";
     };
+  };
+
+  # glibc 2.44-57 carries CVE-2026-84243 (high) and nixos-unstable has no
+  # fixed build yet. Keep critical CVEs paging while muting the high-severity
+  # bucket that contains the one finding we cannot act on; the service
+  # recreates the silence after an Alertmanager restart and stops doing so at
+  # the fixed expiry. Remove this block once the channel ships the patch.
+  systemd.services.alertmanager-cve-silence = {
+    description = "Time-boxed silence for the unfixable glibc CVE";
+    after = ["alertmanager.service"];
+    wants = ["alertmanager.service"];
+    wantedBy = ["multi-user.target"];
+    path = [
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.jq
+    ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      TimeoutStartSec = "120s";
+    };
+    script = ''
+      set -eu
+      end="2026-12-09T00:00:00Z"
+      if [ "$(date -u +%s)" -ge "$(date -u -d "$end" +%s)" ]; then
+        exit 0
+      fi
+
+      for _ in $(seq 1 30); do
+        if curl -fsS -o /dev/null http://127.0.0.1:9093/-/ready; then
+          break
+        fi
+        sleep 1
+      done
+
+      if curl -fsS http://127.0.0.1:9093/api/v2/silences \
+        | jq -e '.[] | select(.status.state == "active") | .matchers[] | select(.name == "alertname" and .value == "NixpkgsVulnerability")' \
+        >/dev/null; then
+        exit 0
+      fi
+
+      starts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      payload=$(jq -n \
+        --arg starts "$starts" \
+        --arg ends "$end" \
+        --arg comment "glibc CVE-2026-84243 has no fix in nixos-unstable as of 2026-11-25; review by $end" \
+        '{
+          matchers: [
+            {name: "alertname", value: "NixpkgsVulnerability", isRegex: false, isEqual: true},
+            {name: "severity", value: "high", isRegex: false, isEqual: true}
+          ],
+          startsAt: $starts,
+          endsAt: $ends,
+          createdBy: "m920q-cve-silence",
+          comment: $comment
+        }')
+      curl -fsS -X POST -H 'Content-Type: application/json' \
+        --data "$payload" http://127.0.0.1:9093/api/v2/silences >/dev/null
+    '';
   };
 
   # Network daemons must not be restarted mid-deploy: networkd owns the LAN link
@@ -596,11 +660,12 @@ in {
   # Headless-first host: no login prompt on tty1 (it would leak hostname and
   # username to the projector room, and the on-demand compositor uses the DRM
   # seat directly). Emergency shells (sulogin via rescue/emergency) and SSH are
-  # unaffected. A bare Restart=no is not enough: getty@tty1 still starts from
-  # getty.target at boot.
-  systemd.units."getty@tty1" = {
-    enable = false;
-  };
+  # unaffected. Suppress the getty template: systemd-getty-generator adds
+  # getty@tty1 to getty.target at every boot regardless of enablement, and
+  # this host needs no VT at all. serial-getty@ttyS0 uses a different template
+  # and stays available for AMT SOL. The kiosk uses seatd/DRM, not a VT, so
+  # this does not affect it.
+  systemd.suppressedSystemUnits = ["getty@.service"];
 
   # Root ownership signals tmpfiles that subdirectory ownership transitions are intentional
   systemd.tmpfiles.rules = [
@@ -719,7 +784,9 @@ in {
     };
 
     stylix-catppuccin.enable = true;
-    containers.enable = true;
+    # No containerized workloads run here; the on-demand Docker socket was
+    # never used and only added closure, a docker group and a stale store.
+    containers.enable = false;
     # Bless-driven cleanup: generations whose boot entries exhausted their
     # tries are deleted once enough good generations exist (see module).
     bootFallback.enable = true;
@@ -1024,9 +1091,9 @@ in {
       enable = true;
       openFirewall = true;
     };
-    # Music Assistant: library + streaming services for the NAD C 368
-    # (MDC BluOS 2i on the WLAN) and future players, surfaced in HA.
-    musicAssistant.enable = true;
+    # Music Assistant is intentionally off. The NAD C 368 will expose BluOS on
+    # the LAN and Home Assistant's native bluesound integration controls it;
+    # Music Assistant had no library, player or play history on this host.
     # Ebook library: Kobo sync for the Clara BW over the LAN (the device
     # cannot run Tailscale), web UI + OPDS through the Caddy tailnet route.
     calibreWeb = {

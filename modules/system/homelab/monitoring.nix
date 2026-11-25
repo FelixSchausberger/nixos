@@ -1102,7 +1102,7 @@ in {
       settings = {
         server =
           {
-            http_addr = "0.0.0.0";
+            http_addr = "127.0.0.1";
             http_port = cfg.grafanaPort;
             domain = "m920q";
           }
@@ -1404,8 +1404,7 @@ in {
       }
     ];
 
-    networking.firewall.allowedTCPPorts = [
-      cfg.grafanaPort
-    ];
+    # Grafana stays on loopback: the Caddy /grafana route and the Homepage
+    # widget both reach it through 127.0.0.1, and the LAN has no direct port.
   };
 }

@@ -19,8 +19,8 @@
     };
     openFirewall = lib.mkOption {
       type = lib.types.bool;
-      default = true;
-      description = "Open firewall ports for DNS (53 TCP/UDP) and admin UI";
+      default = false;
+      description = "Open the AdGuard Home web UI port in the firewall. DNS (53 TCP/UDP) is always opened separately; the web UI is reached over the tailnet through Caddy on this host.";
     };
   };
 
@@ -55,8 +55,9 @@
       enable = true;
       inherit (config.modules.system.homelab.adguardhome) openFirewall;
       settings = {
-        # Admin UI port — migrate to 80/443 via Caddy after initial setup
-        http.address = "0.0.0.0:${toString config.modules.system.homelab.adguardhome.port}";
+        # Admin UI port — bound to loopback. The Caddy /adguard route and the
+        # exporter both connect through 127.0.0.1; the LAN reaches DNS only.
+        http.address = "127.0.0.1:${toString config.modules.system.homelab.adguardhome.port}";
         dns = {
           upstream_dns = [
             "https://dns.cloudflare.com/dns-query"
@@ -204,6 +205,22 @@
         Restart = lib.mkForce "on-failure";
         RestartSec = lib.mkForce "5s";
       };
+    };
+
+    # The admin interface has no users by default, which leaves the whole
+    # /control API unauthenticated. AdGuard's 0.107 API has no user endpoint,
+    # so the password is applied to the YAML in preStart: the sops password
+    # (already used by the exporter) is hashed with bcrypt and written after
+    # the module's settings merge, before the daemon reads the file.
+    systemd.services.adguardhome = {
+      serviceConfig.LoadCredential = "adguard-password:${config.sops.secrets."adguard/password".path}";
+      preStart = lib.mkAfter ''
+        password=$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/adguard-password")
+        hash=$(${pkgs.mkpasswd}/bin/mkpasswd -m bcrypt -R 10 "$password")
+        HASH="$hash" ${pkgs.yq-go}/bin/yq -i \
+          '.users = [{"name": "admin", "password": strenv(HASH)}]' \
+          "$STATE_DIRECTORY/AdGuardHome.yaml"
+      '';
     };
 
     # Port 53 is served directly by AdGuard Home for LAN clients.
