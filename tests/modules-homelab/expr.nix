@@ -1,6 +1,8 @@
 # Test: homelab module assertions and key settings
 {flake, ...}: let
   inherit (flake.nixosConfigurations.m920q) config;
+  lib = flake.nixosConfigurations.m920q.pkgs.lib;
+  homepageServices = builtins.readFile config.environment.etc."homepage-dashboard/services.yaml".source;
 
   hasAssertionWithMessage = message: builtins.any (assertion: (assertion.message or "") == message) config.assertions;
 
@@ -118,6 +120,16 @@ in {
   octoprint_serial_autoconnect = config.services.octoprint.extraConfig.serial.autoconnect;
   octoprint_ipcheck_trusts_tailnet =
     builtins.elem "100.64.0.0/10" config.services.octoprint.extraConfig.server.ipCheck.trustedSubnets;
+  octoprint_api_key_secret = config.sops.secrets ? "octoprint/api-key";
+  octoprint_api_key_injected =
+    lib.hasInfix "strenv(OCTOPRINT_API_KEY)" config.systemd.services.octoprint.preStart;
+  octoprint_homepage_api_key =
+    lib.hasInfix "HOMEPAGE_VAR_OCTOPRINT_API_KEY" config.sops.templates."homepage/env".content;
+  octoprint_homepage_widget_api_key =
+    lib.hasInfix "X-Api-Key" homepageServices
+    && lib.hasInfix "HOMEPAGE_VAR_OCTOPRINT_API_KEY" homepageServices;
+  octoprint_homepage_basic_auth_absent =
+    !(lib.hasInfix "HOMEPAGE_VAR_OCTOPRINT_PASSWORD" homepageServices);
   octoprint_serve_exec_start = stripStoreHash config.systemd.services.tailscale-serve-octoprint.serviceConfig.ExecStart;
   smart_home_octoprint_component =
     builtins.elem "octoprint" config.services.home-assistant.extraComponents;

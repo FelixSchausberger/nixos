@@ -872,13 +872,11 @@
   #     so its tile shows Homepage's error state until the first Connect;
   #     serial.autoconnect stays off by design, hence that state at every
   #     service restart.
-  # Basic auth instead of the native octoprint widget: that one only carries
-  # an API key (its api template is ...?apikey={key}), which would need a
-  # second application key beside the one the HA integration holds. The
-  # generic proxy handler sends HTTP Basic auth when the widget declares
-  # user/password, and OctoPrint's REST API accepts account credentials
-  # natively - the printer account in sops covers both consumers and stays
-  # manageable in one place.
+  # The customapi handler carries arbitrary headers, so all three probes
+  # authenticate with the global API key OctoPrint validates without a user
+  # session. The key is injected into OctoPrint's config and Homepage's
+  # environment from the same sops secret; the printer account remains for
+  # Home Assistant and manual UI logins.
   makerServices = lib.optionals hl.octoprint.enable [
     {
       "Prusa MK3S+" = {
@@ -891,8 +889,9 @@
             type = "customapi";
             url = "http://127.0.0.1:${toString hl.octoprint.port}/api/job";
             refreshInterval = 15000;
-            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
-            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            headers = {
+              "X-Api-Key" = "{{HOMEPAGE_VAR_OCTOPRINT_API_KEY}}";
+            };
             mappings = [
               {
                 field = "state";
@@ -912,8 +911,9 @@
             type = "customapi";
             url = "http://127.0.0.1:${toString hl.octoprint.port}/api/connection";
             refreshInterval = 15000;
-            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
-            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            headers = {
+              "X-Api-Key" = "{{HOMEPAGE_VAR_OCTOPRINT_API_KEY}}";
+            };
             mappings = [
               {
                 field = "current.state";
@@ -925,8 +925,9 @@
             type = "customapi";
             url = "http://127.0.0.1:${toString hl.octoprint.port}/api/printer";
             refreshInterval = 15000;
-            username = "{{HOMEPAGE_VAR_OCTOPRINT_USER}}";
-            password = "{{HOMEPAGE_VAR_OCTOPRINT_PASSWORD}}";
+            headers = {
+              "X-Api-Key" = "{{HOMEPAGE_VAR_OCTOPRINT_API_KEY}}";
+            };
             mappings = [
               {
                 field = "temperature.tool0.actual";
@@ -1157,8 +1158,7 @@
     ++ lib.optional hl.navidrome.enable "HOMEPAGE_VAR_NAVIDROME_TOKEN=${config.sops.placeholder."navidrome/token"}"
     ++ lib.optional (cfg.enable && githubAvailable) "HOMEPAGE_VAR_GITHUB_TOKEN=${config.sops.placeholder."github/token"}"
     ++ lib.optional cfg.enable "HOMEPAGE_VAR_NEXTDNS_API_KEY=${config.sops.placeholder."nextdns/api-key"}"
-    ++ lib.optional hl.octoprint.enable "HOMEPAGE_VAR_OCTOPRINT_USER=${config.sops.placeholder."octoprint/user"}"
-    ++ lib.optional hl.octoprint.enable "HOMEPAGE_VAR_OCTOPRINT_PASSWORD=${config.sops.placeholder."octoprint/password"}"
+    ++ lib.optional hl.octoprint.enable "HOMEPAGE_VAR_OCTOPRINT_API_KEY=${config.sops.placeholder."octoprint/api-key"}"
   );
 in {
   options.modules.system.homelab.homepage = {
