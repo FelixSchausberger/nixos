@@ -52,6 +52,8 @@
     "System/Health/Garmin Stats icon=garmin.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/garmin-stats"
   ];
   monitoring_enabled = true;
+  navidrome_removed_options_absent = true;
+  navidrome_scan_schedule = "@every 30m";
   octoprint_api_key_injected = true;
   octoprint_api_key_secret = true;
   octoprint_bind = "127.0.0.1";

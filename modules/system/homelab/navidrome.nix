@@ -57,9 +57,11 @@ in {
         EnableInsightsCollector = false;
         EnableDownloads = true;
         AutoImportPlaylists = false;
-        ScanSchedule = "@every 30m";
+        # The periodic scan lives under Scanner in 0.64; a top-level
+        # ScanSchedule is warned about and ignored, leaving only the file
+        # watcher scanning.
+        Scanner.Schedule = "@every 30m";
         TranscodingCacheSize = "100MB";
-        DefaultTranscodingBitrate = "128";
       };
     };
 
