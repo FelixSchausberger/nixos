@@ -77,14 +77,20 @@ in {
       }
     ];
 
-    # The printer account backs Homepage's OctoPrint card widgets (Basic
-    # auth against the REST API on loopback; the value reaches the dashboard
-    # only through the {{HOMEPAGE_VAR_*}} env template in homepage.nix) and
-    # Home Assistant's octoprint integration. The pair lives in sops so the
-    # two consumers rotate together; OctoPrint itself holds neither - its
-    # own account data stays in its profile store.
+    # Homepage's card widgets authenticate with the global API key: OctoPrint
+    # validates it on every /api route without a user session, while the
+    # printer account's credentials stay available for Home Assistant and
+    # manual UI logins. Both live in sops so they rotate together; OctoPrint's
+    # own account store remains imperative.
     sops.secrets."octoprint/user" = {};
     sops.secrets."octoprint/password" = {};
+    # The preStart below writes this value into OctoPrint's own config, so the
+    # sops file is the single source and a rotation reaches both ends.
+    sops.secrets."octoprint/api-key" = {
+      owner = "octoprint";
+      mode = "0400";
+      restartUnits = ["octoprint.service"];
+    };
 
     services.octoprint = {
       enable = true;
@@ -109,6 +115,17 @@ in {
     # way so a runaway plugin cannot evict immich/jellyfin on the 16 GB host
     # (the same protection pattern as jellyfin.nix/smart-home.nix).
     systemd.services = {
+      # The upstream module merges its generated settings into the state
+      # config at every start; this runs after that merge and replaces only
+      # api.key, so the rest of the imperative profile store stays untouched.
+      # yq reads the secret through the environment rather than argv, and the
+      # service user owns both the secret and the config file.
+      octoprint.preStart = lib.mkAfter ''
+        export OCTOPRINT_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets."octoprint/api-key".path})"
+        ${pkgs.yq-go}/bin/yq -i '.api.key = strenv(OCTOPRINT_API_KEY)' ${config.services.octoprint.stateDir}/config.yaml
+        ${pkgs.coreutils}/bin/chmod 600 ${config.services.octoprint.stateDir}/config.yaml
+      '';
+
       octoprint.serviceConfig = {
         MemoryMax = "800M";
         MemoryHigh = "600M";

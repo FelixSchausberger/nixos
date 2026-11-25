@@ -51,8 +51,13 @@
     "System/Health/Garmin Stats icon=garmin.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/garmin-stats"
   ];
   monitoring_enabled = true;
+  octoprint_api_key_injected = true;
+  octoprint_api_key_secret = true;
   octoprint_bind = "127.0.0.1";
   octoprint_enabled = true;
+  octoprint_homepage_api_key = true;
+  octoprint_homepage_basic_auth_absent = true;
+  octoprint_homepage_widget_api_key = true;
   octoprint_https_port = 8451;
   octoprint_ipcheck_trusts_tailnet = true;
   octoprint_port = 5000;
