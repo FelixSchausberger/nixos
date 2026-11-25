@@ -24,6 +24,10 @@ in {
   # abort the whole check under set -e.
   health_check_skips_missing_thermal =
     lib.hasInfix ''[[ -e "$zone/type" ]] || continue'' config.systemd.services.system-health-check.script;
+  # A host can carry zpool without a loadable module (WSL); a failed probe
+  # must not fail the whole health check.
+  health_check_handles_unavailable_zfs =
+    lib.hasInfix "zpool status unavailable" config.systemd.services.system-health-check.script;
 
   # Test: Timers exist for periodic execution
   has_health_check_timer = builtins.hasAttr "system-health-check" config.systemd.timers;

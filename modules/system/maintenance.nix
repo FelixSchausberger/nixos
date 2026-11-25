@@ -452,10 +452,15 @@ in {
             ''}
             fi
 
-            # ZFS health check (if ZFS is available)
+            # ZFS health check (if ZFS is available). A host can carry the
+            # zpool binary without a loadable module (WSL does), so a failed
+            # probe is an informational skip, not a health-check failure.
             if command -v zpool >/dev/null 2>&1; then
-              zpool_status=$(zpool status -x)
-              if [[ "$zpool_status" != "all pools are healthy" ]]; then
+              if ! zpool_status=$(zpool status -x 2>&1); then
+                echo "INFO: zpool status unavailable: $zpool_status"
+                zpool_status=""
+              fi
+              if [[ -n "$zpool_status" && "$zpool_status" != "all pools are healthy" ]]; then
                 echo "WARNING: ZFS pool health issues detected:"
                 echo "$zpool_status"
                 ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
