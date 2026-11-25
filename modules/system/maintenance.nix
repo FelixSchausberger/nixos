@@ -809,8 +809,8 @@ in {
             fi
 
             # One gauge per side of the compare, into the node exporter's
-            # textfile directory (the same channel emit-deploy-metrics
-            # writes): Grafana charts the drift without scraping GitHub.
+            # textfile directory: Grafana charts the drift without scraping
+            # GitHub.
             metrics_dir="/var/lib/node-exporter/textfile"
             if [[ -d "$metrics_dir" && (-n "$lock_age_hours" || -n "$channel_age_hours") ]]; then
               mfile="$(mktemp "$metrics_dir/.lock-age.XXXXXX" 2>/dev/null)" || mfile=""
