@@ -122,7 +122,11 @@ in {
     builtins.elem "100.64.0.0/10" config.services.octoprint.extraConfig.server.ipCheck.trustedSubnets;
   octoprint_api_key_secret = config.sops.secrets ? "octoprint/api-key";
   octoprint_api_key_injected =
-    lib.hasInfix "strenv(OCTOPRINT_API_KEY)" config.systemd.services.octoprint.preStart;
+    lib.hasInfix "strenv(OCTOPRINT_API_KEY)" config.systemd.services.octoprint.preStart
+    && lib.hasInfix "users.yaml" config.systemd.services.octoprint.preStart
+    && lib.hasInfix "apikey" config.systemd.services.octoprint.preStart;
+  octoprint_global_api_key_untouched =
+    !(lib.hasInfix ".api.key = strenv" config.systemd.services.octoprint.preStart);
   octoprint_homepage_api_key =
     lib.hasInfix "HOMEPAGE_VAR_OCTOPRINT_API_KEY" config.sops.templates."homepage/env".content;
   octoprint_homepage_widget_api_key =

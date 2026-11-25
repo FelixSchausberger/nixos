@@ -55,6 +55,7 @@
   octoprint_api_key_secret = true;
   octoprint_bind = "127.0.0.1";
   octoprint_enabled = true;
+  octoprint_global_api_key_untouched = true;
   octoprint_homepage_api_key = true;
   octoprint_homepage_basic_auth_absent = true;
   octoprint_homepage_widget_api_key = true;

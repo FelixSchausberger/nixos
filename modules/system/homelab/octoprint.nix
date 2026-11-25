@@ -77,15 +77,16 @@ in {
       }
     ];
 
-    # Homepage's card widgets authenticate with the global API key: OctoPrint
-    # validates it on every /api route without a user session, while the
-    # printer account's credentials stay available for Home Assistant and
-    # manual UI logins. Both live in sops so they rotate together; OctoPrint's
-    # own account store remains imperative.
+    # Homepage's card widgets authenticate with the primary user's API key.
+    # OctoPrint's global api.key still works but logs a deprecation warning on
+    # every call and stops working in 1.13.0, so the key is written into
+    # users.yaml instead. The printer account remains for Home Assistant and
+    # manual UI logins.
     sops.secrets."octoprint/user" = {};
     sops.secrets."octoprint/password" = {};
-    # The preStart below writes this value into OctoPrint's own config, so the
-    # sops file is the single source and a rotation reaches both ends.
+    # The preStart below writes this value into the primary user's API key
+    # field in users.yaml, so the sops file is the single source and a rotation
+    # reaches both ends.
     sops.secrets."octoprint/api-key" = {
       owner = "octoprint";
       mode = "0400";
@@ -115,15 +116,17 @@ in {
     # way so a runaway plugin cannot evict immich/jellyfin on the 16 GB host
     # (the same protection pattern as jellyfin.nix/smart-home.nix).
     systemd.services = {
-      # The upstream module merges its generated settings into the state
-      # config at every start; this runs after that merge and replaces only
-      # api.key, so the rest of the imperative profile store stays untouched.
-      # yq reads the secret through the environment rather than argv, and the
-      # service user owns both the secret and the config file.
+      # The upstream module merges its generated settings into config.yaml at
+      # every start; this runs after that merge and sets only the primary
+      # user's API key in users.yaml, leaving the rest of the imperative
+      # profile store untouched. yq reads the secret through the environment
+      # rather than argv, and the service user owns the secret and both files.
       octoprint.preStart = lib.mkAfter ''
-        export OCTOPRINT_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets."octoprint/api-key".path})"
-        ${pkgs.yq-go}/bin/yq -i '.api.key = strenv(OCTOPRINT_API_KEY)' ${config.services.octoprint.stateDir}/config.yaml
-        ${pkgs.coreutils}/bin/chmod 600 ${config.services.octoprint.stateDir}/config.yaml
+        if [ -f ${config.services.octoprint.stateDir}/users.yaml ]; then
+          export OCTOPRINT_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets."octoprint/api-key".path})"
+          ${pkgs.yq-go}/bin/yq -i '.${inputs.self.lib.user}.apikey = strenv(OCTOPRINT_API_KEY)' ${config.services.octoprint.stateDir}/users.yaml
+          ${pkgs.coreutils}/bin/chmod 600 ${config.services.octoprint.stateDir}/users.yaml
+        fi
       '';
 
       octoprint.serviceConfig = {
