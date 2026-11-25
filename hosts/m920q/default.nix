@@ -41,13 +41,20 @@
   # directed broadcast is the first three octets of the address plus 255.
   desktopBroadcast = "${lib.concatStringsSep "." (lib.init (lib.splitString "." desktopHost.ip))}.255";
 
+  # ntfy runs on this host, so every local alert publisher reaches the homelab
+  # topic over loopback.
+  homelabAlertsUrl = "http://127.0.0.1:2586/homelab-alerts";
+
+  # MagicDNS name under which Caddy, zellijWeb and opencodeWeb serve.
+  tailnetFqdn = "m920q.tailf2f0ca.ts.net";
+
   ntfySmartNotify = pkgs.writeShellScript "ntfy-smart-notify" ''
     exec ${pkgs.curl}/bin/curl -s -o /dev/null \
       -H "Title: SMART Alert: $SMARTD_DEVICESTRING" \
       -H "Priority: urgent" \
       -H "Tags: warning,cd" \
       -d "$SMARTD_FAILTYPE on $SMARTD_DEVICESTRING: $SMARTD_MESSAGE" \
-      http://127.0.0.1:2586/homelab-alerts
+      ${homelabAlertsUrl}
   '';
 
   # Desktop power control, invoked over Tailscale SSH from the phone:
@@ -234,7 +241,7 @@ in {
     # while it is off still surfaces through the unclean-shutdown alert,
     # just without a kernel trace. Streams err-level and above
     # (loglevel=3 above); a reboot applies the param.
-    "netconsole=6666@${hostInfo.ip}/eno1,6666@${inputs.self.lib.hosts.desktop.ip}/${inputs.self.lib.hosts.desktop.lanMac}"
+    "netconsole=6666@${hostInfo.ip}/eno1,6666@${desktopHost.ip}/${desktopHost.lanMac}"
     # Crash forensics floor: a 4 MiB e820-reserved DRAM region for
     # pstore/ramoops. netconsole (above) only delivers printk while the
     # desktop receiver is up; the ramoops region catches the dmesg dump of
@@ -733,7 +740,7 @@ in {
   systemd.timers."nextcloud-cleanup".timerConfig.OnCalendar = lib.mkForce "Sun 13:30:00";
   # Phone-originated vault edits arrive through the Syncthing P2P share
   # (modules/system/homelab/syncthing-vault.nix) as direct server-side writes,
-  # writes, which are invisible to the Nextcloud external-storage file cache
+  # which are invisible to the Nextcloud external-storage file cache
   # until the scan refreshes it; the 1h module default would hold desktop
   # clients a stale vault for up to an hour after every phone save.
   systemd.timers."nextcloud-scan-external".timerConfig.OnUnitActiveSec = lib.mkForce "5min";
@@ -758,7 +765,7 @@ in {
 
   # udev autoloads the BIOS OC watchdog (P2SB sideband) alongside the
   # initrd-forced iTCO_wdt, and whichever registers first wins /dev/watchdog0 —
-  # systemd was petting intel_oc_wdt while iTCO_wdt sat unpets on watchdog1.
+  # systemd was petting intel_oc_wdt while iTCO_wdt sat unpetted on watchdog1.
   # Blacklist it so the standard PCH TCO timer deterministically owns
   # /dev/watchdog0. Needs a reboot to take effect.
   boot.blacklistedKernelModules = ["intel_oc_wdt"];
@@ -791,7 +798,7 @@ in {
     # endpoint itself, so alerts go through the loopback address.
     comin = {
       enable = true;
-      alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+      alertNtfyUrl = homelabAlertsUrl;
       # Development host: poll the local checkout so jjtest deploys
       # testing-m920q with switch-to-configuration test (no bootloader change)
       # seconds after the bookmark moves, without a GitHub round trip.
@@ -1071,7 +1078,7 @@ in {
     # rule is scoped to that host instead of opened fleet-wide.
     logging = {
       enable = true;
-      clientSources = [inputs.self.lib.hosts.desktop.ip];
+      clientSources = [desktopHost.ip];
       # SLZB-MR4U syslog sender; 192.168.178.74 is the coordinator's reserved
       # address, the same one its zigbee2mqtt serial port uses.
       syslogSource = "192.168.178.74";
@@ -1102,7 +1109,7 @@ in {
     };
     caddyProxy = {
       enable = true;
-      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+      tailnetDomain = tailnetFqdn;
     };
     vaultMount.enable = true;
     syncthingVault = {
@@ -1152,7 +1159,7 @@ in {
       # key left unrotated degrades re-login back to the console.
       authKeyFile = config.sops.secrets."tailscale/auth-key".path;
       authKeyExpires = "2027-01-14";
-      authKeyExpiryNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+      authKeyExpiryNtfyUrl = homelabAlertsUrl;
       # Tailscale SSH for phone/Termux access: tailscaled authenticates
       # tailnet clients by device identity, no key management needed.
       openSSH = true;
@@ -1166,7 +1173,7 @@ in {
         peer = "pixel-9a";
         # Local topic is only the fallback: an alert about the tailnet must
         # not depend on the tailnet to reach the phone.
-        alertNtfyUrl = "http://127.0.0.1:2586/homelab-alerts";
+        alertNtfyUrl = homelabAlertsUrl;
         # Same secret file as the maintenance fallback, but inverted order:
         # here the external topic leads (see the option description).
         alertNtfyPrimaryUrlFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
@@ -1175,11 +1182,11 @@ in {
     ssh.enable = true;
     zellijWeb = {
       enable = true;
-      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+      tailnetDomain = tailnetFqdn;
     };
     opencodeWeb = {
       enable = true;
-      tailnetDomain = "m920q.tailf2f0ca.ts.net";
+      tailnetDomain = tailnetFqdn;
     };
   };
 }

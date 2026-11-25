@@ -9,6 +9,9 @@
   hostLib = import ../lib.nix;
   hostName = "surface";
   hostInfo = inputs.self.lib.hosts.${hostName};
+
+  # Maintenance alerts and comin's downgrade alert page the same homelab topic.
+  homelabAlertsUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
 in {
   imports =
     [
@@ -60,7 +63,7 @@ in {
     monitoring = {
       enable = true;
       alerts = true;
-      ntfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
+      ntfyUrl = homelabAlertsUrl;
     };
   };
 
@@ -72,7 +75,7 @@ in {
   # Pull-based GitOps: converge to main automatically, alert on downgrades
   modules.system.comin = {
     enable = true;
-    alertNtfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
+    alertNtfyUrl = homelabAlertsUrl;
   };
 
   # ZFS requires a per-host hostId; the shared default in system/network.nix
@@ -155,12 +158,6 @@ in {
       microcode-intel
     ];
   };
-
-  # Surface-specific configurations
-  # microsoft-surface = {
-  #   ipts.enable = true;
-  #   surface-control.enable = true;
-  # };
 
   console.keyMap = "de";
 

@@ -8,6 +8,16 @@
   ...
 }: let
   inherit (inputs.self.lib) defaults;
+
+  # Shared by performanceProfile and the per-specialisation profile override,
+  # so the two enums cannot drift apart.
+  performanceProfiles = [
+    "default"
+    "gaming"
+    "productivity"
+    "power-saving"
+    "server-efficiency"
+  ];
 in {
   imports = [
     ../modules/system
@@ -123,13 +133,7 @@ in {
         };
 
         performanceProfile = lib.mkOption {
-          type = lib.types.enum [
-            "default"
-            "gaming"
-            "productivity"
-            "power-saving"
-            "server-efficiency"
-          ];
+          type = lib.types.enum performanceProfiles;
           default = "default";
           description = "Performance profile for this system";
         };
@@ -145,13 +149,7 @@ in {
                 };
 
                 profile = lib.mkOption {
-                  type = lib.types.enum [
-                    "default"
-                    "gaming"
-                    "productivity"
-                    "power-saving"
-                    "server-efficiency"
-                  ];
+                  type = lib.types.enum performanceProfiles;
                   default = "default";
                   description = "Performance profile for this specialisation";
                 };
