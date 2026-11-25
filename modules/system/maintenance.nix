@@ -407,9 +407,13 @@ in {
             # rule (node_thermal_zone_temp); this stays as a journal record.
             # >=90 C indicates cooling failure (fan or dust); hardware still
             # throttles at Tjmax (~100 C), so this is an early warning. Only
-            # x86_pkg_temp exists on Intel hosts; other platforms are skipped.
+            # x86_pkg_temp exists on Intel hosts; other platforms - and WSL,
+            # which has no thermal class at all - are skipped. The glob stays
+            # literal when no zone exists, so test the file before reading it
+            # under set -e.
             pkg_temp=0
             for zone in /sys/class/thermal/thermal_zone*; do
+              [[ -e "$zone/type" ]] || continue
               if [[ "$(<"$zone/type")" == x86_pkg_temp ]]; then
                 t=$(<"$zone/temp")
                 if [[ $t -gt $pkg_temp ]]; then pkg_temp=$t; fi

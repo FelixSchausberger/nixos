@@ -20,6 +20,10 @@ in {
   # and must not page as disk-full findings.
   health_check_skips_readonly =
     lib.hasInfix "findmnt -no OPTIONS --target" config.systemd.services.system-health-check.script;
+  # WSL has no thermal class; the glob stays literal and reading type would
+  # abort the whole check under set -e.
+  health_check_skips_missing_thermal =
+    lib.hasInfix ''[[ -e "$zone/type" ]] || continue'' config.systemd.services.system-health-check.script;
 
   # Test: Timers exist for periodic execution
   has_health_check_timer = builtins.hasAttr "system-health-check" config.systemd.timers;
