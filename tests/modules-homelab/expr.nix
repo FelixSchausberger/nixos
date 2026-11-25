@@ -71,6 +71,11 @@
       entries);
 in {
   adguard_enabled = config.modules.system.homelab.adguardhome.enable;
+  # Quad9's DoH endpoint intermittently drops HTTP connections; DoT keeps the
+  # same filtering and DNSSEC validation over a stable TLS stream.
+  adguard_quad9_dot =
+    builtins.elem "tls://dns.quad9.net" config.services.adguardhome.settings.dns.upstream_dns;
+  adguard_upstream_timeout = config.services.adguardhome.settings.dns.upstream_timeout;
   monitoring_enabled = config.modules.system.homelab.monitoring.enable;
   tailscale_enabled = config.modules.system.homelab.tailscale.enable;
   zellij_web_enabled = config.modules.system.homelab.zellijWeb.enable;

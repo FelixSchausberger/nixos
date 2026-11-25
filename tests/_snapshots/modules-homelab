@@ -2,6 +2,8 @@
 {
   adguard_enabled = true;
   adguard_port = 3000;
+  adguard_quad9_dot = true;
+  adguard_upstream_timeout = "3s";
   grafana_port = 3001;
   has_adguard_grafana_assertion = true;
   has_adguard_port_assertion = true;
