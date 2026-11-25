@@ -120,9 +120,10 @@ in {
         environmentFile = [config.sops.secrets."vaultwarden/admin-token".path];
       };
 
-      # ADMIN_TOKEN is stored as an argon2id PHC hash (m=65536, t=3, p=4);
-      # vaultwarden verifies the presented token against it instead of
-      # comparing plaintext, so a leaked env file yields no usable token.
+      # ADMIN_TOKEN is stored as an argon2id PHC hash (m=65536, t=3, p=4),
+      # but it is consumed as a systemd EnvironmentFile: the secret must be
+      # the single line "ADMIN_TOKEN=<hash>". A bare hash is silently ignored
+      # ("invalid environment assignment") and leaves the admin panel locked.
       sops.secrets."vaultwarden/admin-token" = {
         # The EnvironmentFile is only read at unit start, so a token
         # rotation would silently keep the old value verifying until an

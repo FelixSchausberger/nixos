@@ -59,6 +59,10 @@
   # password to unlock it and nothing stores secrets there.
   services.gnome-keyring.enable = lib.mkForce false;
 
+  # No models are installed and nothing on this host uses the local LLM
+  # server; keep the module available for other hosts but not running here.
+  services.ollama.enable = lib.mkForce false;
+
   # opencode scopes sessions by working directory, and its web UI lists only
   # the project matching the server's CWD (default $HOME). Pinning the shared
   # server to the config repo makes TUI (`oc`) and phone-facing web UI show
