@@ -31,10 +31,14 @@
         open-fullscreen = true;
       }
       # AirPlay (UxPlay) mirroring renders as a fullscreen overlay over the
-      # desktop and disappears when mirroring stops.
+      # desktop and disappears when mirroring stops. niri only displays the
+      # focused fullscreen window, and a newly opened UxPlay window does not
+      # take focus from a fullscreen kiosk window by itself: the mirror would
+      # render behind Cinejoy and the projector would keep showing the app.
       {
         matches = [{app-id = "^uxplay$";}];
         open-fullscreen = true;
+        open-focused = true;
       }
       # The kiosk shell and the chromeless app windows it opens (Cinejoy) are
       # both Zen toplevels. niri hides the top layer-shell layer (ironbar,
