@@ -28,7 +28,6 @@
   '';
 
   sops.secrets = {
-    "ollama/api-key" = {};
     "github/token" = {};
   };
 }

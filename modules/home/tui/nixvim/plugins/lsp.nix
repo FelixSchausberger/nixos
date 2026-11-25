@@ -28,9 +28,8 @@
     "markdown-oxide" = "markdown_oxide";
   };
 
-  # Root markers for the two servers nvim-lspconfig has no default config for.
+  # Root markers for the server nvim-lspconfig has no default config for.
   rootMarkers = {
-    lsp-ai = [".git"];
     jj-lsp = [
       ".jj"
       ".git"

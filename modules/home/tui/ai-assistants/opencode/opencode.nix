@@ -75,6 +75,27 @@
     "$schema" = "https://opencode.ai/config.json";
     inherit (shared) agents model;
     permissions = shared.permissionRules;
+    # Local inference providers are not configured on this fleet; the stale
+    # custom endpoint was still health-checked against 127.0.0.1:8000 every
+    # 30 s. Deny the local provider IDs so they disappear from the catalog and
+    # stop probing; remote ollama-cloud stays available.
+    policies = [
+      {
+        action = "provider.use";
+        resource = "custom";
+        effect = "deny";
+      }
+      {
+        action = "provider.use";
+        resource = "vllm";
+        effect = "deny";
+      }
+      {
+        action = "provider.use";
+        resource = "ollama";
+        effect = "deny";
+      }
+    ];
     formatter = shared.formatters;
     # Agent tool calls and the terminal run this shell, so they inherit the rm
     # shim (see agentShell above).

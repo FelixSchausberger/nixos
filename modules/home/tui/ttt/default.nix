@@ -16,10 +16,9 @@
   # while Helix and Neovim run every server listed for a language. This
   # derives a deterministic server per language (the first) and a single
   # extension map from the same shared data (editors.languages), so TTT speaks
-  # to the same servers as the other editors. lsp-ai and jj-lsp are skipped:
-  # neither is a conventional LSP server, and lsp-ai would otherwise be picked
-  # as the Nix handler.
-  excludedLspServers = ["lsp-ai" "jj-lsp"];
+  # to the same servers as the other editors. jj-lsp is skipped: it is not a
+  # conventional LSP server and would otherwise be picked as the Nix handler.
+  excludedLspServers = ["jj-lsp"];
 
   tttLspServers =
     lib.foldl' (

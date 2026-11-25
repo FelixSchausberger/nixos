@@ -99,7 +99,6 @@
     omitPasswordAuth = true;
     only_listener = true;
   };
-  smart_home_music_assistant_component = true;
   smart_home_octoprint_component = true;
   smart_home_recorder_exclude = {
     entities = [

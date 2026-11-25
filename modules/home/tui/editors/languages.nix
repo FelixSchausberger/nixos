@@ -139,31 +139,6 @@ in {
 
   config = {
     editors.languageServers = {
-      lsp-ai = {
-        cmd = ["lsp-ai"];
-        config = {
-          memory.file_store = {};
-          models = {
-            model1 = {
-              type = "ollama";
-              model = "qwen2.5-coder:1.5b";
-            };
-          };
-          completion = {
-            model = "model1";
-            parameters = {
-              max_context = 2048;
-              options.num_predict = 32;
-              fim = {
-                start = "<|fim_prefix|>";
-                middle = "<|fim_suffix|>";
-                end = "<|fim_middle|>";
-              };
-            };
-          };
-        };
-      };
-
       jj-lsp = {
         cmd = ["jj-lsp"];
       };
@@ -315,7 +290,6 @@ in {
         autoFormat = true;
         formatter.command = "alejandra";
         servers = [
-          "lsp-ai"
           "jj-lsp"
         ];
       }
@@ -438,7 +412,6 @@ in {
         formatter.command = "rustfmt";
         servers = [
           "rust-analyzer"
-          "lsp-ai"
           "jj-lsp"
         ];
         debugger = {
@@ -673,7 +646,6 @@ in {
       (with pkgs;
         [
           alejandra # Uncompromising Nix Code Formatter
-          lsp-ai # Open-source language server that serves as a backend for AI-powered functionality
 
           # Core language servers
           vscode-langservers-extracted # HTML/CSS/JSON LSPs

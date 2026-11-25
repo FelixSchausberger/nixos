@@ -139,8 +139,6 @@ in {
     builtins.elem "octoprint" config.services.home-assistant.extraComponents;
   smart_home_webdav_component =
     builtins.elem "webdav" config.services.home-assistant.extraComponents;
-  smart_home_music_assistant_component =
-    builtins.elem "music_assistant" config.services.home-assistant.extraComponents;
   smart_home_smlight_component =
     builtins.elem "smlight" config.services.home-assistant.extraComponents;
   smart_home_upnp_component =

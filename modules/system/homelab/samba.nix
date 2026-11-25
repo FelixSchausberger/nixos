@@ -35,7 +35,6 @@ in {
           # ZFS doesn't implement kernel oplocks — disabling prevents EBUSY
           "kernel oplocks" = "no";
           "max xmit" = "65535";
-          "getwd cache" = "yes";
           "aio read size" = "1048576";
           "aio write size" = "1048576";
           "min receivefile size" = "16384";

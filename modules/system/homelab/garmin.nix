@@ -24,7 +24,7 @@
   # main() only does `from . import garmin_fetch` while the whole engine
   # (login, MFA prompt, fetch loop) sits behind `if __name__ == "__main__":`
   # in garmin_fetch.py. On import that gate is false, so the script printed
-  # its banner and exited 0 without ever authenticating. Upstream's Docker
+  # its banner and exited 0 without ever authenticating. Upstream's container
   # image works around this by running the .py file as a script; executing
   # the module as __main__ through runpy reproduces that from the console
   # script. --replace-fail makes the build fail loudly if upstream rewrites

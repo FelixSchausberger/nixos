@@ -170,14 +170,14 @@ in {
       home-assistant = {
         enable = true;
         # These components are compiled into the HA python env; shelly,
-        # octoprint, music_assistant, smlight and apple_tv are discovered
-        # integrations that would otherwise error-loop on missing modules
-        # (apple_tv needs pyatv). upnp, fritz and fritzbox are discovered over
-        # SSDP/DHCP on the LAN and error-loop on missing getmac,
-        # fritzconnection and pyfritzhome. webdav is config-entry-only: the UI
-        # backup location is not detected from YAML, so omitting it makes the
-        # config flow fail with "Invalid handler specified".
-        extraComponents = ["mqtt" "shelly" "octoprint" "webdav" "music_assistant" "smlight" "apple_tv" "upnp" "fritz" "fritzbox"];
+        # octoprint, smlight and apple_tv are discovered integrations that
+        # would otherwise error-loop on missing modules (apple_tv needs
+        # pyatv). upnp, fritz and fritzbox are discovered over SSDP/DHCP on
+        # the LAN and error-loop on missing getmac, fritzconnection and
+        # pyfritzhome. webdav is config-entry-only: the UI backup location is
+        # not detected from YAML, so omitting it makes the config flow fail
+        # with "Invalid handler specified".
+        extraComponents = ["mqtt" "shelly" "octoprint" "webdav" "smlight" "apple_tv" "upnp" "fritz" "fritzbox"];
         config = {
           default_config = {};
           # The UI editors write automations, scripts and scenes to the config
