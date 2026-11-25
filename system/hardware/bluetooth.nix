@@ -1,6 +1,5 @@
 _: {
-  # Bluetooth persistence moved to system/core/persistence.nix for consolidation
-
+  # Device state persists to /per/var/lib/bluetooth (see system/core/persistence.nix).
   hardware = {
     bluetooth = {
       enable = true;

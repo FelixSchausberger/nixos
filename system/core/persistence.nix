@@ -10,6 +10,9 @@
   # /etc and the initrd so the two can never diverge.
   machineId = builtins.substring 0 32 (builtins.hashString "sha256" "machine-id:${hostConfig.hostName}");
   machineIdFile = pkgs.writeText "machine-id" machineId;
+
+  # The three tmpfiles units below share one exit-status relaxation.
+  cantcreatNonFatal = lib.mkAfter ["CANTCREAT"];
 in {
   imports = [
     inputs.impermanence.nixosModules.impermanence
@@ -39,9 +42,7 @@ in {
         ""
         "${pkgs.systemd}/bin/systemd-tmpfiles --clean --exclude-prefix=/tmp --exclude-prefix=/var/tmp --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd"
       ];
-      SuccessExitStatus = lib.mkAfter [
-        "CANTCREAT"
-      ];
+      SuccessExitStatus = cantcreatNonFatal;
     };
   };
 
@@ -51,9 +52,7 @@ in {
         ""
         "${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --boot --exclude-prefix=/dev --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd"
       ];
-      SuccessExitStatus = lib.mkAfter [
-        "CANTCREAT"
-      ];
+      SuccessExitStatus = cantcreatNonFatal;
     };
   };
 
@@ -63,9 +62,7 @@ in {
         ""
         "${pkgs.systemd}/bin/systemd-tmpfiles --create --remove --exclude-prefix=/dev --exclude-prefix=/nix/var/nix --exclude-prefix=/var/lib/systemd"
       ];
-      SuccessExitStatus = lib.mkAfter [
-        "CANTCREAT"
-      ];
+      SuccessExitStatus = cantcreatNonFatal;
     };
   };
 
