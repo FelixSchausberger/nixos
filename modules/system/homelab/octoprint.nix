@@ -97,6 +97,9 @@ in {
 
     services.octoprint = {
       enable = true;
+      # The channel still ships 1.11.8; pkgs/octoprint-2 carries the 2.0.1
+      # package from nixpkgs master.
+      package = pkgs.callPackage ../../../pkgs/octoprint-2 {};
       # Only the loopback and Tailscale-serve fronts reach the API; the nixpkgs
       # module applies server.host only when non-null, and OctoPrint's default
       # bind is 0.0.0.0.
