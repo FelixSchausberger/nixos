@@ -688,7 +688,12 @@ in {
       Service = {
         ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
         Restart = "on-failure";
-        RestartSec = 1;
+        # On an on-demand niri start the agent can race logind session
+        # registration and exits with "Cannot determine user of subject". A
+        # five-second retry lets the session appear and stays inside the
+        # default start-limit window instead of burning six starts in six
+        # seconds and landing in start-limit-hit.
+        RestartSec = 5;
         TimeoutStopSec = 10;
       };
       Install.WantedBy = ["niri.service"];
