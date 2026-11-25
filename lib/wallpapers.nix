@@ -3,7 +3,7 @@
 # Homepage dashboard background cannot drift: the dashboard follows the window
 # manager's default wallpaper but must not use the blurred overview variant,
 # which carries a soft frame meant for the niri overview backdrop.
-rec {
+{
   # Wallpaper the window manager starts on and the dashboard follows.
   default = "solar-system";
 

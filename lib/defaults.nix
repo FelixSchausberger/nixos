@@ -31,7 +31,7 @@ rec {
   };
 
   # Common paths (automatically derived from system.user where applicable)
-  paths = rec {
+  paths = {
     # Home directory - auto-generated from username
     homeDir = "/home/${system.user}";
 
