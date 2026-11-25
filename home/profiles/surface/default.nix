@@ -8,12 +8,4 @@
       vial # Open-source GUI and QMK fork for configuring your keyboard in real time
     ];
   };
-
-  # # Configure for old private laptop
-  # wm.hyprland = {
-  #   browser = "firefox";
-  #   terminal = "ghostty";
-  #   fileManager = "cosmic-files";
-  #   enableGaming = false;
-  # };
 }

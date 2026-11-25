@@ -8,7 +8,6 @@
   home.persistence."/per/home" = {
     # Essential directories that must persist
     directories = [
-      # Development tool configurations and caches
       # Development tool configurations and caches (Rust toolchains ship in
       # per-project flake dev shells, so ~/.cargo and ~/.rustup are not kept)
       ".docker"

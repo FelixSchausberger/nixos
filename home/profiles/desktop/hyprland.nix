@@ -80,7 +80,6 @@ in
         "QT_QPA_PLATFORM,wayland;xcb"
 
         # MangoHud - disabled globally (use per-application instead)
-        # "MANGOHUD,1"
         "MANGOHUD_DLSYM,1"
 
         # GameMode is handled automatically by the system-level gamemode service
