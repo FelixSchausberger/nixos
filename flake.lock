@@ -1746,17 +1746,17 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1795612579,
-        "narHash": "sha256-l3Gdcd4oRzxkxWTapxJP+oJNQ1kxsMYi+dxZi0MrPL4=",
+        "lastModified": 1795621773,
+        "narHash": "sha256-dZufd2UvTSVer05YHd99enQVhq6IX+WFsAQq3Wd9ZPY=",
         "owner": "FelixSchausberger",
         "repo": "rookery",
-        "rev": "a29121fcae0db4192dc13b3e2d88d67f5be42a52",
+        "rev": "66eb65728cdf5c21382433d5cb939686e3917bfa",
         "type": "github"
       },
       "original": {
         "owner": "FelixSchausberger",
-        "ref": "v0.7.1",
         "repo": "rookery",
+        "rev": "66eb65728cdf5c21382433d5cb939686e3917bfa",
         "type": "github"
       }
     },
