@@ -115,10 +115,12 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   with `herdr agent prompt <pane> --wait`, reads the report file it names, and
   records decisions and follow-ups with `rookery task note`. Each worker owns
   its jj workspace; the lead never edits it, never answers a `blocked` agent,
-  and never runs `rookery done` per worker. Only the lead closes the task with
-  `/task-done <task>`, after every grouped workspace is `merged` or `empty`;
-  an open task holds its workspaces out of `gc` and `clean --apply`. The
-  protocol, report format and cleanup live in the `herdr-lead` skill.
+  and never runs `rookery done` per worker. The lead closes the task with
+  `/task-done <task>` only after the person has reviewed the reports and
+  approved; until then it records the outcome, parks its own workspace with
+  `rookery wait`, and stops. An open task holds its workspaces out of `gc` and
+  `clean --apply`. The protocol, report format and review gate live in the
+  `herdr-lead` skill.
 - Scratch plans and audits under `.opencode/` stay ignored and never enter a
   commit; the global diff rule is what proves the change carries one concern.
   Park a session waiting on the outside world with
@@ -138,9 +140,10 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   half-staged work reported as done; this check is the remedy. After the PR
   merges, close grouped work with `rookery task done <task>`, `rookery clean
   --apply`, and `rookery task archive <task>`; a single ungrouped workspace
-  uses `rookery done <workspace>`. `rookery reap` exports and deletes the
-  conversations whose workspace is gone, so a removed checkout does not leave
-  an orphaned session behind. `rookery ls`
+  uses `rookery done <workspace>`. A top-level conversation is never deleted
+  automatically; it is the person's review record, and the lead deletes a
+  worker's session explicitly after reading its report. `rookery reap` is
+  limited to child subagent transcripts. `rookery ls`
   classifies every workspace; `rookery gc` reclaims the empty/merged ones idle
   past the age gate, skipping any with a live process or a recent opencode
   session, and runs on `rookery <task>` and daily from a systemd user timer.

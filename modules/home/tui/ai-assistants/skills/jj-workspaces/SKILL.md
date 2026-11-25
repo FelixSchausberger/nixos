@@ -140,8 +140,11 @@ benefit for single quick changes.
    rookery task done <task>   # lead only; refused from a grouped worker
    rookery clean --apply      # removes the merged/empty workspaces
    rookery task archive <task>
-   rookery reap               # export and delete the dead conversations
    ```
+
+   A top-level conversation is never deleted automatically; it is the person's
+   review record. The lead deletes a worker's session explicitly after reading
+   its report, and `rookery reap` only prunes child subagent transcripts.
 
    An open task holds every grouped workspace out of `gc` and
    `clean --apply`, so a worker cannot lose its checkout before the lead has

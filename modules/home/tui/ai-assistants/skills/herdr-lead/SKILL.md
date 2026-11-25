@@ -1,6 +1,6 @@
 ---
 name: herdr-lead
-description: Use when a lead opencode agent orchestrates workers for one rookery task. Creates the task, keeps the lead's workspace ungrouped, starts workers in their own jj workspaces with `rookery herdr --task`, collects report files, and closes the task with `/task-done`.
+description: Use when a lead opencode agent orchestrates workers for one rookery task. Creates the task, keeps the lead's workspace ungrouped, starts workers in their own jj workspaces with `rookery herdr --task`, collects report files, parks the lead for human review, and closes the task with `/task-done` only after the person approves.
 license: MIT
 compatibility: opencode
 ---
@@ -117,7 +117,8 @@ hint.
 ## Clean up
 
 When a worker's report is collected, delete its conversation and close the tab
-you opened:
+you opened. The report file is the durable record; the worker transcript is a
+subagent artifact.
 
 ```sh
 session=$(herdr agent get "$pane" | jq -r '.result.agent.agent_session.value // empty')
@@ -129,16 +130,34 @@ Do **not** run `rookery done` for a worker while the task is open. The open task
 is the hold that keeps every workspace alive until the lead has integrated all
 reports. Removing a worker early is how a task loses the branch it still needs.
 
-When the task is fully integrated:
+## Review gate
+
+The lead's conversation and workspace are the review record. Never run
+`/task-done`, `/done`, or `rookery reap` on your own, and never delete your own
+session or close your own tab.
+
+When the task is integrated:
 
 1. Record the outcome and every follow-up with `rookery task note "$task" ...`.
    A follow-up is a GitHub issue link, a `rookery wait` reason, or it does not
-   exist.
-2. Run `/task-done "$task"` from the lead's ungrouped workspace. It verifies
+   exist. Include what was done, what remains open, the report paths, and the
+   decision the person must make.
+2. Park the lead's ungrouped workspace so gc keeps it while the person reviews:
+   `rookery wait <lead-workspace> "awaiting human review: <one line>"`
+3. Report the task id, workspace, report paths, and open decisions. Stop.
+
+The person reviews the conversation and reports and decides whether a follow-up
+is needed. If they resume the task with a new instruction, run
+`rookery go <lead-workspace>` first and park it again before the next stop.
+Only after they approve closing:
+
+1. Run `/task-done "$task"` from the lead's ungrouped workspace. It verifies
    that every grouped workspace is `merged` or `empty`, marks them, runs
-   `clean --apply`, archives the task, and reaps the dead conversations.
-3. Run `/done` in the lead's own workspace. It is ungrouped, so it marks
-   normally; the daily sweep removes it after the lead exits.
+   `clean --apply`, and archives the task. It does not touch the lead's
+   conversation.
+2. Release the lead's hold with `rookery go <lead-workspace>` and leave the
+   conversation in place. Remove the lead's workspace only when the person asks
+   for it.
 
 If a worker's work is intentionally discarded, remove that one workspace with
 `rookery rm --force <workspace>` only after the person approves, then continue
@@ -172,6 +191,8 @@ lead inside the same task.
 ## Rules
 
 - One lead per task; the lead is ungrouped, workers are grouped with `--task`.
+- The lead never deletes its own session, runs `reap`, or closes its own tab;
+  it parks its workspace for review and leaves the conversation in place.
 - A worker never runs `/done`, `task done`, or closes its own tab.
 - A worker that finishes early keeps its workspace; only the lead releases the
   task.

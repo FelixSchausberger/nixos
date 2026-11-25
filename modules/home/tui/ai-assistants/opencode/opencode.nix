@@ -389,12 +389,17 @@ in {
       '';
 
       # The lead's close-out. It runs from the lead's ungrouped workspace (or
-      # the primary checkout), verifies that every grouped workspace is merged
-      # or empty, records the outcome, and only then releases the task.
+      # the primary checkout) only after the person has reviewed the reports
+      # and approved closing the task. It verifies that every grouped
+      # workspace is merged or empty, records the outcome, and releases the
+      # task. The lead's own conversation is never part of this cleanup.
       "${configDir}/commands/task-done.md".text = ''
         ---
         description: Finish a rookery task and reclaim its workspaces
         ---
+        Run this only after the person has reviewed the task and approved
+        closing it. Until then the lead parks its workspace and stops.
+
         Finish rookery task `$ARGUMENTS` as its lead. Do not force-remove work.
 
         1. Read the task and its notes:
@@ -414,8 +419,8 @@ in {
            `rookery task archive $ARGUMENTS`
            If the last workspace removal already archived it, that is success.
            Otherwise, if it refuses, name the kept workspace and the reason.
-        6. Reap the dead conversations:
-           `rookery reap --dry-run`, review the list, then `rookery reap`.
+        6. Never delete the lead's own conversation. The conversation is the
+           review record; only the person closes or removes it.
 
         Report exactly what was removed, what was kept, and why.
       '';
