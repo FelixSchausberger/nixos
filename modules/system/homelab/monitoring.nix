@@ -201,6 +201,18 @@
         "The ME's TLS ports are unreachable through the FRITZ!Box DNAT ({{ $labels.instance }}). Both ports down: the ME went silent; unplug power for 60 s and boot. 16993 open with 16995 down: the m920q-amt device record lost the binding; FRITZ!Box UI: re-assign its permanent IPv4 to 192.168.178.10"
         ''probe_success{job="blackbox-amt"} == 0'')
     ])
+    ++ lib.optionals loggingEnabled [
+      # The distributor counter is the only fleet-wide line count, because every
+      # host pushes to this Loki. Baseline measured 2026-11: ~12k lines/h over
+      # 15m (7.8k/h over 24h), so 60k is five times the normal rate. `sum by
+      # (host)` keeps the label mkRule's summary template interpolates; `host`
+      # is the aggregator, not the sender, so per-host attribution stays in the
+      # logs dashboard. The 15m rate window plus a 15m hold rides out rebuild
+      # and deploy bursts of a minute or two.
+      (mkRuleFor "15m" "LogStorm" "high" "Log ingestion is storming"
+        "Loki ingested {{ $value | humanize }} lines/h over the last 15 minutes, five times the fleet baseline; a unit is probably looping on an error"
+        ''sum by (host) (rate(loki_distributor_lines_received_total[15m])) * 3600 > 60000'')
+    ]
     ++ [
       (mkRule "NodeExporterDown" "urgent" "Node exporter is unreachable"
         "Node exporter is unreachable; system metrics are unavailable"

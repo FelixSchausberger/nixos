@@ -406,11 +406,46 @@
     # readiness endpoint, so a dead store shows a red dot instead of a silently
     # empty dashboard. logging.nix is co-imported with this module, so the card
     # exists wherever the dashboard does.
+    #
+    # The widget reads Loki's own distributor counters from Prometheus (the
+    # "loki" scrape job in monitoring.nix) because Homepage ships no Loki
+    # widget. Every host pushes to this one Loki, so the figures are fleet-wide
+    # ingest - which is what a log storm is; per-host attribution stays in the
+    # Grafana dashboard. 15m rather than 1h: an hourly mean reacts too slowly to
+    # a storm, and 5m over a 60s scrape is five samples of jitter.
     {
       "Logs" = {
         icon = "loki.png";
         href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/logs";
         siteMonitor = "${local hl.logging.lokiPort}/ready";
+        widget = {
+          type = "prometheusmetric";
+          url = local hl.monitoring.prometheusPort;
+          # Loki is scraped every 60s, so a faster refresh re-reads one sample.
+          refreshInterval = 60000;
+          metrics = [
+            {
+              label = "Lines/h";
+              query = ''sum(rate(loki_distributor_lines_received_total[15m])) * 3600'';
+              format = {
+                type = "number";
+                options.maximumFractionDigits = 0;
+              };
+            }
+            {
+              # Storm cost lands on the pool, so volume earns a row of its own.
+              # `bytes` appends the unit and the suffix turns the total into a
+              # rate without inventing a per-hour formatter.
+              label = "Ingest";
+              query = ''sum(rate(loki_distributor_bytes_received_total[15m])) * 3600'';
+              format = {
+                type = "bytes";
+                suffix = "/h";
+                options.maximumFractionDigits = 1;
+              };
+            }
+          ];
+        };
       };
     }
   ];

@@ -48,7 +48,7 @@
     "garmin"
   ];
   loki_scrape_enabled = true;
-  rule_count = 38;
+  rule_count = 39;
   rules = [
     {
       alert = "NextcloudDown";
@@ -134,6 +134,11 @@
       alert = "AmtWanDown";
       expr = "probe_success{job=\"blackbox-amt\"} == 0";
       priority = "urgent";
+    }
+    {
+      alert = "LogStorm";
+      expr = "sum by (host) (rate(loki_distributor_lines_received_total[15m])) * 3600 > 60000";
+      priority = "high";
     }
     {
       alert = "NodeExporterDown";
