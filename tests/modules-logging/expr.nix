@@ -11,10 +11,12 @@
 {flake, ...}: let
   m920q = flake.nixosConfigurations.m920q;
   desktop = flake.nixosConfigurations.desktop;
+  surface = flake.nixosConfigurations.surface;
   lib = m920q.pkgs.lib;
 
   ml = m920q.config.modules.system.homelab.logging;
   dl = desktop.config.modules.system.homelab.logging;
+  sl = surface.config.modules.system.homelab.logging;
 
   datasources = m920q.config.services.grafana.provision.datasources.settings.datasources;
   providers = m920q.config.services.grafana.provision.dashboards.settings.providers;
@@ -37,6 +39,11 @@ in
   assert dl.shipEndpoint == "http://m920q:3100";
   assert !desktop.config.services.loki.enable;
   assert desktop.config.services.alloy.enable;
+  # The surface is the other roaming client: it ships over the tailnet, where
+  # the short name could be answered by a LAN resolver outside clientSources.
+  assert sl.shipEndpoint == "http://m920q.tailf2f0ca.ts.net:3100";
+  assert !surface.config.services.loki.enable;
+  assert surface.config.services.alloy.enable;
   # Alloy must not be a DynamicUser: its state directory would land under
   # /var/lib/private, which the persistence tree cannot provide at the 0700
   # systemd demands.
@@ -49,7 +56,12 @@ in
   # The tool that reads the journal must also lift user-unit names and
   # normalise severity; both are load-bearing for the error views.
   assert lib.hasInfix "loki.process \"levels\"" m920q.config.environment.etc."alloy/config.alloy".text;
-  assert lib.hasInfix "user_unit" m920q.config.environment.etc."alloy/config.alloy".text; {
+  assert lib.hasInfix "user_unit" m920q.config.environment.etc."alloy/config.alloy".text;
+  # The syslog receiver needs the host label to be visible to fleet queries.
+  assert lib.hasInfix "host = \"m920q\"" m920q.config.environment.etc."alloy/config.alloy".text;
+  # The error view filters on level, so app formats must lift their severity.
+  assert lib.hasInfix "app_level>ERR" m920q.config.environment.etc."alloy/config.alloy".text;
+  assert lib.hasInfix "app_level>ERROR|WARNING|CRITICAL" m920q.config.environment.etc."alloy/config.alloy".text; {
     loki_enabled = m920q.config.services.loki.enable;
     loki_port = ml.lokiPort;
     loki_log_level = m920q.config.services.loki.configuration.server.log_level;
@@ -67,4 +79,7 @@ in
     desktop_loki_enabled = desktop.config.services.loki.enable;
     desktop_alloy_enabled = desktop.config.services.alloy.enable;
     desktop_ship_endpoint = dl.shipEndpoint;
+    surface_loki_enabled = surface.config.services.loki.enable;
+    surface_alloy_enabled = surface.config.services.alloy.enable;
+    surface_ship_endpoint = sl.shipEndpoint;
   }

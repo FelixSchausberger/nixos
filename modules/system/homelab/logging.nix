@@ -28,10 +28,11 @@
   # Two journald properties need correcting before the labels are usable:
   #
   #   - A process that writes to stderr without a syslog prefix reaches the
-  #     journal as PRIORITY=6, so a Postgres ERROR or a Go/Rust `level=error`
-  #     line is stored as info. The process stages below read the severity the
-  #     application itself printed and override the journald guess; lines that
-  #     match neither shape keep their journald level.
+  #     journal as PRIORITY=6, so a Postgres ERROR, a Python WARNING, a
+  #     Jellyfin [ERR], or a Go/Rust `level=error` line is stored as info. The
+  #     process stages below read the severity the application itself printed
+  #     and override the journald guess; lines that match none of those shapes
+  #     keep their journald level.
   #   - The priority keyword is "err", not "error" (and "warning" rather than
   #     "warn"), so a dashboard filtering level="error" saw nothing even for
   #     real journald errors. The relabel rules normalise it first.
@@ -92,11 +93,38 @@
         expression = "(?i)(?:^|\\s)level=(?P<app_level>error|warn(?:ing)?|info|debug|trace|fatal|crit(?:ical)?|alert|emerg|notice)\\b"
       }
 
+      // Python logging (`%asctime - %name - LEVEL - message`), the shape
+      // OctoPrint and most Python services print to stderr.
+      stage.regex {
+        expression = " - (?P<app_level>DEBUG|INFO|WARNING|WARN|ERROR|CRITICAL) - "
+      }
+
+      // Jellyfin/.NET prefixes each line with a three-letter level.
+      stage.regex {
+        expression = "\\[(?P<app_level>ERR|WRN|INF|DBG|FTL|TRC)\\]"
+      }
+
+      // Rust env_logger (Vaultwarden): `[timestamp][error][ERROR]`.
+      stage.regex {
+        expression = "\\]\\[(?P<app_level>error|warn|info|debug|trace)\\]"
+      }
+
+      // Shell health checks emit `ERROR:`/`WARNING:` at line start;
+      // wallpaper-conditions writes `WARNING ...` without the colon.
+      stage.regex {
+        expression = "^(?P<app_level>ERROR|WARNING|CRITICAL)\\b"
+      }
+
+      // AdGuard Home: `2026/11/25 10:00:00 [error] ...`.
+      stage.regex {
+        expression = "^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]+ \\[(?P<app_level>error|warning|info|debug)\\]"
+      }
+
       // `with .Value` keeps a non-matching line from acquiring an empty
       // app_level, which the labels stage would otherwise write as level="".
       stage.template {
         source   = "app_level"
-        template = "{{ with .Value }}{{ if eq (. | ToLower) \"warning\" }}warn{{ else if or (eq (. | ToLower) \"fatal\") (eq (. | ToLower) \"critical\") (eq (. | ToLower) \"crit\") (eq (. | ToLower) \"alert\") (eq (. | ToLower) \"emerg\") }}error{{ else if eq (. | ToLower) \"notice\" }}info{{ else }}{{ . | ToLower }}{{ end }}{{ end }}"
+        template = "{{ with .Value }}{{ $l := . | ToLower }}{{ if or (eq $l \"warning\") (eq $l \"wrn\") }}warn{{ else if or (eq $l \"fatal\") (eq $l \"critical\") (eq $l \"crit\") (eq $l \"alert\") (eq $l \"emerg\") (eq $l \"err\") (eq $l \"ftl\") }}error{{ else if or (eq $l \"notice\") (eq $l \"inf\") }}info{{ else if eq $l \"trc\" }}trace{{ else if eq $l \"dbg\" }}debug{{ else }}{{ $l }}{{ end }}{{ end }}"
       }
 
       stage.labels {
@@ -146,7 +174,9 @@
   # Syslog receiver for the SLZB coordinator on the aggregator only. The
   # device buffers its boot log and flushes it when the sender starts, so the
   # component exists to keep those lines searchable next to the journald logs.
-  # Client hosts keep it out of their config; the listener is UDP and
+  # The host label is what makes them visible to the dashboard's host variable;
+  # without it the lines are stored but no fleet query selects them. Client
+  # hosts keep the receiver out of their config; the listener is UDP and
   # unauthenticated, so the firewall rule below scopes it to the coordinator.
   syslogComponent = lib.optionalString (cfg.enable && cfg.syslogSource != null) ''
     loki.source.syslog "slzb" {
@@ -154,10 +184,10 @@
         address       = "0.0.0.0:${toString cfg.syslogPort}"
         protocol      = "udp"
         syslog_format = "rfc3164"
-        labels        = {job = "syslog", device = "slzb-mr4u"}
+        labels        = {job = "syslog", device = "slzb-mr4u", host = "${config.networking.hostName}"}
       }
 
-      forward_to = [loki.write.loki.receiver]
+      forward_to = [loki.process.levels.receiver]
     }
   '';
 in {
