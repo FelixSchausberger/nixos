@@ -4,6 +4,7 @@
   has_health_check_service = true;
   has_health_check_timer = true;
   health_check_service_type = "oneshot";
+  health_check_skips_missing_thermal = true;
   health_check_skips_readonly = true;
   maintenance_enabled = true;
   monitoring_enabled = true;
