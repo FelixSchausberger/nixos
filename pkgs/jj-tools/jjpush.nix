@@ -40,6 +40,11 @@ writeShellApplication {
       exit 1
     fi
 
+    # Commits between main@origin and @ that no remote bookmark reaches. The
+    # abandonment pass and the blocker check below must agree on this set, so
+    # it is written once.
+    unshipped='(main@origin..@) & ~::remote_bookmarks() & ~@'
+
     # Drop empty undescribed commits between main@origin and @ (leftovers
     # from parallel sessions or abandoned experiments). Pushing a bookmark
     # whose introduced commit set includes them fails with "Won't push
@@ -51,7 +56,7 @@ writeShellApplication {
     # while-read loop, never `for cid in $(...)`: word splitting fuses
     # multiple IDs into one token, `jj log -r` fails on it, and errexit
     # kills the script with zero output.
-    jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id ++ "\n"' 2>/dev/null |
+    jj log --no-graph -r "$unshipped" -T 'change_id ++ "\n"' 2>/dev/null |
       while IFS= read -r cid; do
         [ -n "$cid" ] || continue
         em="$(jj log --no-graph -r "$cid" -T 'if(empty, "y", "n")' 2>/dev/null || echo n)"
@@ -72,7 +77,7 @@ writeShellApplication {
       if [ -z "$fl" ] || [ "$fl" = "(no description set)" ]; then
         blockers="$blockers $(printf %.8s "$cid")"
       fi
-    done < <(jj log --no-graph -r '(main@origin..@) & ~::remote_bookmarks() & ~@' -T 'change_id ++ "\n"' 2>/dev/null)
+    done < <(jj log --no-graph -r "$unshipped" -T 'change_id ++ "\n"' 2>/dev/null)
     if [ -n "$blockers" ]; then
       echo "Error: undescribed commits remain between main@origin and @:$blockers" >&2
       echo "Describe ('jj describe -r <change> -m \"...\"') or abandon them before pushing." >&2

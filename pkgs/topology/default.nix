@@ -7,7 +7,7 @@
 }: let
   hl = m920qConfig.modules.system.homelab;
 
-  # Service metadata: name → { label, port, category, color, caddyPath }
+  # Service attributes: name → { label, port, cat, color, caddy }
   # Port values come from the NixOS config options where available;
   # hardcoded for services without a configurable port.
   svcDefs = {
