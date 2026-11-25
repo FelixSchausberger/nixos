@@ -498,12 +498,25 @@ def niri_windows():
         return []
 
 
-def close_app_windows():
-    windows = niri_windows()
-    kiosk = next(
-        (window for window in windows if window.get("title") == KIOSK_WINDOW_TITLE),
+def kiosk_window(windows):
+    # Zen suffixes the toplevel title with " — Zen Browser", so the kiosk
+    # marker has to match as a prefix; an exact comparison never finds the
+    # shell and every close-apps request becomes a no-op.
+    return next(
+        (
+            window
+            for window in windows
+            if window.get("app_id") in ("zen", "zen-beta")
+            and (window.get("title") or "").startswith(KIOSK_WINDOW_TITLE)
+        ),
         None,
     )
+
+
+def close_app_windows(windows=None):
+    if windows is None:
+        windows = niri_windows()
+    kiosk = kiosk_window(windows)
     if kiosk is None:
         # Never guess: without the kiosk marker, closing every Zen window would
         # close the shell itself.
