@@ -13,7 +13,6 @@
     ./jellyfin.nix
     ./logging.nix
     ./monitoring.nix
-    ./music-assistant.nix
     ./navidrome.nix
     ./nextcloud.nix
     ./ntfy.nix

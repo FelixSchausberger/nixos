@@ -24,7 +24,6 @@ in {
     ./monitoring.nix # Modern system monitoring and performance tools
     ./nh.nix # Yet another Nix CLI helper - Modern replacement for nixos-rebuild
     ./newsboat.nix # Terminal feed reader used as the Hacker News reading queue
-    ./ollama.nix # Get up and running with large language models locally
     ./rbw.nix # Unofficial Bitwarden CLI for password management
     ./rclone.nix # Sync files and directories to and from major cloud storage
     ./amt.nix # Intel AMT SOL for m920q (amtterm + amttool via sops)

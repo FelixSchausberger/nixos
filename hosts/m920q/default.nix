@@ -379,7 +379,7 @@ in {
   # client can satisfy. ICMP and foreign ports do reach the host and are
   # dropped by amt_guard instead of being forwarded into a dead end.
   # flushRuleset stays at its false default: only the amtfix table is
-  # replaced on reload, leaving the firewall and docker tables alone.
+  # replaced on reload, leaving the firewall table alone.
   networking.nftables = {
     enable = true;
     tables.amtfix = {
@@ -784,9 +784,6 @@ in {
     };
 
     stylix-catppuccin.enable = true;
-    # No containerized workloads run here; the on-demand Docker socket was
-    # never used and only added closure, a docker group and a stale store.
-    containers.enable = false;
     # Bless-driven cleanup: generations whose boot entries exhausted their
     # tries are deleted once enough good generations exist (see module).
     bootFallback.enable = true;
@@ -1091,9 +1088,6 @@ in {
       enable = true;
       openFirewall = true;
     };
-    # Music Assistant is intentionally off. The NAD C 368 will expose BluOS on
-    # the LAN and Home Assistant's native bluesound integration controls it;
-    # Music Assistant had no library, player or play history on this host.
     # Ebook library: Kobo sync for the Clara BW over the LAN (the device
     # cannot run Tailscale), web UI + OPDS through the Caddy tailnet route.
     calibreWeb = {
