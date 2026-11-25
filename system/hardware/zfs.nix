@@ -109,9 +109,6 @@ in {
 
     # ZFS Event Daemon for monitoring and notifications
     zed = {
-      # Email notifications for critical events (requires mail setup)
-      # enableMail = false;  # Set to true and configure mail if desired
-
       settings = {
         # Automatically replace failed drives if spares are available
         ZED_SPARE_ON_CHECKSUM_ERRORS = 10; # Replace after 10 checksum errors
