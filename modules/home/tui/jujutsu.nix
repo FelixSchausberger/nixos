@@ -216,9 +216,10 @@ in {
           # is judged against current origin. A skip keeps the workspace and is
           # reported in the unit log.
           ${rookery}/bin/rookery clean --apply
-          # `gc` removes the stale directories; `reap` exports and deletes the
-          # conversations that pointed at them. The export is the safety net.
-          ${rookery}/bin/rookery reap
+          # Conversation reaping is deliberately absent from this timer. A
+          # finished top-level conversation is the person's review record, and
+          # the lead deletes a worker's session explicitly after reading its
+          # report. Only child subagent transcripts are disposable.
           read -r total empty merged unpushed inflight conflict stale waitold < <(${rookery}/bin/rookery ls --counts)
           waitold=''${waitold:-0}
           attention=$((unpushed + conflict))
