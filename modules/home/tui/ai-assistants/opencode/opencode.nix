@@ -367,14 +367,57 @@ in {
       "${configDir}/cli.json".text = builtins.toJSON cliConfig;
       "${configDir}/AGENTS.md".text = shared.combinedRules;
       "${configDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
-      # Marks the calling workspace for the cleanup sweep. The shell block runs
-      # in the session's directory, so the command resolves the workspace from
-      # the cwd and refuses the primary checkout.
+      # Marks an ungrouped workspace for the cleanup sweep. A grouped workspace
+      # belongs to a task: only the lead may finish it, from its own ungrouped
+      # workspace, with /task-done. The shell block runs in the session's
+      # directory, so the command resolves the workspace from the cwd.
       "${configDir}/commands/done.md".text = ''
         ---
-        description: Mark this workspace to clean up
+        description: Mark an ungrouped workspace to clean up
         ---
-        !`rookery clean --current`
+        !`ws=$(rookery ls --json | jq -r --arg dir "$PWD" 'select(.path == $dir or ($dir | startswith(.path + "/"))) | .workspace' | head -1); if [ -z "$ws" ]; then echo "not-a-workspace"; else task=$(rookery ls --json | jq -r --arg ws "$ws" 'select(.workspace == $ws) | .task // empty'); if [ -n "$task" ]; then echo "grouped:$task"; else echo "ungrouped:$ws"; fi; fi`
+
+        Read the first line above.
+
+        - `grouped:<id>`: do not mark anything. This workspace belongs to task
+          `<id>`, and a worker cannot finish its own task. Write your report and
+          stop; only the lead runs `/task-done <id>`.
+        - `ungrouped:<workspace>`: run `rookery clean --current`. This marks the
+          workspace for the daily sweep. Do not force-remove work; if the
+          workspace has unpushed changes, resolve them first.
+        - `not-a-workspace`: do nothing and report.
+      '';
+
+      # The lead's close-out. It runs from the lead's ungrouped workspace (or
+      # the primary checkout), verifies that every grouped workspace is merged
+      # or empty, records the outcome, and only then releases the task.
+      "${configDir}/commands/task-done.md".text = ''
+        ---
+        description: Finish a rookery task and reclaim its workspaces
+        ---
+        Finish rookery task `$ARGUMENTS` as its lead. Do not force-remove work.
+
+        1. Read the task and its notes:
+           `rookery task list --json | jq 'select(.id == "$ARGUMENTS")'`
+           Every follow-up must already be a GitHub issue link or a
+           `rookery wait` reason; if it is not, create the issue or add the
+           wait before closing.
+        2. Check every grouped workspace:
+           `rookery ls --json | jq 'select(.task == "$ARGUMENTS")'`
+           Stop and report if any state is not `merged` or `empty`.
+        3. Record the outcome:
+           `rookery task note $ARGUMENTS "closed out: <one line>"`
+        4. Release the task:
+           `rookery task done $ARGUMENTS`
+           `rookery clean --apply`
+        5. Archive the task:
+           `rookery task archive $ARGUMENTS`
+           If the last workspace removal already archived it, that is success.
+           Otherwise, if it refuses, name the kept workspace and the reason.
+        6. Reap the dead conversations:
+           `rookery reap --dry-run`, review the list, then `rookery reap`.
+
+        Report exactly what was removed, what was kept, and why.
       '';
       # TokenScope reads this from the canonical $XDG_CONFIG_HOME/opencode
       # rather than the plugin host, so declaring it here keeps the fleet's

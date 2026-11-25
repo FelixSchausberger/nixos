@@ -35,7 +35,8 @@ workspace each have their own jj workspace when they are created through
 A lead creates each worker with `rookery herdr --workspace <id>`; the worker gets
 its own jj workspace and a tab in the lead's herdr workspace. The lead prompts
 it, reads the report file, closes only the tabs it created, and releases the
-workspace with `rookery done`. The `herdr-lead` skill owns the delegation protocol;
+whole task with `rookery task done` after integration. The `herdr-lead` skill
+owns the delegation protocol;
 `herdr worktree` and fan remain unused.
 
 The claim lives in jj, not in herdr. `rookery <task>` creates the jj workspace,
@@ -131,12 +132,23 @@ benefit for single quick changes.
    work: the primary checkout and secondary workspaces are pushed only by an
    explicit `jjpush` (or `jjtest` for a test deploy).
 
-5. Cleanup after the PR merges:
+5. Cleanup after the PR merges. Grouped work closes as a task; a single
+   ungrouped workspace closes on its own:
 
    ```bash
-   rookery ls            # classify every workspace; empty/merged are reclaimable
-   rookery done <task>   # fetch, refuse if unmerged or live, then forget + rip
+   rookery ls --json | jq 'select(.task == "<task>")'
+   rookery task done <task>   # lead only; refused from a grouped worker
+   rookery clean --apply      # removes the merged/empty workspaces
+   rookery task archive <task>
+   rookery reap               # export and delete the dead conversations
    ```
+
+   An open task holds every grouped workspace out of `gc` and
+   `clean --apply`, so a worker cannot lose its checkout before the lead has
+   integrated the result. The lead is ungrouped and closes the task; a worker
+   never runs `task done`. For a single workspace with no task, `rookery done
+   <workspace>` still refuses unmerged work or a live process, then forgets and
+   rips it.
 
    `rookery ls` is a read-only status board. Each workspace is classified `empty`
    (nothing outside `main@origin`), `merged` (its content is already absorbed
