@@ -113,7 +113,15 @@ in {
       # upgrade has completed successfully (occ status shows the new
       # versionstring with needsDbUpgrade false). The instance is on 35,
       # 34 having run clean;
-      package = pkgs.nextcloud35;
+      # The mount cache's addMount() does a plain INSERT, so every fresh
+      # process that rebuilds the cache (cron, external-storage scan, web
+      # request) races the others and PostgreSQL logs a caught
+      # unique-constraint violation. The patch below switches it to the
+      # insertIgnoreConflict helper the same class already uses for its cache
+      # path; remove it when the packaged Nextcloud carries the change.
+      package = pkgs.nextcloud35.overrideAttrs (old: {
+        patches = (old.patches or []) ++ [./nextcloud-mount-cache-ignore-conflict.patch];
+      });
       datadir = cfg.dataPath;
       config =
         {
