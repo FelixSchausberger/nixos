@@ -65,6 +65,7 @@
   octoprint_serial_autoconnect = false;
   octoprint_serial_port = "/dev/serial/by-id/usb-Prusa_Research__prusa3d.com__Original_Prusa_i3_MK3_CZPX2321X004XK87560-if00";
   octoprint_serve_exec_start = "/nix/store/<hash>/tailscale-serve-octoprint-setup";
+  octoprint_softwareupdate_disabled = true;
   octoprint_state_dir = "/var/lib/octoprint";
   opencode_server_exec_start = [
     "/nix/store/<hash>/opencode-web-start"

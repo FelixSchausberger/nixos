@@ -121,12 +121,18 @@ in {
       # user's API key in users.yaml, leaving the rest of the imperative
       # profile store untouched. yq reads the secret through the environment
       # rather than argv, and the service user owns the secret and both files.
+      #
+      # The same merge disables the built-in softwareupdate plugin: the Nix
+      # Python environment is read-only, so its pip probe can neither install
+      # nor use --user and logs an ERROR on every start. OctoPrint updates are
+      # managed by the flake; the append preserves any UI-disabled plugins.
       octoprint.preStart = lib.mkAfter ''
         if [ -f ${config.services.octoprint.stateDir}/users.yaml ]; then
           export OCTOPRINT_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets."octoprint/api-key".path})"
           ${pkgs.yq-go}/bin/yq -i '.${inputs.self.lib.user}.apikey = strenv(OCTOPRINT_API_KEY)' ${config.services.octoprint.stateDir}/users.yaml
           ${pkgs.coreutils}/bin/chmod 600 ${config.services.octoprint.stateDir}/users.yaml
         fi
+        ${pkgs.yq-go}/bin/yq -i '.plugins._disabled = (((.plugins._disabled // []) + ["softwareupdate"]) | unique)' ${config.services.octoprint.stateDir}/config.yaml
       '';
 
       octoprint.serviceConfig = {
