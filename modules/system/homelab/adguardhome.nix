@@ -209,17 +209,35 @@
 
     # The admin interface has no users by default, which leaves the whole
     # /control API unauthenticated. AdGuard's 0.107 API has no user endpoint,
-    # so the password is applied to the YAML in preStart: the sops password
-    # (already used by the exporter) is hashed with bcrypt and written after
-    # the module's settings merge, before the daemon reads the file.
-    systemd.services.adguardhome = {
-      serviceConfig.LoadCredential = "adguard-password:${config.sops.secrets."adguard/password".path}";
-      preStart = lib.mkAfter ''
-        password=$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/adguard-password")
-        hash=$(${pkgs.mkpasswd}/bin/mkpasswd -m bcrypt -R 10 "$password")
-        HASH="$hash" ${pkgs.yq-go}/bin/yq -i \
-          '.users = [{"name": "admin", "password": strenv(HASH)}]' \
-          "$STATE_DIRECTORY/AdGuardHome.yaml"
+    # so the password is written into the YAML. This runs as root before the
+    # daemon: yq's in-place write chowns its temp file, and that syscall is
+    # killed by the AdGuard service's seccomp sandbox when run from preStart.
+    systemd.services.adguardhome-admin = {
+      description = "Set the AdGuard Home admin user from the sops password";
+      before = ["adguardhome.service"];
+      wantedBy = ["multi-user.target"];
+      path = [
+        pkgs.coreutils
+        pkgs.mkpasswd
+        pkgs.yq-go
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        set -eu
+        file=/var/lib/AdGuardHome/AdGuardHome.yaml
+        if [ ! -f "$file" ]; then
+          # Fresh install: the module's preStart creates the file on the first
+          # boot; the next boot applies the password.
+          exit 0
+        fi
+        password=$(cat ${config.sops.secrets."adguard/password".path})
+        hash=$(mkpasswd -m bcrypt -R 10 "$password")
+        HASH="$hash" yq -i '.users = [{"name": "admin", "password": strenv(HASH)}]' "$file"
+        chown adguardhome:adguardhome "$file"
+        chmod 0600 "$file"
       '';
     };
 
