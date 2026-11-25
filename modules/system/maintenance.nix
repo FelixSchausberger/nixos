@@ -371,6 +371,11 @@ in {
               # at <dataset>/.zfs/snapshot); they share the same pool and must
               # not double-count the live filesystem.
               if [[ "$mount" == *".zfs/"* ]]; then continue; fi
+              # Read-only filesystems cannot be cleaned or grown from this
+              # host. WSL mounts its kernel headers as a 100%-full read-only
+              # ext4 image, so reporting it would page on every check for a
+              # state no action can change.
+              if ${pkgs.util-linux}/bin/findmnt -no OPTIONS --target "$mount" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -qE '(^|,)ro(,|$)'; then continue; fi
               if [[ $pcent -ge 90 ]]; then
                 avail_gib=$((avail / (1024 * 1024 * 1024)))
                 if [[ $pcent -ge 95 ]]; then
