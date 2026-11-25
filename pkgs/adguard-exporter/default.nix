@@ -4,7 +4,7 @@
   buildGoModule,
   nix-update-script,
 }:
-buildGoModule rec {
+buildGoModule {
   pname = "adguard-exporter";
   version = "1.4.4";
 

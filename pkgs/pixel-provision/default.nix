@@ -228,6 +228,17 @@ in
                 f=$(mktemp)
                 trap 'rm -f "$f"' EXIT
                 "$ADB" shell pm list packages -3 --user "$u" | sed 's/^package://' > "$f"
+                # One report line per package: the sandboxed-Play list and the
+                # lane coverage report below must print the same shape.
+                report_presence() {
+                  for id in "$@"; do
+                    if grep -q "^$id$" "$f"; then
+                      echo "ok   $id"
+                    else
+                      echo "MISS $id"
+                    fi
+                  done
+                }
                 if [ "$PROFILE" = owner ]; then
                   # The patched Pixel Camera is the intended com.google.*
                   # exception: the manual camera lane repacks it to run without
@@ -239,23 +250,11 @@ in
                   ids=$(lane fdroid)
                 else
                   echo "-- sandboxed Google Play:"
-                  for id in com.google.android.gms com.android.vending com.google.android.projection.gearhead; do
-                    if grep -q "^$id$" "$f"; then
-                      echo "ok   $id"
-                    else
-                      echo "MISS $id"
-                    fi
-                  done
+                  report_presence com.google.android.gms com.android.vending com.google.android.projection.gearhead
                   echo "-- private lane coverage:"
                   ids="$(lane fdroid) $(lane aurora) $(lane obtainium)"
                 fi
-                for id in $ids; do
-                  if grep -q "^$id$" "$f"; then
-                    echo "ok   $id"
-                  else
-                    echo "MISS $id"
-                  fi
-                done
+                report_presence $ids
                 exit 0
                 ;;
               help|*)
