@@ -72,8 +72,9 @@ in {
       }
     ];
 
-    networking.firewall.allowedTCPPorts = [
-      2586
-    ];
+    # No LAN firewall rule: the phone already subscribes through the tailnet
+    # base URL, local publishers use loopback, and tailscale0 is trusted. The
+    # old LAN opening exposed an unauthenticated read-write topic to every
+    # device on the home network.
   };
 }
