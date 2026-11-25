@@ -19,6 +19,9 @@ in {
       ../../modules/system/specialisations.nix
       ../../modules/system/performance-profiles.nix
       ../../modules/system/tailscale.nix
+      # Log shipping (client half): pushes this host's journald to the m920q
+      # Loki through Grafana Alloy.
+      ../../modules/system/homelab/logging.nix
 
       # Surface-specific hardware module
       inputs.nixos-hardware.nixosModules.microsoft-surface-pro-intel
@@ -60,6 +63,11 @@ in {
       ntfyUrl = "http://${inputs.self.lib.hosts.m920q.tailnetIp}:2586/homelab-alerts";
     };
   };
+
+  # Ship this host's journal to the homelab Loki over the tailnet. The
+  # fully-qualified name keeps the push on tailscale0: a LAN resolver outside
+  # the aggregator's clientSources must not be able to answer the short name.
+  modules.system.homelab.logging.shipEndpoint = "http://m920q.tailf2f0ca.ts.net:3100";
 
   # Pull-based GitOps: converge to main automatically, alert on downgrades
   modules.system.comin = {

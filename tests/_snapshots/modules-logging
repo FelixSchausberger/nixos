@@ -53,11 +53,38 @@
         expression = "(?i)(?:^|\\s)level=(?P<app_level>error|warn(?:ing)?|info|debug|trace|fatal|crit(?:ical)?|alert|emerg|notice)\\b"
       }
     
+      // Python logging (`%asctime - %name - LEVEL - message`), the shape
+      // OctoPrint and most Python services print to stderr.
+      stage.regex {
+        expression = " - (?P<app_level>DEBUG|INFO|WARNING|WARN|ERROR|CRITICAL) - "
+      }
+    
+      // Jellyfin/.NET prefixes each line with a three-letter level.
+      stage.regex {
+        expression = "\\[(?P<app_level>ERR|WRN|INF|DBG|FTL|TRC)\\]"
+      }
+    
+      // Rust env_logger (Vaultwarden): `[timestamp][error][ERROR]`.
+      stage.regex {
+        expression = "\\]\\[(?P<app_level>error|warn|info|debug|trace)\\]"
+      }
+    
+      // Shell health checks emit `ERROR:`/`WARNING:` at line start;
+      // wallpaper-conditions writes `WARNING ...` without the colon.
+      stage.regex {
+        expression = "^(?P<app_level>ERROR|WARNING|CRITICAL)\\b"
+      }
+    
+      // AdGuard Home: `2026/11/25 10:00:00 [error] ...`.
+      stage.regex {
+        expression = "^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]+ \\[(?P<app_level>error|warning|info|debug)\\]"
+      }
+    
       // `with .Value` keeps a non-matching line from acquiring an empty
       // app_level, which the labels stage would otherwise write as level="".
       stage.template {
         source   = "app_level"
-        template = "{{ with .Value }}{{ if eq (. | ToLower) \"warning\" }}warn{{ else if or (eq (. | ToLower) \"fatal\") (eq (. | ToLower) \"critical\") (eq (. | ToLower) \"crit\") (eq (. | ToLower) \"alert\") (eq (. | ToLower) \"emerg\") }}error{{ else if eq (. | ToLower) \"notice\" }}info{{ else }}{{ . | ToLower }}{{ end }}{{ end }}"
+        template = "{{ with .Value }}{{ $l := . | ToLower }}{{ if or (eq $l \"warning\") (eq $l \"wrn\") }}warn{{ else if or (eq $l \"fatal\") (eq $l \"critical\") (eq $l \"crit\") (eq $l \"alert\") (eq $l \"emerg\") (eq $l \"err\") (eq $l \"ftl\") }}error{{ else if or (eq $l \"notice\") (eq $l \"inf\") }}info{{ else if eq $l \"trc\" }}trace{{ else if eq $l \"dbg\" }}debug{{ else }}{{ $l }}{{ end }}{{ end }}"
       }
     
       stage.labels {
@@ -92,10 +119,10 @@
         address       = "0.0.0.0:1514"
         protocol      = "udp"
         syslog_format = "rfc3164"
-        labels        = {job = "syslog", device = "slzb-mr4u"}
+        labels        = {job = "syslog", device = "slzb-mr4u", host = "m920q"}
       }
     
-      forward_to = [loki.write.loki.receiver]
+      forward_to = [loki.process.levels.receiver]
     }
     
     
@@ -127,6 +154,9 @@
   loki_log_level = "warn";
   loki_port = 3100;
   loki_retention = "30d";
+  surface_alloy_enabled = true;
+  surface_loki_enabled = false;
+  surface_ship_endpoint = "http://m920q.tailf2f0ca.ts.net:3100";
   syslog_port = 1514;
   syslog_source = "192.168.178.74";
 }
