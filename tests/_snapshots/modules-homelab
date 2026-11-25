@@ -61,11 +61,11 @@
   octoprint_homepage_widget_api_key = true;
   octoprint_https_port = 8451;
   octoprint_ipcheck_trusts_tailnet = true;
+  octoprint_pip_plugins_disabled = true;
   octoprint_port = 5000;
   octoprint_serial_autoconnect = false;
   octoprint_serial_port = "/dev/serial/by-id/usb-Prusa_Research__prusa3d.com__Original_Prusa_i3_MK3_CZPX2321X004XK87560-if00";
   octoprint_serve_exec_start = "/nix/store/<hash>/tailscale-serve-octoprint-setup";
-  octoprint_softwareupdate_disabled = true;
   octoprint_state_dir = "/var/lib/octoprint";
   opencode_server_exec_start = [
     "/nix/store/<hash>/opencode-web-start"

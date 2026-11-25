@@ -127,8 +127,9 @@ in {
     && lib.hasInfix "apikey" config.systemd.services.octoprint.preStart;
   octoprint_global_api_key_untouched =
     !(lib.hasInfix ".api.key = strenv" config.systemd.services.octoprint.preStart);
-  octoprint_softwareupdate_disabled =
-    lib.hasInfix "softwareupdate" config.systemd.services.octoprint.preStart;
+  octoprint_pip_plugins_disabled =
+    lib.hasInfix "softwareupdate" config.systemd.services.octoprint.preStart
+    && lib.hasInfix "pluginmanager" config.systemd.services.octoprint.preStart;
   octoprint_homepage_api_key =
     lib.hasInfix "HOMEPAGE_VAR_OCTOPRINT_API_KEY" config.sops.templates."homepage/env".content;
   octoprint_homepage_widget_api_key =
