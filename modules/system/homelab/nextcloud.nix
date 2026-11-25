@@ -174,6 +174,12 @@ in {
         # user omits a country code.
         default_phone_region = "AT";
 
+        # Delete trash older than 30 days. The stock "auto" max keeps deleted
+        # files forever while the pool has free space; the second value is the
+        # automatic maximum, so "30, 30" reclaims the 18G of stale trash the
+        # m920q accumulated while still keeping the last 30 days.
+        trashbin_retention_obligation = "30, 30";
+
         # A single PHP pool serves this instance, so the ID only needs to be
         # valid (0-511); it shards cache keys when several pools share one
         # instance and the setup check reports its absence otherwise.
@@ -334,25 +340,6 @@ in {
       script = ''
         ${lib.getExe config.services.nextcloud.occ} config:app:set bruteForce whitelist_loopback \
           --value "127.0.0.1/32"
-      '';
-    };
-
-    systemd.services.nextcloud-trash-retention = {
-      after = ["nextcloud-setup.service"];
-      requires = ["nextcloud-setup.service"];
-      wantedBy = ["multi-user.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        User = "nextcloud";
-        Group = "nextcloud";
-      };
-      script = ''
-        # The stock "auto" obligation keeps deleted files indefinitely while
-        # the pool has free space. The 30-day floor makes the ExpireTrash job
-        # actually reclaim them; this was 18G of trash on m920q.
-        ${lib.getExe config.services.nextcloud.occ} config:app:set files_trashbin trashbin_retention_obligation \
-          --value "30, auto"
       '';
     };
 
