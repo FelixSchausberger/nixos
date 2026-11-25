@@ -651,10 +651,10 @@
         };
       }
     ];
-  # Config Health and Nix Telemetry describe the configuration, so they sit in
-  # the Nix band next to the repository card. The vulnerability card joins them
-  # only when the scan service is enabled: its metrics come from the running
-  # closure, not from the configuration.
+  # Config Health describes the host's health, so it sits in the Nix band next
+  # to the repository card. The vulnerability card joins it only when the scan
+  # service is enabled: its metrics come from the running closure, not from
+  # the configuration.
   vulnerabilityScanEnabled =
     (config.services.nixpkgsVulnerabilityScan.enable or false) && hl.monitoring.enable;
   vulnerabilityMetrics = [
@@ -686,16 +686,8 @@
         "Config Health" = {
           icon = "nixos.png";
           # uid "config-health" (monitoring.nix provisions the dashboard). Shows
-          # NixOS generation size per deploy and the vitals host health score.
+          # the vitals host health score and the current comin deployment.
           href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
-        };
-      }
-      {
-        "Nix Telemetry" = {
-          icon = "nixos.png";
-          # uid "nix-otel" (monitoring.nix provisions the dashboard). Evaluation,
-          # build and substitution timings from Determinate Nix OTel traces.
-          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/nix-otel";
         };
       }
     ]

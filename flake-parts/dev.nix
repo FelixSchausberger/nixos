@@ -80,7 +80,6 @@
               ${../modules/system/homelab/fritz-dashboard.json} \
               ${../modules/system/homelab/garmin-dashboard.json} \
               ${../modules/system/homelab/logs-dashboard.json} \
-              ${../modules/system/homelab/nix-otel-dashboard.json} \
               ${../modules/system/homelab/power-dashboard.json}
             touch $out
           '';

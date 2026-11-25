@@ -11,35 +11,6 @@
 
   tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
 
-  # Loopback OTLP receiver of the collector below; spans never leave the host.
-  otlpEndpoint = "http://127.0.0.1:4318";
-
-  # cockroachdb/swiss, pulled by the contrib collector's generated go.mod,
-  # gates its runtime shims to `go1.20 && !go1.27`, so the Go 1.27 default in
-  # buildGoModule fails with undefined runtime linknames. Pin the compiler to
-  # 1.26 until the default drops back below 1.27 or the distribution moves
-  # past 0.155.x with a newer swiss; both conditions retire the pin.
-  collectorNeedsGo126 =
-    lib.versionAtLeast pkgs.go.version "1.27"
-    && lib.versionOlder pkgs.opentelemetry-collector-contrib.version "0.156";
-
-  collectorPackage =
-    if collectorNeedsGo126
-    then (pkgs.opentelemetry-collector-releases.override {buildGoModule = pkgs.buildGo126Module;}).otelcol-contrib
-    else pkgs.opentelemetry-collector-contrib;
-
-  # Deploy-time closure metrics. The node exporter textfile collector is the
-  # only reader, so the activation snippet below is a no-op on hosts without
-  # monitoring (no textfile directory) and the script itself skips the closure
-  # walk when the activated generation is already recorded.
-  emitDeployMetrics = pkgs.writeShellApplication {
-    name = "nixos-emit-deploy-metrics";
-    runtimeInputs = with pkgs; [coreutils gnugrep nix];
-    text = ''
-      exec ${pkgs.bash}/bin/bash ${../../../tools/scripts/emit-deploy-metrics.sh} "$@"
-    '';
-  };
-
   blackboxConfig = pkgs.writeText "blackbox.yml" ''
     modules:
       http_2xx:
@@ -736,39 +707,6 @@ in {
               }
             ];
           }
-          {
-            # Trace-derived counters and histograms from the OTel collector.
-            # collector_instance_id changes on every collector restart and the
-            # otel_scope_* labels are always empty, so all of them are dropped
-            # at scrape time rather than starting a fresh series per restart.
-            job_name = "otel";
-            scrape_interval = "30s";
-            static_configs = [
-              {
-                targets = ["127.0.0.1:8889"];
-                labels.host = localHost;
-              }
-            ];
-            metric_relabel_configs = [
-              {
-                action = "labeldrop";
-                regex = "collector_instance_id|otel_scope_.*";
-              }
-              {
-                # The nix client names a span after the flake input it fetches
-                # ("unpacking '<url>' into the Git cache") and after every git
-                # revision it probes, so span_name is unbounded: one series per
-                # input per evaluation. Those names dominate the spanmetrics
-                # histogram (they were over half of it) and chart nothing
-                # actionable, so the series are dropped here. The bounded daemon
-                # spans and the client's fixed command spans (nix eval,
-                # BuildInstallables, ...) still reach the dashboards.
-                action = "drop";
-                source_labels = ["span_name"];
-                regex = "unpacking .* into the Git cache|getting Git revision count of .*";
-              }
-            ];
-          }
         ]
         ++ lib.optionals (config.services.comin.enable or false) [
           {
@@ -984,91 +922,11 @@ in {
       ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="*:*", RUN+="${pkgs.coreutils}/bin/chmod 0444 /sys/class/powercap/%k/energy_uj"
     '';
 
-    # Emit deploy-time closure metrics on every activation (switch, test and
-    # boot), which covers `nh os switch`, comin's switch and `jjtest` without a
-    # per-path hook. Runs as root, so the textfile directory needs no
-    # permission change; the fragment is a no-op where the directory is absent
-    # (hosts without this module).
-    system.activationScripts.emitDeployMetrics = ''
-      if [ -d /var/lib/node-exporter/textfile ]; then
-        ${emitDeployMetrics}/bin/nixos-emit-deploy-metrics || true
-      fi
-    '';
-
     # Postgres is only deployed as Nextcloud's database backend; scrape the
     # exporter (and alert on it) only when that stack exists.
     services.prometheus.exporters.postgres = mkIf config.modules.system.homelab.nextcloud.enable {
       enable = true;
       runAsLocalSuperUser = true;
-    };
-
-    # Determinate Nix exports OpenTelemetry traces (evaluation, builds,
-    # substitutions, daemon connections) when a process has an OTLP endpoint in
-    # its environment; the spanmetrics connector turns those spans into the
-    # counters and histograms the dashboards read. Everything stays on loopback
-    # - spans carry store paths, fetched URLs and build-log tails, so they are
-    # handled like build logs and never leave the host.
-    services.opentelemetry-collector = {
-      enable = true;
-      # The core collector ships no spanmetrics connector.
-      package = collectorPackage;
-      settings = {
-        receivers.otlp.protocols.http.endpoint = "127.0.0.1:4318";
-        connectors.spanmetrics = {
-          # Bounds bracket the operations Nix reports: a cache lookup is
-          # milliseconds, a locally built derivation is minutes.
-          histogram.explicit.buckets = [
-            "10ms"
-            "50ms"
-            "100ms"
-            "500ms"
-            "1s"
-            "5s"
-            "10s"
-            "30s"
-            "60s"
-            "300s"
-          ];
-          # Dimensions keep the default set (service, span name, kind, status).
-          # nix.drv.name would be one series per package name and swamp the
-          # scrape.
-        };
-        exporters.prometheus.endpoint = "127.0.0.1:8889";
-        # The collector's own metrics are not scraped, but its internal
-        # listener defaults to the shared 127.0.0.1:8888: a bind failure there
-        # aborts startup, and systemd's start limit turns the retries into a
-        # failed unit even though receiver and exporter are fine. Pin it
-        # instead of leaving it on a port any local process can take.
-        service.telemetry.metrics.readers = [
-          {
-            pull.exporter.prometheus = {
-              host = "127.0.0.1";
-              port = 18888;
-            };
-          }
-        ];
-        service.pipelines = {
-          # Traces feed only the connector: individual traces are not stored,
-          # because every panel reads aggregated series.
-          traces = {
-            receivers = ["otlp"];
-            exporters = ["spanmetrics"];
-          };
-          metrics = {
-            receivers = ["spanmetrics"];
-            exporters = ["prometheus"];
-          };
-        };
-      };
-    };
-
-    # Export is opt-in per process, so shell builds and unprivileged clients
-    # stay silent and the collector only sees the work the panels chart: the
-    # daemon covers builds and substitutions, comin the evaluation spans of a
-    # deploy. The guard keeps the unit off hosts that do not deploy with comin.
-    systemd.services.nix-daemon.environment.OTEL_EXPORTER_OTLP_ENDPOINT = otlpEndpoint;
-    systemd.services.comin = mkIf (config.services.comin.enable or false) {
-      environment.OTEL_EXPORTER_OTLP_ENDPOINT = otlpEndpoint;
     };
 
     # The Fritz exporter opens a TCP connection to the router (192.168.178.1)
@@ -1177,22 +1035,13 @@ in {
               options.path = ./fritz-dashboard.json;
             }
             {
-              # Deploy-time closure metrics (emit-deploy-metrics.sh) and the
-              # vitals health score. Always provisioned: the panels stay empty
-              # until the first deploy or on hosts without the vitals daemon.
+              # Per-host vitals health and the current comin deployment status.
+              # Always provisioned: the vitals panels stay empty on hosts
+              # without the daemon, the comin panels on hosts without comin.
               name = "config-health";
               type = "file";
               disableDeletion = true;
               options.path = ./config-health-dashboard.json;
-            }
-            {
-              # Nix evaluation, build and substitution spans aggregated by the
-              # OTel collector. Always provisioned: the panels stay empty until
-              # the collector has seen its first trace.
-              name = "nix-otel";
-              type = "file";
-              disableDeletion = true;
-              options.path = ./nix-otel-dashboard.json;
             }
             {
               # Wall power at the plugs plus the CPU/GPU series that attribute
