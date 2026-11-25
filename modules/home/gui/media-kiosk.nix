@@ -141,7 +141,7 @@ in {
     Unit = {
       Description = "Projector media kiosk browser (Zen)";
       After = ["niri-session.target" "media-kiosk-api.service"];
-      Wants = ["media-kiosk-api.service"];
+      Wants = ["media-kiosk-api.service" "media-kiosk-controller.service"];
       PartOf = ["niri-session.target"];
       BindsTo = ["niri-session.target"];
       # RestartSec=3 spaces restarts outside systemd's default 10s window, so

@@ -326,10 +326,12 @@ def preview_loop():
         time.sleep(60)
 
 
-# The controller's lizard mode exposes keyboard and mouse interfaces only; the
-# Steam and QAM buttons never reach the host. B (Escape) is therefore the only
-# spare key, so two presses inside the window close every kiosk-opened window
-# and niri focuses the shell again. A single Escape still reaches the page.
+# Fallback for a session where the SDL controller bridge is not running: the
+# lizard-mode keyboard interfaces are then the only input, and the Steam and
+# QAM buttons never reach the host. B (Escape) is the only spare key, so two
+# presses inside the window close every kiosk-opened window and niri focuses
+# the shell again. A single Escape still reaches the page. The bridge disables
+# lizard mode while it owns the controller, so this loop sees no events then.
 STEAM_VENDOR_ID = "28de"
 STEAM_DEVICE_NAME = "Steam Controller Puck"
 EV_KEY = 1
@@ -542,6 +544,41 @@ def close_app_windows(windows=None):
             )
             closed += 1
     return closed
+
+
+def focus_kiosk_window(windows=None):
+    if windows is None:
+        windows = niri_windows()
+    kiosk = kiosk_window(windows)
+    if kiosk is None:
+        log("kiosk window not found; cannot focus the shell")
+        return False
+    result = subprocess.run(
+        [
+            CONFIG["niri"]["bin"],
+            "msg",
+            "action",
+            "focus-window",
+            "--id",
+            str(kiosk["id"]),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if result.returncode != 0:
+        log(f"niri focus-window failed: {result.stderr.strip()}")
+        return False
+    return True
+
+
+def go_home():
+    windows = niri_windows()
+    if kiosk_window(windows) is None:
+        log("kiosk window not found; not going home")
+        return False
+    close_app_windows(windows)
+    return focus_kiosk_window(windows)
 
 
 def open_target(target):
@@ -929,6 +966,8 @@ class KioskHandler(BaseHTTPRequestHandler):
                 return self.send_json(200, {"ok": True})
             if path == "/api/close-apps":
                 return self.send_json(200, {"closed": close_app_windows()})
+            if path == "/api/home":
+                return self.send_json(200, {"ok": go_home()})
             if path in ("/api/moonlight/steam", "/api/moonlight/ui"):
                 kind = "steam" if path.endswith("steam") else "ui"
                 action = new_action(kind)
