@@ -180,7 +180,12 @@ in {
         "f ${cfg.dataPath}/upload/.immich 0600 immich immich - immich"
         # User-curated media: a real directory outside IMMICH_MEDIA_LOCATION,
         # exposed read-only, referenced as an external library import path.
+        # Imports keep owner-only modes, so the service user gets read access
+        # through an ACL; the default entry covers files added below the root
+        # later. Existing subtrees need one recursive
+        # `setfacl -R -m u:immich:rX,d:u:immich:rX <library>`.
         "d /per/mnt/data/media/pictures 0755 schausberger users -"
+        "a+ /per/mnt/data/media/pictures - - - - u:immich:rX,d:u:immich:rX"
       ]
       ++ subdir "thumbs" cfg.thumbsPath
       ++ subdir "encoded-video" cfg.encodedVideoPath;
