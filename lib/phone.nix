@@ -241,9 +241,9 @@ _: {
     manual = [
       "Sideload Obtainium itself from github.com/ImranR98/Obtainium/releases once, then run `pixel-provision links` and import the bulk obtainium://apps/ link it prints."
       "Aurora Store first run: anonymous session, then install the lane list; updates happen on-device from then on. An install parked at \"Installing\" after a missed prompt never recovers on its own: `pixel-provision reset-aurora <profile>` clears that profile's Aurora data (and its anonymous session) so the next install prompts again."
-      "Play-dependent banking, government and travel apps live in the private space; TF Bank is the exception and runs in the Google user (see googleAccount); the owner's Aurora lane keeps only the apps that stay in this profile."
-      "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. The tailnet's sole global nameserver is AdGuard Home at 100.105.37.12 with Override local DNS on, so roaming queries use AdGuard; AdGuard falls back to NextDNS (https://dns.nextdns.io/b99bc7) when its DoH upstreams fail. Do not add NextDNS as a second Tailscale global nameserver: Tailscale races resolvers and a NextDNS denial could be answered by AdGuard. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private, Google user pixel-10a-google) because Android VPNs are per-user."
-      "Seedvault: exclude Tailscale from app backups (Settings > System > Backup > Backup status > three-dot menu > Exclude apps). Without the exclusion every full backup kills the owner's Tailscale process: Tailscale's full-backup rules exclude every domain, the backup measures zero bytes, Seedvault rejects the package as NO_DATA, and the framework kills the backup-agent host process, which is the live app; always-on VPN is a start trigger and does not restart it. Reproduced with 'bmgr backupnow com.tailscale.ipn' on 2026-11-11; the private space and Google-user tunnels are unaffected because backups run for the owner. Tailscale's backup data is empty, so the exclusion loses nothing."
+      "Play-dependent banking, government and travel apps live in the private space, TF Bank included; the owner's Aurora lane keeps only the apps that stay in this profile."
+      "Tailscale: sign in and enroll the 10a on the tailnet; with MagicDNS the fleet resolves pixel-10a like the old pixel-9a did. Keep Use Tailscale DNS settings on: without it the VPN carries no resolvers and MagicDNS names such as m920q.tailf2f0ca.ts.net stop resolving. The tailnet's sole global nameserver is AdGuard Home at 100.105.37.12 with Override local DNS on, so roaming queries use AdGuard; AdGuard falls back to NextDNS (https://dns.nextdns.io/b99bc7) when its DoH upstreams fail. Do not add NextDNS as a second Tailscale global nameserver: Tailscale races resolvers and a NextDNS denial could be answered by AdGuard. Each Android user is its own node (owner pixel-10a, private space pixel-10a-private) because Android VPNs are per-user."
+      "Seedvault: exclude Tailscale from app backups (Settings > System > Backup > Backup status > three-dot menu > Exclude apps). Without the exclusion every full backup kills the owner's Tailscale process: Tailscale's full-backup rules exclude every domain, the backup measures zero bytes, Seedvault rejects the package as NO_DATA, and the framework kills the backup-agent host process, which is the live app; always-on VPN is a start trigger and does not restart it. Reproduced with 'bmgr backupnow com.tailscale.ipn' on 2026-11-11; the private space tunnel is unaffected because backups run for the owner. Tailscale's backup data is empty, so the exclusion loses nothing."
       "Immich and Nextcloud: sign in against m920q (album/exam challenges happen inside the app)."
       "UPM runs the patch flows (ReVanced, Morphe, Reseam bundles) and strips the Google dependencies from the patched targets, so patched apps run without Play services: the Morphe-built Maps (org.ungoogled.android.apps.maps) and Car2Go are installed and bench-verified on the 10a. Pin the arm64-v8a asset to keep updates on the Tensor G4 flavor."
       "Pixel Camera gallery: the 1.1.3 Morphe bundle (morphe-patches-pixelcamera-1.1.3.mpp) never reaches its gallery hook on GrapheneOS because Llys.b hard-gates on com.google.android.apps.photos and the review intent carries only secure_mode_ids; the installed camera is a local repack of the UPM output that fakes the Photos presence in that check and rewrites hwb.w to ACTION_VIEW content://media/external/file/<id> for app.alextran.immich. Rebuild the repack after every UPM camera patch, page-align the native libraries, and sign it with UPM's keystore and `apksigner --alignment-preserved` so the in-place install keeps the camera data. Immich is untouched, updates through Obtainium, and has no secure-review activity, so lock-screen review stops at the keyguard bouncer."
@@ -297,6 +297,10 @@ _: {
         "capital.scalable.droid"
         "com.paypal.android.p2pmobile"
         "de.xcom.flatexat"
+        # TF Bank pairs one device per customer: unpair the previous install
+        # in-app ("Unpair this device") before enrolling another profile, or
+        # setup fails with the generic contact-support message.
+        "se.tfbank.tfbankmobile.at"
 
         # Government
         "at.gv.oe.app"
@@ -319,35 +323,18 @@ _: {
       ];
 
       manual = [
-        "Install sandboxed Google Play services, Play Store and Android Auto from the GrapheneOS App Store inside the private space. No Google account is required; Aurora's anonymous session serves the Play apps. Add fel.schausberger@gmail.com only if an app insists on Play licensing."
+        "Install sandboxed Google Play services, Play Store and Android Auto from the GrapheneOS App Store inside the private space, with fel.schausberger@gmail.com signed into Play. Play services alone carry FCM push and the compatibility shims; the account is what makes Play Store installs and Play Integrity's basic verdict work, and this is the only profile allowed to sign in."
         "Use Settings > Security & privacy > Private space > Install available apps to copy main-profile apps into the space (FUTO Keyboard); it copies the APK, not the app data. The flow omits IMEs and some web builds, so the remaining clones come from the migration commands."
         "Grant Play services and WhatsApp an unrestricted battery exception in the private space, and unlock the private space after every reboot: push only arrives while it is unlocked."
         "WhatsApp currently runs in the owner profile, where it has no Play services and polls its own socket; the private-space copy is the intended FCM path but is not the installed one, and the owner copy is what the backup folder below comes from. If WhatsApp moves here, transfer the chat history first, keep the private space unlocked after a reboot so push keeps arriving, and re-share the backup folder from this profile."
         "WhatsApp backups: the installed copy is in the owner profile, where there is no Google Play services and no Google account, so the Chat backup screen has no Google Drive setting — only the local backup. The only backup that reports a WhatsApp failure in this profile is Seedvault (Android's system backup); exclude WhatsApp there (Settings > System > Backup > Backup status > three-dot menu > Exclude apps). The owner's Syncthing-Fork shares Android/media/com.whatsapp/WhatsApp/Databases as send-only with the m920q under the folder ID whatsapp-backups; grant All Files Access (or pick the folder through the system picker) and accept the share. The m920q keeps 30 days of staggered versions in /per/mnt/data/backups/whatsapp. The local msgstore.db.crypt14 is restored by placing it back in the same folder; the 64-digit key only applies to an encrypted cloud backup."
         "The WhatsApp database backup excludes media; the Media tree stays on the phone. If WhatsApp is later moved to the private space for FCM push, the folder has to be re-shared from that profile's Syncthing-Fork because Android storage is per-user."
-        "Banking and government apps re-bind the device. Keep the Pixel 9a available until every app is verified; the Google secondary user stays for TF Bank. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
-        "Aegis stays in the owner: import the token export from the Google user before deleting it. Banking logins in the private space use the owner's Aegis; copy the code across the shared clipboard."
+        "Banking and government apps re-bind the device. Keep the Pixel 9a available until every app is verified. SMS and call verification happen in the owner profile; the cross-profile clipboard carries codes."
+        "Aegis stays in the owner; banking logins in the private space use the owner's Aegis, with the code copied across the shared clipboard."
         "FUTO Keyboard is also in the private lane; the owner keeps its working copy. Duolingo is private-lane only. Spotify, Telegram and Aegis stay in the owner. Gmail is not installed in the private space: it needs the Google account, and Proton Mail stays in the owner."
         "Tailscale: the private space is a separate node. Rename it to pixel-10a-private in the admin console (node names follow the phone's global device name, so a second login inherits the owner's), disable key expiry for it and keep Use Tailscale DNS settings on for MagicDNS."
         "UPM stays in the owner: it patches the apps that must run without Play services, and the private space has sandboxed Play, so nothing here needs it."
         "The out-of-repo privacy lane (~/.config/pixel-provision/private-apps.json) is merged into this profile's Aurora list by pixel-provision."
-      ];
-    };
-  };
-
-  # The Google user is a full secondary user kept for TF Bank, which refuses
-  # the private space. It needs Tailscale like the other profiles: an Android
-  # VPN is per-user and cannot be shared, so this is a third tailnet node.
-  # Play apps come from Aurora's anonymous session, as in the private lane.
-  googleAccount = {
-    lanes = {
-      aurora = [
-        "se.tfbank.tfbankmobile.at"
-      ];
-
-      manual = [
-        "Tailscale: sign in once in the Google user, rename its node to pixel-10a-google in the admin console, disable key expiry for it and keep Use Tailscale DNS settings on. pixel-provision apply google sets always-on VPN; a process the system stops (a backup, a user switch) needs the app opened again, because always-on VPN is a start trigger, not a watchdog."
-        "TF Bank: install from the Aurora lane above and enroll in-app. It is the reason this user exists; the private space cannot run it."
       ];
     };
   };
