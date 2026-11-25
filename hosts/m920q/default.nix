@@ -716,9 +716,12 @@ in {
 
   # Controller-first kiosk inside the on-demand niri session. desktopPower is
   # passed in so the Moonlight tile reuses the host's WoL + ping + ntfy path.
+  # The page paints the selector-published wallpaper, the same file Homepage
+  # uses, with the packaged default as the fallback while the pool is absent.
   modules.system.mediaKiosk = {
     enable = true;
     inherit desktopPower;
+    wallpaperFile = "${inputs.self.lib.wallpapers.root}/${inputs.self.lib.wallpapers.current}";
   };
 
   # Bedroom quiet window (00:00-09:00): EPP drop + no turbo keeps the single
@@ -1116,7 +1119,7 @@ in {
       whatsapp.enable = true;
     };
     homepage.enable = true;
-    homepage.backgroundWallpaperDir = "/per/mnt/data/media/pictures/wallpapers";
+    homepage.backgroundWallpaperDir = inputs.self.lib.wallpapers.root;
     smartHome = {
       enable = true;
       # SLZB-MR4U radio 1 (EFR32MG26) serves its serial port over TCP in

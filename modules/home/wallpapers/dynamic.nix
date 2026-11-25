@@ -4,6 +4,11 @@
 # roots, and the predicates below decide when it may be selected. The folder
 # name is only a label, so `sunset/` and `dusk/` can coexist without a naming
 # grammar. Images added to an existing folder need no rebuild.
+#
+# The selector publishes one stable copy (current.jpg in the first root) for
+# consumers outside the session. Publication does not require a display: the
+# timer runs whenever the user manager is up, and only the awww apply is
+# skipped when no daemon answers.
 {
   config,
   lib,
@@ -14,6 +19,12 @@
   cfg = config.wallpapers.dynamic;
   defaults = inputs.self.lib.defaults;
   package = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.wallpaper-conditions;
+  inherit (config) wallpapers;
+
+  # The packaged crisp default and its blur twin, resolved once so the manifest
+  # fallback and the activation seed cannot name different files.
+  defaultWallpaperPath = "${wallpapers.wallpaperPath}/${wallpapers.available.${wallpapers.defaultWallpaper}}";
+  defaultBlurredPath = "${wallpapers.wallpaperPath}/${wallpapers.availableBlurred.${wallpapers.defaultWallpaper}}";
 
   # awww's session target guarantees WAYLAND_DISPLAY. Fall back to niri's
   # target for the (unlikely) case where the awww module is not imported.
@@ -23,13 +34,14 @@
     inherit (cfg) roots;
     inherit (cfg) latitude;
     inherit (cfg) longitude;
+    inherit (cfg) interval;
     weather = cfg.weather.enable;
     inherit (cfg) order;
     inherit (cfg) collections;
     inherit (cfg) publish;
     fallback = {
-      file = "${config.wallpapers.wallpaperPath}/${config.wallpapers.available.${config.wallpapers.defaultWallpaper}}";
-      blurred = "${config.wallpapers.wallpaperPath}/${config.wallpapers.availableBlurred.${config.wallpapers.defaultWallpaper}}";
+      file = defaultWallpaperPath;
+      blurred = defaultBlurredPath;
     };
   });
 
@@ -58,6 +70,16 @@ in {
       '';
     };
 
+    interval = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3600;
+      description = ''
+        Seconds between image re-rolls inside the selected collection. The
+        timer itself runs every ten minutes so dawn and dusk are followed;
+        only the image changes on this interval.
+      '';
+    };
+
     publish = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default =
@@ -66,8 +88,10 @@ in {
         else "${builtins.head cfg.roots}/current.jpg";
       description = ''
         Stable JPEG copy of the selected crisp wallpaper, for consumers outside
-        the session such as the homepage dashboard. Defaults to current.jpg in
-        the first root; set to null to disable publishing.
+        the session such as the homepage dashboard and the media kiosk. Defaults
+        to current.jpg in the first root; set to null to disable publishing.
+        The parent directory must already exist; the selector never creates a
+        mountpoint.
       '';
     };
 
@@ -140,7 +164,29 @@ in {
           };
         };
       });
-      default = {};
+      default = {
+        # Unconstrained collection: the fallback when no constrained folder
+        # matches. Daylight-only weather folders keep a daylit scene off the
+        # night desktop; add a phase+weather folder (e.g. night-rain) for
+        # night rain art.
+        nature-studies = {};
+        dawn = {phase = ["dawn"];};
+        day = {phase = ["day"];};
+        dusk = {phase = ["dusk"];};
+        night = {phase = ["night"];};
+        clear = {
+          weather = ["clear" "partly"];
+          phase = ["day"];
+        };
+        rain = {
+          weather = ["rain" "thunder"];
+          phase = ["day" "dawn" "dusk"];
+        };
+        snow = {
+          weather = ["snow"];
+          phase = ["day" "dawn" "dusk"];
+        };
+      };
       description = ''
         Folder name -> conditions. The attribute name is the folder under each
         root; the predicates are the conditions it may be selected for. A
@@ -187,29 +233,27 @@ in {
       wallpaper-next = "wallpaper-conditions next";
     };
 
-    # The homepage and any other out-of-session consumer needs a stable file
-    # before the first niri session runs. Seed it with the Nix default; the
-    # selector overwrites the same path after the first apply. The zz- prefix
-    # runs after writeBoundary or any earlier home.file activation.
+    # Seed the consumer copy with the Nix default so the homepage has an image
+    # before the first selector run. Never create the pool directory: while the
+    # dataset is unmounted that would leave a shadow directory on the root
+    # filesystem. The zz- prefix runs after writeBoundary and any earlier
+    # home.file activation.
     home.activation.zz-wallpaper-current = lib.optionalString (cfg.publish != null) ''
       publish="${cfg.publish}"
-      fallback="${config.wallpapers.wallpaperPath}/${config.wallpapers.available.${config.wallpapers.defaultWallpaper}}"
-      if [ ! -e "$publish" ] && [ -f "$fallback" ]; then
-        mkdir -p "$(dirname "$publish")"
+      fallback="${defaultWallpaperPath}"
+      if [ ! -e "$publish" ] && [ -f "$fallback" ] && [ -d "$(dirname "$publish")" ]; then
         cp "$fallback" "$publish"
         chmod 0644 "$publish"
       fi
     '';
 
-    # Timer-driven run. The session-start unit below forces the selection even
-    # when the previous session left the same image in the state file, because
-    # a new awww daemon starts on the default wallpaper.
+    # Timer-driven run. It is deliberately bound to timers.target rather than
+    # the session: on a lingering user manager it selects and publishes even
+    # while no compositor runs, and the Python side applies to awww only when a
+    # daemon answers.
     systemd.user.services.wallpaper-conditions = {
       Unit = {
         Description = "Apply the condition-aware wallpaper";
-        After = [sessionTarget "awww-wallpaper-init.service"];
-        Wants = ["awww-wallpaper-init.service"];
-        PartOf = [sessionTarget];
       };
       Service = {
         Type = "oneshot";
@@ -217,6 +261,8 @@ in {
       };
     };
 
+    # A new awww daemon starts on the default wallpaper, so the session unit
+    # forces the current selection even when the state file already names it.
     systemd.user.services.wallpaper-conditions-session = {
       Unit = {
         Description = "Apply the condition-aware wallpaper at session start";
@@ -236,14 +282,13 @@ in {
     systemd.user.timers.wallpaper-conditions = {
       Unit = {
         Description = "Periodic condition-aware wallpaper check";
-        PartOf = [sessionTarget];
       };
       Timer = {
         OnCalendar = "*:0/10";
         Persistent = true;
         Unit = "wallpaper-conditions.service";
       };
-      Install.WantedBy = [sessionTarget];
+      Install.WantedBy = ["timers.target"];
     };
   };
 }

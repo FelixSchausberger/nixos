@@ -162,6 +162,14 @@ class PublishTests(unittest.TestCase):
             self.assertFalse(publish_current(source, target))
         self.assertEqual(target.read_bytes(), b"old")
 
+    def test_publish_does_not_create_the_pool_root(self) -> None:
+        source = touch(self.base / "wallpapers" / "night" / "source.png")
+        target = self.base / "unmounted" / "current.jpg"
+        with patch("wallpaper_conditions.apply._run") as run:
+            self.assertFalse(publish_current(source, target))
+        run.assert_not_called()
+        self.assertFalse((self.base / "unmounted").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

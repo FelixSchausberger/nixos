@@ -20,4 +20,9 @@
     the-whale = "the-whale_blurred.jpg";
     appa = "appa_blurred.jpg";
   };
+
+  # Runtime pool of condition folders. Every consumer outside the session
+  # (homepage, kiosk) reads the published copy instead of picking a file.
+  root = "/per/mnt/data/media/pictures/wallpapers";
+  current = "current.jpg";
 }

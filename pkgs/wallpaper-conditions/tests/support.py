@@ -16,6 +16,7 @@ def write_manifest(
     fallback_file: Path | None = None,
     fallback_blurred: Path | None = None,
     publish: Path | None = None,
+    interval: int | None = None,
 ) -> Path:
     payload = {
         "roots": [str(root) for root in roots],
@@ -31,6 +32,8 @@ def write_manifest(
     }
     if publish is not None:
         payload["publish"] = str(publish)
+    if interval is not None:
+        payload["interval"] = interval
     path.write_text(json.dumps(payload), encoding="utf-8")
     return path
 

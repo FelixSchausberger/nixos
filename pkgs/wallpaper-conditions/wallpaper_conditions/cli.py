@@ -10,7 +10,7 @@ import os
 from collections import Counter
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterator
 
@@ -95,7 +95,13 @@ def _build_plan(
         phase=local_phase,
         weather=effective_weather,
     )
-    chosen = choose_file(state, resolution, now, reroll=reroll)
+    chosen = choose_file(
+        state,
+        resolution,
+        now,
+        reroll=reroll,
+        interval=timedelta(seconds=manifest.interval_seconds),
+    )
     return Plan(
         manifest=manifest,
         resolution=resolution,
@@ -121,6 +127,23 @@ def _age(now: datetime, then: datetime | None) -> str:
     return f"{seconds // 3600}h ago"
 
 
+def _publish(state: State, chosen: Path, publish: Path | None) -> None:
+    """Keep the consumer copy in step with the selection.
+
+    Publication is deliberately independent of the display backend: the
+    homepage and the kiosk must follow the conditions even when no awww daemon
+    is running. A failed publish leaves the previous image in place.
+    """
+
+    if publish is None:
+        return
+    target = str(chosen)
+    if state.published_file == target and publish.exists():
+        return
+    if publish_current(chosen, publish):
+        state.published_file = target
+
+
 def command_apply(args: argparse.Namespace, manifest: Manifest) -> int:
     cache_dir = _cache_dir(args.cache_dir)
     now = _parse_now(args.now)
@@ -141,29 +164,26 @@ def command_apply(args: argparse.Namespace, manifest: Manifest) -> int:
             apply(plan.resolution, plan.chosen, cache_dir, dry_run=True)
             return 0
 
-        publish = plan.manifest.publish
-        if not args.force and state.applied_file == str(plan.chosen):
-            if publish is not None and not publish.exists():
-                publish_current(plan.chosen, publish)
-            save(state_path, state)
+        chosen = str(plan.chosen)
+        if not args.force and state.applied_file == chosen:
             LOGGER.debug("already applied: %s", plan.chosen)
-            return 0
-
-        try:
-            result = apply(plan.resolution, plan.chosen, cache_dir)
-        except ApplyError:
-            # Keep the selection and weather hysteresis but leave applied_file
-            # untouched so the next timer tick retries the same image.
-            save(state_path, state)
-            raise
-
-        if result.applied:
-            state.applied_file = str(plan.chosen)
-            if publish is not None:
-                publish_current(plan.chosen, publish)
-            LOGGER.info("%s", result.reason)
         else:
-            LOGGER.info("%s; not applied", result.reason)
+            try:
+                result = apply(plan.resolution, plan.chosen, cache_dir)
+            except ApplyError:
+                # Keep the selection and weather hysteresis but leave
+                # applied_file untouched so the next timer tick retries the
+                # same image.
+                save(state_path, state)
+                raise
+
+            if result.applied:
+                state.applied_file = chosen
+                LOGGER.info("%s", result.reason)
+            else:
+                LOGGER.info("%s; not applied", result.reason)
+
+        _publish(state, plan.chosen, plan.manifest.publish)
         save(state_path, state)
 
     return 0

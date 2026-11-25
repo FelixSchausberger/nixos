@@ -9,7 +9,7 @@
       scaling_mode = cosmicLib.cosmic.mkRON "enum" "Zoom";
       source = cosmicLib.cosmic.mkRON "enum" {
         value = [
-          /per/etc/nixos/home/shared/wallpapers/appa.jpg
+          ../../../home/wallpapers/appa.jpg
         ];
         variant = "Path";
       };

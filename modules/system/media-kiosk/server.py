@@ -820,12 +820,34 @@ class KioskHandler(BaseHTTPRequestHandler):
             return self.send_json(404, {"error": "preview unavailable"})
         self.send_bytes(200, path.read_bytes(), "image/jpeg", "no-store")
 
+    def send_wallpaper(self):
+        """Serve the selector-published wallpaper, else the packaged default.
+
+        The live copy changes without a deploy, so it is never cached; the
+        packaged store asset may be. A missing pool (host not mounted, service
+        not started yet) is a normal fallback, not an error.
+        """
+
+        live = CONFIG.get("wallpaperFile")
+        if live:
+            path = Path(live)
+            if path.is_file():
+                try:
+                    payload = path.read_bytes()
+                except OSError:
+                    pass
+                else:
+                    return self.send_bytes(200, payload, "image/jpeg", "no-store")
+        return self.send_static("/static/wallpaper.jpg")
+
     def do_GET(self):
         try:
             path = urllib.parse.urlparse(self.path).path
 
             if path in ("/", "/index.html"):
                 return self.send_static("index.html")
+            if path == "/static/wallpaper.jpg":
+                return self.send_wallpaper()
             if path in ("/app.js", "/style.css") or path.startswith("/static/"):
                 return self.send_static(path)
             if path == "/api/health":

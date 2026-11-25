@@ -7,7 +7,7 @@ import logging
 import os
 import random
 from dataclasses import asdict, dataclass, fields
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -15,11 +15,11 @@ from .resolve import Resolution
 
 LOGGER = logging.getLogger(__name__)
 
-# The selection rolls once per day after this hour, and the weather category
-# must be observed twice with a minimum dwell before it replaces the effective
-# category. Both are deliberately short enough to follow real conditions but
-# long enough that a passing shower cannot flip the wallpaper twice.
-DAILY_ANCHOR_HOUR = 4
+# An image is re-rolled once per interval. The weather category must be
+# observed twice with a minimum dwell before it replaces the effective
+# category: short enough to follow real conditions, long enough that a passing
+# shower cannot flip the wallpaper twice.
+DEFAULT_INTERVAL = timedelta(hours=1)
 WEATHER_HYSTERESIS = timedelta(minutes=20)
 WEATHER_MIN_DWELL = timedelta(minutes=30)
 
@@ -29,6 +29,7 @@ class State:
     collection: str | None = None
     selected_file: str | None = None
     applied_file: str | None = None
+    published_file: str | None = None
     selected_at: str | None = None
     weather_effective: str | None = None
     weather_since: str | None = None
@@ -81,8 +82,8 @@ def _parse(value: str | None) -> datetime | None:
     return parsed
 
 
-def roll_date(now: datetime) -> date:
-    return (now - timedelta(hours=DAILY_ANCHOR_HOUR)).date()
+def roll_due(now: datetime, selected_at: datetime, interval: timedelta) -> bool:
+    return now - selected_at >= interval
 
 
 def choose_file(
@@ -91,6 +92,7 @@ def choose_file(
     now: datetime,
     *,
     reroll: bool = False,
+    interval: timedelta = DEFAULT_INTERVAL,
     choice: Callable[[Sequence[Path]], Path] = random.choice,
 ) -> Path:
     files = resolution.files
@@ -104,7 +106,7 @@ def choose_file(
         or current is None
         or current not in files
         or selected_at is None
-        or roll_date(now) > roll_date(selected_at)
+        or roll_due(now, selected_at, interval)
     )
     if not must_pick:
         return current

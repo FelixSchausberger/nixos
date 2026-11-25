@@ -1,4 +1,4 @@
-{...}: {
+{inputs, ...}: {
   imports = [
     # Only the pieces this session needs; the full GUI app suite is reserved
     # for managed desktop hosts (see home/profiles/shared.nix).
@@ -46,33 +46,13 @@
     ];
   };
 
-  # Condition-aware wallpaper selection. The pool lives on the data share; the
-  # unconstrained nature-studies collection is the fallback until condition
-  # folders are populated. `clear`, `rain` and `snow` are restricted to
-  # daylight phases so a daylit scene cannot replace a night wallpaper; add a
-  # `night-rain` collection (phase + weather) for night rain art.
+  # Condition-aware wallpaper selection. The pool lives on the data share and
+  # is sorted into the standard phase/weather folders; the selector publishes
+  # current.jpg there for the dashboard and the kiosk. The collection defaults
+  # live in modules/home/wallpapers/dynamic.nix.
   wallpapers.dynamic = {
     enable = true;
-    roots = ["/per/mnt/data/media/pictures/wallpapers"];
-    collections = {
-      nature-studies = {};
-      dawn = {phase = ["dawn"];};
-      day = {phase = ["day"];};
-      dusk = {phase = ["dusk"];};
-      night = {phase = ["night"];};
-      clear = {
-        weather = ["clear" "partly"];
-        phase = ["day"];
-      };
-      rain = {
-        weather = ["rain" "thunder"];
-        phase = ["day" "dawn" "dusk"];
-      };
-      snow = {
-        weather = ["snow"];
-        phase = ["day" "dawn" "dusk"];
-      };
-    };
+    roots = [inputs.self.lib.wallpapers.root];
   };
 
   # The 2026 Steam Controller's lizard mode maps Steam+D-pad-right to Alt+Tab

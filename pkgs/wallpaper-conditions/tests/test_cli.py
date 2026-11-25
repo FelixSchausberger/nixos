@@ -6,12 +6,26 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Callable
+from unittest.mock import patch
 
 from support import touch, write_manifest
+from wallpaper_conditions.apply import ApplyResult
 from wallpaper_conditions.cli import main
 
 NIGHT = "2026-12-21T23:00:00+01:00"
 DAY = "2026-12-21T12:00:00+01:00"
+
+
+def fake_publish(calls: list[Path]) -> Callable[[Path, Path], bool]:
+    """Record each published source and write a JPEG marker to the target."""
+
+    def publish(source: Path, target: Path) -> bool:
+        target.write_bytes(b"\xff\xd8\xff")
+        calls.append(source)
+        return True
+
+    return publish
 
 
 class CliTests(unittest.TestCase):
@@ -107,6 +121,54 @@ class CliTests(unittest.TestCase):
         self.assertIn("awww img", output)
         self.assertFalse((self.cache / "state.json").exists())
         self.assertFalse(self.publish.exists())
+
+    def test_apply_publishes_without_a_display_backend(self) -> None:
+        calls: list[Path] = []
+        with (
+            patch(
+                "wallpaper_conditions.cli.apply",
+                return_value=ApplyResult(False, "no awww daemon"),
+            ),
+            patch("wallpaper_conditions.cli.publish_current", side_effect=fake_publish(calls)),
+        ):
+            self.run_cli("--now", NIGHT, "apply")
+
+        chosen = str(self.root / "night" / "one.jpg")
+        self.assertEqual(calls, [Path(chosen)])
+        state = json.loads((self.cache / "state.json").read_text())
+        self.assertEqual(state["selected_file"], chosen)
+        self.assertEqual(state["published_file"], chosen)
+        self.assertIsNone(state["applied_file"])
+        self.assertEqual(self.publish.read_bytes(), b"\xff\xd8\xff")
+
+    def test_apply_skips_an_unchanged_published_file(self) -> None:
+        calls: list[Path] = []
+        with (
+            patch(
+                "wallpaper_conditions.cli.apply",
+                return_value=ApplyResult(True, "applied"),
+            ),
+            patch("wallpaper_conditions.cli.publish_current", side_effect=fake_publish(calls)),
+        ):
+            self.run_cli("--now", NIGHT, "apply")
+            self.run_cli("--now", NIGHT, "apply")
+
+        self.assertEqual(len(calls), 1)
+
+    def test_apply_republishes_a_missing_file(self) -> None:
+        calls: list[Path] = []
+        with (
+            patch(
+                "wallpaper_conditions.cli.apply",
+                return_value=ApplyResult(True, "applied"),
+            ),
+            patch("wallpaper_conditions.cli.publish_current", side_effect=fake_publish(calls)),
+        ):
+            self.run_cli("--now", NIGHT, "apply")
+            self.publish.unlink()
+            self.run_cli("--now", NIGHT, "apply")
+
+        self.assertEqual(len(calls), 2)
 
     def test_version(self) -> None:
         self.assertEqual(self.run_cli("version").strip(), "0.1.0")
