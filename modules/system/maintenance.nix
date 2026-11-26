@@ -250,9 +250,16 @@ in {
             # kernel panic, hardware watchdog reset (an iTCO_wdt reset leaves
             # no panic record), or power loss. The arming stamp exists so the
             # first boot after deployment - before any clean shutdown has
-            # stamped - stays silent instead of paging.
+            # stamped - stays silent instead of paging. Hosts without the
+            # option do not install clean-shutdown-marker, so the check would
+            # warn on every boot (WSL never reaches shutdown.target); it is
+            # gated on the same option that installs the marker.
             stamp_dir=/var/lib/crash-detect
-            if [[ ! -f /run/unclean-shutdown-checked ]]; then
+            if [[ "${
+              if config.modules.system.maintenance.monitoring.detectUncleanShutdown
+              then "1"
+              else "0"
+            }" -eq 1 && ! -f /run/unclean-shutdown-checked ]]; then
               : > /run/unclean-shutdown-checked
               if [[ ! -f $stamp_dir/armed ]]; then
                 ${pkgs.coreutils}/bin/mkdir -p $stamp_dir
