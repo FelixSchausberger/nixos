@@ -31,14 +31,8 @@
   sessionTarget = config.wm.awww.sessionTarget or "niri-session.target";
 
   manifest = pkgs.writeText "wallpaper-collections.json" (builtins.toJSON {
-    inherit (cfg) roots;
-    inherit (cfg) latitude;
-    inherit (cfg) longitude;
-    inherit (cfg) interval;
+    inherit (cfg) roots latitude longitude interval order collections publish;
     weather = cfg.weather.enable;
-    inherit (cfg) order;
-    inherit (cfg) collections;
-    inherit (cfg) publish;
     fallback = {
       file = defaultWallpaperPath;
       blurred = defaultBlurredPath;

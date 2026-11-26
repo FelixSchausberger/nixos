@@ -26,7 +26,7 @@
 
   programs.vscodium = {
     enable = true;
-    package = pkgs.vscodium; # pkgs.cursor
+    package = pkgs.vscodium;
 
     profiles = {
       default = {
@@ -280,7 +280,6 @@
       "IDE"
     ];
     comment = "Code Editing. Optimized for Wayland.";
-    # icon = "code";
     mimeType = [
       "text/plain"
       "text/markdown"

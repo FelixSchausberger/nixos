@@ -106,9 +106,7 @@ in rec {
 
   # Helper function to get colors by variant name
   getColors = variant:
-    if variant == "dark"
-    then mocha
-    else if variant == "light"
+    if variant == "light"
     then latte
-    else mocha; # Default to dark
+    else mocha; # Dark is the default for any other value
 }

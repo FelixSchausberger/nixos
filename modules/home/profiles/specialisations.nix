@@ -20,11 +20,6 @@
       # is still experimental, so we rely on system specialisations to cascade properly
 
       # Future enhancement: when home-manager specialisation support stabilizes,
-      # we can add WM-specific home configurations here:
-      # home.specialisation = lib.mapAttrs (name: _: {
-      #   configuration = {
-      #     # WM-specific home configs
-      #   };
-      # }) osConfig.specialisation;
+      # WM-specific home configurations can be added here.
     };
 }
