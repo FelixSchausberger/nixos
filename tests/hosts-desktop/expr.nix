@@ -11,6 +11,9 @@
       builtins.split " " (builtins.concatStringsSep " " cmd)
     );
 
+  # First Moonshine application with the given title.
+  tileFor = title: builtins.head (builtins.filter (app: app.title == title) config.services.moonshine.settings.application);
+
   # Matches a hook whose command vector ends up invoking `shutdown` (paths are
   # absolute because Moonshine resolves hook programs with `which` against the
   # unit PATH and silently drops unresolvable ones).
@@ -82,7 +85,7 @@ in {
   # NOPASSWD sudo rule a headless host without a login session needs.
   moonshine_power_off_enabled = config.modules.system.moonshine.powerOff.enable;
   steam_tile_power_hooks = let
-    tile = builtins.head (builtins.filter (app: app.title == "Steam") config.services.moonshine.settings.application);
+    tile = tileFor "Steam";
   in
     hasShutdownHook tile.pre_command && hasShutdownHook tile.post_command;
   scanner_power_hooks = let
@@ -97,7 +100,7 @@ in {
   # package, refuses to start at all, and its failure aborts every launch
   # (2026-10-15: no tile started on the desktop until this was pinned).
   power_hooks_use_sudo_wrapper = let
-    tile = builtins.head (builtins.filter (app: app.title == "Steam") config.services.moonshine.settings.application);
+    tile = tileFor "Steam";
     usesWrapper = hooks: builtins.any (cmd: builtins.elem "${config.security.wrapperDir}/sudo" cmd) hooks;
   in
     usesWrapper tile.pre_command && usesWrapper tile.post_command;
@@ -106,9 +109,7 @@ in {
   # without scaling to the window, so N64 tiles must route through the
   # resolution-setting wrapper instead of calling RMG directly
   fzero_x_uses_rmg_wrapper = let
-    tile =
-      builtins.head
-      (builtins.filter (app: app.title == "F-Zero X") config.services.moonshine.settings.application);
+    tile = tileFor "F-Zero X";
   in
     builtins.any (arg: builtins.match ".*rmg-moonshine.*" arg != null) tile.command;
 
@@ -119,23 +120,18 @@ in {
   # fullscreen through the config override so it renders at the client
   # resolution inside gamescope's output.
   fzero_gx_uses_gamescope = let
-    tile =
-      builtins.head
-      (builtins.filter (app: app.title == "F-Zero GX") config.services.moonshine.settings.application);
+    tile = tileFor "F-Zero GX";
   in
     builtins.any (arg: builtins.match ".*gamescope-moonshine.*" arg != null) tile.command;
 
   fzero_gx_forces_fullscreen = let
-    tile =
-      builtins.head
-      (builtins.filter (app: app.title == "F-Zero GX") config.services.moonshine.settings.application);
+    tile = tileFor "F-Zero GX";
   in
     builtins.elem "Dolphin.Display.Fullscreen=True" tile.command;
 
   # Every non-Steam emulator tile must fill the stream via the gamescope
   # wrapper; RMG keeps its dedicated GLideN64 resolution wrapper instead.
   emulator_tiles_use_gamescope = let
-    tileFor = title: builtins.head (builtins.filter (app: app.title == title) config.services.moonshine.settings.application);
     usesGamescope = title: builtins.any (arg: builtins.match ".*gamescope-moonshine.*" arg != null) (tileFor title).command;
   in
     builtins.all usesGamescope [
@@ -147,15 +143,12 @@ in {
   # snes9x's X11 fullscreen path only scales when the Xvideo path is enabled;
   # without it the SNES image is drawn at a fixed 2x centered in the output.
   fzero_snes_uses_xvideo = let
-    tile =
-      builtins.head
-      (builtins.filter (app: app.title == "F-Zero") config.services.moonshine.settings.application);
+    tile = tileFor "F-Zero";
   in
     builtins.elem "-xvideo" tile.command;
 
   # Every console ROM tile must ship box art for the Moonlight app grid.
   rom_tiles_have_boxart = let
-    tileFor = title: builtins.head (builtins.filter (app: app.title == title) config.services.moonshine.settings.application);
     hasBoxart = title: ((tileFor title).boxart or null) != null;
   in
     builtins.all hasBoxart [

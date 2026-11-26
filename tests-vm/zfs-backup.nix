@@ -73,7 +73,7 @@ _: {
     snapshots = machine.succeed("zfs list -t snapshot")
     assert "dpool/data@autosnap" in snapshots, f"Expected snapshot not found: {snapshots}"
 
-    # 6. Verify snapshot retention matches configured policy
+    # 6. Verify at least one sanoid snapshot exists
     snap_count = machine.succeed("zfs list -t snapshot -o name | grep -c 'dpool/data@autosnap_'")
     assert int(snap_count) >= 1, f"Expected at least 1 snapshot, got {snap_count}"
 

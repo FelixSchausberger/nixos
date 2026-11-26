@@ -5,7 +5,7 @@
   hostname = "hp-probook-wsl";
   is_gui = false;
   user_exists = true;
+  wsl_conf_configured = true;
   wsl_enabled = true;
   wsl_integration_enabled = true;
-  wsl_packages_enabled = true;
 }
