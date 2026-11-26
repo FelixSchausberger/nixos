@@ -5,7 +5,9 @@
   lib,
   config,
   ...
-}: {
+}: let
+  cfg = config.hardware.profiles.amdGpu;
+in {
   options.hardware.profiles.amdGpu = {
     enable = lib.mkEnableOption "AMD GPU configuration";
 
@@ -19,7 +21,7 @@
     };
   };
 
-  config = lib.mkIf config.hardware.profiles.amdGpu.enable {
+  config = lib.mkIf cfg.enable {
     # AMD GPU kernel modules and parameters
     boot = {
       kernelModules = [
@@ -34,7 +36,7 @@
           "amdgpu.modeset=1"
           "amd_pstate=active"
         ]
-        ++ lib.optionals (config.hardware.profiles.amdGpu.variant == "desktop") [
+        ++ lib.optionals (cfg.variant == "desktop") [
           # Desktop-specific optimizations
           "8250.nr_uarts=0"
           "console=tty0"

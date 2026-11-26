@@ -19,6 +19,11 @@
       done
     fi
   '';
+  # Argv form of the shutdown guard above, shared by the Steam tile and the
+  # per-game scanner.
+  steamShutdownHook = [
+    ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
+  ];
   # Cover art for the Steam tile in Moonlight clients (silences the
   # "No boxart defined" warning per launch). Round app icon shipped by the
   # Steam client itself; verified present at this path in the nixpkgs build.
@@ -38,18 +43,18 @@
   # profile's sudo: that is the plain package, which refuses to start without
   # the setuid bit, and a hook that fails aborts the launch. (`shutdown -c`
   # itself is safe to call with nothing scheduled.)
-  applyPowerHooks = app:
+  applyPowerHooks = application:
     if !cfg.powerOff.enable
-    then app
+    then application
     else let
       sudo = "${config.security.wrapperDir}/sudo";
       cancel = [sudo "-n" "/run/current-system/sw/bin/shutdown" "-c"];
       arm = [sudo "-n" "/run/current-system/sw/bin/shutdown" "+${toString cfg.powerOff.delayMinutes}"];
     in
-      app
+      application
       // {
-        pre_command = (app.pre_command or []) ++ [cancel];
-        post_command = (app.post_command or []) ++ [arm];
+        pre_command = (application.pre_command or []) ++ [cancel];
+        post_command = (application.post_command or []) ++ [arm];
       };
 in {
   options.modules.system.moonshine = {
@@ -117,7 +122,7 @@ in {
             [
               {
                 title = "Steam";
-                boxart = "${steamBoxart}";
+                boxart = steamBoxart;
                 command = [
                   "/run/current-system/sw/bin/steam"
                   "steam://open/bigpicture"
@@ -129,9 +134,7 @@ in {
                 # (the default discards all application output).
                 stdout = "journal";
                 stderr = "journal";
-                pre_command = [
-                  ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
-                ];
+                pre_command = steamShutdownHook;
               }
             ]
             ++ cfg.extraApplications
@@ -152,9 +155,7 @@ in {
             launch_timeout_secs = 20;
             stdout = "journal";
             stderr = "journal";
-            pre_command = [
-              ["${pkgs.bash}/bin/bash" "${steamShutdown}"]
-            ];
+            pre_command = steamShutdownHook;
           }
         ];
       };

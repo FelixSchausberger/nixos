@@ -33,8 +33,8 @@
     in_window=0
     if [[ "$start" < "$end" ]]; then
       if [[ ! "$now" < "$start" ]] && [[ "$now" < "$end" ]]; then in_window=1; fi
-    else
-      if [[ ! "$now" < "$start" ]] || [[ "$now" < "$end" ]]; then in_window=1; fi
+    elif [[ ! "$now" < "$start" ]] || [[ "$now" < "$end" ]]; then
+      in_window=1
     fi
 
     state="$1"

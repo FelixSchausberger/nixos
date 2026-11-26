@@ -156,8 +156,7 @@
       # Cursor theme using centralized configuration
       cursor = {
         package = cursorPkg;
-        inherit (fonts.cursor) name;
-        inherit (fonts.cursor) size;
+        inherit (fonts.cursor) name size;
       };
 
       # Enable targets for GUI apps

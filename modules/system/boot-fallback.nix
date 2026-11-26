@@ -44,14 +44,12 @@ in {
     # running generation is good by construction even if its entry was GC'd).
     systemd.services."systemd-bless-boot" = {
       restartIfChanged = false;
-      serviceConfig.ExecStart = let
-        bless-good = pkgs.writeShellScript "bless-boot-good" ''
+      serviceConfig.ExecStart = [
+        ""
+        (pkgs.writeShellScript "bless-boot-good" ''
           out=$(${pkgs.systemd}/lib/systemd/systemd-bless-boot good 2>&1) ||
             echo "$out: entry on the ESP is gone; nothing to bless (harmless on long-lived boots)" >&2
-        '';
-      in [
-        ""
-        bless-good
+        '')
       ];
     };
 

@@ -108,30 +108,32 @@
                 [[ -b "$part" ]] || continue
 
                 # Check if it's a ZFS partition
-                if blkid "$part" | grep -q zfs_member; then
-                    echo "Found ZFS partition: $part"
+                if ! blkid "$part" | grep -q zfs_member; then
+                    continue
+                fi
+                echo "Found ZFS partition: $part"
 
-                    # Try to get pool name
-                    local pool_name=$(zdb -l "$part" 2>/dev/null | grep -E "name: 'rpool" | head -1 | sed "s/.*name: '//" | sed "s/'.*//")
+                # Try to get pool name
+                local pool_name=$(zdb -l "$part" 2>/dev/null | grep -E "name: 'rpool" | head -1 | sed "s/.*name: '//" | sed "s/'.*//")
+                if [[ -z "$pool_name" ]]; then
+                    continue
+                fi
 
-                    if [[ -n "$pool_name" ]]; then
-                        # Find corresponding boot partition (usually partition 1)
-                        local boot_part="''${disk}1"
-                        [[ -b "$boot_part" ]] || continue
+                # Find corresponding boot partition (usually partition 1)
+                local boot_part="''${disk}1"
+                [[ -b "$boot_part" ]] || continue
 
-                        # Check if encrypted
-                        local is_encrypted="false"
-                        if blkid "$part" | grep -q crypto_LUKS; then
-                            is_encrypted="true"
-                        fi
+                # Check if encrypted
+                local is_encrypted="false"
+                if blkid "$part" | grep -q crypto_LUKS; then
+                    is_encrypted="true"
+                fi
 
-                        echo "Do you want to mount this system? [y/N]"
-                        read -r response
-                        if [[ "$response" =~ ^[Yy]$ ]]; then
-                            mount_nixos_system "$part" "$boot_part" "$pool_name" "$is_encrypted"
-                            return 0
-                        fi
-                    fi
+                echo "Do you want to mount this system? [y/N]"
+                read -r response
+                if [[ "$response" =~ ^[Yy]$ ]]; then
+                    mount_nixos_system "$part" "$boot_part" "$pool_name" "$is_encrypted"
+                    return 0
                 fi
             done
         done

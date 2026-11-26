@@ -115,6 +115,10 @@
     '';
   };
 
+  # Store path of the wrapper above, shared by every tile that needs a real
+  # compositor under Moonshine's.
+  gamescopeBin = "${gamescopeMoonshine}/bin/gamescope-moonshine";
+
   # ROM paths relative to /per/mnt/games/Emulator
   gcGames = {
     "F-Zero GX" = {
@@ -228,7 +232,7 @@ in {
             inherit title;
             inherit (g) boxart;
             args = [
-              "${gamescopeMoonshine}/bin/gamescope-moonshine"
+              gamescopeBin
               "${pkgs.dolphin-emu}/bin/dolphin-emu"
               "-b"
               "-C"
@@ -262,7 +266,7 @@ in {
             inherit title;
             inherit (g) boxart;
             args = [
-              "${gamescopeMoonshine}/bin/gamescope-moonshine"
+              gamescopeBin
               "${pkgs.snes9x}/bin/snes9x"
               "-fullscreen"
               "-xvideo"
@@ -275,7 +279,7 @@ in {
           appTile {
             inherit title;
             args = [
-              "${gamescopeMoonshine}/bin/gamescope-moonshine"
+              gamescopeBin
               "${pkgs.eden}/bin/eden-cli"
               "-g"
               "${romDir}/${rom}"

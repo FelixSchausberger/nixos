@@ -30,9 +30,11 @@
   # The kiosk renders the desktop's wallpaper. The live copy is the file the
   # condition-aware selector publishes; the packaged crisp default remains the
   # fallback while the pool is unmounted or before the first selection.
+  wallpaperName = inputs.self.lib.wallpapers.default;
+
   backgroundFile =
-    inputs.self.lib.wallpapers.available.${inputs.self.lib.wallpapers.default}
-    or (throw "lib/wallpapers.nix has no file for '${inputs.self.lib.wallpapers.default}'");
+    inputs.self.lib.wallpapers.available.${wallpaperName}
+    or (throw "lib/wallpapers.nix has no file for '${wallpaperName}'");
 
   kioskPackage = pkgs.callPackage ./package.nix {
     wallpaper = ../../../modules/home/wallpapers/${backgroundFile};

@@ -6,7 +6,6 @@
 
     # Javascript
     nodejs
-    # nodejs_23
 
     # Python
     jq
