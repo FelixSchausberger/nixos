@@ -301,10 +301,10 @@ in {
 
           unlock_vault
           if existing=$(bw get item --session "$BW_SESSION" "host/$HOSTNAME" 2> /dev/null) && [[ "$existing" == \{* ]]; then
-              rc=0
+              # A reconciled item exits from inside the helper; only the
+              # replace path returns, carrying status 3.
               reconcile_existing_item "$existing" "$RECIP" || rc=$?
               case "$rc" in
-                  0) echo "Vault item already matches the live host key." ;;
                   3) store_item "host/$HOSTNAME" "$HOST_PRIV" "$HOST_PUB" "$FINGERPRINT" ;;
                   *) exit 1 ;;
               esac

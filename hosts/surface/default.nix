@@ -112,7 +112,7 @@ in {
       TimeoutStartSec = "600";
     };
     script = ''
-      for attempt in 1 2 3 4; do
+      for attempt in 1 2 3; do
         sleep 90
         if nmcli -t -f DEVICE,TYPE,STATE device status | grep -q '^.*:wifi:connected$'; then
           exit 0
@@ -120,7 +120,11 @@ in {
         echo "WiFi not connected after boot; restarting iwd (attempt $attempt)" >&2
         systemctl restart iwd
       done
-      sleep 30
+      # Verify the third restart instead of restarting a fourth unverified time.
+      sleep 90
+      if nmcli -t -f DEVICE,TYPE,STATE device status | grep -q '^.*:wifi:connected$'; then
+        exit 0
+      fi
       nmcli -t -f DEVICE,TYPE,STATE device status | grep '^.*:wifi:' || true
     '';
   };
