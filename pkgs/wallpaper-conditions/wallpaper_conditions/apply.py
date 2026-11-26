@@ -15,6 +15,26 @@ LOGGER = logging.getLogger(__name__)
 
 TRANSITION = ("--transition-type", "fade", "--transition-duration", "2")
 BLUR_VERSION = "1"
+BLUR_FILTERS = (
+    "-auto-orient",
+    "-resize",
+    "25%",
+    "-blur",
+    "0x6",
+    "-resize",
+    "400%",
+    "-strip",
+    "-quality",
+    "88",
+)
+PUBLISH_FILTERS = (
+    "-auto-orient",
+    "-resize",
+    "3840x2160>",
+    "-strip",
+    "-quality",
+    "92",
+)
 
 
 class ApplyError(RuntimeError):
@@ -27,8 +47,17 @@ class ApplyResult:
     reason: str
 
 
-def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, capture_output=True, text=True, check=False)
+def _run(
+    command: list[str],
+    timeout: float | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=timeout,
+    )
 
 
 def backend_ready(namespace: str | None = None) -> bool:
@@ -36,8 +65,8 @@ def backend_ready(namespace: str | None = None) -> bool:
     if namespace is not None:
         command += ["-n", namespace]
     try:
-        return _run(command).returncode == 0
-    except OSError:
+        return _run(command, timeout=5).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
 
@@ -49,22 +78,28 @@ def backdrop_command(path: Path) -> list[str]:
     return ["awww", "img", "--namespace", "backdrop", str(path), *TRANSITION]
 
 
-def _blur_command(source: Path, target: Path) -> list[str]:
-    return [
-        "magick",
-        str(source),
-        "-auto-orient",
-        "-resize",
-        "25%",
-        "-blur",
-        "0x6",
-        "-resize",
-        "400%",
-        "-strip",
-        "-quality",
-        "88",
-        str(target),
-    ]
+def _render(source: Path, target: Path, filters: tuple[str, ...], stage: str) -> bool:
+    """Write ``source`` into ``target`` through ImageMagick, atomically.
+
+    A failed conversion keeps the previous target and drops the temporary file,
+    so a consumer never reads a half-written image.
+    """
+
+    temporary = target.with_name(f"{target.stem}.tmp.jpg")
+    try:
+        result = _run(["magick", str(source), *filters, str(temporary)])
+    except OSError as exc:
+        LOGGER.warning("cannot execute ImageMagick: %s", exc)
+        return False
+    if result.returncode != 0:
+        LOGGER.warning("%s failed for %s: %s", stage, source, result.stderr.strip())
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+        return False
+    os.replace(temporary, target)
+    return True
 
 
 def _blur_target(source: Path, cache_dir: Path) -> Path | None:
@@ -92,8 +127,11 @@ def blurred_for(
     blurred once and cached by content identity.
     """
 
-    if resolution.chosen is None and resolution.fallback_blurred is not None:
-        return resolution.fallback_blurred if resolution.fallback_blurred.is_file() else None
+    if resolution.chosen is None:
+        fallback = resolution.fallback_blurred
+        if fallback is not None and fallback.is_file():
+            return fallback
+        return None
 
     sibling = source.with_name(f"{source.stem}_blurred{source.suffix}")
     if sibling.is_file():
@@ -107,20 +145,8 @@ def blurred_for(
         return target
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_name(f"{target.stem}.tmp.jpg")
-    try:
-        result = _run(_blur_command(source, temporary))
-    except OSError as exc:
-        LOGGER.warning("cannot execute ImageMagick: %s", exc)
+    if not _render(source, target, BLUR_FILTERS, "blur"):
         return None
-    if result.returncode != 0:
-        LOGGER.warning("blur failed for %s: %s", source, result.stderr.strip())
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
-        return None
-    os.replace(temporary, target)
     return target
 
 
@@ -133,33 +159,14 @@ def publish_current(source: Path, target: Path) -> bool:
         LOGGER.warning("cannot read wallpaper %s: %s", source, exc)
         return False
 
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_name(f"{target.stem}.tmp.jpg")
-    command = [
-        "magick",
-        str(source),
-        "-auto-orient",
-        "-resize",
-        "3840x2160>",
-        "-strip",
-        "-quality",
-        "92",
-        str(temporary),
-    ]
-    try:
-        result = _run(command)
-    except OSError as exc:
-        LOGGER.warning("cannot execute ImageMagick: %s", exc)
+    # The pool root is a mountpoint owned by the user; never create it. Doing
+    # so while the dataset is unmounted would leave a shadow directory on the
+    # root filesystem that hides the published file once the pool mounts.
+    if not target.parent.is_dir():
+        LOGGER.warning("cannot publish to %s: %s is missing", target, target.parent)
         return False
-    if result.returncode != 0:
-        LOGGER.warning("publish failed for %s: %s", source, result.stderr.strip())
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
-        return False
-    os.replace(temporary, target)
-    return True
+
+    return _render(source, target, PUBLISH_FILTERS, "publish")
 
 
 def apply(
@@ -170,13 +177,11 @@ def apply(
     dry_run: bool = False,
 ) -> ApplyResult:
     crisp = crisp_command(chosen)
-    backdrop = None
     if dry_run:
         blurred = blurred_for(resolution, chosen, cache_dir, generate=False)
-        backdrop = backdrop_command(blurred) if blurred is not None else None
         print(" ".join(crisp))
-        if backdrop is not None:
-            print(" ".join(backdrop))
+        if blurred is not None:
+            print(" ".join(backdrop_command(blurred)))
         return ApplyResult(False, "dry run")
 
     if not backend_ready():
@@ -204,9 +209,9 @@ def apply(
         try:
             backdrop_result = _run(backdrop_command(blurred))
         except OSError as exc:
+            backdrop_result = None
             LOGGER.warning("cannot execute awww for the backdrop: %s", exc)
-        else:
-            if backdrop_result.returncode != 0:
-                LOGGER.warning("backdrop wallpaper failed: %s", backdrop_result.stderr.strip())
+        if backdrop_result is not None and backdrop_result.returncode != 0:
+            LOGGER.warning("backdrop wallpaper failed: %s", backdrop_result.stderr.strip())
 
     return ApplyResult(True, f"applied {chosen}")

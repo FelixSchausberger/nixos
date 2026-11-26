@@ -126,12 +126,6 @@
         description = "Serif font family for GUI applications";
       };
     };
-
-    wallpaper = lib.mkOption {
-      type = lib.types.str;
-      default = "${../wallpapers/the-whale.jpg}";
-      description = "Default wallpaper path for GUI environments";
-    };
   };
 
   config = lib.mkIf config.theme.gui.enable {

@@ -27,9 +27,9 @@
   # nixpkgs' Jellyfin module has no port option and keeps the upstream 8096.
   jellyfinPort = 8096;
 
-  # The kiosk renders the desktop's wallpaper, the same file Homepage paints
-  # behind its cards. Resolve the name through lib/wallpapers.nix so a wallpaper
-  # change cannot leave the two surfaces out of sync.
+  # The kiosk renders the desktop's wallpaper. The live copy is the file the
+  # condition-aware selector publishes; the packaged crisp default remains the
+  # fallback while the pool is unmounted or before the first selection.
   backgroundFile =
     inputs.self.lib.wallpapers.available.${inputs.self.lib.wallpapers.default}
     or (throw "lib/wallpapers.nix has no file for '${inputs.self.lib.wallpapers.default}'");
@@ -51,6 +51,7 @@
     inherit (cfg) port;
     bind = "127.0.0.1";
     inherit (cfg) cacheDir;
+    inherit (cfg) wallpaperFile;
     jellyfin = {
       url = "http://127.0.0.1:${toString jellyfinPort}";
     };
@@ -103,6 +104,17 @@ in {
       type = lib.types.str;
       default = "/per/var/kiosk/cache";
       description = "Persistent directory for the Jellyfin/Immich preview cache";
+    };
+
+    wallpaperFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/per/mnt/data/media/pictures/wallpapers/current.jpg";
+      description = ''
+        Live wallpaper served at /static/wallpaper.jpg, normally the file
+        published by the condition-aware selector. When it is absent the
+        kiosk falls back to the packaged default wallpaper.
+      '';
     };
 
     desktopPower = lib.mkOption {

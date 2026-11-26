@@ -100,6 +100,33 @@ class ManifestTests(unittest.TestCase):
         )
         self.assertIsNone(load_manifest(self.manifest_path).publish)
 
+    def test_interval_defaults_to_an_hour(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {"night": {"phase": ["night"]}},
+            roots=[self.root],
+        )
+        self.assertEqual(load_manifest(self.manifest_path).interval_seconds, 3600)
+
+    def test_parses_interval(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {"night": {"phase": ["night"]}},
+            roots=[self.root],
+            interval=600,
+        )
+        self.assertEqual(load_manifest(self.manifest_path).interval_seconds, 600)
+
+    def test_rejects_non_positive_interval(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {"night": {"phase": ["night"]}},
+            roots=[self.root],
+            interval=0,
+        )
+        with self.assertRaisesRegex(ManifestError, "interval"):
+            load_manifest(self.manifest_path)
+
     def test_rejects_missing_file(self) -> None:
         with self.assertRaisesRegex(ManifestError, "cannot read manifest"):
             load_manifest(self.base / "absent.json")

@@ -13,6 +13,7 @@ WEATHERS = ("clear", "partly", "overcast", "fog", "rain", "snow", "thunder")
 DIMENSIONS = ("phase", "weather")
 IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp"})
 COLLECTION_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+DEFAULT_INTERVAL_SECONDS = 3600
 
 
 class ManifestError(ValueError):
@@ -55,6 +56,7 @@ class Manifest:
     fallback_file: Path
     fallback_blurred: Path | None
     publish: Path | None = None
+    interval_seconds: int = DEFAULT_INTERVAL_SECONDS
 
 
 def _require(condition: bool, message: str) -> None:
@@ -150,6 +152,13 @@ def load_manifest(path: Path) -> Manifest:
     fallback_blurred = _absolute_path(blurred_raw, "fallback.blurred") if blurred_raw is not None else None
     publish_raw = raw.get("publish")
     publish = _absolute_path(publish_raw, "publish") if publish_raw is not None else None
+    interval_raw = raw.get("interval", DEFAULT_INTERVAL_SECONDS)
+    _require(
+        isinstance(interval_raw, int)
+        and not isinstance(interval_raw, bool)
+        and interval_raw > 0,
+        "interval must be a positive integer of seconds",
+    )
 
     return Manifest(
         roots=roots,
@@ -161,4 +170,5 @@ def load_manifest(path: Path) -> Manifest:
         fallback_file=fallback_file,
         fallback_blurred=fallback_blurred,
         publish=publish,
+        interval_seconds=interval_raw,
     )

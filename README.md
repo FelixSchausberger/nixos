@@ -66,11 +66,18 @@ Home modules in `modules/home/`:
 - profiles: Per-host profile fragments and specialisations
 
 Wallpapers are runtime data: `wallpapers.dynamic` scans one or more roots for
-collection folders, and `wallpapers.dynamic.collections` declares the
-phase/weather predicates each folder satisfies. The folder name is only a
-label; a collection with no predicates is the fallback. `wallpaper-conditions
-status` explains the current choice and `wallpaper-conditions doctor` validates
-the layout; new images need no rebuild.
+collection folders and declares the phase/weather predicates each folder
+satisfies. The folder name is only a label; a collection with no predicates is
+the fallback, and `wallpapers.dynamic.collections` ships the standard phase and
+weather set, so images added to an existing folder need no rebuild. The
+selector runs whenever the user manager is up, re-rolls the image hourly
+(`wallpapers.dynamic.interval`) and publishes `current.jpg` in the first root.
+The homepage dashboard and the media kiosk read that one file, so every surface
+follows the same selection even while no graphical session is running. If the
+selector never runs, the seeded copy stays; if the pool is unmounted, the
+consumers fall back to the packaged default. `wallpaper-conditions status`
+explains the current choice and `wallpaper-conditions doctor` validates the
+layout.
 
 ### Package Exports
 

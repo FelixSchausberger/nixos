@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from wallpaper_conditions.model import Collection
@@ -11,7 +11,6 @@ from wallpaper_conditions.state import (
     State,
     choose_file,
     load,
-    roll_date,
     save,
     stabilize_weather,
 )
@@ -53,7 +52,7 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(state.selected_file, str(FILES[0]))
         self.assertEqual(state.selected_at, NOW.isoformat())
 
-    def test_sticky_within_the_same_day(self) -> None:
+    def test_sticky_within_the_interval(self) -> None:
         state = State(
             collection="night",
             selected_file=str(FILES[0]),
@@ -62,13 +61,13 @@ class SelectionTests(unittest.TestCase):
         chosen = choose_file(
             state,
             make_resolution("night"),
-            NOW + timedelta(hours=1),
+            NOW + timedelta(minutes=30),
             choice=lambda _seq: FILES[1],
         )
         self.assertEqual(chosen, FILES[0])
         self.assertEqual(state.selected_file, str(FILES[0]))
 
-    def test_daily_reroll_excludes_the_current_image(self) -> None:
+    def test_interval_reroll_excludes_the_current_image(self) -> None:
         state = State(
             collection="night",
             selected_file=str(FILES[0]),
@@ -80,10 +79,30 @@ class SelectionTests(unittest.TestCase):
             seen.extend(candidates)
             return candidates[0]
 
-        chosen = choose_file(state, make_resolution("night"), NOW + timedelta(days=1), choice=choice)
+        chosen = choose_file(
+            state,
+            make_resolution("night"),
+            NOW + timedelta(hours=2),
+            choice=choice,
+        )
         self.assertEqual(chosen, FILES[1])
         self.assertEqual(seen, [FILES[1]])
-        self.assertEqual(state.selected_at, (NOW + timedelta(days=1)).isoformat())
+        self.assertEqual(state.selected_at, (NOW + timedelta(hours=2)).isoformat())
+
+    def test_custom_interval_controls_the_roll(self) -> None:
+        state = State(
+            collection="night",
+            selected_file=str(FILES[0]),
+            selected_at=NOW.isoformat(),
+        )
+        chosen = choose_file(
+            state,
+            make_resolution("night"),
+            NOW + timedelta(hours=2),
+            interval=timedelta(hours=6),
+            choice=lambda _seq: FILES[1],
+        )
+        self.assertEqual(chosen, FILES[0])
 
     def test_reroll_flag_picks_a_new_image(self) -> None:
         state = State(
@@ -114,10 +133,6 @@ class SelectionTests(unittest.TestCase):
         chosen = choose_file(state, fallback_resolution(), NOW, choice=lambda seq: seq[0])
         self.assertEqual(chosen, Path("/fallback.jpg"))
         self.assertIsNone(state.collection)
-
-    def test_roll_date_anchor(self) -> None:
-        self.assertEqual(roll_date(datetime(2026, 11, 23, 3, 0, tzinfo=timezone.utc)), date(2026, 11, 22))
-        self.assertEqual(roll_date(datetime(2026, 11, 23, 5, 0, tzinfo=timezone.utc)), date(2026, 11, 23))
 
 
 class WeatherHysteresisTests(unittest.TestCase):
