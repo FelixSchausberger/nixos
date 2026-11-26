@@ -33,10 +33,6 @@ detect_host() {
     fi
 
     # Detect based on hardware characteristics
-    local cpu_model=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
-    local total_mem_gb=$(free -g | awk '/^Mem:/{print $2}')
-
-    # Physical hardware detection
     if lspci | grep -qi "AMD.*Radeon.*6700"; then
         echo "desktop"
         return

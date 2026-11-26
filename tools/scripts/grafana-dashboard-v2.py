@@ -83,6 +83,10 @@ def variable_option(option):
     }
 
 
+def variable_options(variable):
+    return [variable_option(option) for option in variable.get("options", [])]
+
+
 def resolve_datasource(datasource, panel_datasource, variable_types, where):
     """Return (uid, plugin_id) for a datasource reference.
 
@@ -133,15 +137,9 @@ def convert_target(target, panel_datasource, variable_types, where):
 def query_options(panel):
     """Classic panel-level query settings, mapped like Grafana's converter."""
     options = dict(panel.get("queryOptions") or {})
-    for classic, v2 in (
-        ("timeFrom", "timeFrom"),
-        ("timeShift", "timeShift"),
-        ("timeCompare", "timeCompare"),
-        ("interval", "interval"),
-        ("cacheTimeout", "cacheTimeout"),
-    ):
-        if panel.get(classic):
-            options[v2] = panel[classic]
+    for key in ("timeFrom", "timeShift", "timeCompare", "interval", "cacheTimeout"):
+        if panel.get(key):
+            options[key] = panel[key]
     if panel.get("maxDataPoints"):
         options["maxDataPoints"] = panel["maxDataPoints"]
     if panel.get("hideTimeOverride"):
@@ -247,6 +245,7 @@ def convert_layout(panels):
         if not section["lines"]:
             raise ConversionError(f"row {section['title']!r} has no panels")
         for index, line in enumerate(section["lines"]):
+            first_line = index == 0
             items = [
                 {
                     "kind": "AutoGridLayoutItem",
@@ -258,9 +257,9 @@ def convert_layout(panels):
                 {
                     "kind": "RowsLayoutRow",
                     "spec": {
-                        "title": section["title"] if index == 0 else "",
-                        "collapse": section["collapse"] if index == 0 else False,
-                        "hideHeader": index > 0 or section["title"] == "",
+                        "title": section["title"] if first_line else "",
+                        "collapse": section["collapse"] if first_line else False,
+                        "hideHeader": not first_line or section["title"] == "",
                         "layout": {
                             "kind": "AutoGridLayout",
                             "spec": {
@@ -296,7 +295,7 @@ def convert_variable(variable):
                 "pluginId": variable.get("query", ""),
                 "refresh": enum(REFRESH, variable.get("refresh"), f"variable {name} refresh"),
                 "regex": variable.get("regex", ""),
-                "options": [variable_option(option) for option in variable.get("options", [])],
+                "options": variable_options(variable),
                 "multi": bool(variable.get("multi", False)),
                 "includeAll": bool(variable.get("includeAll", False)),
                 "allowCustomValue": True,
@@ -355,7 +354,7 @@ def convert_variable(variable):
                 "regexApplyTo": "value",
                 "sort": enum(SORT, variable.get("sort"), f"variable {name} sort"),
                 "definition": variable.get("definition", ""),
-                "options": [variable_option(option) for option in variable.get("options", [])],
+                "options": variable_options(variable),
                 "multi": bool(variable.get("multi", False)),
                 "includeAll": bool(variable.get("includeAll", False)),
                 "allowCustomValue": True,

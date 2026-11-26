@@ -90,12 +90,6 @@ for module in "${all_modules[@]}"; do
   # Search for just the filename (in case of relative imports)
   elif git grep -q "/${module_name}.nix" -- '*.nix' >/dev/null 2>&1; then
     found=true
-  # Special case: modules/*/default.nix files are typically imported by parent
-  elif [[ "$(basename "$module")" == "default.nix" ]]; then
-    parent_dir="$(basename "$(dirname "$module_rel")")"
-    if git grep -q "$parent_dir" -- '*.nix' >/dev/null 2>&1; then
-      found=true
-    fi
   fi
 
   if [ "$found" = false ]; then

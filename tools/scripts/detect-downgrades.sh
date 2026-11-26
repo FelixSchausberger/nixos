@@ -92,9 +92,7 @@ done <<<"$diff_output"
 # tracks the current set: only unseen pairs alert, healing empties the set,
 # and a later re-appearance of the same pair alerts again.
 if [[ -z "$downgrades" ]]; then
-	if [[ -e "$seen_file" ]]; then
-		rm -f "$seen_file"
-	fi
+	rm -f "$seen_file"
 	exit 0
 fi
 
