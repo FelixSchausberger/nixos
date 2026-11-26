@@ -12,6 +12,29 @@
   # install the same package set, so they stay in lockstep.
   developmentTools = config.features.development.enable or config.hostConfig.guiApps or false;
 
+  # The debugger registry entry and each native language's debugger field share
+  # one lldb-dap launch template; keep the copy here so they cannot drift.
+  lldbDapDebugger = {
+    name = "lldb-dap";
+    transport = "stdio";
+    command = "lldb-dap";
+    templates = [
+      {
+        name = "binary";
+        request = "launch";
+        completion = [
+          {
+            completion = "filename";
+            name = "binary";
+          }
+        ];
+        args = {
+          program = "{0}";
+        };
+      }
+    ];
+  };
+
   languageServerType = types.submodule {
     options = {
       cmd = mkOption {
@@ -243,26 +266,7 @@ in {
     };
 
     editors.debuggers = {
-      lldb-dap = {
-        command = "lldb-dap";
-        transport = "stdio";
-        name = "lldb-dap";
-        templates = [
-          {
-            name = "binary";
-            request = "launch";
-            completion = [
-              {
-                completion = "filename";
-                name = "binary";
-              }
-            ];
-            args = {
-              program = "{0}";
-            };
-          }
-        ];
-      };
+      lldb-dap = lldbDapDebugger;
     };
 
     editors.languages = [
@@ -414,26 +418,7 @@ in {
           "rust-analyzer"
           "jj-lsp"
         ];
-        debugger = {
-          name = "lldb-dap";
-          transport = "stdio";
-          command = "lldb-dap";
-          templates = [
-            {
-              name = "binary";
-              request = "launch";
-              completion = [
-                {
-                  completion = "filename";
-                  name = "binary";
-                }
-              ];
-              args = {
-                program = "{0}";
-              };
-            }
-          ];
-        };
+        debugger = lldbDapDebugger;
       }
       {
         name = "typst";
@@ -451,26 +436,7 @@ in {
         ];
         autoFormat = true;
         servers = ["clangd"];
-        debugger = {
-          name = "lldb-dap";
-          transport = "stdio";
-          command = "lldb-dap";
-          templates = [
-            {
-              name = "binary";
-              request = "launch";
-              completion = [
-                {
-                  completion = "filename";
-                  name = "binary";
-                }
-              ];
-              args = {
-                program = "{0}";
-              };
-            }
-          ];
-        };
+        debugger = lldbDapDebugger;
       }
       {
         name = "cpp";
@@ -487,26 +453,7 @@ in {
         ];
         autoFormat = true;
         servers = ["clangd"];
-        debugger = {
-          name = "lldb-dap";
-          transport = "stdio";
-          command = "lldb-dap";
-          templates = [
-            {
-              name = "binary";
-              request = "launch";
-              completion = [
-                {
-                  completion = "filename";
-                  name = "binary";
-                }
-              ];
-              args = {
-                program = "{0}";
-              };
-            }
-          ];
-        };
+        debugger = lldbDapDebugger;
       }
       {
         name = "javascript";
@@ -691,7 +638,7 @@ in {
       {
         assertion =
           lib.all (
-            lang: lib.all (server: config.editors.languageServers ? ${server}) lang.servers
+            language: lib.all (serverName: config.editors.languageServers ? ${serverName}) language.servers
           )
           config.editors.languages;
         message = "editors.languages: a language references an undefined entry of editors.languageServers";

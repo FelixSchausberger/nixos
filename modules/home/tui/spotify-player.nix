@@ -3,7 +3,9 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  cfg = config.modules.home.tui.spotify-player;
+in {
   options.modules.home.tui.spotify-player = {
     enable = lib.mkEnableOption "spotify-player";
     enableDaemon = lib.mkOption {
@@ -31,10 +33,10 @@
     };
   };
 
-  config = lib.mkIf config.modules.home.tui.spotify-player.enable {
+  config = lib.mkIf cfg.enable {
     programs.spotify-player = {
       enable = true;
-      inherit (config.modules.home.tui.spotify-player) package;
+      inherit (cfg) package;
 
       # State-of-the-art configuration for modern PipeWire setup
       settings = {
@@ -48,7 +50,7 @@
         };
 
         # Audio backend selection
-        audio_backend = config.modules.home.tui.spotify-player.audioBackend;
+        audio_backend = cfg.audioBackend;
 
         # Media control integration (works with playerctl)
         enable_media_control = true;
@@ -90,10 +92,10 @@
     services.playerctld.enable = true;
 
     # Optional daemon service for background operation
-    systemd.user.services.spotify-player-daemon = lib.mkIf config.modules.home.tui.spotify-player.enableDaemon {
+    systemd.user.services.spotify-player-daemon = lib.mkIf cfg.enableDaemon {
       Unit.Description = "Spotify Player Daemon";
       Service = {
-        ExecStart = "${config.modules.home.tui.spotify-player.package}/bin/spotify_player --daemon";
+        ExecStart = "${cfg.package}/bin/spotify_player --daemon";
         Restart = "on-failure";
         RestartSec = 5;
       };

@@ -102,7 +102,7 @@ in {
         };
       }
 
-      # Yazi at the current file (replaces the previous terminal-tab variant)
+      # Yazi at the current file
       {
         mode = "n";
         key = "<leader>yy";

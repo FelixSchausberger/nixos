@@ -295,15 +295,14 @@
   # so the server's own processes have it; a failed load falls back to the
   # static PATH below so a broken flake cannot take the agent server down.
   sharedServerExec = let
-    dir = config.ai-assistants.opencode.sharedServer.devShell;
     cmd = "${opencode}/bin/opencode2 serve --service --hostname 127.0.0.1 --port ${toString shared.webPort}";
   in
-    if dir == null
+    if devShellDir == null
     then cmd
     else
       pkgs.writeShellScript "opencode-web-start" ''
-        if ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg dir} ${pkgs.coreutils}/bin/true; then
-          exec ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg dir} ${cmd}
+        if ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${pkgs.coreutils}/bin/true; then
+          exec ${pkgs.direnv}/bin/direnv exec ${lib.escapeShellArg devShellDir} ${cmd}
         fi
         exec ${cmd}
       '';

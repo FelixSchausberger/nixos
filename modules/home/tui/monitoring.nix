@@ -54,7 +54,6 @@
       "ps" = "procs";
       "du" = "dua interactive";
       "ncdu" = "dua interactive";
-      # "ping" = "gping";
       "dig" = "dog";
       "bench" = "hyperfine";
 

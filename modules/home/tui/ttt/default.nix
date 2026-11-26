@@ -50,7 +50,10 @@
       acc: lang:
         if lang.formatter == null
         then acc
-        else lib.foldl' (a: ft: a // {${ft} = formatterCommand lang.formatter;}) acc lang.fileTypes
+        else let
+          command = formatterCommand lang.formatter;
+        in
+          lib.foldl' (a: ft: a // {${ft} = command;}) acc lang.fileTypes
     ) {}
     config.editors.languages;
 

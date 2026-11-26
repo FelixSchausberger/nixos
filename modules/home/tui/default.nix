@@ -43,7 +43,6 @@ in {
   ];
 
   programs = {
-    # cliphist.enable = true; # Wayland clipboard manager
     home-manager.enable = true; # A Nix-based user environment configurator
     nix-index.enable = true; # A files database for nixpkgs
 
@@ -63,7 +62,6 @@ in {
 
   home.packages = with pkgs; [
     cacert # CA certificates for TLS connections
-    # clipboard-jh # Cut, copy, and paste anything, anywhere, all from the terminal
     circumflex # Terminal Hacker News browser (clx), reads article and comment threads in place
     dssh # Dead-simple SSH connection manager CLI and TUI
     fclones # Efficient Duplicate File Finder and Remover
@@ -79,14 +77,12 @@ in {
     ouch # A CLI for easily compressing and decompressing files and directories
     outfieldr # Fast TLDR client in Zig (34x faster than tealdeer, no certificate issues)
     pik # Process Interactive Kill
-    # quickemu # Quickly create and run virtual machines
     ripgrep # Utility that combines the usability of The Silver Searcher with the raw speed of grep
     # rip2 provides bin/rip; ai-assistants/safe-rm.nix also installs rip2, and
     # buildEnv collides when both rm-improved and rip2 ship bin/rip. rip2 is a
     # drop-in superset of rm-improved (same --graveyard/-s/-u/-d/-i flags).
     rip2
     scooter # Interactive find and replace in the terminal
-    # superfile # Pretty fancy and modern terminal file manager
     systemd-manager-tui # Program for managing systemd services through a tui
     typst # New markup-based typesetting system that is powerful and easy to learn
     xdg-utils # Set of command line tools that assist applications with a variety of desktop integration tasks

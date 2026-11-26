@@ -28,7 +28,7 @@
     // lib.optionalAttrs (lang.formatter != null) {
       formatter =
         {
-          command = lang.formatter.command;
+          inherit (lang.formatter) command;
         }
         // lib.optionalAttrs (lang.formatter.args != []) {args = lang.formatter.args;};
     }

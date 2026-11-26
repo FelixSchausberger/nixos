@@ -13,9 +13,7 @@
   '';
 in {
   programs.yazi = {
-    plugins.mount = {
-      package = mountPlugin;
-    };
+    plugins.mount.package = mountPlugin;
 
     keymap.mgr.prepend_keymap = [
       {

@@ -46,17 +46,20 @@
   # docker-compose-langserver) stay disabled too: Helix only attaches servers
   # listed per language, so enabling them here would spawn LSPs Helix never
   # starts, from packages the development gate may not install.
-  mkServer = name: server:
-    if name == "rust-analyzer" || filetypesFor name == []
+  mkServer = name: server: let
+    filetypes = filetypesFor name;
+  in
+    if name == "rust-analyzer" || filetypes == []
     then {}
     else {
       enable = true;
       # Server binaries come from the shared, feature-gated home.packages set;
       # package = null keeps nixvim from putting a second copy on nvim's PATH.
       package = null;
+      # filetypes is non-empty here: the empty list took the branch above.
       config =
         {inherit (server) cmd;}
-        // lib.optionalAttrs (filetypesFor name != []) {filetypes = filetypesFor name;}
+        // {inherit filetypes;}
         // lib.optionalAttrs (server.config != {}) {init_options = server.config;}
         // lib.optionalAttrs (rootMarkers ? ${name}) {root_markers = rootMarkers.${name};};
     };
