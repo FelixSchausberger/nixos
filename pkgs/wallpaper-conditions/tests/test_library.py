@@ -9,6 +9,10 @@ from wallpaper_conditions.library import scan
 from wallpaper_conditions.model import load_manifest
 
 
+def scan_default(manifest):
+    return scan(manifest.theme(manifest.default_theme))
+
+
 class LibraryTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -36,16 +40,16 @@ class LibraryTests(unittest.TestCase):
         touch(self.root / "unknown" / "x.jpg")
 
     def test_filters_images_and_blurred_variants(self) -> None:
-        library = scan(self.manifest)
+        library = scan_default(self.manifest)
         names = [path.name for path in library.get("night")]
         self.assertEqual(names, ["a.jpg", "b.PNG"])
 
     def test_reports_unknown_directories(self) -> None:
-        library = scan(self.manifest)
+        library = scan_default(self.manifest)
         self.assertEqual([path.name for path in library.unknown_dirs], ["unknown"])
 
     def test_empty_collection_has_no_files(self) -> None:
-        library = scan(self.manifest)
+        library = scan_default(self.manifest)
         self.assertEqual(library.get("empty"), ())
 
     def test_missing_root(self) -> None:
@@ -54,7 +58,7 @@ class LibraryTests(unittest.TestCase):
             {"night": {"phase": ["night"]}},
             roots=[self.base / "absent"],
         )
-        library = scan(load_manifest(manifest_path))
+        library = scan_default(load_manifest(manifest_path))
         self.assertEqual(library.missing_roots, (self.base / "absent",))
 
     def test_multiple_roots_merge_and_deduplicate(self) -> None:
@@ -65,9 +69,21 @@ class LibraryTests(unittest.TestCase):
             {"night": {"phase": ["night"]}},
             roots=[self.root, second, self.root],
         )
-        library = scan(load_manifest(manifest_path))
+        library = scan_default(load_manifest(manifest_path))
         names = sorted(path.name for path in library.get("night"))
         self.assertEqual(names, ["a.jpg", "b.PNG", "other.jpg"])
+
+    def test_scans_the_theme_subdirectory(self) -> None:
+        manifest_path = write_manifest(
+            self.base / "themed.json",
+            {},
+            roots=[self.root],
+            themes={"plants": {"collections": {"any": {}}}},
+            default_theme="plants",
+        )
+        theme = load_manifest(manifest_path).theme("plants")
+        touch(self.root / "plants" / "any" / "leaf.jpg")
+        self.assertEqual([path.name for path in scan(theme).get("any")], ["leaf.jpg"])
 
 
 if __name__ == "__main__":

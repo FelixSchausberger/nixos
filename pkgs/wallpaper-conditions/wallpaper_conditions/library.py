@@ -1,4 +1,4 @@
-"""Runtime scanning of collection folders under the configured roots."""
+"""Runtime scanning of collection folders under the theme's roots."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .model import IMAGE_SUFFIXES, Manifest
+from .model import IMAGE_SUFFIXES, Theme
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,14 +50,14 @@ def _images(folder: Path) -> list[Path]:
     return images
 
 
-def scan(manifest: Manifest) -> Library:
-    declared = {collection.name for collection in manifest.collections}
+def scan(theme: Theme) -> Library:
+    declared = {collection.name for collection in theme.collections}
     files: dict[str, list[Path]] = {name: [] for name in declared}
     seen: set[Path] = set()
     unknown: list[Path] = []
     missing: list[Path] = []
 
-    for root in manifest.roots:
+    for root in theme.roots:
         try:
             if not root.is_dir():
                 missing.append(root)

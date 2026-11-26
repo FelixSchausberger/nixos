@@ -12,8 +12,9 @@ PHASES = ("dawn", "day", "dusk", "night")
 WEATHERS = ("clear", "partly", "overcast", "fog", "rain", "snow", "thunder")
 DIMENSIONS = ("phase", "weather")
 IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp"})
-COLLECTION_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 DEFAULT_INTERVAL_SECONDS = 3600
+DEFAULT_THEME = "landscapes"
 
 
 class ManifestError(ValueError):
@@ -46,17 +47,35 @@ class Collection:
 
 
 @dataclass(frozen=True)
+class Theme:
+    """One wallpaper family: its collection folders and the directories holding them."""
+
+    name: str
+    roots: tuple[Path, ...]
+    collections: tuple[Collection, ...]
+
+
+@dataclass(frozen=True)
 class Manifest:
     roots: tuple[Path, ...]
+    themes: dict[str, Theme]
+    default_theme: str
+    active_theme_file: Path | None
     latitude: float
     longitude: float
     weather_enabled: bool
     order: tuple[str, ...]
-    collections: tuple[Collection, ...]
     fallback_file: Path
     fallback_blurred: Path | None
     publish: Path | None = None
     interval_seconds: int = DEFAULT_INTERVAL_SECONDS
+
+    def theme(self, name: str) -> Theme:
+        try:
+            return self.themes[name]
+        except KeyError:
+            available = ", ".join(sorted(self.themes))
+            raise ManifestError(f"unknown theme '{name}'; available: {available}") from None
 
 
 def _require(condition: bool, message: str) -> None:
@@ -93,6 +112,55 @@ def _absolute_path(raw: Any, field: str) -> Path:
     return path
 
 
+def _collection(name: str, spec: Any) -> Collection:
+    _require(
+        isinstance(name, str) and NAME_RE.fullmatch(name) is not None,
+        f"invalid collection name {name!r}; use letters, digits, '_' and '-'",
+    )
+    _require(isinstance(spec, dict), f"collection {name} must be an object")
+    unknown = sorted(set(spec) - set(DIMENSIONS) - {"priority"})
+    _require(not unknown, f"collection {name} has unknown keys {unknown}")
+    priority = spec.get("priority", 0)
+    _require(
+        isinstance(priority, int) and not isinstance(priority, bool),
+        f"{name}.priority must be an integer",
+    )
+    return Collection(
+        name=name,
+        phase=_values(spec.get("phase", []), PHASES, f"{name}.phase"),
+        weather=_values(spec.get("weather", []), WEATHERS, f"{name}.weather"),
+        priority=priority,
+    )
+
+
+def _collections(raw: Any, field: str) -> tuple[Collection, ...]:
+    _require(isinstance(raw, dict), f"{field} must be an object")
+    return tuple(_collection(name, spec) for name, spec in raw.items())
+
+
+def _themes(raw: dict[str, Any], base_roots: tuple[Path, ...]) -> dict[str, Theme]:
+    _require(isinstance(raw, dict) and bool(raw), "themes must be a non-empty object")
+    themes = {}
+    for name, spec in raw.items():
+        _require(
+            isinstance(name, str) and NAME_RE.fullmatch(name) is not None,
+            f"invalid theme name {name!r}; use letters, digits, '_' and '-'",
+        )
+        _require(isinstance(spec, dict), f"theme {name} must be an object")
+        unknown = sorted(set(spec) - {"roots", "collections"})
+        _require(not unknown, f"theme {name} has unknown keys {unknown}")
+        collections = _collections(spec.get("collections"), f"{name}.collections")
+        raw_roots = spec.get("roots")
+        if raw_roots is None:
+            roots = tuple(root / name for root in base_roots)
+        else:
+            values = _string_list(raw_roots, f"{name}.roots")
+            _require(bool(values), f"{name}.roots must not be empty")
+            roots = tuple(_absolute_path(value, f"{name}.roots entry") for value in values)
+        themes[name] = Theme(name=name, roots=roots, collections=collections)
+    return themes
+
+
 def load_manifest(path: Path) -> Manifest:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -107,6 +175,32 @@ def load_manifest(path: Path) -> Manifest:
     _require(bool(roots_raw), "roots must not be empty")
     roots = tuple(_absolute_path(root, "roots entry") for root in roots_raw)
 
+    if raw.get("themes") is not None:
+        themes = _themes(raw["themes"], roots)
+        default_theme = raw.get("default_theme", next(iter(themes)))
+        _require(
+            isinstance(default_theme, str) and default_theme in themes,
+            f"default_theme must name a declared theme; available: {sorted(themes)}",
+        )
+    else:
+        # Manifests written before themes existed keep the flat layout and act
+        # as the default theme.
+        themes = {
+            DEFAULT_THEME: Theme(
+                name=DEFAULT_THEME,
+                roots=roots,
+                collections=_collections(raw.get("collections"), "collections"),
+            )
+        }
+        default_theme = DEFAULT_THEME
+
+    active_theme_raw = raw.get("active_theme_file")
+    active_theme_file = (
+        _absolute_path(active_theme_raw, "active_theme_file")
+        if active_theme_raw is not None
+        else None
+    )
+
     latitude = _number(raw.get("latitude"), "latitude", -90.0, 90.0)
     longitude = _number(raw.get("longitude"), "longitude", -180.0, 180.0)
 
@@ -119,31 +213,6 @@ def load_manifest(path: Path) -> Manifest:
         f"order must be a permutation of {list(DIMENSIONS)}",
     )
     order = tuple(order_raw)
-
-    collections_raw = raw.get("collections")
-    _require(isinstance(collections_raw, dict), "collections must be an object")
-    collections = []
-    for name, spec in collections_raw.items():
-        _require(
-            isinstance(name, str) and COLLECTION_NAME_RE.fullmatch(name) is not None,
-            f"invalid collection name {name!r}; use letters, digits, '_' and '-'",
-        )
-        _require(isinstance(spec, dict), f"collection {name} must be an object")
-        unknown = sorted(set(spec) - set(DIMENSIONS) - {"priority"})
-        _require(not unknown, f"collection {name} has unknown keys {unknown}")
-        priority = spec.get("priority", 0)
-        _require(
-            isinstance(priority, int) and not isinstance(priority, bool),
-            f"{name}.priority must be an integer",
-        )
-        collections.append(
-            Collection(
-                name=name,
-                phase=_values(spec.get("phase", []), PHASES, f"{name}.phase"),
-                weather=_values(spec.get("weather", []), WEATHERS, f"{name}.weather"),
-                priority=priority,
-            )
-        )
 
     fallback_raw = raw.get("fallback")
     _require(isinstance(fallback_raw, dict), "fallback must be an object")
@@ -162,11 +231,13 @@ def load_manifest(path: Path) -> Manifest:
 
     return Manifest(
         roots=roots,
+        themes=themes,
+        default_theme=default_theme,
+        active_theme_file=active_theme_file,
         latitude=latitude,
         longitude=longitude,
         weather_enabled=weather_enabled,
         order=order,
-        collections=tuple(collections),
         fallback_file=fallback_file,
         fallback_blurred=fallback_blurred,
         publish=publish,

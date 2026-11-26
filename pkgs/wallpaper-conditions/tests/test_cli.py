@@ -54,12 +54,15 @@ class CliTests(unittest.TestCase):
         )
 
     def run_cli(self, *args: str) -> str:
+        return self.run_with(self.manifest, *args)
+
+    def run_with(self, manifest: Path, *args: str) -> str:
         output = io.StringIO()
         with redirect_stdout(output):
             code = main(
                 [
                     "--manifest",
-                    str(self.manifest),
+                    str(manifest),
                     "--cache-dir",
                     str(self.cache),
                     *args,
@@ -67,6 +70,25 @@ class CliTests(unittest.TestCase):
             )
         self.assertEqual(code, 0)
         return output.getvalue()
+
+    def themed_manifest(self) -> Path:
+        root = self.base / "themed"
+        touch(root / "landscapes" / "night" / "one.jpg")
+        touch(root / "plants" / "any" / "leaf.jpg")
+        return write_manifest(
+            self.base / "themed.json",
+            {},
+            roots=[root],
+            themes={
+                "landscapes": {"collections": {"night": {"phase": ["night"]}}},
+                "plants": {"collections": {"any": {}}},
+            },
+            default_theme="landscapes",
+            active_theme_file=self.base / "active-theme",
+            publish=self.base / "themed-current.jpg",
+            fallback_file=self.fallback,
+            fallback_blurred=self.fallback_blurred,
+        )
 
     def test_status_json_selects_the_specific_folder(self) -> None:
         payload = json.loads(self.run_cli("--now", NIGHT, "status", "--offline", "--json"))
@@ -172,6 +194,40 @@ class CliTests(unittest.TestCase):
 
     def test_version(self) -> None:
         self.assertEqual(self.run_cli("version").strip(), "0.1.0")
+
+    def test_status_reports_the_theme_and_the_shared_file(self) -> None:
+        manifest = self.themed_manifest()
+        payload = json.loads(
+            self.run_with(manifest, "--now", NIGHT, "status", "--offline", "--json")
+        )
+        self.assertEqual(payload["theme"], "landscapes")
+        self.assertEqual(payload["themes"], ["landscapes", "plants"])
+        self.assertTrue(payload["active_theme_file"].endswith("active-theme"))
+
+    def test_theme_switch_writes_the_shared_file(self) -> None:
+        manifest = self.themed_manifest()
+        with (
+            patch(
+                "wallpaper_conditions.cli.apply",
+                return_value=ApplyResult(False, "no awww daemon"),
+            ),
+            patch("wallpaper_conditions.cli.publish_current", return_value=True),
+        ):
+            self.run_with(manifest, "--now", NIGHT, "theme", "plants")
+
+        self.assertEqual((self.base / "active-theme").read_text().strip(), "plants")
+        state = json.loads((self.cache / "state.json").read_text())
+        self.assertEqual(state["theme"], "plants")
+        self.assertIn("plants/any/leaf.jpg", state["selected_file"])
+
+    def test_shared_file_drives_the_selection(self) -> None:
+        manifest = self.themed_manifest()
+        (self.base / "active-theme").write_text("plants\n", encoding="utf-8")
+        payload = json.loads(
+            self.run_with(manifest, "--now", NIGHT, "status", "--offline", "--json")
+        )
+        self.assertEqual(payload["theme"], "plants")
+        self.assertIn("plants/any/leaf.jpg", payload["file"])
 
 
 if __name__ == "__main__":

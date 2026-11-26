@@ -1,12 +1,14 @@
 # Condition-aware wallpaper selection on top of awww.
 #
-# Folders are runtime data: each collection is a directory under one of the
-# roots, and the predicates below decide when it may be selected. The folder
-# name is only a label, so `sunset/` and `dusk/` can coexist without a naming
-# grammar. Images added to an existing folder need no rebuild.
+# A theme is a family of collection folders under the pool, e.g.
+# <root>/plants/<collection>. The predicates decide when a collection may be
+# selected; the folder name is only a label. Images added to an existing
+# folder need no rebuild.
 #
 # The selector publishes one stable copy (current.jpg in the first root) for
-# consumers outside the session. Publication does not require a display: the
+# consumers outside the session. The active theme is shared through
+# active-theme in the same root, so a host that only mounts the pool read-only
+# follows the host that writes it. Publication does not require a display: the
 # timer runs whenever the user manager is up, and only the awww apply is
 # skipped when no daemon answers.
 {
@@ -30,9 +32,81 @@
   # target for the (unlikely) case where the awww module is not imported.
   sessionTarget = config.wm.awww.sessionTarget or "niri-session.target";
 
+  collectionType = lib.types.attrsOf (lib.types.submodule {
+    options = {
+      phase = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum ["dawn" "day" "dusk" "night"]);
+        default = [];
+        description = "Solar phases this folder is valid for; empty means any.";
+      };
+      weather = lib.mkOption {
+        type = lib.types.listOf (lib.types.enum [
+          "clear"
+          "partly"
+          "overcast"
+          "fog"
+          "rain"
+          "snow"
+          "thunder"
+        ]);
+        default = [];
+        description = "Weather categories this folder is valid for; empty means any.";
+      };
+      priority = lib.mkOption {
+        type = lib.types.int;
+        default = 0;
+        description = ''
+          Breaks ties between collections with the same specificity and
+          dimension order; higher wins. Use it when two folders are valid
+          for the same conditions, e.g. a generic rain/ and a dawn-rain/.
+        '';
+      };
+    };
+  });
+
+  defaultCollections = {
+    # Unconstrained collection: the fallback when no constrained folder
+    # matches. Daylight-only weather folders keep a daylit scene off the
+    # night desktop; add a phase+weather folder (e.g. night-rain) for
+    # night rain art.
+    nature-studies = {};
+    dawn = {phase = ["dawn"];};
+    day = {phase = ["day"];};
+    dusk = {phase = ["dusk"];};
+    night = {phase = ["night"];};
+    clear = {
+      weather = ["clear" "partly"];
+      phase = ["day"];
+    };
+    rain = {
+      weather = ["rain" "thunder"];
+      phase = ["day" "dawn" "dusk"];
+    };
+    snow = {
+      weather = ["snow"];
+      phase = ["day" "dawn" "dusk"];
+    };
+  };
+
   manifest = pkgs.writeText "wallpaper-collections.json" (builtins.toJSON {
-    inherit (cfg) roots latitude longitude interval order collections publish;
+    inherit (cfg) roots;
+    inherit (cfg) latitude;
+    inherit (cfg) longitude;
+    inherit (cfg) interval;
     weather = cfg.weather.enable;
+    inherit (cfg) order;
+    inherit (cfg) publish;
+    default_theme = cfg.defaultTheme;
+    active_theme_file = cfg.activeThemeFile;
+    themes =
+      lib.mapAttrs (name: theme: {
+        roots =
+          if theme.roots == []
+          then map (root: "${root}/${name}") cfg.roots
+          else theme.roots;
+        inherit (theme) collections;
+      })
+      cfg.themes;
     fallback = {
       file = defaultWallpaperPath;
       blurred = defaultBlurredPath;
@@ -57,10 +131,63 @@ in {
       default = [];
       example = ["/per/mnt/data/media/pictures/wallpapers"];
       description = ''
-        Directories that contain one folder per collection. They are scanned on
-        every timer run, so adding images to an existing folder needs no
-        rebuild. Absolute paths only; a missing root is reported by
-        `wallpaper-conditions doctor` and falls back to the default wallpaper.
+        Pool roots. Each theme lives in a subdirectory named after it
+        (`<root>/<theme>/<collection>`), unless the theme overrides its roots.
+        They are scanned on every timer run, so adding images to an existing
+        folder needs no rebuild. Absolute paths only; a missing root is
+        reported by `wallpaper-conditions doctor` and falls back to the
+        default wallpaper.
+      '';
+    };
+
+    themes = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          roots = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [];
+            description = ''
+              Directories holding this theme's collection folders. Empty means
+              `<root>/<theme>` for every pool root; set it when a theme lives
+              on another mount, such as a local laptop cache.
+            '';
+          };
+          collections = lib.mkOption {
+            type = collectionType;
+            description = "Folder name -> conditions inside this theme.";
+          };
+        };
+      });
+      default = {
+        landscapes = {collections = defaultCollections;};
+        plants = {collections = {any = {};};};
+        ascii = {collections = {any = {};};};
+      };
+      description = ''
+        Theme family -> its collection folders. The folder name is not parsed,
+        so it can be any label that matches [A-Za-z0-9_-]+. Switch the active
+        theme at runtime with `wallpaper-theme <name>`; the choice is shared
+        through activeThemeFile.
+      '';
+    };
+
+    defaultTheme = lib.mkOption {
+      type = lib.types.str;
+      default = "landscapes";
+      description = "Theme used when neither the shared file nor the local state names one.";
+    };
+
+    activeThemeFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default =
+        if cfg.roots == []
+        then null
+        else "${builtins.head cfg.roots}/active-theme";
+      description = ''
+        Shared file holding the active theme name, normally in the pool root.
+        The host that mounts the pool read-write (the laptop) writes it; hosts
+        that only read the pool follow it. Set to null to keep the choice local
+        to each host.
       '';
     };
 
@@ -125,79 +252,6 @@ in {
         night desktop; put weather first when weather should dominate.
       '';
     };
-
-    collections = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
-        options = {
-          phase = lib.mkOption {
-            type = lib.types.listOf (lib.types.enum ["dawn" "day" "dusk" "night"]);
-            default = [];
-            description = "Solar phases this folder is valid for; empty means any.";
-          };
-          weather = lib.mkOption {
-            type = lib.types.listOf (lib.types.enum [
-              "clear"
-              "partly"
-              "overcast"
-              "fog"
-              "rain"
-              "snow"
-              "thunder"
-            ]);
-            default = [];
-            description = "Weather categories this folder is valid for; empty means any.";
-          };
-          priority = lib.mkOption {
-            type = lib.types.int;
-            default = 0;
-            description = ''
-              Breaks ties between collections with the same specificity and
-              dimension order; higher wins. Use it when two folders are valid
-              for the same conditions, e.g. a generic rain/ and a dawn-rain/.
-            '';
-          };
-        };
-      });
-      default = {
-        # Unconstrained collection: the fallback when no constrained folder
-        # matches. Daylight-only weather folders keep a daylit scene off the
-        # night desktop; add a phase+weather folder (e.g. night-rain) for
-        # night rain art.
-        nature-studies = {};
-        dawn = {phase = ["dawn"];};
-        day = {phase = ["day"];};
-        dusk = {phase = ["dusk"];};
-        night = {phase = ["night"];};
-        clear = {
-          weather = ["clear" "partly"];
-          phase = ["day"];
-        };
-        rain = {
-          weather = ["rain" "thunder"];
-          phase = ["day" "dawn" "dusk"];
-        };
-        snow = {
-          weather = ["snow"];
-          phase = ["day" "dawn" "dusk"];
-        };
-      };
-      description = ''
-        Folder name -> conditions. The attribute name is the folder under each
-        root; the predicates are the conditions it may be selected for. A
-        collection with no predicates is the fallback and is only picked when
-        no constrained collection matches. The folder name is not parsed, so
-        it can be any label that matches [A-Za-z0-9_-]+.
-      '';
-      example = lib.literalExpression ''
-        {
-          night = {phase = ["night"];};
-          clear = {weather = ["clear" "partly"]; phase = ["day"];};
-          rain = {weather = ["rain" "thunder"]; phase = ["day" "dawn" "dusk"];};
-          snow = {weather = ["snow"];};
-          default = {};
-        }
-      '';
-    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -215,8 +269,18 @@ in {
         message = "wallpapers.dynamic.order must contain phase and weather exactly once each.";
       }
       {
-        assertion = lib.all (name: builtins.match "[A-Za-z0-9_-]+" name != null) (lib.attrNames cfg.collections);
-        message = "wallpapers.dynamic.collections names must match [A-Za-z0-9_-]+.";
+        assertion = builtins.hasAttr cfg.defaultTheme cfg.themes;
+        message = "wallpapers.dynamic.defaultTheme must name a declared theme.";
+      }
+      {
+        assertion = lib.all (name: builtins.match "[A-Za-z0-9_-]+" name != null) (lib.attrNames cfg.themes);
+        message = "wallpapers.dynamic.themes names must match [A-Za-z0-9_-]+.";
+      }
+      {
+        assertion = lib.all (
+          theme: lib.all (name: builtins.match "[A-Za-z0-9_-]+" name != null) (lib.attrNames theme.collections)
+        ) (lib.attrValues cfg.themes);
+        message = "wallpapers.dynamic collections names must match [A-Za-z0-9_-]+.";
       }
     ];
 
@@ -225,6 +289,7 @@ in {
     home.shellAliases = {
       wallpaper-status = "wallpaper-conditions status";
       wallpaper-next = "wallpaper-conditions next";
+      wallpaper-theme = "wallpaper-conditions theme";
     };
 
     # Seed the consumer copy with the Nix default so the homepage has an image

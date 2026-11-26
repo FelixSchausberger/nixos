@@ -23,13 +23,14 @@ class ManifestTests(unittest.TestCase):
             roots=[self.root],
         )
         manifest = load_manifest(self.manifest_path)
+        theme = manifest.theme(manifest.default_theme)
         self.assertEqual(manifest.roots, (self.root,))
         self.assertFalse(manifest.weather_enabled)
         self.assertEqual(manifest.order, ("phase", "weather"))
-        self.assertEqual(len(manifest.collections), 1)
-        self.assertEqual(manifest.collections[0].phase, frozenset({"night"}))
-        self.assertEqual(manifest.collections[0].specificity, 1)
-        self.assertEqual(manifest.collections[0].priority, 0)
+        self.assertEqual(len(theme.collections), 1)
+        self.assertEqual(theme.collections[0].phase, frozenset({"night"}))
+        self.assertEqual(theme.collections[0].specificity, 1)
+        self.assertEqual(theme.collections[0].priority, 0)
 
     def test_rejects_relative_root(self) -> None:
         write_manifest(self.manifest_path, {}, roots=[Path("relative")])
@@ -130,6 +131,80 @@ class ManifestTests(unittest.TestCase):
     def test_rejects_missing_file(self) -> None:
         with self.assertRaisesRegex(ManifestError, "cannot read manifest"):
             load_manifest(self.base / "absent.json")
+
+    def test_parses_themes_and_default(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {},
+            roots=[self.root],
+            themes={
+                "landscapes": {"collections": {"night": {"phase": ["night"]}}},
+                "plants": {"collections": {"any": {}}},
+            },
+            default_theme="plants",
+        )
+        manifest = load_manifest(self.manifest_path)
+        self.assertEqual(sorted(manifest.themes), ["landscapes", "plants"])
+        self.assertEqual(manifest.default_theme, "plants")
+        self.assertEqual(
+            manifest.themes["landscapes"].roots,
+            (self.root / "landscapes",),
+        )
+        self.assertEqual(manifest.theme("plants").collections[0].name, "any")
+
+    def test_parses_theme_roots_override(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {},
+            roots=[self.root],
+            themes={
+                "plants": {
+                    "roots": [str(self.base / "local-plants")],
+                    "collections": {"any": {}},
+                },
+            },
+        )
+        manifest = load_manifest(self.manifest_path)
+        self.assertEqual(
+            manifest.theme("plants").roots,
+            (self.base / "local-plants",),
+        )
+
+    def test_rejects_unknown_default_theme(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {},
+            roots=[self.root],
+            themes={"plants": {"collections": {"any": {}}}},
+            default_theme="missing",
+        )
+        with self.assertRaisesRegex(ManifestError, "default_theme"):
+            load_manifest(self.manifest_path)
+
+    def test_rejects_unknown_theme_lookup(self) -> None:
+        write_manifest(
+            self.manifest_path,
+            {},
+            roots=[self.root],
+            themes={"plants": {"collections": {"any": {}}}},
+        )
+        manifest = load_manifest(self.manifest_path)
+        with self.assertRaisesRegex(ManifestError, "unknown theme"):
+            manifest.theme("ascii")
+
+    def test_parses_active_theme_file(self) -> None:
+        shared = self.base / "active-theme"
+        write_manifest(
+            self.manifest_path,
+            {},
+            roots=[self.root],
+            themes={"plants": {"collections": {"any": {}}}},
+            active_theme_file=shared,
+        )
+        self.assertEqual(
+            load_manifest(self.manifest_path).active_theme_file,
+            shared,
+        )
 
 
 if __name__ == "__main__":

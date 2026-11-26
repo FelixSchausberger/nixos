@@ -17,7 +17,7 @@ from typing import Iterator
 from . import __version__
 from .apply import ApplyError, apply, backend_ready, publish_current
 from .library import Library, scan
-from .model import PHASES, WEATHERS, Manifest, ManifestError, load_manifest
+from .model import PHASES, WEATHERS, Manifest, ManifestError, Theme, load_manifest
 from .resolve import Resolution, resolve
 from .solar import elevation_degrees, phase
 from .state import State, choose_file, load, save, stabilize_weather
@@ -30,6 +30,7 @@ LOGGER = logging.getLogger("wallpaper_conditions")
 @dataclass(frozen=True)
 class Plan:
     manifest: Manifest
+    theme: Theme
     resolution: Resolution
     state: State
     chosen: Path
@@ -70,6 +71,31 @@ def _locked(cache_dir: Path) -> Iterator[None]:
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
+def _active_theme(manifest: Manifest, state: State, override: str | None = None) -> str:
+    """Resolve the explicit override, the shared choice, the local state, the default.
+
+    The shared file lives in the wallpaper pool, so a host that only mounts the
+    pool read-only still follows the host that writes it.
+    """
+
+    if override is not None:
+        return override
+
+    path = manifest.active_theme_file
+    if path is not None:
+        try:
+            name = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            name = ""
+        if name in manifest.themes:
+            return name
+        if name:
+            LOGGER.warning("ignoring unknown shared theme %r in %s", name, path)
+    if state.theme in manifest.themes:
+        return state.theme
+    return manifest.default_theme
+
+
 def _build_plan(
     manifest: Manifest,
     state: State,
@@ -78,8 +104,10 @@ def _build_plan(
     *,
     offline: bool,
     reroll: bool,
+    theme_override: str | None = None,
 ) -> Plan:
-    library = scan(manifest)
+    theme = manifest.theme(_active_theme(manifest, state, theme_override))
+    library = scan(theme)
     local_solar_elevation = elevation_degrees(now, manifest.latitude, manifest.longitude)
     local_phase = phase(now, manifest.latitude, manifest.longitude)
     raw_weather = resolve_weather(
@@ -90,13 +118,17 @@ def _build_plan(
     )
     effective_weather = stabilize_weather(state, raw_weather, now)
     resolution = resolve(
-        manifest,
+        theme,
         library,
         phase=local_phase,
         weather=effective_weather,
+        order=manifest.order,
+        fallback_file=manifest.fallback_file,
+        fallback_blurred=manifest.fallback_blurred,
     )
     chosen = choose_file(
         state,
+        theme,
         resolution,
         now,
         reroll=reroll,
@@ -104,6 +136,7 @@ def _build_plan(
     )
     return Plan(
         manifest=manifest,
+        theme=theme,
         resolution=resolution,
         state=state,
         chosen=chosen,
@@ -158,6 +191,7 @@ def command_apply(args: argparse.Namespace, manifest: Manifest) -> int:
             cache_dir,
             offline=False,
             reroll=args.reroll,
+            theme_override=getattr(args, "theme", None),
         )
 
         if args.dry_run:
@@ -195,6 +229,32 @@ def command_next(args: argparse.Namespace, manifest: Manifest) -> int:
     return command_apply(args, manifest)
 
 
+def command_theme(args: argparse.Namespace, manifest: Manifest) -> int:
+    """Switch the shared theme family and apply it immediately."""
+
+    manifest.theme(args.name)
+    path = manifest.active_theme_file
+    if path is None:
+        LOGGER.warning("no shared theme file configured; switching this host only")
+    elif not path.parent.is_dir():
+        LOGGER.warning(
+            "cannot write shared theme file %s: %s is missing", path, path.parent
+        )
+    else:
+        temporary = path.with_name(f"{path.name}.tmp")
+        try:
+            temporary.write_text(f"{args.name}\n", encoding="utf-8")
+            os.replace(temporary, path)
+        except OSError as exc:
+            LOGGER.warning("cannot write shared theme file %s: %s", path, exc)
+
+    args.force = True
+    args.reroll = True
+    args.dry_run = False
+    args.theme = args.name
+    return command_apply(args, manifest)
+
+
 def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
     cache_dir = _cache_dir(args.cache_dir)
     now = _parse_now(args.now)
@@ -211,6 +271,13 @@ def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
     cached_at = plan.weather_cached.fetched_at if plan.weather_cached is not None else None
     payload = {
         "now": plan.now.isoformat(),
+        "theme": plan.theme.name,
+        "themes": sorted(plan.manifest.themes),
+        "active_theme_file": (
+            str(plan.manifest.active_theme_file)
+            if plan.manifest.active_theme_file is not None
+            else None
+        ),
         "phase": plan.resolution.phase,
         "solar_elevation_degrees": round(plan.solar_elevation, 2),
         "weather": {
@@ -231,7 +298,7 @@ def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
             }
             for match in plan.resolution.matches
         ],
-        "roots": [str(root) for root in plan.manifest.roots],
+        "roots": [str(root) for root in plan.theme.roots],
         "missing_roots": [str(root) for root in plan.library.missing_roots],
     }
 
@@ -240,6 +307,9 @@ def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
         return 0
 
     print(f"now:     {plan.now.isoformat()}")
+    print(f"theme:   {plan.theme.name} (of {', '.join(sorted(plan.manifest.themes))})")
+    if plan.manifest.active_theme_file is not None:
+        print(f"shared:  {plan.manifest.active_theme_file}")
     print(f"phase:   {plan.resolution.phase} (sun {plan.solar_elevation:.1f} deg)")
     print(
         "weather: "
@@ -265,56 +335,62 @@ def command_status(args: argparse.Namespace, manifest: Manifest) -> int:
                 f"specificity {match.specificity}  rank {match.rank}  "
                 f"{len(match.files)} images"
             )
-    for root in plan.manifest.roots:
+    for root in plan.theme.roots:
         print(f"root {root}: {'ok' if root.is_dir() else 'MISSING'}")
     print(f"backend: {'ready' if backend_ready() else 'not running'}")
     return 0
 
 
 def command_doctor(args: argparse.Namespace, manifest: Manifest) -> int:
-    library = scan(manifest)
     print(f"manifest: {args.manifest}")
-    for root in manifest.roots:
-        print(f"root {root}: {'ok' if root.is_dir() else 'MISSING'}")
-    for collection in manifest.collections:
-        files = library.get(collection.name)
-        print(f"collection {collection.name}: {len(files)} images")
-        if not files:
-            print("  empty or missing")
-        for path in files:
-            try:
-                size = path.stat().st_size
-            except OSError:
-                continue
-            if size > 8 * 1024 * 1024:
-                print(
-                    f"  warning: {path} is {size // (1024 * 1024)} MiB; "
-                    "consider a compressed copy"
-                )
-    for path in library.unknown_dirs:
-        print(f"undeclared folder (ignored): {path}")
-    for path in library.missing_roots:
-        print(f"missing root: {path}")
+    print(f"themes:   {', '.join(sorted(manifest.themes))}")
+    for name, theme in manifest.themes.items():
+        print(f"theme {name}:")
+        library = scan(theme)
+        for root in theme.roots:
+            print(f"  root {root}: {'ok' if root.is_dir() else 'MISSING'}")
+        for collection in theme.collections:
+            files = library.get(collection.name)
+            print(f"  collection {collection.name}: {len(files)} images")
+            if not files:
+                print("    empty or missing")
+            for path in files:
+                try:
+                    size = path.stat().st_size
+                except OSError:
+                    continue
+                if size > 8 * 1024 * 1024:
+                    print(
+                        f"    warning: {path} is {size // (1024 * 1024)} MiB; "
+                        "consider a compressed copy"
+                    )
+        for path in library.unknown_dirs:
+            print(f"  undeclared folder (ignored): {path}")
+        for path in library.missing_roots:
+            print(f"  missing root: {path}")
 
-    # Enumerate the whole condition space to catch a collection that is always
-    # shadowed by a more specific or earlier-ranked one.
-    wins: Counter[str] = Counter()
-    for candidate_phase in PHASES:
-        for candidate_weather in (*WEATHERS, None):
-            result = resolve(
-                manifest,
-                library,
-                phase=candidate_phase,
-                weather=candidate_weather,
-            )
-            if result.chosen is not None:
-                wins[result.chosen.collection.name] += 1
-    for collection in manifest.collections:
-        if wins[collection.name] == 0 and library.get(collection.name):
-            print(
-                f"warning: collection {collection.name} never wins; "
-                "it is shadowed by another collection"
-            )
+        # Enumerate the whole condition space to catch a collection that is
+        # always shadowed by a more specific or earlier-ranked one.
+        wins: Counter[str] = Counter()
+        for candidate_phase in PHASES:
+            for candidate_weather in (*WEATHERS, None):
+                result = resolve(
+                    theme,
+                    library,
+                    phase=candidate_phase,
+                    weather=candidate_weather,
+                    order=manifest.order,
+                    fallback_file=manifest.fallback_file,
+                    fallback_blurred=manifest.fallback_blurred,
+                )
+                if result.chosen is not None:
+                    wins[result.chosen.collection.name] += 1
+        for collection in theme.collections:
+            if wins[collection.name] == 0 and library.get(collection.name):
+                print(
+                    f"  warning: collection {collection.name} never wins; "
+                    "it is shadowed by another collection"
+                )
 
     print(f"backend: {'ready' if backend_ready() else 'not running'}")
     return 0
@@ -346,6 +422,10 @@ def build_parser() -> argparse.ArgumentParser:
     next_parser = subparsers.add_parser("next", help="pick and apply a new image now")
     next_parser.add_argument("--dry-run", action="store_true", help="print the awww commands")
     next_parser.set_defaults(func=command_next)
+
+    theme_parser = subparsers.add_parser("theme", help="switch the active wallpaper theme")
+    theme_parser.add_argument("name", help="theme name declared in the manifest")
+    theme_parser.set_defaults(func=command_theme)
 
     status_parser = subparsers.add_parser("status", help="explain the current selection")
     status_parser.add_argument("--json", action="store_true", help="machine-readable output")
