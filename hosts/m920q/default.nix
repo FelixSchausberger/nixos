@@ -672,6 +672,13 @@ in {
     };
   };
 
+  # The CSR8510 dongle parks in USB autosuspend after two seconds; keep it
+  # powered so classic page and connection attempts do not race the resume
+  # path. It is the host's only Bluetooth radio.
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0a12", ATTR{idProduct}=="0001", TEST=="power/control", ATTR{power/control}="on"
+  '';
+
   # Headless-first host: no login prompt on tty1 (it would leak hostname and
   # username to the projector room, and the on-demand compositor uses the DRM
   # seat directly). Emergency shells (sulogin via rescue/emergency) and SSH are
