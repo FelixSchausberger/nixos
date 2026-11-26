@@ -24,8 +24,8 @@ in {
   # Test: SSL certificates are configured
   has_ssl_cert_file = config.environment.variables.SSL_CERT_FILE != null;
 
-  # Test: WSL integration packages are configured
+  # Test: WSL configuration is present
   # Note: We check the option values instead of evaluating systemPackages
   # to avoid expensive derivation evaluation
-  wsl_packages_enabled = config.wsl.wslConf != null;
+  wsl_conf_configured = config.wsl.wslConf != null;
 }

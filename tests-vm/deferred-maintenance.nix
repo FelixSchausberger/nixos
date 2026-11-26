@@ -85,7 +85,7 @@ _: {
     # 5. Verify networkd is still running (wasn't restarted with broken config)
     machine.succeed("systemctl is-active systemd-networkd.service")
 
-    # 6. Verify rollback restored the original network config
+    # 6. Verify the booted system still carries the original network config
     original_cfg = machine.succeed("cat /run/booted-system/etc/systemd/network/10-eth1.network")
     assert "Address=192.168.1.2/24" in original_cfg, f"Booted system config missing address: {original_cfg}"
     assert "Gateway=192.168.1.2" in original_cfg, f"Booted system config missing gateway: {original_cfg}"
