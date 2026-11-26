@@ -273,14 +273,13 @@
         fi
         restore_service
 
-        new_size="$(store_bytes)"
-        log "prune: store is now $(human "$new_size")"
-        if [ "$new_size" -ge "$size" ]; then
+        previous_size="$size"
+        size="$(store_bytes)"
+        log "prune: store is now $(human "$size")"
+        if [ "$size" -ge "$previous_size" ]; then
           log "prune: the store did not shrink; stopping rather than deleting more history"
-          size="$new_size"
           break
         fi
-        size="$new_size"
         attempt=$((attempt + 1))
       done
 

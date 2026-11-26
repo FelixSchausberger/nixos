@@ -254,7 +254,8 @@ in {
         for wt_pkg in /mnt/c/Users/*/AppData/Local/Packages/Microsoft.WindowsTerminal*; do
           [ -d "$wt_pkg" ] || continue
           mkdir -p "$wt_pkg/LocalState"
-          wt_user="$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$wt_pkg")")")")")"
+          wt_user="''${wt_pkg#/mnt/c/Users/}"
+          wt_user="''${wt_user%%/*}"
           if [ -n "$wt_user" ]; then
             sed "s/__WT_USER__/$wt_user/g" "$WT_SETTINGS" > "$wt_pkg/LocalState/settings.json"
           else

@@ -1,8 +1,6 @@
 {inputs, ...}: {
   programs.yazi = {
-    plugins = {
-      chmod = "${inputs.yazi-plugins}/chmod.yazi";
-    };
+    plugins.chmod = "${inputs.yazi-plugins}/chmod.yazi";
 
     keymap.mgr.prepend_keymap = [
       {

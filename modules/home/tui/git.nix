@@ -7,6 +7,12 @@
 }: let
   inherit (inputs.self.lib) personalInfo hosts user;
 
+  # Single source for the GitHub token: the git credential helpers and the
+  # nix.conf access token both read it.
+  githubTokenPath = config.sops.secrets."github/token".path;
+
+  githubCredentialHelper = "!f() { echo username=token; echo password=$(cat ${githubTokenPath}); }; f";
+
   # Generate per-host SSH config entries from the canonical host registry.
   #
   # A LAN entry carries ConnectTimeout: its RFC1918 address is unroutable off
@@ -86,7 +92,6 @@ in {
       inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.lumen # Instant AI Git Commit message, Git changes summary from the CLI
       lazygit # A simple terminal UI for git commands
       serie # A rich git commit graph in your terminal, like magic
-      # graphite-cli # CLI that makes creating stacked git changes fast & intuitive
     ];
 
     # Context-aware VCS aliases are now in fish/functions/vcs-aliases.nix
@@ -159,9 +164,8 @@ in {
       # Corporate git configuration (work servers, their TLS exceptions and
       # identities) stays out of this repo entirely: it lives in the local
       # imperative layer on the machines that need it.
-      # GitHub authentication for Nix flake operations
-      "credential \"https://github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
-      "credential \"https://api.github.com\"".helper = "!f() { echo username=token; echo password=$(cat ${config.sops.secrets."github/token".path}); }; f";
+      "credential \"https://github.com\"".helper = githubCredentialHelper;
+      "credential \"https://api.github.com\"".helper = githubCredentialHelper;
     };
   };
 
@@ -192,19 +196,16 @@ in {
 
     EOF
           $DRY_RUN_CMD chmod 600 "$ssh_config"
-        else
-          # Config exists as regular file - check if Include directive is present
-          if ! grep -q "Include ~/.ssh/config.d/base.conf" "$ssh_config"; then
-            # Prepend Include directive to existing config
-            $DRY_RUN_CMD cat > "$ssh_config.tmp" <<'EOF'
+        elif ! grep -q "Include ~/.ssh/config.d/base.conf" "$ssh_config"; then
+          # Prepend the Include directive to a config lazyssh already wrote
+          $DRY_RUN_CMD cat > "$ssh_config.tmp" <<'EOF'
     # Base configuration (managed by Home Manager)
     Include ~/.ssh/config.d/base.conf
 
     EOF
-            $DRY_RUN_CMD cat "$ssh_config" >> "$ssh_config.tmp"
-            $DRY_RUN_CMD mv "$ssh_config.tmp" "$ssh_config"
-            $DRY_RUN_CMD chmod 600 "$ssh_config"
-          fi
+          $DRY_RUN_CMD cat "$ssh_config" >> "$ssh_config.tmp"
+          $DRY_RUN_CMD mv "$ssh_config.tmp" "$ssh_config"
+          $DRY_RUN_CMD chmod 600 "$ssh_config"
         fi
   '';
 
@@ -213,11 +214,11 @@ in {
   # Using home.activation to read the secret file at runtime
   home.activation.nixConfig = config.lib.dag.entryAfter ["writeBoundary"] ''
     $DRY_RUN_CMD mkdir -p $HOME/.config/nix
-    if [[ -f ${config.sops.secrets."github/token".path} ]]; then
-      token=$(cat ${config.sops.secrets."github/token".path})
+    if [[ -f ${githubTokenPath} ]]; then
+      token=$(cat ${githubTokenPath})
       echo "access-tokens = github.com=$token" > $HOME/.config/nix/nix.conf
     else
-      echo "Warning: GitHub token file not found at ${config.sops.secrets."github/token".path}" >&2
+      echo "Warning: GitHub token file not found at ${githubTokenPath}" >&2
     fi
   '';
 
