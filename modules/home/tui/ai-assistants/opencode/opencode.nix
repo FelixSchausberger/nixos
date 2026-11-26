@@ -366,25 +366,31 @@ in {
       "${configDir}/cli.json".text = builtins.toJSON cliConfig;
       "${configDir}/AGENTS.md".text = shared.combinedRules;
       "${configDir}/agents/code-simplifier.md".text = shared.codeSimplifierAgent;
-      # Marks an ungrouped workspace for the cleanup sweep. A grouped workspace
-      # belongs to a task: only the lead may finish it, from its own ungrouped
-      # workspace, with /task-done. The shell block runs in the session's
-      # directory, so the command resolves the workspace from the cwd.
-      "${configDir}/commands/done.md".text = ''
+      # Marks an ungrouped workspace for the cleanup sweep. This is the
+      # single-workspace close-out; a grouped workspace belongs to a task and
+      # only the lead closes it, from its own ungrouped workspace, with
+      # /task-done. The shell block runs in the session's directory, so the
+      # command resolves the workspace from the cwd. The agent shell prints its
+      # dev-shell load before the command's output, so the status carries a
+      # ROOKERY-DONE prefix instead of being the first line.
+      "${configDir}/commands/workspace-done.md".text = ''
         ---
-        description: Mark an ungrouped workspace to clean up
+        description: Mark the current ungrouped workspace for cleanup (not a task)
         ---
-        !`ws=$(rookery ls --json | jq -r --arg dir "$PWD" 'select(.path == $dir or ($dir | startswith(.path + "/"))) | .workspace' | head -1); if [ -z "$ws" ]; then echo "not-a-workspace"; else task=$(rookery ls --json | jq -r --arg ws "$ws" 'select(.workspace == $ws) | .task // empty'); if [ -n "$task" ]; then echo "grouped:$task"; else echo "ungrouped:$ws"; fi; fi`
+        !`rookery ls --json | jq -rs --arg dir "$PWD" 'map(. as $w | select($w.path == $dir or ($dir | startswith($w.path + "/")))) | first as $m | if $m == null then "ROOKERY-DONE unknown" elif $m.workspace == "default" then "ROOKERY-DONE primary-checkout" elif $m.task != null then "ROOKERY-DONE grouped:\($m.task)" else "ROOKERY-DONE ungrouped:\($m.workspace)" end'`
 
-        Read the first line above.
+        Use this only for work that lives in one workspace with no task. To
+        close a task, use `/task-done <id>` instead. Read the `ROOKERY-DONE`
+        line above.
 
-        - `grouped:<id>`: do not mark anything. This workspace belongs to task
-          `<id>`, and a worker cannot finish its own task. Write your report and
-          stop; only the lead runs `/task-done <id>`.
-        - `ungrouped:<workspace>`: run `rookery clean --current`. This marks the
-          workspace for the daily sweep. Do not force-remove work; if the
-          workspace has unpushed changes, resolve them first.
-        - `not-a-workspace`: do nothing and report.
+        - `ROOKERY-DONE grouped:<id>`: do not mark anything. This workspace
+          belongs to task `<id>`, and a worker cannot finish its own task. Write
+          your report and stop; only the lead runs `/task-done <id>`.
+        - `ROOKERY-DONE ungrouped:<workspace>`: run `rookery clean --current`.
+          This marks the workspace for the daily sweep. Do not force-remove
+          work; if the workspace has unpushed changes, resolve them first.
+        - `ROOKERY-DONE primary-checkout` or `ROOKERY-DONE unknown`: mark nothing
+          and report.
       '';
 
       # The lead's close-out. It runs from the lead's ungrouped workspace (or
@@ -394,10 +400,11 @@ in {
       # task. The lead's own conversation is never part of this cleanup.
       "${configDir}/commands/task-done.md".text = ''
         ---
-        description: Finish a rookery task and reclaim its workspaces
+        description: Close a reviewed task and reclaim its workspaces (lead only)
         ---
         Run this only after the person has reviewed the task and approved
-        closing it. Until then the lead parks its workspace and stops.
+        closing it. Until then the lead parks its workspace and stops. A single
+        workspace with no task closes with `/workspace-done`, not here.
 
         Finish rookery task `$ARGUMENTS` as its lead. Do not force-remove work.
 
