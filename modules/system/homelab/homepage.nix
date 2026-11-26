@@ -46,6 +46,15 @@
     User-Agent = "homepage";
   };
 
+  # Home Assistant counts (people home, lights and switches on). The widget's
+  # template rows are rendered by HA's /api/template, which the API gates on an
+  # admin user, so the token has to belong to an admin account - use a
+  # dedicated one rather than the daily driver. Presence of the secret is the
+  # gate for the same reason as githubAvailable: until the token is minted and
+  # declared, the card renders without a widget instead of 401ing on every
+  # poll. A non-admin token would only fetch single entity states.
+  haValuesAvailable = hl.smartHome.enable && config.sops.secrets ? "homeassistant/token";
+
   # Host gauges for the Infrastructure cards. Each host's own node_exporter is
   # scraped into the local Prometheus (jobs "node" for m920q's loopback and
   # "node-desktop" for the gaming PC over the LAN), so one PromQL query per
@@ -527,6 +536,26 @@
           # uid "power" (monitoring.nix provisions the dashboard). Wall power at
           # the plugs plus the CPU/GPU panels that attribute it.
           href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
+          # The plug cards already show the instantaneous draw per machine, so
+          # the roll-up is the one number they cannot: energy over a rolling
+          # day, from the json exporter's counter. `increase` handles the
+          # counter reset when a plug reboots.
+          widget = {
+            type = "prometheusmetric";
+            url = local hl.monitoring.prometheusPort;
+            refreshInterval = 60000;
+            metrics = [
+              {
+                label = "24h";
+                query = "sum(increase(wall_energy_wh_total[24h])) / 1000";
+                format = {
+                  type = "number";
+                  suffix = " kWh";
+                  options.maximumFractionDigits = 2;
+                };
+              }
+            ];
+          };
         };
       }
     ]
@@ -547,12 +576,37 @@
   smartHomeServices =
     lib.optionals hl.smartHome.enable [
       {
-        "Home Assistant" = {
-          icon = "mdi-home-assistant";
-          href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.smartHome.httpsPort}/";
-          description = "Home automation";
-          siteMonitor = local hl.smartHome.port;
-        };
+        "Home Assistant" =
+          {
+            icon = "mdi-home-assistant";
+            href = "https://${hl.caddyProxy.tailnetDomain}:${toString hl.smartHome.httpsPort}/";
+            description = "Home automation";
+            siteMonitor = local hl.smartHome.port;
+          }
+          // lib.optionalAttrs haValuesAvailable {
+            # Counts, not entity states: one row per light would not fit and the
+            # naming is not stable. The ratio renders as "2 / 4" because the
+            # switch or light someone turns off should not read as a failure.
+            widget = {
+              type = "homeassistant";
+              url = local hl.smartHome.port;
+              key = "{{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}";
+              custom = [
+                {
+                  label = "People";
+                  template = ''{{ states.person | selectattr("state", "equalto", "home") | list | length }} / {{ states.person | list | length }}'';
+                }
+                {
+                  label = "Lights";
+                  template = ''{{ states.light | selectattr("state", "equalto", "on") | list | length }}'';
+                }
+                {
+                  label = "Switches";
+                  template = ''{{ states.switch | selectattr("state", "equalto", "on") | list | length }}'';
+                }
+              ];
+            };
+          };
       }
     ]
     ++ lib.optionals (hl.smartHome.enable && hl.smartHome.coordinatorUrl != null) [
@@ -723,6 +777,33 @@
           # uid "config-health" (monitoring.nix provisions the dashboard). Shows
           # the vitals host health score and the current comin deployment.
           href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+          # Three comin gauges no other surface shows: a pending reboot after
+          # a kernel or initrd change, a suspended daemon (deployments stop but
+          # nothing fails), and the age of the healthcheck that the stale-alert
+          # would page on. The two flags come from the comin exporter; the age
+          # is the healthcheck's textfile metric, read through the node job.
+          widget = {
+            type = "prometheusmetric";
+            url = local hl.monitoring.prometheusPort;
+            refreshInterval = 60000;
+            metrics = [
+              {
+                label = "Reboot needed";
+                query = "comin_need_to_reboot";
+                format.type = "number";
+              }
+              {
+                label = "Suspended";
+                query = "comin_is_suspended";
+                format.type = "number";
+              }
+              {
+                label = "Checked";
+                query = "time() - comin_health_last_check_timestamp_seconds";
+                format.type = "duration";
+              }
+            ];
+          };
         };
       }
     ]
@@ -799,12 +880,31 @@
           };
         }
         {
-          "Fritz!Exporter" = {
-            icon = "fritzbox.png";
-            # uid "hn51eUggz" (monitoring.nix provisions the fritz dashboard).
-            # The router's own metrics belong with the router, not Monitoring.
-            href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
-          };
+          "Fritz!Exporter" =
+            {
+              icon = "fritzbox.png";
+              # uid "hn51eUggz" (monitoring.nix provisions the fritz dashboard).
+              # The router's own metrics belong with the router, not Monitoring.
+              href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
+            }
+            // lib.optionalAttrs (hl.monitoring.enable && hl.monitoring.fritzbox.enable) {
+              # The one router value without a home: AVM's update flag (1 = a
+              # firmware update is waiting). Uptime and throughput stay on the
+              # Fritz!Box card and the dashboard.
+              widget = {
+                type = "prometheusmetric";
+                url = local hl.monitoring.prometheusPort;
+                # Firmware checks happen upstream on the router's own schedule.
+                refreshInterval = 3600000;
+                metrics = [
+                  {
+                    label = "Update";
+                    query = "fritz_update_available";
+                    format.type = "number";
+                  }
+                ];
+              };
+            };
         }
       ];
     }
@@ -1186,6 +1286,7 @@
     ++ lib.optional (cfg.enable && githubAvailable) "HOMEPAGE_VAR_GITHUB_TOKEN=${config.sops.placeholder."github/token"}"
     ++ lib.optional cfg.enable "HOMEPAGE_VAR_NEXTDNS_API_KEY=${config.sops.placeholder."nextdns/api-key"}"
     ++ lib.optional hl.octoprint.enable "HOMEPAGE_VAR_OCTOPRINT_API_KEY=${config.sops.placeholder."octoprint/api-key"}"
+    ++ lib.optional haValuesAvailable "HOMEPAGE_VAR_HOMEASSISTANT_TOKEN=${config.sops.placeholder."homeassistant/token"}"
   );
 in {
   options.modules.system.homelab.homepage = {

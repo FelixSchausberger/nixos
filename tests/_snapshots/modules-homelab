@@ -14,7 +14,7 @@
   homepage_cards = [
     "Access/Router/Fritz!Box icon=fritzbox.png href=http://192.168.178.1 monitor widget=fritzbox"
     "Access/Router/MyFRITZ! icon=mdi-cloud href=https://myfritz.net/"
-    "Access/Router/Fritz!Exporter icon=fritzbox.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/hn51eUggz"
+    "Access/Router/Fritz!Exporter icon=fritzbox.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/hn51eUggz widget=prometheusmetric"
     "Access/AMT/IPv4 (WAN) icon=mdi-chip href=https://116.204.198.109:16993"
     "Access/AMT/LAN icon=mdi-chip href=https://192.168.178.10:16993"
     "Access/Tailscale icon=tailscale.png href=https://login.tailscale.com/login?next_url=%2Fadmin%2Fmachines%3Frefreshed%3Dtrue"
@@ -26,7 +26,7 @@
     "Backups/Backup failures icon=mdi-alert-circle-outline widget=prometheusmetric"
     "Power/desktop icon=mdi-power-plug href=http://192.168.178.11/ monitor widget=customapi"
     "Power/m920q icon=mdi-power-plug href=http://192.168.178.12/ monitor widget=customapi"
-    "Power/Power icon=shelly.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/power"
+    "Power/Power icon=shelly.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/power widget=prometheusmetric"
     "Monitoring/Grafana icon=grafana.png href=https://m920q.tailf2f0ca.ts.net/grafana monitor widget=grafana"
     "Monitoring/Prometheus icon=prometheus.png href=https://m920q.tailf2f0ca.ts.net:8446/ monitor widget=prometheus"
     "Monitoring/Logs icon=loki.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/logs monitor widget=prometheusmetric"
@@ -47,7 +47,7 @@
     "System/Smart home/Zigbee2MQTT icon=mdi-zigbee href=https://m920q.tailf2f0ca.ts.net:8449/ monitor"
     "System/Maker/Prusa MK3S+ icon=octoprint.png href=https://m920q.tailf2f0ca.ts.net:8451 monitor widgets=customapi,customapi,customapi"
     "System/Nix/NixOS Repo icon=si-github href=https://github.com/FelixSchausberger/nixos widgets=customapi,customapi,customapi,customapi"
-    "System/Nix/Config Health icon=nixos.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/config-health"
+    "System/Nix/Config Health icon=nixos.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/config-health widget=prometheusmetric"
     "System/Nix/Vulnerabilities icon=mdi-shield-alert href=https://tracker.security.nixos.org/issues?state=open widget=prometheusmetric"
     "System/Health/Garmin Stats icon=garmin.png href=https://m920q.tailf2f0ca.ts.net/grafana/d/garmin-stats"
   ];
