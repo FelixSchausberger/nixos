@@ -45,6 +45,19 @@ in {
       linger = true;
     };
 
+    # WirePlumber's logind plugin reports the session as "online" rather than
+    # "active" when the uid has no seat, and its BlueZ monitor only registers
+    # A2DP endpoints in the active state. Without disabling the seat gate no
+    # source endpoint reaches bluetoothd and connecting a speaker fails with
+    # "Protocol not available".
+    services.pipewire.wireplumber.extraConfig."51-bluez-seatless" = {
+      "wireplumber.profiles" = {
+        main = {
+          "monitor.bluez.seat-monitoring" = "disabled";
+        };
+      };
+    };
+
     # Start niri.service, not a bespoke wrapper around niri-session.
     # niri.service is the unit that pulls in graphical-session.target
     # (BindsTo) and, through it, niri-session.target, which the home modules
