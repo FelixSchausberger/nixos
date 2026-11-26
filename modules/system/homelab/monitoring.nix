@@ -11,6 +11,17 @@
 
   tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
 
+  # Grafana's file provider watches `options.path` as a directory. Pointing it
+  # at the JSON file itself provisions the dashboard but fails the watcher with
+  # "error watching folder" on every start, so each provider gets a directory
+  # holding a real copy of its dashboard under a stable file name (a symlink
+  # would depend on how the provider enumerates entries).
+  dashboardProviderPath = name: dashboard:
+    pkgs.runCommand "grafana-dashboard-${name}" {} ''
+      mkdir -p $out
+      install -m 0644 ${dashboard} $out/${name}.json
+    '';
+
   blackboxConfig = pkgs.writeText "blackbox.yml" ''
     modules:
       http_2xx:
@@ -351,10 +362,12 @@
   # drifted UID or a query aimed at a datasource this host does not provision
   # fails the deploy instead of rendering an empty panel. Deriving the list from
   # the providers keeps the asserted set identical to the provisioned one.
+  # Each provider path is the directory dashboardProviderPath builds, so the
+  # dashboard file inside it is named after the provider.
   grafanaDashboards =
     map (provider: {
       inherit (provider) name;
-      json = builtins.fromJSON (builtins.readFile provider.options.path);
+      json = builtins.fromJSON (builtins.readFile "${provider.options.path}/${provider.name}.json");
     })
     config.services.grafana.provision.dashboards.settings.providers;
 
@@ -983,6 +996,10 @@ in {
           admin_password = "$__env{GF_SECURITY_ADMIN_PASSWORD}";
           secret_key = "$__file{${config.sops.secrets."grafana/secret-key".path}}";
         };
+        # Alerting runs in Prometheus and Alertmanager. Grafana's unified
+        # alerting still evaluated the rules left in its database and logged
+        # scheduler errors on start-up, so the subsystem stays off.
+        unified_alerting.enabled = false;
         # Grafana 13.3.0's search manifest watcher logs a zero-manifest warning
         # pair on every poll on installs that publish no app manifests, which
         # is a normal state here; upstream grafana/grafana#137058 fixed the
@@ -1039,7 +1056,7 @@ in {
               name = "fritz";
               type = "file";
               disableDeletion = true;
-              options.path = ./fritz-dashboard.json;
+              options.path = dashboardProviderPath "fritz" ./fritz-dashboard.json;
             }
             {
               # Per-host vitals health and the current comin deployment status.
@@ -1048,7 +1065,7 @@ in {
               name = "config-health";
               type = "file";
               disableDeletion = true;
-              options.path = ./config-health-dashboard.json;
+              options.path = dashboardProviderPath "config-health" ./config-health-dashboard.json;
             }
             {
               # Wall power at the plugs plus the CPU/GPU series that attribute
@@ -1057,7 +1074,7 @@ in {
               name = "power";
               type = "file";
               disableDeletion = true;
-              options.path = ./power-dashboard.json;
+              options.path = dashboardProviderPath "power" ./power-dashboard.json;
             }
           ]
           # Journald logs shipped by Alloy and stored in Loki (logging.nix).
@@ -1068,7 +1085,7 @@ in {
               name = "logs";
               type = "file";
               disableDeletion = true;
-              options.path = ./logs-dashboard.json;
+              options.path = dashboardProviderPath "logs" ./logs-dashboard.json;
             }
           ]
           ++ lib.optionals hl.garmin.enable [
@@ -1076,7 +1093,7 @@ in {
               name = "garmin";
               type = "file";
               disableDeletion = true;
-              options.path = ./garmin-dashboard.json;
+              options.path = dashboardProviderPath "garmin" ./garmin-dashboard.json;
             }
           ];
       };
