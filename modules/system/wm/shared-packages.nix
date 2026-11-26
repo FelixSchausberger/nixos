@@ -1,5 +1,5 @@
 # Shared system packages for Wayland window managers
-# Common packages used by both Hyprland and Niri
+# Common packages used by the Wayland window manager modules
 {pkgs, ...}: {
   environment.systemPackages = with pkgs; [
     # Core Wayland infrastructure

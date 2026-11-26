@@ -338,8 +338,8 @@ in {
             message = "modules.system.homelab.backup.syncoidCommands.${name} targets '${cmd.target}', which has no sanoidDatasets entry; the replica would accrete snapshots without bound";
           })
           cfg.syncoidCommands
-          # The static half of the route metrics: the expected routes, their max
-          # age and when each was first configured. A fresh route gets a 24h grace
+          # Each route's stamp is attached to the unit it names, so that unit
+          # must exist.
           ++ lib.mapAttrsToList (name: route: {
             assertion = builtins.hasAttr route.unit config.systemd.services;
             message = "modules.system.homelab.backup.status.routes.${name} references systemd service '${route.unit}', which is not defined";

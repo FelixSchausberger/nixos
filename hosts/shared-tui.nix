@@ -17,6 +17,6 @@
       enable32Bit = false;
     };
 
-    # Sops configuration and tmpfiles are now centralized in sops-common.nix
+    # Sops configuration and tmpfiles live in ../modules/system/sops-common.nix.
   };
 }

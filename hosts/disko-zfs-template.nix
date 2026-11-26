@@ -2,7 +2,6 @@
 #
 # Parameterized template for ZFS-based systems used by:
 # - desktop (16GB swap, /dev/disk/by-id/changeme)
-# - surface (shelf config, 8GB swap)
 # - hp-probook-vmware (shelf config, 8GB swap, /dev/sda)
 #
 # Defines disk layout with:
