@@ -184,5 +184,12 @@ in {
   prometheus_port = config.modules.system.homelab.monitoring.prometheusPort;
   adguard_port = config.modules.system.homelab.adguardhome.port;
 
+  # Navidrome warns about and ignores unknown options, so the scan schedule has
+  # to use the current nested name and the removed top-level keys must be gone.
+  navidrome_scan_schedule = config.services.navidrome.settings.Scanner.Schedule;
+  navidrome_removed_options_absent =
+    !(config.services.navidrome.settings ? ScanSchedule)
+    && !(config.services.navidrome.settings ? DefaultTranscodingBitrate);
+
   homepage_cards = renderCards "" config.services.homepage-dashboard.services;
 }
