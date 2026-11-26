@@ -9,6 +9,9 @@
   defaults = inputs.self.lib.defaults;
   user = defaults.system.user;
 
+  # Unset until the Syncthing-Fork app is paired (see the option description).
+  hasPhoneDeviceId = cfg.phoneDeviceId != null;
+
   # The ignore list is a per-device artifact: the file sits in the synced
   # folder root and is never propagated to other devices
   # (https://docs.syncthing.net/users/ignoring.html), so Nix owns it as a
@@ -92,7 +95,7 @@ in {
       configDir = "${defaults.paths.homeDir}/.config/syncthing";
 
       settings = {
-        devices = lib.optionalAttrs (cfg.phoneDeviceId != null) {
+        devices = lib.optionalAttrs hasPhoneDeviceId {
           phone = {
             id = cfg.phoneDeviceId;
             addresses = [cfg.phoneAddress];
@@ -107,10 +110,10 @@ in {
               label = "Obsidian vault";
               path = defaults.paths.obsidianVault;
               type = "sendreceive";
-              devices = lib.optionals (cfg.phoneDeviceId != null) ["phone"];
+              devices = lib.optionals hasPhoneDeviceId ["phone"];
             };
           }
-          // lib.optionalAttrs (cfg.whatsapp.enable && cfg.phoneDeviceId != null) {
+          // lib.optionalAttrs (cfg.whatsapp.enable && hasPhoneDeviceId) {
             "whatsapp-backups" = {
               label = "WhatsApp local backups";
               path = cfg.whatsapp.path;

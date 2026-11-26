@@ -214,7 +214,9 @@ in {
           # systemd-pstore moves during boot; a Persistent timer's boot
           # catchup can otherwise start before that move completes.
           after = ["systemd-pstore.service"];
-          script = ''
+          script = let
+            alerts = config.modules.system.maintenance.monitoring.alerts;
+          in ''
             set -eu
 
             # Service PATH lacks hostname(1) (nettools), so resolve the host
@@ -226,7 +228,7 @@ in {
             # because the topic name is password-equivalent) is published to
             # only when the local publish fails - a full pool kills the local
             # ntfy exactly when disk alerts matter most.
-            ${lib.optionalString config.modules.system.maintenance.monitoring.alerts
+            ${lib.optionalString alerts
               ((import ../../lib/ntfy-send.nix {inherit pkgs lib;}) {
                 primary = config.modules.system.maintenance.monitoring.ntfyUrl;
                 secondaryFile = config.modules.system.maintenance.monitoring.secondaryNtfyUrlFile;
@@ -257,7 +259,7 @@ in {
                 : > $stamp_dir/armed
               elif [[ ! -f $stamp_dir/clean-shutdown ]]; then
                 echo "WARNING: previous boot ended without a clean shutdown (crash, watchdog reset, or power loss)"
-                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+                ${lib.optionalString alerts ''
                             # Attach the panic evidence the pstore backend captured (the
                             # ramoops region on hosts that configure one; systemd-pstore
                             # moves the records into /var/lib/systemd/pstore at boot): the
@@ -345,7 +347,7 @@ in {
                 if [[ $rearmed -eq 1 ]]; then
                   echo "Timer $unit rearmed automatically"
                 fi
-                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+                ${lib.optionalString alerts ''
               if [[ $rearmed -eq 0 ]]; then
                 ntfy_send "Timer Disarmed on $host" "high" "warning" "$unit has no scheduled elapse and automatic rearm failed. Run: sudo systemctl restart $unit"
               fi
@@ -444,7 +446,7 @@ in {
             fi
             if [[ $kernel_dirty -eq 1 || $params_dirty -eq 1 ]]; then
               echo "WARNING: kernel update deployed but not booted (reboot pending)"
-              ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+              ${lib.optionalString alerts ''
               if [[ ! -f /run/reboot-pending-notified ]]; then
                 : > /run/reboot-pending-notified
                 ntfy_send "Reboot Pending on $host" "default" "warning" "Kernel or kernel-params change deployed but not booted. Run: sudo reboot"
@@ -463,7 +465,7 @@ in {
               if [[ -n "$zpool_status" && "$zpool_status" != "all pools are healthy" ]]; then
                 echo "WARNING: ZFS pool health issues detected:"
                 echo "$zpool_status"
-                ${lib.optionalString config.modules.system.maintenance.monitoring.alerts ''
+                ${lib.optionalString alerts ''
               ntfy_send "ZFS Pool Issue on $host" "urgent" "warning" "$zpool_status"
             ''}
               fi
@@ -566,8 +568,9 @@ in {
           after = ["multi-user.target"];
           wants = ["multi-user.target"];
           script = let
-            list = config.modules.system.maintenance.deferredRestarts.services;
+            restartServices = config.modules.system.maintenance.deferredRestarts.services;
             sanity = config.modules.system.maintenance.deferredRestarts.networkSanity;
+            ntfyUrl = config.modules.system.maintenance.monitoring.ntfyUrl;
           in ''
             set -euo pipefail
             echo "=== maintenance window started at $(date) ==="
@@ -580,10 +583,10 @@ in {
               ${pkgs.curl}/bin/curl -s -o /dev/null \
                 -H "Title: network-maintenance rollback" -H "Priority: urgent" -H "Tags: warning,cd" \
                 -d "network config rolled back to booted generation after failed networkd restart" \
-                "${config.modules.system.maintenance.monitoring.ntfyUrl}" || true
+                "${ntfyUrl}" || true
             }
 
-            list=(${lib.concatStringsSep " " list})
+            list=(${lib.concatStringsSep " " restartServices})
             networkd_ok=1
 
             if [[ " ''${list[*]} " == *" systemd-networkd "* ]]; then
@@ -596,29 +599,27 @@ in {
                 ${pkgs.curl}/bin/curl -s -o /dev/null \
                   -H "Title: network-maintenance blocked" -H "Priority: urgent" -H "Tags: warning,cd" \
                   -d "networkd restart aborted: $cfg missing static IP/gateway" \
-                  "${config.modules.system.maintenance.monitoring.ntfyUrl}" || true
+                  "${ntfyUrl}" || true
                 networkd_ok=0
-              else
-                if ${pkgs.systemd}/bin/systemctl restart systemd-networkd; then
-                  ok=0
-                  for _ in $(seq 1 40); do
-                    if ${pkgs.iproute2}/bin/ip -4 addr show "${sanity.interface}" 2>/dev/null | grep -q "${sanity.address}" \
-                      && ${pkgs.iputils}/bin/ping -c1 -W1 "${sanity.gateway}" >/dev/null 2>&1; then
-                      ok=1
-                      break
-                    fi
-                    sleep 1
-                  done
-                  if [[ $ok -eq 0 ]]; then
-                    echo "WARN: networkd restarted but ${sanity.interface} did not regain ${sanity.address}; rolling back network config" >&2
-                    rollback_network_config
-                    networkd_ok=0
+              elif ${pkgs.systemd}/bin/systemctl restart systemd-networkd; then
+                ok=0
+                for _ in $(seq 1 40); do
+                  if ${pkgs.iproute2}/bin/ip -4 addr show "${sanity.interface}" 2>/dev/null | grep -q "${sanity.address}" \
+                    && ${pkgs.iputils}/bin/ping -c1 -W1 "${sanity.gateway}" >/dev/null 2>&1; then
+                    ok=1
+                    break
                   fi
-                else
-                  echo "WARN: systemd-networkd failed to restart; rolling back network config" >&2
+                  sleep 1
+                done
+                if [[ $ok -eq 0 ]]; then
+                  echo "WARN: networkd restarted but ${sanity.interface} did not regain ${sanity.address}; rolling back network config" >&2
                   rollback_network_config
                   networkd_ok=0
                 fi
+              else
+                echo "WARN: systemd-networkd failed to restart; rolling back network config" >&2
+                rollback_network_config
+                networkd_ok=0
               fi
             ''}
               ${lib.optionalString (sanity == null) ''

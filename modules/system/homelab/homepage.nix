@@ -232,7 +232,7 @@
   # incident), so its card simply goes quiet when the PC sleeps.
   #
   # Remote wake for the gaming PC lives on the router, not here: Fritz!Box
-  # Heimnetz → computer → "Computer starten" (or MyFRITZ!App when off-LAN). The
+  # Heimnetz → computer → "Computer starten" (or MyFRITZ!App when off-LAN).
   # The Moonlight app handles wake + presence on the LAN itself.
   # The Fritz!Box card under Router links there.
   #
@@ -675,12 +675,12 @@
           icon = "ntfy.png";
           href = "http://192.168.178.2:${toString ntfyPort}";
           description = "Push Notifications";
-          siteMonitor = "http://127.0.0.1:${toString ntfyPort}";
+          siteMonitor = local ntfyPort;
           # auth-default-access is read-write, so the topic needs no
           # credentials for the widget to read the latest alert.
           widget = {
             type = "ntfy";
-            url = "http://127.0.0.1:${toString ntfyPort}";
+            url = local ntfyPort;
             topic = "homelab-alerts";
           };
         };
@@ -914,7 +914,7 @@
         widgets = [
           {
             type = "customapi";
-            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/job";
+            url = "${local hl.octoprint.port}/api/job";
             refreshInterval = 15000;
             headers = {
               "X-Api-Key" = "{{HOMEPAGE_VAR_OCTOPRINT_API_KEY}}";
@@ -936,7 +936,7 @@
           }
           {
             type = "customapi";
-            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/connection";
+            url = "${local hl.octoprint.port}/api/connection";
             refreshInterval = 15000;
             headers = {
               "X-Api-Key" = "{{HOMEPAGE_VAR_OCTOPRINT_API_KEY}}";
@@ -950,7 +950,7 @@
           }
           {
             type = "customapi";
-            url = "http://127.0.0.1:${toString hl.octoprint.port}/api/printer";
+            url = "${local hl.octoprint.port}/api/printer";
             refreshInterval = 15000;
             headers = {
               "X-Api-Key" = "{{HOMEPAGE_VAR_OCTOPRINT_API_KEY}}";

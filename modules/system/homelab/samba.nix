@@ -6,6 +6,7 @@
   ...
 }: let
   inherit (inputs.self.lib) defaults;
+  cfg = config.modules.system.homelab.samba;
 in {
   options.modules.system.homelab.samba = {
     enable = lib.mkEnableOption "Samba SMB/CIFS file sharing";
@@ -16,7 +17,7 @@ in {
     };
   };
 
-  config = lib.mkIf config.modules.system.homelab.samba.enable {
+  config = lib.mkIf cfg.enable {
     services.samba = {
       enable = true;
       openFirewall = true;
@@ -50,7 +51,7 @@ in {
           "hide unreadable" = "yes";
         };
         data = {
-          "path" = config.modules.system.homelab.samba.dataPath;
+          "path" = cfg.dataPath;
           "browseable" = "yes";
           "read only" = "no";
           "guest ok" = "no";
@@ -96,33 +97,31 @@ in {
     users.groups.sambashare = {};
     users.users.${defaults.system.user}.extraGroups = ["sambashare"];
 
-    systemd.tmpfiles.rules = let
-      inherit (config.modules.system.homelab.samba) dataPath;
-    in [
-      "d ${dataPath} 0775 root sambashare -"
+    systemd.tmpfiles.rules = [
+      "d ${cfg.dataPath} 0775 root sambashare -"
       # Allow sambashare group full access + default ACL for new files
-      "a+ ${dataPath} - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${cfg.dataPath} - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # Same ACLs on the Obsidian vault and Documents (Nextcloud-exposed dirs)
       # The vault is Nextcloud's external-storage target: point of write
       # policy is the DAV protocol, so SMB keeps it read-only (every SMB
       # write would bypass the etag machinery and surface as a blocked
       # client sync later).
-      "a+ ${dataPath}/notes - - - - g:sambashare:rx,d:g:sambashare:rx"
-      "a+ ${dataPath}/documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${cfg.dataPath}/notes - - - - g:sambashare:rx,d:g:sambashare:rx"
+      "a+ ${cfg.dataPath}/documents - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # projects root: own group gets full access, nextcloud only traverse
       # (x) so the projects/cad mount is reachable without exposing sibling
       # project dirs. projects/cad and inbox are nextcloud external-storage
       # mounts: default ACL keeps nextcloud-created files SMB-accessible
-      "d ${dataPath}/inbox 0775 schausberger users -"
-      "a+ ${dataPath}/projects - - - - g:sambashare:rwx,d:g:sambashare:rwx,u:nextcloud:x,d:u:nextcloud:x"
-      "a+ ${dataPath}/projects/cad - - - - g:sambashare:rwx,d:g:sambashare:rwx"
-      "a+ ${dataPath}/inbox - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "d ${cfg.dataPath}/inbox 0775 schausberger users -"
+      "a+ ${cfg.dataPath}/projects - - - - g:sambashare:rwx,d:g:sambashare:rwx,u:nextcloud:x,d:u:nextcloud:x"
+      "a+ ${cfg.dataPath}/projects/cad - - - - g:sambashare:rwx,d:g:sambashare:rwx"
+      "a+ ${cfg.dataPath}/inbox - - - - g:sambashare:rwx,d:g:sambashare:rwx"
       # backups is SMB-only (no Nextcloud mount) and collects device and
       # service dumps, so it stays closed to other local users while the
       # share group keeps access. The default ACL closes children created
       # outside Samba (an agent's umask would otherwise make them 0755).
-      "d ${dataPath}/backups 0750 ${defaults.system.user} sambashare -"
-      "a+ ${dataPath}/backups - - - - d:u::rwx,d:g::rwx,d:o::---"
+      "d ${cfg.dataPath}/backups 0750 ${defaults.system.user} sambashare -"
+      "a+ ${cfg.dataPath}/backups - - - - d:u::rwx,d:g::rwx,d:o::---"
     ];
 
     environment.persistence."/per".directories = [

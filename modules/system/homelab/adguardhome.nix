@@ -4,7 +4,10 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  cfg = config.modules.system.homelab.adguardhome;
+  hl = config.modules.system.homelab;
+in {
   options.modules.system.homelab.adguardhome = {
     enable = lib.mkEnableOption "AdGuard Home DNS ad-blocker";
     port = lib.mkOption {
@@ -24,17 +27,17 @@
     };
   };
 
-  config = lib.mkIf config.modules.system.homelab.adguardhome.enable {
+  config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = config.modules.system.homelab.adguardhome.port != 53;
+        assertion = cfg.port != 53;
         message = "AdGuard Home admin UI port must not be 53 (reserved for DNS service)";
       }
       {
         assertion =
-          !config.modules.system.homelab.monitoring.enable
-          || config.modules.system.homelab.adguardhome.port
-          != config.modules.system.homelab.monitoring.grafanaPort;
+          !hl.monitoring.enable
+          || cfg.port
+          != hl.monitoring.grafanaPort;
         message = "AdGuard Home admin UI port must differ from Grafana port when monitoring is enabled";
       }
     ];
@@ -53,11 +56,11 @@
 
     services.adguardhome = {
       enable = true;
-      inherit (config.modules.system.homelab.adguardhome) openFirewall;
+      inherit (cfg) openFirewall;
       settings = {
         # Admin UI port — bound to loopback. The Caddy /adguard route and the
         # exporter both connect through 127.0.0.1; the LAN reaches DNS only.
-        http.address = "127.0.0.1:${toString config.modules.system.homelab.adguardhome.port}";
+        http.address = "127.0.0.1:${toString cfg.port}";
         dns = {
           # Quad9 is reached over DoT: its DoH endpoint intermittently closes
           # HTTP connections with "unexpected EOF" (AdGuardHome#8311), while
@@ -278,10 +281,10 @@
     };
     sops.templates."adguard-exporter-env" = {
       content = ''
-        ADGUARD_SERVERS=http://127.0.0.1:${toString config.modules.system.homelab.adguardhome.port}
+        ADGUARD_SERVERS=http://127.0.0.1:${toString cfg.port}
         ADGUARD_USERNAMES=admin
         ADGUARD_PASSWORDS=${config.sops.placeholder."adguard/password"}
-        PORT=${toString config.modules.system.homelab.adguardhome.exporterPort}
+        PORT=${toString cfg.exporterPort}
         INTERVAL=30s
       '';
       owner = "adguard-exporter";

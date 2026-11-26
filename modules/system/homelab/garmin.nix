@@ -12,7 +12,7 @@
   # Local InfluxQL endpoint of the GarminStats database. InfluxDB v1 HTTP
   # accepts the database name as a query parameter, so the datasource needs
   # no database-scoped credentials.
-  influxUrl = "http://127.0.0.1:${toString hl.garmin.influxPort}";
+  influxUrl = "http://127.0.0.1:${toString cfg.influxPort}";
   # Fetcher environment. Credentials are interpolated from sops placeholders
   # into a root-owned EnvironmentFile (0640, group garmin-fetch), following
   # the grafana-env template pattern in monitoring.nix. The upstream script
@@ -245,7 +245,7 @@ in {
     #     -p Environment=TOKEN_DIR=/var/lib/garmin-fetch/garminconnect-tokens \
     #     -p Environment=MANUAL_START_DATE=$(date +%F) \
     #     ${lib.getExe garmin-grafana}
-    environment.systemPackages = lib.mkIf config.modules.system.homelab.monitoring.enable [
+    environment.systemPackages = lib.mkIf hl.monitoring.enable [
       (pkgs.writeShellApplication {
         name = "garmin-login";
         runtimeInputs = with pkgs; [coreutils systemd];

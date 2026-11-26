@@ -69,7 +69,7 @@
 
   hasWallPlugs = cfg.wallPower.plugs != {};
 
-  smartHome = config.modules.system.homelab.smartHome;
+  inherit (hl) smartHome;
   # Zigbee probes exist only with a configured coordinator URL; the TCP probe
   # derives its target from it and the frontend probe from frontendPort.
   smartHomeProbes = smartHome.enable && smartHome.coordinatorUrl != null;
@@ -115,27 +115,27 @@
   fsAvail = "node_filesystem_avail_bytes{${fsFstype}}";
 
   alertRuleGroups =
-    (lib.optionals config.modules.system.homelab.nextcloud.enable [
+    (lib.optionals hl.nextcloud.enable [
       (mkRule "NextcloudDown" "urgent" "Nextcloud is down"
         "Nextcloud is not answering HTTP health probes ({{ $labels.instance }})"
         ''probe_success{job="blackbox",app="nextcloud"} == 0'')
     ])
-    ++ (lib.optionals config.modules.system.homelab.immich.enable [
+    ++ (lib.optionals hl.immich.enable [
       (mkRule "ImmichDown" "urgent" "Immich is down"
         "Immich is not answering HTTP health probes ({{ $labels.instance }})"
         ''probe_success{job="blackbox",app="immich"} == 0'')
     ])
-    ++ (lib.optionals config.modules.system.homelab.jellyfin.enable [
+    ++ (lib.optionals hl.jellyfin.enable [
       (mkRule "JellyfinDown" "urgent" "Jellyfin is down"
         "Jellyfin is not answering HTTP health probes ({{ $labels.instance }})"
         ''probe_success{job="blackbox",app="jellyfin"} == 0'')
     ])
-    ++ (lib.optionals config.modules.system.homelab.navidrome.enable [
+    ++ (lib.optionals hl.navidrome.enable [
       (mkRule "NavidromeDown" "urgent" "Navidrome is down"
         "Navidrome is not answering HTTP health probes ({{ $labels.instance }})"
         ''probe_success{job="blackbox",app="navidrome"} == 0'')
     ])
-    ++ (lib.optionals config.modules.system.homelab.vaultwarden.enable [
+    ++ (lib.optionals hl.vaultwarden.enable [
       (mkRule "VaultwardenDown" "urgent" "Vaultwarden is down"
         "Vaultwarden is not answering HTTP health probes ({{ $labels.instance }})"
         ''probe_success{job="blackbox",app="vaultwarden"} == 0'')
@@ -148,7 +148,7 @@
         "The SLZB coordinator is not accepting serial connections ({{ $labels.instance }}); if its Coordinator mode is USB, switch it back to LAN, otherwise reseat its cable"
         ''probe_success{job="blackbox-zigbee"} == 0'')
     ])
-    ++ (lib.optionals config.modules.system.homelab.adguardhome.enable [
+    ++ (lib.optionals hl.adguardhome.enable [
       (mkRule "AdGuardDown" "urgent" "AdGuard Home DNS is down"
         "AdGuard Home is not responding"
         ''up{job="adguard"} == 0 or adguard_running == 0'')
@@ -156,7 +156,7 @@
         "AdGuard Home is not resolving queries; LAN name resolution is failing"
         ''probe_success{job="blackbox-dns"} == 0'')
     ])
-    ++ (lib.optionals config.modules.system.homelab.backup.enable [
+    ++ (lib.optionals hl.backup.enable [
       (mkRule "BackupFailed" "high" "A backup job failed"
         "A ZFS snapshot or replication job (sanoid/syncoid) ended in failed state; backups are incomplete until fixed"
         ''node_systemd_unit_state{name=~".*(sanoid|syncoid).*[.]service",state="failed"} == 1'')
@@ -279,7 +279,7 @@
         "The tracker index is {{ $value | humanizeDuration }} old; the weekly refresh has been failing"
         ''nixpkgs_vulnerabilities_tracker_age_seconds > 14 * 86400'')
     ]
-    ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
+    ++ lib.optionals hl.nextcloud.enable [
       (mkRule "PostgresDown" "high" "PostgreSQL exporter is unreachable"
         "PostgreSQL exporter is unreachable"
         ''up{job="postgres"} == 0'')
@@ -380,7 +380,7 @@
   elementRefs = node:
     if builtins.isAttrs node
     then
-      lib.optionals (node.kind or null == "ElementReference") [node.name or ""]
+      lib.optionals ((node.kind or null) == "ElementReference") [node.name or ""]
       ++ lib.concatLists (map elementRefs (builtins.attrValues node))
     else if builtins.isList node
     then lib.concatLists (map elementRefs node)
@@ -525,8 +525,8 @@ in {
         }
         {
           assertion =
-            !config.modules.system.homelab.adguardhome.enable
-            || cfg.grafanaPort != config.modules.system.homelab.adguardhome.port;
+            !hl.adguardhome.enable
+            || cfg.grafanaPort != hl.adguardhome.port;
           message = "When AdGuard Home is enabled, Grafana port must differ from AdGuard admin port";
         }
         {
@@ -607,13 +607,8 @@ in {
       };
 
       scrapeConfigs = let
-        hasAppTargets =
-          config.modules.system.homelab.immich.enable
-          || config.modules.system.homelab.nextcloud.enable
-          || config.modules.system.homelab.jellyfin.enable
-          || config.modules.system.homelab.navidrome.enable
-          || config.modules.system.homelab.vaultwarden.enable
-          || smartHomeProbes;
+        # Derived from the probes below so the job gate cannot drift from them.
+        hasAppTargets = blackboxProbes != [];
         # One static_config per service so each probe carries an "app" label:
         # the relabeling below sets instance to the probed URL, which contains
         # no service name, so alert rules must select by label instead of
@@ -624,21 +619,21 @@ in {
         # also serves app metrics on a dedicated port, not /metrics on this
         # one — the HTTP probe is the only Immich signal scraped here.)
         blackboxProbes =
-          lib.optionals config.modules.system.homelab.immich.enable [
+          lib.optionals hl.immich.enable [
             {
-              targets = ["http://127.0.0.1:${toString config.modules.system.homelab.immich.port}/api/server/ping"];
+              targets = ["http://127.0.0.1:${toString hl.immich.port}/api/server/ping"];
               labels.app = "immich";
               labels.host = localHost;
             }
           ]
-          ++ lib.optionals config.modules.system.homelab.nextcloud.enable [
+          ++ lib.optionals hl.nextcloud.enable [
             {
-              targets = ["http://127.0.0.1:${toString config.modules.system.homelab.nextcloud.port}/status.php"];
+              targets = ["http://127.0.0.1:${toString hl.nextcloud.port}/status.php"];
               labels.app = "nextcloud";
               labels.host = localHost;
             }
           ]
-          ++ lib.optionals config.modules.system.homelab.jellyfin.enable [
+          ++ lib.optionals hl.jellyfin.enable [
             {
               # /health returns 200 once the server is up, independent of auth.
               targets = ["http://127.0.0.1:8096/health"];
@@ -646,7 +641,7 @@ in {
               labels.host = localHost;
             }
           ]
-          ++ lib.optionals config.modules.system.homelab.navidrome.enable [
+          ++ lib.optionals hl.navidrome.enable [
             {
               # Probe the prefixed SPA path, not the Subsonic API: navidrome
               # answers /rest/ping.view with HTTP 200 but logs a warning for
@@ -656,13 +651,13 @@ in {
               # BaseURL unset this path 302s into the root SPA and the probe
               # fails, which is the outage the phone sees.
               targets = [
-                "http://127.0.0.1:${toString config.modules.system.homelab.navidrome.port}/navidrome/app/"
+                "http://127.0.0.1:${toString hl.navidrome.port}/navidrome/app/"
               ];
               labels.app = "navidrome";
               labels.host = localHost;
             }
           ]
-          ++ lib.optionals config.modules.system.homelab.vaultwarden.enable [
+          ++ lib.optionals hl.vaultwarden.enable [
             {
               # /alive is the unauthenticated liveness endpoint; probed on the
               # Rocket loopback port, not through the Tailscale Serve front.
@@ -800,13 +795,13 @@ in {
             ];
           }
         ]
-        ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
+        ++ lib.optionals hl.adguardhome.enable [
           {
             job_name = "adguard";
             scrape_interval = "60s";
             static_configs = [
               {
-                targets = ["127.0.0.1:${toString config.modules.system.homelab.adguardhome.exporterPort}"];
+                targets = ["127.0.0.1:${toString hl.adguardhome.exporterPort}"];
                 labels.host = localHost;
               }
             ];
@@ -823,7 +818,7 @@ in {
             relabel_configs = proberRelabel 9115;
           }
         ]
-        ++ lib.optionals config.modules.system.homelab.adguardhome.enable [
+        ++ lib.optionals hl.adguardhome.enable [
           {
             job_name = "blackbox-dns";
             scrape_interval = "30s";
@@ -936,7 +931,7 @@ in {
 
     # Postgres is only deployed as Nextcloud's database backend; scrape the
     # exporter (and alert on it) only when that stack exists.
-    services.prometheus.exporters.postgres = mkIf config.modules.system.homelab.nextcloud.enable {
+    services.prometheus.exporters.postgres = mkIf hl.nextcloud.enable {
       enable = true;
       runAsLocalSuperUser = true;
     };
@@ -979,8 +974,8 @@ in {
           # Sub-path serving mirrors the Caddy route: Grafana mounts its app at
           # /grafana and the tailnet URL is canonical for redirects and assets.
           # Without the proxy route Grafana keeps serving from the root path.
-          // lib.optionalAttrs (config.modules.system.homelab.caddyProxy.enable && config.modules.system.homelab.caddyProxy.grafana) {
-            root_url = "https://${config.modules.system.homelab.caddyProxy.tailnetDomain}/grafana";
+          // lib.optionalAttrs (hl.caddyProxy.enable && hl.caddyProxy.grafana) {
+            root_url = "https://${hl.caddyProxy.tailnetDomain}/grafana";
             serve_from_sub_path = true;
           };
         security = {
@@ -1018,12 +1013,12 @@ in {
           ]
           # Garmin health metrics (InfluxDB 1.x, InfluxQL). Only present when
           # the garmin module is enabled; uid matches the dashboard JSON.
-          ++ lib.optionals config.modules.system.homelab.garmin.enable [
+          ++ lib.optionals hl.garmin.enable [
             {
               name = "Garmin-InfluxDB";
               type = "influxdb";
               uid = "garmin_influxdb";
-              url = "http://127.0.0.1:${toString config.modules.system.homelab.garmin.influxPort}";
+              url = "http://127.0.0.1:${toString hl.garmin.influxPort}";
               isDefault = false;
               # Top-level user (v1 datasource model), same account garmin.nix
               # creates with CREATE USER. Without it Grafana sends only the
@@ -1076,7 +1071,7 @@ in {
               options.path = ./logs-dashboard.json;
             }
           ]
-          ++ lib.optionals config.modules.system.homelab.garmin.enable [
+          ++ lib.optionals hl.garmin.enable [
             {
               name = "garmin";
               type = "file";
@@ -1196,11 +1191,11 @@ in {
       // lib.optionalAttrs cfg.fritzbox.enable {
         "fritzbox/password".owner = "fritz-exporter";
       }
-      // lib.optionalAttrs config.modules.system.homelab.garmin.enable {
+      // lib.optionalAttrs hl.garmin.enable {
         # Grafana reads the InfluxDB user password via $__file{}.
         "garmin/influx-user-password".owner = "grafana";
       }
-      // lib.optionalAttrs config.modules.system.homelab.garmin.calendar.enable {
+      // lib.optionalAttrs hl.garmin.calendar.enable {
         # Bearer token the calendar-sync script uses against the annotation API.
         "grafana/calendar-annotation-token".owner = "garmin-fetch";
       };

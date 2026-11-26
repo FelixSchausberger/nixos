@@ -9,6 +9,9 @@
 
   # Pool backing a syncoid endpoint dataset (first path component).
   poolOf = dataset: lib.head (lib.splitString "/" dataset);
+
+  # Generated zfs-import unit for a pool.
+  importUnitFor = pool: "zfs-import-${pool}.service";
 in {
   options.modules.system.homelab.backup = {
     enable = lib.mkEnableOption "Backup configuration (sanoid snapshots + syncoid replication)";
@@ -156,7 +159,7 @@ in {
     # pool (the USB backup pool) is invisible until something triggers the
     # import. Pull the import units in like the syncoid services do; Wants
     # keeps hosts whose pools have no generated import unit working.
-    sanoidImportUnits = map (pool: "zfs-import-${pool}.service") (
+    sanoidImportUnits = map importUnitFor (
       lib.unique (map poolOf (lib.attrNames cfg.sanoidDatasets))
     );
 
@@ -217,17 +220,20 @@ in {
           # is a nixpkgs sanoid module option, not a sanoid config key.
           datasets =
             lib.mapAttrs (
-              _: ds: (lib.filterAttrs (_: v: v != null) {
-                inherit (ds) hourly daily weekly monthly yearly recursive;
-                frequently =
-                  if ds.frequently == 0
-                  then null
-                  else ds.frequently;
-                frequent_period =
-                  if ds.frequently == 0
-                  then null
-                  else ds.frequentPeriod;
-              })
+              _: ds: let
+                frequentEnabled = ds.frequently != 0;
+              in
+                lib.filterAttrs (_: v: v != null) {
+                  inherit (ds) hourly daily weekly monthly yearly recursive;
+                  frequently =
+                    if frequentEnabled
+                    then ds.frequently
+                    else null;
+                  frequent_period =
+                    if frequentEnabled
+                    then ds.frequentPeriod
+                    else null;
+                }
             )
             cfg.sanoidDatasets;
         };
@@ -261,7 +267,7 @@ in {
           lib.mapAttrs' (
             name: cmd: let
               pools = lib.unique [(poolOf cmd.source) (poolOf cmd.target)];
-              importUnits = map (pool: "zfs-import-${pool}.service") pools;
+              importUnits = map importUnitFor pools;
             in
               lib.nameValuePair "syncoid-${name}" {
                 # Pools whose filesystems are all `noauto` import only on first
@@ -374,24 +380,27 @@ in {
                 mkdir -p "$state"
                 tmp="$dir/.backup-routes.$$"
                 : >"$tmp"
-                ${lib.concatStrings (lib.mapAttrsToList (name: route: ''
+                ${lib.concatStrings (lib.mapAttrsToList (name: route: let
+                    routeArg = lib.escapeShellArg name;
+                    descriptionArg = lib.escapeShellArg (promLabel route.description);
+                    gracePeriod =
+                      if route.firstRunGrace == null
+                      then route.maxAge
+                      else route.firstRunGrace;
+                  in ''
                     first="$state/${name}.first-seen"
                     [ -s "$first" ] || date +%s >"$first"
                     printf 'backup_route_expected{route="%s",description="%s"} 1\n' \
-                      ${lib.escapeShellArg name} ${lib.escapeShellArg (promLabel route.description)} >>"$tmp"
+                      ${routeArg} ${descriptionArg} >>"$tmp"
                     printf 'backup_max_age_seconds{route="%s",description="%s"} %s\n' \
-                      ${lib.escapeShellArg name} ${lib.escapeShellArg (promLabel route.description)} ${toString (toSeconds route.maxAge)} >>"$tmp"
+                      ${routeArg} ${descriptionArg} ${toString (toSeconds route.maxAge)} >>"$tmp"
                     # First-run grace: never alarm a fresh route before its
                     # first expected window, and never sooner than a day (the
                     # hourly routes would otherwise page within three hours).
                     printf 'backup_first_run_grace_seconds{route="%s",description="%s"} %s\n' \
-                      ${lib.escapeShellArg name} ${lib.escapeShellArg (promLabel route.description)} ${toString (lib.max 86400 (toSeconds (
-                      if route.firstRunGrace == null
-                      then route.maxAge
-                      else route.firstRunGrace
-                    )))} >>"$tmp"
+                      ${routeArg} ${descriptionArg} ${toString (lib.max 86400 (toSeconds gracePeriod))} >>"$tmp"
                     printf 'backup_route_first_seen_timestamp_seconds{route="%s",description="%s"} %s\n' \
-                      ${lib.escapeShellArg name} ${lib.escapeShellArg (promLabel route.description)} "$(cat "$first")" >>"$tmp"
+                      ${routeArg} ${descriptionArg} "$(cat "$first")" >>"$tmp"
                   '')
                   cfg.status.routes)}
                 mv "$tmp" "$dir/backup-routes.prom"
