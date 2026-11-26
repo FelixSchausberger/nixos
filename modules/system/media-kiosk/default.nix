@@ -15,6 +15,12 @@
 # Immich or Cinejoy; Kodi covers only Jellyfin; Homepage is read-only; Steam
 # would add a login and a global Steam Input desktop layout. No maintained tool
 # covers this flow set inside a shared niri session.
+#
+# The Games tile hands the game library to Nightjar, a controller-first
+# Moonlight client with its own SDL window: it renders the cover grid and keeps
+# VA-API decode in-process, so the kiosk does not reproduce a library UI in the
+# browser. The controller bridge is stopped for the duration because Nightjar
+# reads the pad through SDL3 itself and injected keys would double every press.
 {
   config,
   inputs,
@@ -69,6 +75,7 @@
       port = 47989;
       power = lib.getExe cfg.desktopPower;
       moonlight = lib.getExe cfg.moonlightPackage;
+      nightjar = lib.getExe cfg.nightjarPackage;
     };
     audio = {
       url = cfg.audioHubUrl;
@@ -76,6 +83,7 @@
     systemd = {
       systemctl = lib.getExe' pkgs.systemd "systemctl";
       inherit (cfg) browserUnit;
+      controller = "media-kiosk-controller.service";
     };
     niri = {
       bin = lib.getExe config.programs.niri.package;
@@ -153,6 +161,15 @@ in {
       type = lib.types.str;
       default = "Steam";
       description = "Moonshine application title started by the Steam stream tile";
+    };
+
+    nightjarPackage = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.callPackage ../../../pkgs/nightjar {};
+      description = ''
+        Nightjar package providing the controller-driven game library and
+        stream client the kiosk opens on the Games tile.
+      '';
     };
 
     cinejoyUrl = lib.mkOption {

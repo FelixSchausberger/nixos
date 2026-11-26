@@ -32,6 +32,13 @@
         open-fullscreen = true;
         open-focused = true;
       }
+      # Nightjar is the kiosk game library and stream client. SDL publishes
+      # its reverse-DNS application id as the Wayland app id.
+      {
+        matches = [{app-id = "^io\\.github\\.ramazankara\\.nightjar$";}];
+        open-fullscreen = true;
+        open-focused = true;
+      }
       # AirPlay (UxPlay) mirroring renders as a fullscreen overlay over the
       # desktop and disappears when mirroring stops. niri only displays the
       # focused fullscreen window, and a newly opened UxPlay window does not
