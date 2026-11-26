@@ -75,9 +75,29 @@
         expression = "^(?P<app_level>ERROR|WARNING|CRITICAL)\\b"
       }
     
-      // AdGuard Home: `2026/11/25 10:00:00 [error] ...`.
+      // AdGuard Home: `2026/11/25 10:00:00.123456 [error] ...`. The
+      // fractional seconds are always present in 0.107, so a class without
+      // the dot stops before the bracket and the level silently stays at
+      // journald's guess.
       stage.regex {
-        expression = "^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:]+ \\[(?P<app_level>error|warning|info|debug)\\]"
+        expression = "^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9:.]+ \\[(?P<app_level>error|warning|warn|info|debug)\\]"
+      }
+    
+      // Caddy writes structured JSON to stderr: `{"level":"error",...}`.
+      // Character classes keep the quotes out of the River string.
+      stage.regex {
+        expression = "[{,]\\s*[\"]level[\"]:[\"](?P<app_level>debug|info|warn|error|fatal)[\"]"
+      }
+    
+      // Home Assistant: `2026-11-25 13:53:56.751+01:00 ERROR (MainThread)`.
+      stage.regex {
+        expression = "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:.+]+ (?P<app_level>ERROR|WARNING|CRITICAL) [(]"
+      }
+    
+      // Immich (Nest) colourises the level: `[Nest] 123  - 11/25/2026, ...
+      // ERROR [Microservices]`. The scheduler id varies, so skip to the level.
+      stage.regex {
+        expression = "\\[Nest\\].*?(?P<app_level>ERROR|WARN|LOG|DEBUG|VERBOSE)\\b"
       }
     
       // `with .Value` keeps a non-matching line from acquiring an empty
