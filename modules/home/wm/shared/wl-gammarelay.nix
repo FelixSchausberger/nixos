@@ -7,7 +7,9 @@ sessionTarget: {
   config,
   pkgs,
   ...
-}: {
+}: let
+  wlGammarelayBin = "${pkgs.wl-gammarelay-rs}/bin/wl-gammarelay-rs";
+in {
   config = lib.mkIf (!(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"])) {
     # Provide package
     home.packages = with pkgs; [wl-gammarelay-rs];
@@ -23,7 +25,7 @@ sessionTarget: {
 
           Service = {
             Type = "simple";
-            ExecStart = "${pkgs.wl-gammarelay-rs}/bin/wl-gammarelay-rs run";
+            ExecStart = "${wlGammarelayBin} run";
             Restart = "on-failure";
             RestartSec = 1;
             # WAYLAND_DISPLAY comes from the systemd activation environment
@@ -44,7 +46,7 @@ sessionTarget: {
 
           Service = {
             Type = "oneshot";
-            ExecStart = "${pkgs.bash}/bin/bash -c '${pkgs.wl-gammarelay-rs}/bin/wl-gammarelay-rs set-temperature 4500'";
+            ExecStart = "${pkgs.bash}/bin/bash -c '${wlGammarelayBin} set-temperature 4500'";
             RemainAfterExit = true;
           };
 

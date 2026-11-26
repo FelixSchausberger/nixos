@@ -25,6 +25,7 @@
     else if cfg.terminal == "wezterm"
     then pkgs.wezterm
     else pkgs.ghostty;
+  terminalBin = "${terminalPkg}/bin/${cfg.terminal}";
 
   # Directional key mappings for programmatic keybind generation.
   # Shared with wlr-which-key (modules/home/wm/shared/keybind-definitions.nix)
@@ -50,6 +51,8 @@
     else if shellIsDms
     then dms
     else custom;
+
+  playerctlBin = "${pkgs.playerctl}/bin/playerctl";
 
   hwBinds =
     {
@@ -83,11 +86,11 @@
         ["dms" "ipc" "call" "brightness" "decrement" "5"]
         ["${pkgs.avizo}/bin/lightctl" "down"];
 
-      "XF86AudioPlay".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "play-pause"];
-      "XF86AudioPause".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "play-pause"];
-      "XF86AudioNext".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "next"];
-      "XF86AudioPrev".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "previous"];
-      "XF86AudioStop".action.spawn = ["${pkgs.playerctl}/bin/playerctl" "stop"];
+      "XF86AudioPlay".action.spawn = [playerctlBin "play-pause"];
+      "XF86AudioPause".action.spawn = [playerctlBin "play-pause"];
+      "XF86AudioNext".action.spawn = [playerctlBin "next"];
+      "XF86AudioPrev".action.spawn = [playerctlBin "previous"];
+      "XF86AudioStop".action.spawn = [playerctlBin "stop"];
 
       "XF86Search".action.spawn =
         pick
@@ -108,16 +111,16 @@ in {
     programs.niri.settings.binds = lib.mkMerge [
       {
         # ===== APPLICATION SHORTCUTS =====
-        "Mod+T".action.spawn = "${terminalPkg}/bin/${cfg.terminal}";
+        "Mod+T".action.spawn = terminalBin;
 
         "Mod+Shift+T".action.spawn = [
-          "${terminalPkg}/bin/${cfg.terminal}"
+          terminalBin
           "-e"
           "${pkgs.fish}/bin/fish"
         ];
 
         # Open terminal with herdr for AI agent sessions
-        "Mod+A".action.spawn = ["${terminalPkg}/bin/${cfg.terminal}" "-e" "${pkgs.herdr}/bin/herdr"];
+        "Mod+A".action.spawn = [terminalBin "-e" "${pkgs.herdr}/bin/herdr"];
 
         # ===== WINDOW MANAGEMENT =====
         "Mod+Q".action.close-window = {};
@@ -230,7 +233,7 @@ in {
         "Mod+Escape".action.toggle-debug-tint = {};
 
         "Mod+Shift+Escape".action.spawn = [
-          "${terminalPkg}/bin/${cfg.terminal}"
+          terminalBin
           "-e"
           "${pkgs.bash}/bin/bash"
           "--norc"

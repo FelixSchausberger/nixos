@@ -31,23 +31,20 @@
   # option so switching managers updates install, env, and MIME defaults
   # together. Unknown values fall back to COSMIC Files, matching the
   # silent-fallback style of terminalPkg/browserPkg above.
-  fileManagerInfo =
-    {
-      cosmic-files = {
-        package = pkgs.cosmic-files;
-        desktopId = "com.system76.CosmicFiles.desktop";
-      };
-      nautilus = {
-        package = pkgs.nautilus;
-        desktopId = "org.gnome.Nautilus.desktop";
-      };
-    }
-    .${
-      cfg.fileManager
-    } or {
+  fileManagerEntries = {
+    cosmic-files = {
       package = pkgs.cosmic-files;
       desktopId = "com.system76.CosmicFiles.desktop";
     };
+    nautilus = {
+      package = pkgs.nautilus;
+      desktopId = "org.gnome.Nautilus.desktop";
+    };
+  };
+
+  fileManagerInfo =
+    fileManagerEntries.${cfg.fileManager}
+    or fileManagerEntries.cosmic-files;
 
   fileManagerPkg = fileManagerInfo.package;
 
@@ -286,7 +283,7 @@ in {
         ++ lib.optionals shellKeepsWalker [
           inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default # Wayland-native application launcher with plugins
         ]
-        ++ lib.optionals (!(builtins.elem (config.wm.shell or "custom") ["noctalia" "dms"])) [
+        ++ lib.optionals (!shellKeepsWalker) [
           avizo # OSD for volume/brightness (noctalia and dms render their own OSD)
         ]
         ++ lib.optionals (cfg.browser != "zen") [
@@ -448,11 +445,7 @@ in {
       # Environment variables
       environment = {
         TERMINAL = "${terminalPkg}/bin/${cfg.terminal}";
-        BROWSER = "${browserPkg}/bin/${
-          if cfg.browser == "zen"
-          then "zen"
-          else cfg.browser
-        }";
+        BROWSER = "${browserPkg}/bin/${cfg.browser}";
         FILEMANAGER = "${fileManagerPkg}/bin/${cfg.fileManager}";
         XCURSOR_THEME = "Bibata-Modern-Classic";
         XCURSOR_SIZE = "24";

@@ -6,10 +6,15 @@
   ...
 }: let
   cfg = config.wm.niri;
+
+  terminalPkg =
+    if cfg.terminal == "ghostty"
+    then pkgs.ghostty
+    else pkgs.${cfg.terminal};
 in {
   config = lib.mkIf cfg.enable {
     # Add walker package
-    home.packages = with pkgs; [
+    home.packages = [
       inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
@@ -96,11 +101,7 @@ in {
       };
       orientation = "vertical";
       hide_plugin_info = true;
-      terminal = "${
-        if cfg.terminal == "ghostty"
-        then pkgs.ghostty
-        else pkgs.${cfg.terminal}
-      }/bin/${cfg.terminal}";
+      terminal = "${terminalPkg}/bin/${cfg.terminal}";
       runner = {
         includes_binaries = true;
       };
