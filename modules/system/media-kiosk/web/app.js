@@ -57,10 +57,7 @@ const state = {
   lastCard: null,
   lastFocus: null,
   toastTimer: null,
-  padLast: 0,
   wheelLast: 0,
-  padA: false,
-  padB: false,
 };
 
 async function api(path, options = {}) {
@@ -566,49 +563,11 @@ function handleWheel(event) {
   moveFocus(dx, dy);
 }
 
-/* Gamepad: the 2026 Steam Controller only appears here on a kernel that
- * exposes hid-steam (7.3+). On the m920q's ZFS-supported 6.18 line the
- * firmware's lizard mode delivers arrow/Enter/Escape and pointer events
- * instead, which the keyboard/mouse handlers above already cover. */
-function pollGamepad() {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  const pad = [...pads].find((entry) => entry && entry.connected);
-  if (!pad) return;
-
-  const now = performance.now();
-  const pressed = (index) => Boolean(pad.buttons[index]?.pressed);
-  const dialogOpen = Boolean(document.querySelector("dialog[open]"));
-
-  let dx = 0;
-  let dy = 0;
-  if (pressed(12) || pad.axes[1] < -0.6) dy = -1;
-  if (pressed(13) || pad.axes[1] > 0.6) dy = 1;
-  if (pressed(14) || pad.axes[0] < -0.6) dx = -1;
-  if (pressed(15) || pad.axes[0] > 0.6) dx = 1;
-
-  if (!dialogOpen && (dx || dy) && now - state.padLast > 150) {
-    state.padLast = now;
-    moveFocus(dx, dy);
-  }
-
-  const a = pressed(0);
-  if (!dialogOpen && a && !state.padA && document.activeElement instanceof HTMLElement) {
-    document.activeElement.click();
-  }
-  state.padA = a;
-
-  const b = pressed(1);
-  if (b && !state.padB) {
-    if (els.actionDialog.open) {
-      els.actionCancel.click();
-    } else if (els.confirmDialog.open) {
-      els.confirmDialog.close("cancel");
-    } else if (state.app) {
-      goHome();
-    }
-  }
-  state.padB = b;
-}
+/* Gamepad input is owned by media-kiosk-controller, which reads the Steam
+ * Controller through SDL3, injects the same keys the handlers above use, and
+ * drives the avizo volume OSD. The browser never sees the vendor hidraw
+ * interface, so there is nothing to poll here; the keyboard and wheel handlers
+ * remain the fallback if the bridge is not running. */
 
 /* Wiring */
 
@@ -708,7 +667,6 @@ function boot() {
   setInterval(loadHighlights, 20000);
   setInterval(loadAudio, 20000);
   setInterval(loadDesktop, 30000);
-  setInterval(pollGamepad, 60);
 
   els.jellyfinCard.focus();
 }

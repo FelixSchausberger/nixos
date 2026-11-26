@@ -258,6 +258,28 @@ in {
       };
     };
 
+    # The 2026 Steam Controller has no hid-steam support on the m920q kernel;
+    # SDL3 claims the puck's vendor interface, and the bridge translates the
+    # gamepad state into keyboard input, the kiosk home action, and avizo
+    # volume steps.
+    systemd.user.services.media-kiosk-controller = {
+      description = "Steam Controller bridge for the media kiosk";
+      after = [
+        "niri-session.target"
+        "media-kiosk-api.service"
+        cfg.browserUnit
+      ];
+      partOf = ["niri-session.target" cfg.browserUnit];
+      bindsTo = ["niri-session.target" cfg.browserUnit];
+      wantedBy = ["niri-session.target"];
+      serviceConfig = {
+        ExecStart = lib.getExe' kioskPackage "media-kiosk-controller";
+        Environment = ["KIOSK_API=http://127.0.0.1:${toString cfg.port}"];
+        Restart = "on-failure";
+        RestartSec = 3;
+      };
+    };
+
     systemd.tmpfiles.rules = [
       "d /per/var/kiosk 0755 ${cfg.user} ${config.users.users.${cfg.user}.group} -"
       "d ${cfg.cacheDir} 0700 ${cfg.user} ${config.users.users.${cfg.user}.group} -"
