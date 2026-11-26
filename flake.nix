@@ -393,8 +393,7 @@
             deployedHosts = builtins.attrNames config.flake.nixosConfigurations;
 
             inherit (defaults.system) user;
-            inherit (defaults) personalInfo;
-            inherit (defaults) paths;
+            inherit (defaults) personalInfo paths;
           };
         };
       }
