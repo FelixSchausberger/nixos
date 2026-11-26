@@ -547,13 +547,7 @@ def close_app_windows(windows=None):
     return closed
 
 
-def focus_kiosk_window(windows=None):
-    if windows is None:
-        windows = niri_windows()
-    kiosk = kiosk_window(windows)
-    if kiosk is None:
-        log("kiosk window not found; cannot focus the shell")
-        return False
+def focus_window(window_id):
     result = subprocess.run(
         [
             CONFIG["niri"]["bin"],
@@ -561,7 +555,7 @@ def focus_kiosk_window(windows=None):
             "action",
             "focus-window",
             "--id",
-            str(kiosk["id"]),
+            str(window_id),
         ],
         capture_output=True,
         text=True,
@@ -573,6 +567,25 @@ def focus_kiosk_window(windows=None):
     return True
 
 
+def focus_kiosk_window(windows=None):
+    if windows is None:
+        windows = niri_windows()
+    kiosk = kiosk_window(windows)
+    if kiosk is None:
+        log("kiosk window not found; cannot focus the shell")
+        return False
+    return focus_window(kiosk["id"])
+
+
+def focus_moonlight_window(windows=None):
+    if windows is None:
+        windows = niri_windows()
+    for window in windows:
+        if window.get("app_id") in MOONLIGHT_APP_IDS:
+            return focus_window(window["id"])
+    return False
+
+
 def go_home():
     windows = niri_windows()
     if kiosk_window(windows) is None:
@@ -580,6 +593,121 @@ def go_home():
         return False
     close_app_windows(windows)
     return focus_kiosk_window(windows)
+
+
+SWITCHER_LOCK = threading.Lock()
+
+
+MOONLIGHT_APP_IDS = ("moonlight", "com.moonlight_stream.Moonlight")
+
+
+def surface_label(window, action):
+    app_id = window.get("app_id") or ""
+    title = window.get("title") or ""
+
+    if app_id == "uxplay":
+        return "AirPlay"
+    if app_id in ZEN_APP_IDS:
+        if title.startswith(KIOSK_WINDOW_TITLE):
+            return "Kiosk"
+        for prefix in ("Cinejoy", "Jellyfin", "Immich"):
+            if title.startswith(prefix):
+                return prefix
+        return title or "Zen window"
+    if app_id in MOONLIGHT_APP_IDS:
+        if action is not None and action["kind"] == "steam":
+            return "Steam stream"
+        return "Moonlight"
+    return None
+
+
+def surface_entries():
+    windows = niri_windows()
+    focused = next((window["id"] for window in windows if window.get("is_focused")), None)
+    action = current_action()
+    entries = []
+    seen = {}
+
+    for window in windows:
+        label = surface_label(window, action)
+        if label is None:
+            continue
+        seen[label] = seen.get(label, 0) + 1
+        if seen[label] > 1:
+            label = f"{label} ({seen[label]})"
+        if window["id"] == focused:
+            label = f"● {label}"
+        entries.append(
+            {"label": label, "kind": "focus", "window": window["id"]}
+        )
+
+    # Actions after the live surfaces: the switcher is for moving between
+    # windows, not for tearing them down, so closing is an explicit choice.
+    entries.append({"label": "Close app windows", "kind": "close"})
+    if action is not None:
+        entries.append({"label": "Stop Moonlight", "kind": "stop"})
+    return entries
+
+
+def run_switcher():
+    if not SWITCHER_LOCK.acquire(blocking=False):
+        return False
+    try:
+        walker = CONFIG.get("ui", {}).get("walker")
+        if walker is None:
+            log("switcher: walker is not configured")
+            return False
+        entries = surface_entries()
+        if not entries:
+            return False
+        result = subprocess.run(
+            [walker, "-d", "-p", "Switch surface"],
+            input="\n".join(entry["label"] for entry in entries) + "\n",
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            return False
+        selected = result.stdout.strip()
+        entry = next((item for item in entries if item["label"] == selected), None)
+        if entry is None:
+            log(f"switcher: unknown selection {selected!r}")
+            return False
+        if entry["kind"] == "focus":
+            return focus_window(entry["window"])
+        if entry["kind"] == "close":
+            close_app_windows()
+            return True
+        if entry["kind"] == "stop":
+            action = current_action()
+            return cancel_action(action["id"]) if action is not None else False
+        return False
+    except Exception as error:
+        log(f"switcher failed: {error}")
+        return False
+    finally:
+        SWITCHER_LOCK.release()
+
+
+TARGET_TITLES = {
+    "cinejoy": "Cinejoy",
+    "jellyfin": "Jellyfin",
+    "immich": "Immich",
+}
+
+
+def focus_target_window(target):
+    prefix = TARGET_TITLES.get(target)
+    if prefix is None:
+        return False
+    for window in niri_windows():
+        if (
+            window.get("app_id") in ZEN_APP_IDS
+            and (window.get("title") or "").startswith(prefix)
+        ):
+            return focus_window(window["id"])
+    return False
 
 
 def open_target(target):
@@ -592,7 +720,13 @@ def open_target(target):
     if url is None:
         raise ValueError(f"unknown target '{target}'")
 
-    close_app_windows()
+    # Reuse a running app window instead of tearing down the other surfaces:
+    # switching back to Cinejoy must not close the Moonlight stream or an
+    # existing Jellyfin/Immich window.
+    if focus_target_window(target):
+        log(f"focused existing {target} window")
+        return
+
     subprocess.Popen(
         [CONFIG["open"]["command"], url],
         stdout=subprocess.DEVNULL,
@@ -669,6 +803,37 @@ def wait_for_port(action):
     return False
 
 
+def select_moonlight_host(action, process):
+    # Moonlight opens on the computer list with the first host focused. One
+    # Return opens its box-art application grid; wait for the window and its
+    # host discovery, focus it explicitly, then send the key so it cannot land
+    # on whichever kiosk surface happened to have focus.
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if action.get("cancelled") or process.poll() is not None:
+            return
+        if any(
+            window.get("app_id") in MOONLIGHT_APP_IDS
+            for window in niri_windows()
+        ):
+            break
+        time.sleep(0.5)
+    time.sleep(2)
+    if action.get("cancelled") or process.poll() is not None:
+        return
+    wtype = CONFIG.get("ui", {}).get("wtype")
+    if wtype is None:
+        return
+    focus_moonlight_window()
+    time.sleep(0.5)
+    subprocess.run(
+        [wtype, "-k", "Return"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=5,
+    )
+
+
 def run_action(action):
     try:
         set_state(action, "waking", "Waking the desktop…")
@@ -695,7 +860,11 @@ def run_action(action):
         set_state(action, "launching", "Starting Moonlight…")
         command = [CONFIG["desktop"]["moonlight"]]
         if action["kind"] == "steam":
+            # The stream client must exit when the host session ends, or it
+            # stays open after Steam quits and keeps the single-action lock
+            # taken ("another action is already running" on the next tile).
             command += [
+                "--quit-after",
                 "stream",
                 CONFIG["desktop"]["host"],
                 CONFIG["desktop"]["app"],
@@ -703,9 +872,15 @@ def run_action(action):
 
         process = start_process(command)
         action["process"] = process
+        if action["kind"] == "ui":
+            select_moonlight_host(action, process)
         time.sleep(1.5)
         if process.poll() is None:
-            set_state(action, "streaming", "Streaming")
+            set_state(
+                action,
+                "streaming",
+                "Moonlight library" if action["kind"] == "ui" else "Streaming",
+            )
         read_lines(action, process)
         status = process.wait()
 
@@ -753,6 +928,13 @@ def action_status(action):
             if action["state"] == "error"
             else None,
         }
+
+
+def current_action():
+    with ACTION_LOCK:
+        if ACTION and ACTION["state"] not in ("done", "error", "cancelled"):
+            return dict(ACTION)
+        return None
 
 
 def cancel_action(action_id):
@@ -969,10 +1151,22 @@ class KioskHandler(BaseHTTPRequestHandler):
                 return self.send_json(200, {"closed": close_app_windows()})
             if path == "/api/home":
                 return self.send_json(200, {"ok": go_home()})
+            if path == "/api/switcher":
+                threading.Thread(target=run_switcher, daemon=True).start()
+                return self.send_json(202, {"ok": True})
             if path in ("/api/moonlight/steam", "/api/moonlight/ui"):
                 kind = "steam" if path.endswith("steam") else "ui"
                 action = new_action(kind)
                 if action is None:
+                    # The stream/library process stays alive while it is
+                    # useful; a second tile press should return to it, not
+                    # report a dead-end "another action" error.
+                    existing = current_action()
+                    if existing is not None:
+                        focus_moonlight_window()
+                        return self.send_json(
+                            202, {"id": existing["id"], "existing": True}
+                        )
                     return self.send_json(
                         409, {"error": "another action is already running"}
                     )

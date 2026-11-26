@@ -25,10 +25,12 @@
     ];
 
     windowRules = [
-      # Moonlight streams on the projector only; always fullscreen there.
+      # Moonlight streams on the projector only; always fullscreen there. The
+      # Qt app-id is com.moonlight_stream.Moonlight on current releases.
       {
-        matches = [{app-id = "^moonlight$";}];
+        matches = [{app-id = "^(moonlight|com\\.moonlight_stream\\.Moonlight)$";}];
         open-fullscreen = true;
+        open-focused = true;
       }
       # AirPlay (UxPlay) mirroring renders as a fullscreen overlay over the
       # desktop and disappears when mirroring stops. niri only displays the

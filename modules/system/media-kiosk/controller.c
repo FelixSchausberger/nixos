@@ -7,11 +7,13 @@
  * QAM (three-dot) button never reach the host. SDL3's Triton driver claims the
  * vendor interfaces and disables lizard mode; this daemon turns the resulting
  * gamepad state into the keys and API calls the kiosk already understands.
- * Steam goes home, the QAM (three-dot) button is the quick volume control:
- * tap it to mute, or hold it and move the stick/D-pad to step the sink volume.
- * The sticks and D-pad otherwise feed the page's arrow-key navigation, and B
- * stays a plain Escape. The double-B close shortcut belongs to the lizard-mode
- * fallback in server.py, where the Steam and QAM buttons never reach the host.
+ * Steam opens the surface switcher (a walker dmenu over the live windows) so
+ * AirPlay, Cinejoy, the kiosk shell and Moonlight can be focused without
+ * closing each other. QAM is the quick volume control: tap it to mute, or hold
+ * it and move the stick/D-pad to step the sink volume. The sticks and D-pad
+ * otherwise feed the page's arrow-key navigation, and B stays a plain Escape.
+ * The double-B close shortcut belongs to the lizard-mode fallback in
+ * server.py, where the Steam and QAM buttons never reach the host.
  *
  * Volume steps call avizo's volumectl; its OSD is a layer-shell overlay with
  * keyboard interactivity off, so it stays visible over the fullscreen kiosk
@@ -237,7 +239,7 @@ static void poll_pad(Uint64 now) {
       send_key("Escape");
     }
     if (steam && !prev_steam) {
-      kiosk_post("/api/home");
+      kiosk_post("/api/switcher");
     }
   }
   prev_a = a;
