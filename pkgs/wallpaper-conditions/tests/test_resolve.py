@@ -16,6 +16,22 @@ COLLECTIONS = {
 }
 
 
+def scan_theme(manifest):
+    return scan(manifest.theme(manifest.default_theme))
+
+
+def resolve_theme(manifest, library, *, phase, weather):
+    return resolve(
+        manifest.theme(manifest.default_theme),
+        library,
+        phase=phase,
+        weather=weather,
+        order=manifest.order,
+        fallback_file=manifest.fallback_file,
+        fallback_blurred=manifest.fallback_blurred,
+    )
+
+
 class ResolveTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -32,10 +48,10 @@ class ResolveTests(unittest.TestCase):
             fallback_file=self.fallback,
         )
         self.manifest = load_manifest(self.manifest_path)
-        self.library = scan(self.manifest)
+        self.library = scan_theme(self.manifest)
 
     def test_most_specific_collection_wins(self) -> None:
-        resolution = resolve(
+        resolution = resolve_theme(
             self.manifest,
             self.library,
             phase="night",
@@ -52,7 +68,7 @@ class ResolveTests(unittest.TestCase):
             fallback_file=self.fallback,
             order=["phase", "weather"],
         )
-        resolution = resolve(
+        resolution = resolve_theme(
             load_manifest(manifest_path),
             self.library,
             phase="night",
@@ -67,7 +83,7 @@ class ResolveTests(unittest.TestCase):
             fallback_file=self.fallback,
             order=["weather", "phase"],
         )
-        resolution = resolve(
+        resolution = resolve_theme(
             load_manifest(manifest_path),
             self.library,
             phase="night",
@@ -76,7 +92,7 @@ class ResolveTests(unittest.TestCase):
         self.assertEqual(resolution.collection_name, "rain")
 
     def test_empty_collection_is_skipped(self) -> None:
-        self.manifest_path = write_manifest(
+        manifest_path = write_manifest(
             self.base / "empty-specific.json",
             {
                 "night-rain": {"phase": ["night"], "weather": ["rain"]},
@@ -85,17 +101,17 @@ class ResolveTests(unittest.TestCase):
             roots=[self.root],
             fallback_file=self.fallback,
         )
-        library = scan(load_manifest(self.manifest_path))
-        resolution = resolve(
-            load_manifest(self.manifest_path),
-            library,
+        manifest = load_manifest(manifest_path)
+        resolution = resolve_theme(
+            manifest,
+            scan_theme(manifest),
             phase="night",
             weather="rain",
         )
         self.assertEqual(resolution.collection_name, "night")
 
     def test_unknown_weather_only_matches_phase(self) -> None:
-        resolution = resolve(
+        resolution = resolve_theme(
             self.manifest,
             self.library,
             phase="night",
@@ -116,9 +132,10 @@ class ResolveTests(unittest.TestCase):
             roots=[self.root],
             fallback_file=self.fallback,
         )
-        resolution = resolve(
-            load_manifest(manifest_path),
-            scan(load_manifest(manifest_path)),
+        manifest = load_manifest(manifest_path)
+        resolution = resolve_theme(
+            manifest,
+            scan_theme(manifest),
             phase="day",
             weather="rain",
         )
@@ -133,7 +150,7 @@ class ResolveTests(unittest.TestCase):
             fallback_file=self.fallback,
         )
         manifest = load_manifest(manifest_path)
-        resolution = resolve(manifest, scan(manifest), phase="day", weather=None)
+        resolution = resolve_theme(manifest, scan_theme(manifest), phase="day", weather=None)
         self.assertIsNone(resolution.chosen)
         self.assertEqual(resolution.files, (self.fallback,))
         self.assertEqual(resolution.blurred, self.base / "fallback_blurred.jpg")

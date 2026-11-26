@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Sequence
 
+from .model import Theme
 from .resolve import Resolution
 
 LOGGER = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ WEATHER_MIN_DWELL = timedelta(minutes=30)
 
 @dataclass
 class State:
+    theme: str | None = None
     collection: str | None = None
     selected_file: str | None = None
     applied_file: str | None = None
@@ -88,6 +90,7 @@ def roll_due(now: datetime, selected_at: datetime, interval: timedelta) -> bool:
 
 def choose_file(
     state: State,
+    theme: Theme,
     resolution: Resolution,
     now: datetime,
     *,
@@ -98,7 +101,9 @@ def choose_file(
     files = resolution.files
     current = Path(state.selected_file) if state.selected_file else None
     selected_at = _parse(state.selected_at)
-    same_collection = state.collection == resolution.collection_name
+    same_collection = (
+        state.theme == theme.name and state.collection == resolution.collection_name
+    )
 
     must_pick = (
         reroll
@@ -113,6 +118,7 @@ def choose_file(
 
     candidates = [path for path in files if path != current] or list(files)
     chosen = choice(candidates)
+    state.theme = theme.name
     state.collection = resolution.collection_name
     state.selected_file = str(chosen)
     state.selected_at = now.isoformat()

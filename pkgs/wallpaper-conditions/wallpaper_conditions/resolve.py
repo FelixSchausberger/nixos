@@ -1,4 +1,4 @@
-"""Collection matching and ranking."""
+"""Collection matching and ranking inside one theme."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .library import Library
-from .model import DIMENSIONS, Collection, Manifest
+from .model import DIMENSIONS, Collection, Theme
 
 
 @dataclass(frozen=True)
@@ -54,14 +54,17 @@ def _rank(collection: Collection, order: tuple[str, ...]) -> int:
 
 
 def resolve(
-    manifest: Manifest,
+    theme: Theme,
     library: Library,
     *,
     phase: str,
     weather: str | None,
+    order: tuple[str, ...],
+    fallback_file: Path,
+    fallback_blurred: Path | None,
 ) -> Resolution:
     matches = []
-    for collection in manifest.collections:
+    for collection in theme.collections:
         if not collection.matches(phase=phase, weather=weather):
             continue
         files = library.get(collection.name)
@@ -71,7 +74,7 @@ def resolve(
             Match(
                 collection=collection,
                 files=files,
-                rank=_rank(collection, manifest.order),
+                rank=_rank(collection, order),
                 specificity=collection.specificity,
                 priority=collection.priority,
             )
@@ -94,6 +97,6 @@ def resolve(
         weather=weather,
         matches=tuple(matches),
         chosen=matches[0] if matches else None,
-        fallback_file=manifest.fallback_file,
-        fallback_blurred=manifest.fallback_blurred,
+        fallback_file=fallback_file,
+        fallback_blurred=fallback_blurred,
     )

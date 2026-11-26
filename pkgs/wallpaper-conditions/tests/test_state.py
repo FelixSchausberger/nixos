@@ -5,7 +5,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from wallpaper_conditions.model import Collection
+from wallpaper_conditions.model import Collection, Theme
 from wallpaper_conditions.resolve import Match, Resolution
 from wallpaper_conditions.state import (
     State,
@@ -17,6 +17,8 @@ from wallpaper_conditions.state import (
 
 NOW = datetime(2026, 11, 23, 12, 0, tzinfo=timezone.utc)
 FILES = (Path("/wallpapers/night/a.jpg"), Path("/wallpapers/night/b.jpg"))
+THEME = Theme("landscapes", (Path("/wallpapers"),), (Collection("night"),))
+OTHER_THEME = Theme("plants", (Path("/wallpapers/plants"),), (Collection("night"),))
 
 
 def make_resolution(name: str, files: tuple[Path, ...] = FILES) -> Resolution:
@@ -46,7 +48,7 @@ def fallback_resolution() -> Resolution:
 class SelectionTests(unittest.TestCase):
     def test_first_pick_sets_state(self) -> None:
         state = State()
-        chosen = choose_file(state, make_resolution("night"), NOW, choice=lambda seq: seq[0])
+        chosen = choose_file(state, THEME, make_resolution("night"), NOW, choice=lambda seq: seq[0])
         self.assertEqual(chosen, FILES[0])
         self.assertEqual(state.collection, "night")
         self.assertEqual(state.selected_file, str(FILES[0]))
@@ -54,12 +56,14 @@ class SelectionTests(unittest.TestCase):
 
     def test_sticky_within_the_interval(self) -> None:
         state = State(
+            theme="landscapes",
             collection="night",
             selected_file=str(FILES[0]),
             selected_at=NOW.isoformat(),
         )
         chosen = choose_file(
             state,
+            THEME,
             make_resolution("night"),
             NOW + timedelta(minutes=30),
             choice=lambda _seq: FILES[1],
@@ -81,6 +85,7 @@ class SelectionTests(unittest.TestCase):
 
         chosen = choose_file(
             state,
+            THEME,
             make_resolution("night"),
             NOW + timedelta(hours=2),
             choice=choice,
@@ -91,12 +96,14 @@ class SelectionTests(unittest.TestCase):
 
     def test_custom_interval_controls_the_roll(self) -> None:
         state = State(
+            theme="landscapes",
             collection="night",
             selected_file=str(FILES[0]),
             selected_at=NOW.isoformat(),
         )
         chosen = choose_file(
             state,
+            THEME,
             make_resolution("night"),
             NOW + timedelta(hours=2),
             interval=timedelta(hours=6),
@@ -112,6 +119,7 @@ class SelectionTests(unittest.TestCase):
         )
         chosen = choose_file(
             state,
+            THEME,
             make_resolution("night"),
             NOW,
             reroll=True,
@@ -125,12 +133,29 @@ class SelectionTests(unittest.TestCase):
             selected_file="/wallpapers/night/deleted.jpg",
             selected_at=NOW.isoformat(),
         )
-        chosen = choose_file(state, make_resolution("night"), NOW, choice=lambda seq: seq[0])
+        chosen = choose_file(state, THEME, make_resolution("night"), NOW, choice=lambda seq: seq[0])
         self.assertEqual(chosen, FILES[0])
+
+    def test_theme_change_repicks_even_inside_the_interval(self) -> None:
+        state = State(
+            theme="landscapes",
+            collection="night",
+            selected_file=str(FILES[0]),
+            selected_at=NOW.isoformat(),
+        )
+        chosen = choose_file(
+            state,
+            OTHER_THEME,
+            make_resolution("night"),
+            NOW + timedelta(minutes=5),
+            choice=lambda seq: seq[0],
+        )
+        self.assertEqual(state.theme, "plants")
+        self.assertEqual(chosen, FILES[1])
 
     def test_fallback_selection(self) -> None:
         state = State()
-        chosen = choose_file(state, fallback_resolution(), NOW, choice=lambda seq: seq[0])
+        chosen = choose_file(state, THEME, fallback_resolution(), NOW, choice=lambda seq: seq[0])
         self.assertEqual(chosen, Path("/fallback.jpg"))
         self.assertIsNone(state.collection)
 

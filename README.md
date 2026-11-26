@@ -65,19 +65,26 @@ Home modules in `modules/home/`:
 - wm: Window manager configurations (COSMIC, GNOME, Hyprland)
 - profiles: Per-host profile fragments and specialisations
 
-Wallpapers are runtime data: `wallpapers.dynamic` scans one or more roots for
-collection folders and declares the phase/weather predicates each folder
-satisfies. The folder name is only a label; a collection with no predicates is
-the fallback, and `wallpapers.dynamic.collections` ships the standard phase and
-weather set, so images added to an existing folder need no rebuild. The
-selector runs whenever the user manager is up, re-rolls the image hourly
-(`wallpapers.dynamic.interval`) and publishes `current.jpg` in the first root.
+Wallpapers are runtime data: the pool root holds one directory per theme
+(`landscapes/`, `plants/`, `ascii/`), and each theme holds its condition
+folders. `wallpapers.dynamic.themes.<name>.collections` declares the
+phase/weather predicates each folder satisfies; the standard phase and weather
+set ships in the module, so images added to an existing folder need no rebuild.
+The selector runs whenever the user manager is up, re-rolls the image hourly
+(`wallpapers.dynamic.interval`) and publishes `current.jpg` in the pool root.
 The homepage dashboard and the media kiosk read that one file, so every surface
-follows the same selection even while no graphical session is running. If the
-selector never runs, the seeded copy stays; if the pool is unmounted, the
-consumers fall back to the packaged default. `wallpaper-conditions status`
-explains the current choice and `wallpaper-conditions doctor` validates the
-layout.
+follows the same selection even while no graphical session is running. The
+active theme is shared through `active-theme` in the same root: the host that
+mounts the pool read-write switches it with `wallpaper-theme <name>`, and hosts
+that only read the pool follow it. If the selector never runs, the seeded copy
+stays; if the pool is unmounted, the consumers fall back to the packaged
+default. `wallpaper-conditions status` explains the current choice and
+`wallpaper-conditions doctor` validates the layout and every theme.
+
+The build-time color scheme is separate: `modules.system.stylix-catppuccin.scheme`
+selects `catppuccin-mocha`, `everforest-dark` or `ascii-mono` for Stylix, the
+shell theme targets and the custom stack. Switching it regenerates app configs
+and needs a rebuild; switching the wallpaper theme is immediate.
 
 ### Package Exports
 

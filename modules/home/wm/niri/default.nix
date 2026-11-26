@@ -6,7 +6,14 @@
   ...
 }: let
   cfg = config.wm.niri;
-  catppuccin = inputs.self.lib.catppuccinColors.mocha;
+  # Stylix does not theme niri itself (there is no target); read its generated
+  # palette here so the focus ring follows the selected scheme. Hosts without
+  # Stylix (the headless desktop) keep the Catppuccin fallbacks.
+  stylixColors =
+    config.lib.stylix.colors.withHashtag or {
+      base03 = "#45475a";
+      base0D = "#89b4fa";
+    };
 
   # Package mappings for applications
   browserPkg =
@@ -401,22 +408,22 @@ in {
           {proportion = 0.66667;}
         ];
 
-        # Focus ring and border follow Catppuccin Mocha to match Hyprland
-        # theming. Stylix runs with autoEnable=false so it never themes niri;
-        # without explicit colors niri falls back to its default yellow
-        # focus ring on the active window.
+        # Focus ring and border follow the active Stylix scheme. Stylix runs
+        # with autoEnable=false and has no niri target, so the colors are read
+        # explicitly; without them niri falls back to its default yellow focus
+        # ring on the active window.
         focus-ring = {
           enable = true;
           width = 4;
-          active.color = catppuccin.blue;
-          inactive.color = catppuccin.surface1;
+          active.color = stylixColors.base0D;
+          inactive.color = stylixColors.base03;
         };
 
         border = {
           enable = true;
           width = 2;
-          active.color = catppuccin.blue;
-          inactive.color = catppuccin.surface1;
+          active.color = stylixColors.base0D;
+          inactive.color = stylixColors.base03;
         };
       };
 

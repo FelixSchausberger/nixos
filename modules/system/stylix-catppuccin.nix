@@ -1,18 +1,20 @@
-# Shared Stylix module with Catppuccin Mocha theme
+# Shared Stylix module with a selectable base16 scheme
 #
-# Eliminates 265+ lines of duplication across 4 hosts:
-# - desktop (GUI, custom font packages)
-# - surface (GUI, default font packages)
-# - hp-probook-wsl (TUI, custom font packages)
-# - hp-probook-vmware (GUI, custom font packages)
+# The module keeps its historical name; `scheme` chooses Catppuccin Mocha,
+# Everforest Dark or the monochrome ASCII palette. The shell targets, the
+# custom stack and the GUI environment variables all read the same scheme.
+#
+# Eliminates 265+ lines of duplication across the GUI hosts and keeps the
+# palette out of each host's configuration.
 #
 # Usage:
 #   # Enable with default font packages (pkgs.nerd-fonts.jetbrains-mono, etc.)
 #   modules.system.stylix-catppuccin.enable = true;
 #
-#   # Or customize font packages
+#   # Or customize font packages and the palette
 #   modules.system.stylix-catppuccin = {
 #     enable = true;
+#     scheme = "everforest-dark";
 #     fontPackages = {
 #       monospace = inputs.nixpkgs.legacyPackages.x86_64-linux.nerd-fonts.jetbrains-mono;
 #       sansSerif = inputs.nixpkgs.legacyPackages.x86_64-linux.inter;
@@ -25,9 +27,11 @@
   inputs,
   pkgs,
   ...
-}: {
+}: let
+  schemeColors = inputs.self.lib.themeSchemes.${config.modules.system.stylix-catppuccin.scheme};
+in {
   options.modules.system.stylix-catppuccin = {
-    enable = lib.mkEnableOption "Stylix Catppuccin Mocha theme";
+    enable = lib.mkEnableOption "Stylix theming with a selectable base16 scheme";
 
     # Allow per-host font package customization
     fontPackages = {
@@ -55,6 +59,20 @@
       default = pkgs.bibata-cursors;
       description = "Cursor theme package";
     };
+
+    scheme = lib.mkOption {
+      type = lib.types.enum [
+        "catppuccin-mocha"
+        "everforest-dark"
+        "ascii-mono"
+      ];
+      default = "catppuccin-mocha";
+      description = ''
+        Base16 scheme used by Stylix and the shell theme targets. The matching
+        runtime wallpaper family is chosen separately with
+        `wallpaper-theme <name>`; switching this option needs a rebuild.
+      '';
+    };
   };
 
   config = lib.mkIf config.modules.system.stylix-catppuccin.enable {
@@ -80,8 +98,25 @@
           stylix.targets = {
             firefox.profileNames = ["default"];
             # Yazi owns no hand-written theme; this target derives theme.toml,
-            # including filetype and icon rules, from the Catppuccin palette.
+            # including filetype and icon rules, from the active scheme.
             yazi.enable = true;
+            # Dank Material Shell is a full-layer shell with its own theme
+            # engine; the Stylix target feeds it the preset palette, fonts and
+            # opacity instead of leaving it on its upstream default.
+            dank-material-shell.enable = (config.wm.shell or "custom") == "dms";
+          };
+
+          # GUI environment variables used by the custom stack. Keep them on
+          # the same scheme as Stylix so a preset switch does not leave the
+          # terminal/desktop split between two palettes.
+          theme.gui.colors = {
+            background = lib.mkDefault schemeColors.base00;
+            foreground = lib.mkDefault schemeColors.base05;
+            primary = lib.mkDefault schemeColors.base0D;
+            secondary = lib.mkDefault schemeColors.base0E;
+            success = lib.mkDefault schemeColors.base0B;
+            warning = lib.mkDefault schemeColors.base0A;
+            error = lib.mkDefault schemeColors.base08;
           };
         }
       )
@@ -89,7 +124,6 @@
 
     stylix = let
       inherit (inputs.self.lib) fonts;
-      catppuccin = inputs.self.lib.catppuccinColors.mocha;
       fontPkgs = config.modules.system.stylix-catppuccin.fontPackages;
       cursorPkg = config.modules.system.stylix-catppuccin.cursorPackage;
     in {
@@ -102,34 +136,18 @@
 
       # Wallpaper source for Stylix wallpaper targets (e.g. noctalia). Mirrors
       # the wallpapers module default (solar-system) so a shell that owns the
-      # wallpaper does not receive a null path. Palette is set explicitly via
-      # base16Scheme below, so this image is not used for color generation.
+      # wallpaper does not receive a null path. The palette is set explicitly
+      # via the selected scheme; the runtime wallpaper engine owns the actual
+      # selection, so this image is only the build-time seed.
       image = ../home/wallpapers/solar-system.jpg;
 
-      # Catppuccin Mocha is a dark scheme. Stylix defaults polarity to
-      # "either"; pin it so dark-only targets (e.g. noctalia's theme mode) do
-      # not resolve to light.
+      # Every bundled scheme is dark. Stylix defaults polarity to "either";
+      # pin it so dark-only targets (e.g. noctalia's theme mode) do not
+      # resolve to light.
       polarity = "dark";
 
-      # Use Catppuccin Mocha colors via base16 scheme
-      base16Scheme = {
-        base00 = catppuccin.base; # Default background
-        base01 = catppuccin.mantle; # Lighter background (status bars, line numbers)
-        base02 = catppuccin.surface0; # Selection background
-        base03 = catppuccin.surface1; # Comments, invisibles
-        base04 = catppuccin.surface2; # Dark foreground (status bars)
-        base05 = catppuccin.text; # Default foreground
-        base06 = catppuccin.subtext1; # Light foreground
-        base07 = catppuccin.subtext0; # Light background
-        base08 = catppuccin.red; # Variables, XML tags
-        base09 = catppuccin.peach; # Integers, booleans
-        base0A = catppuccin.yellow; # Classes, search text
-        base0B = catppuccin.green; # Strings
-        base0C = catppuccin.teal; # Support, regex
-        base0D = catppuccin.blue; # Functions, methods
-        base0E = catppuccin.mauve; # Keywords, storage
-        base0F = catppuccin.flamingo; # Deprecated, embedded
-      };
+      # Base16 palette from the selected preset.
+      base16Scheme = schemeColors;
 
       # Font configuration using centralized fonts library
       fonts = {

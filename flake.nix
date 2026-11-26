@@ -381,6 +381,7 @@
             catppuccinColors = import ./modules/home/themes/catppuccin-colors.nix {
               inherit (inputs.nixpkgs) lib;
             };
+            themeSchemes = import ./lib/themes.nix;
             hosts = import ./lib/hosts.nix;
             homelabPorts = import ./lib/homelab-ports.nix;
             sshKeys = import ./lib/ssh-keys.nix;
