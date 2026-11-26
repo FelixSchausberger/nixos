@@ -30,7 +30,7 @@
         [
           cosmic-wallpapers
         ]
-        ++ (pkgs.lib.optional (
+        ++ (lib.optional (
             pkgs.kdePackages ? xwaylandvideobridge
           )
           pkgs.kdePackages.xwaylandvideobridge);

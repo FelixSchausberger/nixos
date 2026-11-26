@@ -93,9 +93,7 @@ in {
       # Avoid dual mDNS responder warning when systemd-resolved has mDNS enabled.
       services.resolved.settings.Resolve.MulticastDNS = false;
 
-      environment.systemPackages = with pkgs; [
-        uxplay
-      ];
+      environment.systemPackages = [pkgs.uxplay];
 
       networking.firewall = {
         allowedTCPPorts = [

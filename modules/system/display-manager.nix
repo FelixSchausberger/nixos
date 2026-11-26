@@ -79,7 +79,6 @@ in
       };
 
       # Allow tuigreet to handle session selection
-      # displayManager.defaultSession = sessionName;
     };
 
     environment = {

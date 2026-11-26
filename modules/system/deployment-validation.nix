@@ -175,7 +175,7 @@ in {
               status_line err "${service}" "not found or disabled"
             fi
           '')
-          config.modules.system.deploymentValidation.criticalServices}
+          cfg.criticalServices}
 
         section "Shells"
         shells=(
@@ -186,14 +186,14 @@ in {
         fi
         for entry in "''${shells[@]}"; do
           IFS=: read -r name path <<< "$entry"
-          if [[ -x "$path" ]]; then
-            if "$path" -c 'exit 0' 2>/dev/null; then
-              status_line ok "$name" "$path"
-            else
-              status_line err "$name" "exists but failed to execute ($path)"
-            fi
-          else
+          if [[ ! -x "$path" ]]; then
             status_line warn "$name" "not installed"
+            continue
+          fi
+          if "$path" -c 'exit 0' 2>/dev/null; then
+            status_line ok "$name" "$path"
+          else
+            status_line err "$name" "exists but failed to execute ($path)"
           fi
         done
 

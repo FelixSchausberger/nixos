@@ -6,7 +6,10 @@
   pkgs,
   hostConfig,
   ...
-}: {
+}: let
+  # Single source for the CA bundle the registry symlinks below point at.
+  caBundle = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+in {
   options.modules.system.containers = {
     enable = lib.mkEnableOption "container tools (Docker)";
   };
@@ -44,12 +47,10 @@
 
       services.docker = {
         wantedBy = lib.mkForce [];
+        # The assertion above guarantees modules.system.ssl.enable, so the
+        # helper is always defined here.
         environment =
-          (
-            if config.modules.system.ssl.enable
-            then config.modules.system.ssl.helpers.dockerEnv
-            else {}
-          )
+          config.modules.system.ssl.helpers.dockerEnv
           // {
             DOCKER_TLS_VERIFY = "0"; # Unix socket — no TLS
             GOPROXY = "direct";
@@ -70,13 +71,13 @@
         "d /etc/docker/certs.d/docker.io 0755 root root - -"
         "d /etc/docker/certs.d/auth.docker.io 0755 root root - -"
         "d /etc/docker/certs.d/production.cloudflare.docker.com 0755 root root - -"
-        "L+ /etc/docker/certs.d/ca-certificates.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/docker/certs.d/ca.pem - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/docker/certs.d/registry-1.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/docker/certs.d/index.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/docker/certs.d/docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/docker/certs.d/auth.docker.io/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-        "L+ /etc/docker/certs.d/production.cloudflare.docker.com/ca.crt - - - - ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+        "L+ /etc/docker/certs.d/ca-certificates.crt - - - - ${caBundle}"
+        "L+ /etc/docker/certs.d/ca.pem - - - - ${caBundle}"
+        "L+ /etc/docker/certs.d/registry-1.docker.io/ca.crt - - - - ${caBundle}"
+        "L+ /etc/docker/certs.d/index.docker.io/ca.crt - - - - ${caBundle}"
+        "L+ /etc/docker/certs.d/docker.io/ca.crt - - - - ${caBundle}"
+        "L+ /etc/docker/certs.d/auth.docker.io/ca.crt - - - - ${caBundle}"
+        "L+ /etc/docker/certs.d/production.cloudflare.docker.com/ca.crt - - - - ${caBundle}"
       ];
     };
 

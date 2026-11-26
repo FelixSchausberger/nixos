@@ -15,7 +15,6 @@ in {
     useUserPackages = true;
     backupFileExtension = "backup";
     verbose = false;
-    # Disable release check — HM tracks nixos-unstable, not a fixed release
     extraSpecialArgs = {
       inherit inputs;
     };

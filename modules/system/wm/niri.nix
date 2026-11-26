@@ -6,7 +6,10 @@
   lib,
   hostConfig,
   ...
-}: {
+}: let
+  # niri-unstable ships the compositor and its Xwayland bridge from one package set.
+  niriPackages = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system};
+in {
   imports = [
     inputs.niri.nixosModules.niri
     ../session/default.nix
@@ -24,7 +27,7 @@
     programs.niri = {
       enable = true;
       # Enable xwayland for compatibility with X11 applications
-      package = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable;
+      package = niriPackages.niri-unstable;
     };
 
     # PipeWire, fonts, and common security configuration are provided by shared modules
@@ -35,7 +38,7 @@
       egl-wayland # EGL Wayland platform
 
       # X11/Wayland compatibility (Niri-specific)
-      inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.xwayland-satellite-unstable
+      niriPackages.xwayland-satellite-unstable
 
       # Qt theme tools (Niri-specific)
       libsForQt5.qt5ct
