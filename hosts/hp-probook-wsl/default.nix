@@ -152,8 +152,7 @@ in {
     # Host-specific configuration using centralized host mapping
     hostConfig = {
       inherit hostName;
-      inherit (hostInfo) isGui;
-      inherit (hostInfo) wms;
+      inherit (hostInfo) isGui wms;
       # user and system use defaults from lib/defaults.nix
 
       # Local WSL terminals (Windows Terminal "NixOS", plain `wsl.exe`, VS Code)

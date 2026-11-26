@@ -4,7 +4,17 @@
 #   - main (256GB NVMe): ZFS rpool with impermanence
 #   - data (2TB SATA WD Green): dpool at /per/mnt/data
 #   - backup (4TB Micron X10 Pro): bpool at /per/mnt/backup
-{
+let
+  # All three pools start from the same property set; the datasets that need
+  # different snapshot behaviour override "com.sun:auto-snapshot" individually.
+  poolRootFsOptions = {
+    compression = "zstd";
+    acltype = "posixacl";
+    xattr = "sa";
+    atime = "off";
+    "com.sun:auto-snapshot" = "false";
+  };
+in {
   disko.devices = {
     disk = {
       main = {
@@ -82,13 +92,7 @@
     zpool = {
       rpool = {
         type = "zpool";
-        rootFsOptions = {
-          compression = "zstd";
-          acltype = "posixacl";
-          xattr = "sa";
-          atime = "off";
-          "com.sun:auto-snapshot" = "false";
-        };
+        rootFsOptions = poolRootFsOptions;
         datasets = {
           "eyd" = {
             type = "zfs_fs";
@@ -148,13 +152,7 @@
       };
       dpool = {
         type = "zpool";
-        rootFsOptions = {
-          compression = "zstd";
-          acltype = "posixacl";
-          xattr = "sa";
-          atime = "off";
-          "com.sun:auto-snapshot" = "false";
-        };
+        rootFsOptions = poolRootFsOptions;
         datasets = {
           data = {
             type = "zfs_fs";
@@ -168,13 +166,7 @@
       };
       bpool = {
         type = "zpool";
-        rootFsOptions = {
-          compression = "zstd";
-          acltype = "posixacl";
-          xattr = "sa";
-          atime = "off";
-          "com.sun:auto-snapshot" = "false";
-        };
+        rootFsOptions = poolRootFsOptions;
         datasets = {
           backup = {
             type = "zfs_fs";

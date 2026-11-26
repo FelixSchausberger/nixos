@@ -70,14 +70,14 @@
         if wifiFile == ""
         then []
         else lib.splitString "\n" (builtins.readFile wifiFile);
-      matches = builtins.filter (l: builtins.match "${lib.escapeRegex ssid}=.*" l != null) lines;
+      matchingLines = builtins.filter (line: builtins.match "${lib.escapeRegex ssid}=.*" line != null) lines;
     in
-      if matches == []
+      if matchingLines == []
       then null
       else let
-        m = builtins.match "[^=]+=(.*)" (builtins.head matches);
+        pskMatch = builtins.match "[^=]+=(.*)" (builtins.head matchingLines);
       in
-        builtins.head m;
+        builtins.head pskMatch;
     wifiPsk = wifiPskFor "PrettyFlyForAWiFi";
   in {
     networking.hostName = cfg.hostName;
