@@ -114,6 +114,15 @@ def read_json(path):
         return None
 
 
+def mark_preview_offline(name, fallback):
+    # Keep the last known metadata so the tile still renders while the backend
+    # is down; only the online flag changes.
+    metadata = read_json(CACHE / f"{name}.json") or dict(fallback)
+    metadata["online"] = False
+    metadata.setdefault("updated", int(time.time()))
+    write_json(CACHE / f"{name}.json", metadata)
+
+
 def jellyfin_headers():
     return {
         "X-Emby-Token": JELLYFIN_KEY,
@@ -220,7 +229,6 @@ def refresh_jellyfin():
             )
             write_atomic(CACHE / "jellyfin.jpg", http_bytes(image_url, jellyfin_headers()))
 
-        progress = 0.0
         try:
             progress = float((item.get("UserData") or {}).get("PlayedPercentage") or 0)
         except (TypeError, ValueError):
@@ -239,13 +247,9 @@ def refresh_jellyfin():
         )
     except Exception as error:
         log(f"Jellyfin preview failed: {error}")
-        metadata = read_json(CACHE / "jellyfin.json") or {
-            "title": "Jellyfin",
-            "subtitle": "Movies & shows",
-        }
-        metadata["online"] = False
-        metadata.setdefault("updated", int(time.time()))
-        write_json(CACHE / "jellyfin.json", metadata)
+        mark_preview_offline(
+            "jellyfin", {"title": "Jellyfin", "subtitle": "Movies & shows"}
+        )
 
 
 def immich_web_login():
@@ -310,13 +314,7 @@ def refresh_immich():
         )
     except Exception as error:
         log(f"Immich preview failed: {error}")
-        metadata = read_json(CACHE / "immich.json") or {
-            "title": "Immich",
-            "subtitle": "Photo library",
-        }
-        metadata["online"] = False
-        metadata.setdefault("updated", int(time.time()))
-        write_json(CACHE / "immich.json", metadata)
+        mark_preview_offline("immich", {"title": "Immich", "subtitle": "Photo library"})
 
 
 def preview_loop():
@@ -500,6 +498,9 @@ def niri_windows():
         return []
 
 
+ZEN_APP_IDS = ("zen", "zen-beta")
+
+
 def kiosk_window(windows):
     # Zen suffixes the toplevel title with " — Zen Browser", so the kiosk
     # marker has to match as a prefix; an exact comparison never finds the
@@ -508,7 +509,7 @@ def kiosk_window(windows):
         (
             window
             for window in windows
-            if window.get("app_id") in ("zen", "zen-beta")
+            if window.get("app_id") in ZEN_APP_IDS
             and (window.get("title") or "").startswith(KIOSK_WINDOW_TITLE)
         ),
         None,
@@ -529,7 +530,7 @@ def close_app_windows(windows=None):
     for window in windows:
         if window.get("id") == kiosk.get("id"):
             continue
-        if window.get("app_id") in ("zen", "zen-beta"):
+        if window.get("app_id") in ZEN_APP_IDS:
             subprocess.run(
                 [
                     CONFIG["niri"]["bin"],
