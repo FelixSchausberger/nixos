@@ -56,6 +56,11 @@
       # forced form is required for the recreate fallback to actually heal.
       # Concurrent recreates are harmless: a second `attach --create` joins
       # the fresh session.
+      #
+      # A pty with no geometry is not a viewer. WSL's init starts a systemd
+      # login (/bin/login -f) on a pty with no terminal when the distro boots;
+      # Zellij sizes a tab for its smallest viewer, so attaching there creates
+      # the session at 80x24 and clamps every real client to it.
       if status is-interactive
           and ${lib.boolToString attachEnabled}
           and not __emergency_check
@@ -63,6 +68,9 @@
           and not set -q ZELLIJ_PANE_ID
           and not set -q HERDR_ENV
           and command -q zellij
+          and set -l __zellij_pty (stty size 2>/dev/null)
+          and test -n "$__zellij_pty"
+          and string match -qr '^[1-9][0-9]* [1-9][0-9]*$' -- "$__zellij_pty"
         set -l session_name "${attachSession}"
         if test -n "$session_name"
           # Already attached here (e.g. nested 0.45 session marked current):
