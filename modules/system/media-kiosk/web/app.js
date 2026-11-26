@@ -1,7 +1,6 @@
 const els = {
   clock: document.getElementById("clock"),
   date: document.getElementById("date"),
-  desktopPill: document.getElementById("desktop-pill"),
   desktopDot: document.getElementById("desktop-dot"),
   desktopLabel: document.getElementById("desktop-label"),
   homeView: document.getElementById("home-view"),
@@ -143,6 +142,12 @@ async function loadConfig() {
   }
 }
 
+function setPreview(image, source) {
+  if (image.dataset.src === source) return;
+  image.dataset.src = source;
+  image.src = source;
+}
+
 function applyJellyfin(meta) {
   if (!meta) {
     els.jellyfinCard.classList.add("is-broken");
@@ -159,11 +164,7 @@ function applyJellyfin(meta) {
   const progress = Math.max(0, Math.min(100, Number(meta.progress) || 0));
   els.jellyfinProgress.style.width = `${progress}%`;
 
-  const source = `/api/preview/jellyfin?v=${meta.updated || Date.now()}`;
-  if (els.jellyfinPreview.dataset.src !== source) {
-    els.jellyfinPreview.dataset.src = source;
-    els.jellyfinPreview.src = source;
-  }
+  setPreview(els.jellyfinPreview, `/api/preview/jellyfin?v=${meta.updated || Date.now()}`);
 }
 
 function applyImmich(meta) {
@@ -178,11 +179,7 @@ function applyImmich(meta) {
   els.immichSubtitle.textContent = meta.online
     ? meta.subtitle || "Recent photo"
     : "Immich offline";
-  const source = `/api/preview/immich?v=${meta.updated || Date.now()}`;
-  if (els.immichPreview.dataset.src !== source) {
-    els.immichPreview.dataset.src = source;
-    els.immichPreview.src = source;
-  }
+  setPreview(els.immichPreview, `/api/preview/immich?v=${meta.updated || Date.now()}`);
 }
 
 async function loadHighlights() {
@@ -349,7 +346,13 @@ function goHome() {
 }
 
 async function openApp(name) {
-  state.lastCard = els[name === "jellyfin" ? "jellyfinCard" : name === "immich" ? "immichCard" : "cinejoyCard"];
+  let card = els.cinejoyCard;
+  if (name === "jellyfin") {
+    card = els.jellyfinCard;
+  } else if (name === "immich") {
+    card = els.immichCard;
+  }
+  state.lastCard = card;
 
   if (name === "jellyfin" || name === "immich") {
     showApp(name, name === "jellyfin");
@@ -401,6 +404,8 @@ const ACTION_TITLES = {
   error: "Could not start the stream",
 };
 
+const ACTION_FINAL_STATES = ["done", "error", "cancelled"];
+
 async function startAction(kind) {
   if (state.action) {
     toast("An action is already running");
@@ -429,7 +434,7 @@ function updateActionDialog(data) {
   els.actionStatus.textContent = data.error
     ? `${data.message}\n\n${data.error}`
     : data.message;
-  if (["done", "error", "cancelled"].includes(data.state)) {
+  if (ACTION_FINAL_STATES.includes(data.state)) {
     els.actionCancel.textContent = "Close";
   }
 }
@@ -443,13 +448,16 @@ async function pollAction() {
     if (state.action !== action) return;
     updateActionDialog(data);
 
-    if (["done", "error", "cancelled"].includes(data.state)) {
+    if (ACTION_FINAL_STATES.includes(data.state)) {
       state.action = null;
       if (!els.actionDialog.open) {
-        toast(
-          data.state === "error" ? data.message : data.state === "done" ? "Stream ended" : "Cancelled",
-          data.state === "error",
-        );
+        if (data.state === "error") {
+          toast(data.message, true);
+        } else if (data.state === "done") {
+          toast("Stream ended");
+        } else {
+          toast("Cancelled");
+        }
       }
       return;
     }
