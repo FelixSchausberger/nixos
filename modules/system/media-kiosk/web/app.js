@@ -19,7 +19,7 @@ const els = {
   cinejoyCard: document.getElementById("cinejoy-card"),
   moonlightCard: document.getElementById("moonlight-card"),
   moonlightSubtitle: document.getElementById("moonlight-subtitle"),
-  moonlightUiCard: document.getElementById("moonlight-ui-card"),
+  gamesCard: document.getElementById("games-card"),
   homeButton: document.getElementById("home-button"),
   openWindowButton: document.getElementById("open-window-button"),
   frameJellyfin: document.getElementById("frame-jellyfin"),
@@ -390,7 +390,7 @@ async function closeApps() {
   }
 }
 
-/* Moonlight actions */
+/* Game and Moonlight actions */
 
 const ACTION_TITLES = {
   starting: "Preparing the desktop…",
@@ -404,6 +404,19 @@ const ACTION_TITLES = {
   error: "Could not start the stream",
 };
 
+const GAMES_TITLES = {
+  starting: "Starting the library…",
+  games: "Game library",
+  cancelling: "Closing…",
+  cancelled: "Cancelled",
+  done: "Library closed",
+  error: "Could not open the library",
+};
+
+function actionTitles() {
+  return state.action?.kind === "games" ? GAMES_TITLES : ACTION_TITLES;
+}
+
 const ACTION_FINAL_STATES = ["done", "error", "cancelled"];
 
 async function startAction(kind) {
@@ -412,15 +425,21 @@ async function startAction(kind) {
     return;
   }
 
+  const endpoint = kind === "games" ? "/api/games" : `/api/moonlight/${kind}`;
+
   try {
-    const result = await api(`/api/moonlight/${kind}`, {
+    const result = await api(endpoint, {
       method: "POST",
       body: {},
     });
-    state.action = { id: result.id };
-    els.actionKicker.textContent = kind === "steam" ? "Steam stream" : "Moonlight library";
-    els.actionTitle.textContent = ACTION_TITLES.starting;
-    els.actionStatus.textContent = "This can take a minute after the desktop was powered off.";
+    state.action = { id: result.id, kind };
+    els.actionKicker.textContent =
+      kind === "steam" ? "Steam stream" : kind === "games" ? "Game library" : "Moonlight library";
+    els.actionTitle.textContent = actionTitles().starting;
+    els.actionStatus.textContent =
+      kind === "games"
+        ? "Opening Nightjar; the controller follows into its library."
+        : "This can take a minute after the desktop was powered off.";
     els.actionCancel.textContent = "Cancel";
     if (!els.actionDialog.open) els.actionDialog.showModal();
     pollAction();
@@ -430,7 +449,7 @@ async function startAction(kind) {
 }
 
 function updateActionDialog(data) {
-  els.actionTitle.textContent = ACTION_TITLES[data.state] || "Moonlight";
+  els.actionTitle.textContent = actionTitles()[data.state] || "Moonlight";
   els.actionStatus.textContent = data.error
     ? `${data.message}\n\n${data.error}`
     : data.message;
@@ -454,7 +473,7 @@ async function pollAction() {
         if (data.state === "error") {
           toast(data.message, true);
         } else if (data.state === "done") {
-          toast("Stream ended");
+          toast(action.kind === "games" ? "Library closed" : "Stream ended");
         } else {
           toast("Cancelled");
         }
@@ -584,7 +603,7 @@ function wire() {
   els.immichCard.addEventListener("click", () => openApp("immich"));
   els.cinejoyCard.addEventListener("click", () => openApp("cinejoy"));
   els.moonlightCard.addEventListener("click", () => startAction("steam"));
-  els.moonlightUiCard.addEventListener("click", () => startAction("ui"));
+  els.gamesCard.addEventListener("click", () => startAction("games"));
 
   els.homeButton.addEventListener("click", goHome);
   els.openWindowButton.addEventListener("click", openWindow);

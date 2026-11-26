@@ -577,13 +577,21 @@ def focus_kiosk_window(windows=None):
     return focus_window(kiosk["id"])
 
 
-def focus_moonlight_window(windows=None):
+def focus_first_app_window(app_ids, windows=None):
     if windows is None:
         windows = niri_windows()
     for window in windows:
-        if window.get("app_id") in MOONLIGHT_APP_IDS:
+        if window.get("app_id") in app_ids:
             return focus_window(window["id"])
     return False
+
+
+def focus_moonlight_window(windows=None):
+    return focus_first_app_window(MOONLIGHT_APP_IDS, windows)
+
+
+def focus_nightjar_window(windows=None):
+    return focus_first_app_window(NIGHTJAR_APP_IDS, windows)
 
 
 def go_home():
@@ -600,6 +608,10 @@ SWITCHER_LOCK = threading.Lock()
 
 MOONLIGHT_APP_IDS = ("moonlight", "com.moonlight_stream.Moonlight")
 
+# SDL publishes its application metadata identifier as the Wayland app id;
+# Nightjar's desktop file and window both carry the reverse-DNS name.
+NIGHTJAR_APP_IDS = ("io.github.ramazankara.nightjar",)
+
 
 def surface_label(window, action):
     app_id = window.get("app_id") or ""
@@ -607,6 +619,8 @@ def surface_label(window, action):
 
     if app_id == "uxplay":
         return "AirPlay"
+    if app_id in NIGHTJAR_APP_IDS:
+        return "Games"
     if app_id in ZEN_APP_IDS:
         if title.startswith(KIOSK_WINDOW_TITLE):
             return "Kiosk"
@@ -645,7 +659,8 @@ def surface_entries():
     # windows, not for tearing them down, so closing is an explicit choice.
     entries.append({"label": "Close app windows", "kind": "close"})
     if action is not None:
-        entries.append({"label": "Stop Moonlight", "kind": "stop"})
+        label = "Stop the game library" if action["kind"] == "games" else "Stop Moonlight"
+        entries.append({"label": label, "kind": "stop"})
     return entries
 
 
@@ -834,7 +849,53 @@ def select_moonlight_host(action, process):
     )
 
 
+def systemctl(verb, unit):
+    try:
+        result = subprocess.run(
+            [CONFIG["systemd"]["systemctl"], "--user", verb, unit],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except Exception as error:
+        log(f"systemctl --user {verb} {unit} failed: {error}")
+        return
+    if result.returncode != 0:
+        log(f"systemctl --user {verb} {unit} failed: {result.stderr.strip()}")
+
+
+def run_games_action(action):
+    # Nightjar navigates its own library with the Steam Controller through
+    # SDL3, so the bridge must not inject arrows and Return into it as well.
+    # The bridge comes back when Nightjar exits, which keeps the kiosk
+    # navigable without waiting for the next session.
+    systemctl("stop", CONFIG["systemd"]["controller"])
+    try:
+        set_state(action, "games", "Game library")
+        process = start_process([CONFIG["desktop"]["nightjar"]])
+        action["process"] = process
+        read_lines(action, process)
+        status = process.wait()
+
+        if action.get("cancelled"):
+            set_state(action, "cancelled", "Cancelled")
+        elif status != 0:
+            set_state(action, "error", f"Nightjar exited with status {status}")
+        else:
+            set_state(action, "done", "Library closed")
+    except Exception as error:
+        log(f"games action failed: {error}")
+        set_state(action, "error", str(error))
+    finally:
+        action["process"] = None
+        systemctl("start", CONFIG["systemd"]["controller"])
+
+
 def run_action(action):
+    if action["kind"] == "games":
+        run_games_action(action)
+        return
+
     try:
         set_state(action, "waking", "Waking the desktop…")
         process = start_process([CONFIG["desktop"]["power"], "on"])
@@ -1154,16 +1215,24 @@ class KioskHandler(BaseHTTPRequestHandler):
             if path == "/api/switcher":
                 threading.Thread(target=run_switcher, daemon=True).start()
                 return self.send_json(202, {"ok": True})
-            if path in ("/api/moonlight/steam", "/api/moonlight/ui"):
-                kind = "steam" if path.endswith("steam") else "ui"
+            if path in ("/api/moonlight/steam", "/api/moonlight/ui", "/api/games"):
+                kinds = {
+                    "/api/moonlight/steam": "steam",
+                    "/api/moonlight/ui": "ui",
+                    "/api/games": "games",
+                }
+                kind = kinds[path]
                 action = new_action(kind)
                 if action is None:
-                    # The stream/library process stays alive while it is
-                    # useful; a second tile press should return to it, not
-                    # report a dead-end "another action" error.
+                    # The app stays alive while it is useful; a second tile
+                    # press should return to it, not report a dead-end
+                    # "another action" error.
                     existing = current_action()
                     if existing is not None:
-                        focus_moonlight_window()
+                        if kind == "games":
+                            focus_nightjar_window()
+                        else:
+                            focus_moonlight_window()
                         return self.send_json(
                             202, {"id": existing["id"], "existing": True}
                         )

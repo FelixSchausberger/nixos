@@ -38,6 +38,9 @@
         # Instant AI Git Commit message generator (from nixpkgs)
         inherit (pkgs) lumen;
 
+        # Moonlight-protocol client used as the m920q kiosk game library
+        nightjar = pkgs.callPackage ../pkgs/nightjar {};
+
         # SSH connection manager
         dssh = pkgs.callPackage ../pkgs/dssh {};
 
