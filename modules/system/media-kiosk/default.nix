@@ -80,6 +80,15 @@
     niri = {
       bin = lib.getExe config.programs.niri.package;
     };
+    ui = {
+      # Walker's dmenu mode is the surface switcher: it is a layer-shell
+      # overlay, so it stays visible over fullscreen AirPlay, Cinejoy and
+      # Moonlight windows, and the controller already sends it arrows/Enter.
+      walker = lib.getExe inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      # Moonlight opens on the computer list; one Return selects the only
+      # host and lands on its box-art application grid.
+      wtype = lib.getExe pkgs.wtype;
+    };
     open = {
       # Home-Manager installs this helper next to the kiosk browser profile;
       # it opens app URLs in a chromeless top-level Zen window.
@@ -260,7 +269,7 @@ in {
 
     # The 2026 Steam Controller has no hid-steam support on the m920q kernel;
     # SDL3 claims the puck's vendor interface, and the bridge translates the
-    # gamepad state into keyboard input, the kiosk home action, and avizo
+    # gamepad state into keyboard input, the surface switcher, and avizo
     # volume steps.
     systemd.user.services.media-kiosk-controller = {
       description = "Steam Controller bridge for the media kiosk";
