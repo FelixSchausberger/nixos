@@ -91,7 +91,10 @@ in
             }
 
             obtainium_bulk_link() {
-              payload=$(jq -c "[$(lanes_path).obtainium[] | {id, url, author, name}]" "$MANIFEST")
+              # Obtainium reads extra settings from a JSON-encoded
+              # additionalSettings string; apkFilterRegEx keeps a release with
+              # several APK flavours (Nightjar) on the standard build.
+              payload=$(jq -c "[$(lanes_path).obtainium[] | {id, url, author, name} + (if .apkFilterRegEx then {additionalSettings: ({apkFilterRegEx: .apkFilterRegEx} | tojson)} else {} end)]" "$MANIFEST")
               encoded=$(printf %s "$payload" | jq -sRr @uri)
               echo "obtainium://apps/$encoded"
             }

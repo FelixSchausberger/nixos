@@ -85,6 +85,16 @@ _: {
         url = "https://github.com/moonlight-stream/moonlight-android";
       }
       {
+        # GitHub-only release, so Aurora cannot track it. The release also
+        # carries a root flavour and an unversioned duplicate; the filter
+        # pins Obtainium to the standard versioned APK.
+        id = "com.butterpollo.client";
+        name = "Nightjar";
+        author = "RamazanKara";
+        url = "https://github.com/RamazanKara/nightjar";
+        apkFilterRegEx = "^nightjar-[0-9]+\\.[0-9]+\\.[0-9]+\\.apk$";
+      }
+      {
         # UPM runs ReVanced, Morphe and Reseam patch bundles in one place;
         # its runtimes bundle the Morphe and Reseam engines, so the two
         # dedicated managers stay dropped. Bench-verified id: the APK's
