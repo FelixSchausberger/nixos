@@ -102,7 +102,7 @@
     ];
     formatter = shared.formatters;
     # Agent tool calls and the terminal run this shell, so they inherit the rm
-    # shim (see agentShell above).
+    # shim (see agentShell below).
     shell = "${agentShell}/bin/bash";
     skills = [combinedSkills];
     # The Rex community MCP carries the Rex docs, changelog and beta Discord

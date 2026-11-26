@@ -1,7 +1,7 @@
 {pkgs, ...}: {
   # Import configurations of graphical applications
   imports = [
-    ./browsers # Web browsers (Chrome, Firefox, Zen)
+    ./browsers # Web browsers (Zen, Ladybird)
     ./editors # Editors (VS Code, Zed)
     ./terminals # Terminal emulators (Ghostty)
     ./mpv.nix # General-purpose media player, fork of MPlayer and mplayer2
@@ -20,7 +20,7 @@
   # playerctld integration plus an optional background daemon.
   modules.home.tui.spotify-player.enable = true;
 
-  # MIME type associations for oculante (from oculante.nix)
+  # MIME type associations for oculante, installed above
   xdg = {
     enable = true;
     mimeApps = {
