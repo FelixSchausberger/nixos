@@ -657,11 +657,10 @@ in {
   # Bluetooth serves the JBL Flip 6 audio sink (projector kiosk and general
   # music playback) and a BT Steam Controller if one is used. The USB CSR8510
   # dongle is attached (controller 00:0A:CD:34:9D:7A); the optional M.2
-  # WLAN/BT card is not installed. The persisted state holds the MX Anywhere
-  # 2S only, so the JBL needs pairing after the dongle appears. Pairings
-  # persist via environment.persistence."/per" below. Experimental exposes
-  # device battery; KernelExperimental enables ISO sockets for recent
-  # controllers.
+  # WLAN/BT card is not installed. The JBL link key lives under
+  # /var/lib/bluetooth, which is on the persistent /per dataset, so the bond
+  # survives reboots. Experimental exposes device battery; KernelExperimental
+  # enables ISO sockets for recent controllers.
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
