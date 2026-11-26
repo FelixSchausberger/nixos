@@ -156,30 +156,28 @@ in {
   xdg = {
     enable = true;
     mimeApps = let
-      associations = let
-        zenDesktop = "zen.desktop";
-        mimeTypes = [
-          "x-scheme-handler/https"
-          "x-scheme-handler/http"
-          "text/html"
-          "application/xhtml+xml"
-          "application/x-extension-html"
-          "application/x-extension-htm"
-          "application/x-extension-shtml"
-          "application/x-extension-xhtml"
-          "application/x-extension-xht"
-          "application/json"
-          "text/plain"
-          "x-scheme-handler/about"
-          "x-scheme-handler/unknown"
-          "x-scheme-handler/mailto"
-        ];
-      in
-        builtins.listToAttrs (map (name: {
-            inherit name;
-            value = zenDesktop;
-          })
-          mimeTypes);
+      zenDesktop = "zen.desktop";
+      mimeTypes = [
+        "x-scheme-handler/https"
+        "x-scheme-handler/http"
+        "text/html"
+        "application/xhtml+xml"
+        "application/x-extension-html"
+        "application/x-extension-htm"
+        "application/x-extension-shtml"
+        "application/x-extension-xhtml"
+        "application/x-extension-xht"
+        "application/json"
+        "text/plain"
+        "x-scheme-handler/about"
+        "x-scheme-handler/unknown"
+        "x-scheme-handler/mailto"
+      ];
+      associations = builtins.listToAttrs (map (name: {
+          inherit name;
+          value = zenDesktop;
+        })
+        mimeTypes);
     in {
       associations.added = associations;
       defaultApplications = associations;

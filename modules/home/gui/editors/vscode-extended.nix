@@ -93,16 +93,6 @@
           };
         };
 
-        # "formatting = {
-        #   # Use yapf as the Python code formatter
-        #   "provider" = "yapf";
-
-        #   # Specify the style file for yapf formatting
-        #   "yapfArgs" = [
-        #     "--style=/usr/share/magformat/default_styles/style.yapf"
-        #   ];
-        # };
-
         # Configure pylint for Python linting with Django and numpy/ompl support
         "linting.pylintArgs" = [
           "--load-plugins"

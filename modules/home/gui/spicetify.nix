@@ -43,8 +43,6 @@ in {
       playlistIcons # Give your playlists icons in the left sidebar.
     ];
 
-    # experimentalFeatures = true;
-
     # Theme and colorScheme are controlled by stylix for system-wide consistency
   };
 }
