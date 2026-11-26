@@ -6,41 +6,24 @@
       value = [(cosmicLib.cosmic.mkRON "enum" dirStr)];
     };
 
-  # Generate focus + move shortcuts for a direction (Colemak key + arrow key)
-  mkDirShortcuts = colemakKey: arrowKey: dirStr: [
-    {
-      action = mkDirAction "Focus" dirStr;
-      key = "Super+${colemakKey}";
-    }
-    {
-      action = mkDirAction "Focus" dirStr;
-      key = "Super+${arrowKey}";
-    }
-    {
-      action = mkDirAction "Move" dirStr;
-      key = "Super+Ctrl+${colemakKey}";
-    }
-    {
-      action = mkDirAction "Move" dirStr;
-      key = "Super+Ctrl+${arrowKey}";
-    }
-    {
-      action = mkDirAction "SwitchOutput" dirStr;
-      key = "Super+Shift+${colemakKey}";
-    }
-    {
-      action = mkDirAction "SwitchOutput" dirStr;
-      key = "Super+Shift+${arrowKey}";
-    }
-    {
-      action = mkDirAction "MoveToOutput" dirStr;
-      key = "Super+Ctrl+Shift+${colemakKey}";
-    }
-    {
-      action = mkDirAction "MoveToOutput" dirStr;
-      key = "Super+Ctrl+Shift+${arrowKey}";
-    }
-  ];
+  # Generate focus + move + switch-output shortcuts for a direction
+  # (Colemak key + arrow key) under each action's modifier prefix
+  mkDirShortcuts = colemakKey: arrowKey: dirStr: let
+    mkPair = variant: modifier: [
+      {
+        action = mkDirAction variant dirStr;
+        key = "${modifier}${colemakKey}";
+      }
+      {
+        action = mkDirAction variant dirStr;
+        key = "${modifier}${arrowKey}";
+      }
+    ];
+  in
+    (mkPair "Focus" "Super+")
+    ++ (mkPair "Move" "Super+Ctrl+")
+    ++ (mkPair "SwitchOutput" "Super+Shift+")
+    ++ (mkPair "MoveToOutput" "Super+Ctrl+Shift+");
 
   mkSpawn = cmd:
     cosmicLib.cosmic.mkRON "enum" {

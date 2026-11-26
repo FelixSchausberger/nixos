@@ -15,14 +15,15 @@
     then config.wm.hyprland.terminal
     else "ghostty";
 
-  terminalBin =
-    if terminalName == "ghostty"
-    then "${pkgs.ghostty}/bin/ghostty"
-    else if terminalName == "cosmic-term"
-    then "${pkgs.cosmic-term}/bin/cosmic-term"
-    else if terminalName == "wezterm"
-    then "${pkgs.wezterm}/bin/wezterm"
-    else "${pkgs.ghostty}/bin/ghostty";
+  # Known terminals resolve to their store path; anything else falls back
+  # to ghostty.
+  terminalBins = {
+    ghostty = "${pkgs.ghostty}/bin/ghostty";
+    cosmic-term = "${pkgs.cosmic-term}/bin/cosmic-term";
+    wezterm = "${pkgs.wezterm}/bin/wezterm";
+  };
+
+  terminalBin = terminalBins.${terminalName} or terminalBins.ghostty;
 
   # Detect which WM-specific modules should be enabled
   wmModules = lib.optionals (config.wm.hyprland.enable or false) [

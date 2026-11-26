@@ -259,15 +259,6 @@ in {
           end
         end
 
-        # Safe jujutsu completion with enhanced error handling (commented for now)
-        # if command -v jj >/dev/null 2>&1
-        #   if jj --help >/dev/null 2>&1
-        #     if not COMPLETE=fish jj | source 2>/dev/null
-        #       echo "ΓÜá∩╕Å  jj completions failed to load - continuing without jj completions"
-        #     end
-        #   end
-        # end
-
         # Name the Zellij tab after the current directory, so plain shell tabs
         # never show zellij's misleading "Tab #<id>" default. Leaf-only and
         # length-capped so a deep/long path cannot widen the status bar. No-op
@@ -287,7 +278,6 @@ in {
         end
         __zellij_tab_name
       end
-
 
       ${autoAttachBlock}
 
