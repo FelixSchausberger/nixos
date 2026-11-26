@@ -82,7 +82,15 @@
 
       case "''${1:-}" in
         on | wake)
-          if up; then echo "desktop already up"; exit 0; fi
+          if up; then
+            # A finished stream arms `shutdown +15` on the desktop. Opening
+            # the Moonlight library starts no stream, so only this cancel
+            # keeps the host from powering off under the UI.
+            ssh -o BatchMode=yes -o ConnectTimeout=5 desktop \
+              sudo -n /run/current-system/sw/bin/shutdown -c >/dev/null 2>&1 || true
+            echo "desktop already up"
+            exit 0
+          fi
           if ! wakeonlan -i "$broadcast" "$mac"; then
             notify "Desktop wake failed" "could not send the magic packet" high warning
             echo "wake packet failed" >&2
