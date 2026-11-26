@@ -139,6 +139,10 @@ in {
           ${pkgs.coreutils}/bin/chmod 600 ${stateDir}/users.yaml
         fi
         ${pkgs.yq-go}/bin/yq -i '.plugins._disabled = (((.plugins._disabled // []) + ["softwareupdate", "pluginmanager"]) | unique)' ${stateDir}/config.yaml
+        # OctoPrint 2.0 flags the legacy global API key as a health warning.
+        # Home Assistant authenticates with its own app key and Homepage with
+        # the per-user key above, so the global key is removed on every start.
+        ${pkgs.yq-go}/bin/yq -i 'del(.api.key)' ${stateDir}/config.yaml
       '';
 
       octoprint.serviceConfig = {
