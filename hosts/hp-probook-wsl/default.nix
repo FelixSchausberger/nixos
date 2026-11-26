@@ -415,10 +415,6 @@ in {
 
         config.launch_menu = {
           -- ── WSL ──────────────────────────────────────────────────────────
-          -- sleep 0.2 lets WezTerm's ConPTY settle from its initial 80x24 to
-          -- the actual window dimensions before resize -q queries TIOCGWINSZ.
-          -- Without the sleep, resize -q reads the stale 80x24 and zellij starts at that
-          -- size with no subsequent SIGWINCH to correct it.
           {
             label  = "WSL: Zellij",
             domain = { DomainName = "local" },

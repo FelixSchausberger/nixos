@@ -1,4 +1,4 @@
-# Detaches zellij attach clients left behind by a dead mosh session.
+# Detaches zellij attach clients that are not real viewers.
 #
 # Zellij sizes a tab for its smallest viewer (per-client tab sizes, 0.45+),
 # so a client that nobody is watching still counts: the tab is laid out for
@@ -6,15 +6,24 @@
 # partway. A tab opened through the phantom gets the live client's size, which
 # makes the clamp look tab-specific.
 #
-# Mosh outlives its transport by design: closing the laptop, restarting WSL or
-# changing networks kills mosh-client without a clean quit, mosh-server keeps
-# running, and its `zellij attach` stays registered as a viewer. Detaching the
-# phantom is lossless - the session and every pane keep running server-side,
-# only the dead client's terminal goes away.
+# Two kinds of client are not viewers:
 #
-# A client is presumed orphaned when it is older than the age bound and
-# smaller than the newest client of its session: a bigger client cannot clamp
-# the visible tab, and a tab with a single client is never touched because
+# - A client left behind by a dead mosh transport. Mosh outlives its transport
+#   by design: closing the laptop, restarting WSL or changing networks kills
+#   mosh-client without a clean quit, mosh-server keeps running, and its
+#   `zellij attach` stays registered as a viewer.
+# - A client with a 0x0 pty. WSL's init starts a systemd login for the user
+#   with no terminal when the distro boots; if fish auto-attaches from there,
+#   the session is created at 80x24 and every real client is clamped to it.
+#
+# Detaching either phantom is lossless - the session and every pane keep
+# running server-side, only the dead client's terminal goes away.
+#
+# A client is unsized when its pty reports zero rows or columns; it is
+# detached after a short grace even when it is the newest client. A sized
+# client is presumed orphaned when it is older than the age bound and smaller
+# than the newest client of its session: a bigger client cannot clamp the
+# visible tab, and a tab with a single sized client is never touched because
 # that client is its own newest.
 {
   pkgs,
@@ -29,6 +38,11 @@
   # login.
   maxAgeSeconds = 12 * 60 * 60;
 
+  # A real client's pty can be 0x0 for a fraction of a second while its
+  # terminal starts; the timer runs every five minutes, so a minute keeps the
+  # scan from racing that startup without delaying a genuine phantom.
+  zeroSizeGraceSeconds = 60;
+
   reaper = pkgs.writeShellApplication {
     name = "zellij-client-reap";
     runtimeInputs = [pkgs.zellij pkgs.procps pkgs.coreutils];
@@ -39,6 +53,7 @@
       set -o nounset -o pipefail
 
       max_age=${toString maxAgeSeconds}
+      zero_size_grace=${toString zeroSizeGraceSeconds}
 
       while IFS= read -r line; do
         session="''${line%% *}"
@@ -87,14 +102,23 @@
           pid="''${pids[$i]}"
           age="''${ages[$i]}"
           tty="''${ttys[$i]}"
-          if [ "$pid" = "$newest_pid" ] || [ "$age" -le "$max_age" ]; then
-            continue
-          fi
           size="$(stty -F "/dev/$tty" size 2>/dev/null || true)"
           if [ -z "$size" ]; then
             continue
           fi
           read -r rows cols <<<"$size"
+          if [ "$rows" -eq 0 ] || [ "$cols" -eq 0 ]; then
+            if [ "$age" -gt "$zero_size_grace" ]; then
+              # SIGKILL: a 0x0 client has no terminal state to flush, and the
+              # WSL boot login stays alive after SIGTERM detaches it server-side.
+              kill -9 "$pid" 2>/dev/null || continue
+              echo "detached unsized client $pid from session '$session' (''${age}s old, ''${cols}x''${rows})"
+            fi
+            continue
+          fi
+          if [ "$pid" = "$newest_pid" ] || [ "$age" -le "$max_age" ]; then
+            continue
+          fi
           if [ "$rows" -ge "$newest_rows" ] && [ "$cols" -ge "$newest_cols" ]; then
             continue
           fi
@@ -107,7 +131,7 @@
 in {
   options.tui.zellijClientReap = {
     enable =
-      lib.mkEnableOption "detaching zellij clients orphaned by a dead mosh session"
+      lib.mkEnableOption "detaching zellij clients that are not real viewers"
       // {
         default = true;
       };
@@ -118,7 +142,7 @@ in {
 
     systemd.user.services.zellij-client-reap = {
       Unit = {
-        Description = "Detach zellij clients orphaned by dead mosh sessions";
+        Description = "Detach zellij clients that are not real viewers";
       };
       Service = {
         Type = "oneshot";
@@ -128,7 +152,7 @@ in {
 
     systemd.user.timers.zellij-client-reap = {
       Unit = {
-        Description = "Periodically detach orphaned zellij clients";
+        Description = "Periodically detach orphaned or unsized zellij clients";
       };
       Timer = {
         OnBootSec = "3min";
