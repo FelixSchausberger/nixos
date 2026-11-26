@@ -29,11 +29,8 @@
       then config.wm.niri
       else config.wm.hyprland;
 
-    terminalPkg = getTerminalPkg wmCfg;
-    terminalBin =
-      if wmCfg.terminal == "ghostty"
-      then "ghostty"
-      else wmCfg.terminal;
+    # The terminal option value is also the executable name.
+    terminalCmd = "${getTerminalPkg wmCfg}/bin/${wmCfg.terminal}";
 
     # Helper to extract just the key without modifiers
     stripModifiers = key: let
@@ -47,6 +44,15 @@
         (!bind ? niriOnly || isNiri)
         && (!bind ? hyprlandOnly || isHyprland))
       bindings;
+
+    # Map a category's bindings to which-key entries, resolving each command by name
+    categoryEntries = category: commandFor:
+      lib.mapAttrsToList (name: bind: {
+        key = stripModifiers bind.key;
+        inherit (bind) desc;
+        cmd = commandFor name;
+      })
+      (filterBindings category.bindings);
 
     # Convert directional action to submenu entry
     dirToSubmenu = actionName: actionCfg: dir: let
@@ -112,239 +118,183 @@
       );
 
     # Build category submenu from bindings
-    buildCategorySubmenu = category: let
-      bindings = filterBindings category.bindings;
-    in
-      lib.mapAttrsToList (name: bind: {
-        key = stripModifiers bind.key;
-        inherit (bind) desc;
-        cmd =
-          if isNiri
-          then
-            (
-              if name == "terminal"
-              then "${terminalPkg}/bin/${terminalBin}"
-              else if name == "terminal-safe"
-              then "${terminalPkg}/bin/${terminalBin} -e ${pkgs.fish}/bin/fish"
-              else if name == "herdr"
-              then "${terminalPkg}/bin/${terminalBin} -e ${pkgs.herdr}/bin/herdr"
-              else if name == "launcher"
-              then "walker"
-              else if name == "close"
-              then "niri msg action close-window"
-              else if name == "float"
-              then "niri msg action toggle-window-floating"
-              else if name == "float-tiling"
-              then "niri msg action switch-focus-between-floating-and-tiling"
-              else if name == "fullscreen"
-              then "niri msg action maximize-column"
-              else if name == "fullscreen-window"
-              then "niri msg action fullscreen-window"
-              else if name == "center"
-              then "niri msg action center-column"
-              else if name == "center-visible"
-              then "niri msg action center-visible-columns"
-              else if name == "cycle-width"
-              then "niri msg action switch-preset-column-width"
-              else if name == "cycle-height"
-              then "niri msg action switch-preset-window-height"
-              else if name == "reset-height"
-              then "niri msg action reset-window-height"
-              else if name == "consume-left"
-              then "niri msg action consume-or-expel-window-left"
-              else if name == "consume-right"
-              then "niri msg action consume-or-expel-window-right"
-              else if name == "consume-into"
-              then "niri msg action consume-window-into-column"
-              else if name == "expel-from"
-              then "niri msg action expel-window-from-column"
-              else "true"
-            )
-          else
-            (
-              if name == "terminal"
-              then "${terminalPkg}/bin/${terminalBin}"
-              else if name == "launcher"
-              then "walker"
-              else if name == "browser"
-              then wmCfg.browser
-              else if name == "file-manager"
-              then wmCfg.fileManager
-              else if name == "editor"
-              then "${config.programs.nixvim.build.package}/bin/nvim"
-              else if name == "close"
-              then "hyprctl dispatch killactive"
-              else if name == "float"
-              then "hyprctl dispatch togglefloating"
-              else "true"
-            );
-      })
-      bindings;
+    buildCategorySubmenu = category:
+      categoryEntries category (name:
+        if isNiri
+        then
+          if name == "terminal"
+          then terminalCmd
+          else if name == "terminal-safe"
+          then "${terminalCmd} -e ${pkgs.fish}/bin/fish"
+          else if name == "herdr"
+          then "${terminalCmd} -e ${pkgs.herdr}/bin/herdr"
+          else if name == "launcher"
+          then "walker"
+          else if name == "close"
+          then "niri msg action close-window"
+          else if name == "float"
+          then "niri msg action toggle-window-floating"
+          else if name == "float-tiling"
+          then "niri msg action switch-focus-between-floating-and-tiling"
+          else if name == "fullscreen"
+          then "niri msg action maximize-column"
+          else if name == "fullscreen-window"
+          then "niri msg action fullscreen-window"
+          else if name == "center"
+          then "niri msg action center-column"
+          else if name == "center-visible"
+          then "niri msg action center-visible-columns"
+          else if name == "cycle-width"
+          then "niri msg action switch-preset-column-width"
+          else if name == "cycle-height"
+          then "niri msg action switch-preset-window-height"
+          else if name == "reset-height"
+          then "niri msg action reset-window-height"
+          else if name == "consume-left"
+          then "niri msg action consume-or-expel-window-left"
+          else if name == "consume-right"
+          then "niri msg action consume-or-expel-window-right"
+          else if name == "consume-into"
+          then "niri msg action consume-window-into-column"
+          else if name == "expel-from"
+          then "niri msg action expel-window-from-column"
+          else "true"
+        else if name == "terminal"
+        then terminalCmd
+        else if name == "launcher"
+        then "walker"
+        else if name == "browser"
+        then wmCfg.browser
+        else if name == "file-manager"
+        then wmCfg.fileManager
+        else if name == "editor"
+        then "${config.programs.nixvim.build.package}/bin/nvim"
+        else if name == "close"
+        then "hyprctl dispatch killactive"
+        else if name == "float"
+        then "hyprctl dispatch togglefloating"
+        else "true");
+
+    # Categories that apply to this WM
+    applicableCategories = lib.filterAttrs (_catName: category:
+      !((category ? niriOnly && !isNiri)
+        || (category ? hyprlandOnly && !isHyprland)))
+    keybindDefs.categories;
 
     # Build main menu structure
-    menu = lib.filter (item: item != null) (
-      lib.mapAttrsToList (catName: category: let
-        # Skip categories that are WM-specific
-        skip =
-          (category ? niriOnly && !isNiri)
-          || (category ? hyprlandOnly && !isHyprland);
-      in
-        if skip
-        then null
-        else {
-          inherit (category) key;
-          desc = category.title;
-          submenu =
-            if catName == "navigation"
-            then buildNavigationSubmenu
-            else if catName == "scratchpads"
-            then
-              (lib.mapAttrsToList (name: bind: {
-                  key = stripModifiers bind.key;
-                  inherit (bind) desc;
-                  cmd = "${pkgs.pyprland}/bin/pypr toggle ${name}";
-                })
-                (filterBindings category.bindings))
-            else if catName == "workspaces"
-            then
-              (lib.mapAttrsToList (name: bind: {
-                  key = stripModifiers bind.key;
-                  inherit (bind) desc;
-                  cmd =
-                    if isNiri
-                    then
-                      (
-                        if name == "prev"
-                        then "niri msg action focus-workspace-up"
-                        else if name == "next"
-                        then "niri msg action focus-workspace-down"
-                        else if name == "move-prev"
-                        then "niri msg action move-column-to-workspace-up"
-                        else if name == "move-next"
-                        then "niri msg action move-column-to-workspace-down"
-                        else if name == "shift-up"
-                        then "niri msg action move-workspace-up"
-                        else if name == "shift-down"
-                        then "niri msg action move-workspace-down"
-                        else if name == "prev-alt"
-                        then "niri msg action focus-workspace-up"
-                        else if name == "next-alt"
-                        then "niri msg action focus-workspace-down"
-                        else if name == "previous"
-                        then "bash -c 'niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait'"
-                        else "true"
-                      )
-                    else
-                      (
-                        if name == "prev"
-                        then "hyprctl dispatch workspace e-1"
-                        else if name == "next"
-                        then "hyprctl dispatch workspace e+1"
-                        else if name == "move-prev"
-                        then "hyprctl dispatch movetoworkspace e-1"
-                        else if name == "move-next"
-                        then "hyprctl dispatch movetoworkspace e+1"
-                        else if name == "prev-alt"
-                        then "hyprctl dispatch workspace e-1"
-                        else if name == "next-alt"
-                        then "hyprctl dispatch workspace e+1"
-                        else if name == "previous"
-                        then "hyprctl dispatch workspace previous"
-                        else "true"
-                      );
-                })
-                (filterBindings category.bindings))
-            else if catName == "screenshots"
-            then
-              (lib.mapAttrsToList (name: bind: {
-                  key = stripModifiers bind.key;
-                  inherit (bind) desc;
-                  cmd =
-                    if isNiri
-                    then
-                      (
-                        if name == "selection"
-                        then "niri msg action screenshot"
-                        else if name == "fullscreen"
-                        then "niri msg action screenshot-screen"
-                        else if name == "window"
-                        then "niri msg action screenshot-window"
-                        else "true"
-                      )
-                    else
-                      (
-                        if name == "selection"
-                        then "${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" - | ${pkgs.wl-clipboard}/bin/wl-copy"
-                        else if name == "fullscreen"
-                        then "${pkgs.grim}/bin/grim - | ${pkgs.wl-clipboard}/bin/wl-copy"
-                        else if name == "save-selection"
-                        then "${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png"
-                        else if name == "save-fullscreen"
-                        then "${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png"
-                        else "true"
-                      );
-                })
-                (filterBindings category.bindings))
-            else if catName == "system"
-            then
-              (lib.mapAttrsToList (name: bind: {
-                  key = stripModifiers bind.key;
-                  inherit (bind) desc;
-                  cmd =
-                    if isNiri
-                    then
-                      (
-                        if name == "lock"
-                        then "loginctl lock-session"
-                        else if name == "quit" || name == "quit-alt"
-                        then "niri msg action quit"
-                        else if name == "power-monitors"
-                        then "niri msg action power-off-monitors"
-                        else if name == "idle-inhibitor"
-                        then "stasis-toggle"
-                        else if name == "debug-tint"
-                        then "niri msg action toggle-debug-tint"
-                        else if name == "emergency"
-                        then "${terminalPkg}/bin/${terminalBin} -e ${pkgs.bash}/bin/bash --norc -c 'touch /tmp/.nixos-emergency-mode && exec bash --norc'"
-                        else if name == "overview"
-                        then "bash -c 'niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait'"
-                        else "true"
-                      )
-                    else
-                      (
-                        if name == "lock"
-                        then "loginctl lock-session"
-                        else if name == "quit" || name == "quit-alt"
-                        then "hyprctl dispatch exit"
-                        else if name == "debug-tint"
-                        then "${pkgs.libnotify}/bin/notify-send 'Test' 'Notification system'"
-                        else if name == "emergency"
-                        then "pkill -SIGUSR1 wired"
-                        else "true"
-                      );
-                })
-                (filterBindings category.bindings))
-            else if catName == "utilities"
-            then
-              (lib.mapAttrsToList (name: bind: {
-                  key = stripModifiers bind.key;
-                  inherit (bind) desc;
-                  cmd =
-                    if name == "clipboard"
-                    then "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules clipboard"
-                    else if name == "emoji"
-                    then "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules emoji"
-                    else if name == "color-picker"
-                    then "${pkgs.hyprpicker}/bin/hyprpicker -a"
-                    else if name == "resize-mode"
-                    then "hyprctl dispatch submap resize"
-                    else "true";
-                })
-                (filterBindings category.bindings))
-            else buildCategorySubmenu category;
-        })
-      keybindDefs.categories
-    );
+    menu =
+      lib.mapAttrsToList (catName: category: {
+        inherit (category) key;
+        desc = category.title;
+        submenu =
+          if catName == "navigation"
+          then buildNavigationSubmenu
+          else if catName == "scratchpads"
+          then categoryEntries category (name: "${pkgs.pyprland}/bin/pypr toggle ${name}")
+          else if catName == "workspaces"
+          then
+            categoryEntries category (name:
+              if isNiri
+              then
+                if name == "prev"
+                then "niri msg action focus-workspace-up"
+                else if name == "next"
+                then "niri msg action focus-workspace-down"
+                else if name == "move-prev"
+                then "niri msg action move-column-to-workspace-up"
+                else if name == "move-next"
+                then "niri msg action move-column-to-workspace-down"
+                else if name == "shift-up"
+                then "niri msg action move-workspace-up"
+                else if name == "shift-down"
+                then "niri msg action move-workspace-down"
+                else if name == "prev-alt"
+                then "niri msg action focus-workspace-up"
+                else if name == "next-alt"
+                then "niri msg action focus-workspace-down"
+                else if name == "previous"
+                then "bash -c 'niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait'"
+                else "true"
+              else if name == "prev"
+              then "hyprctl dispatch workspace e-1"
+              else if name == "next"
+              then "hyprctl dispatch workspace e+1"
+              else if name == "move-prev"
+              then "hyprctl dispatch movetoworkspace e-1"
+              else if name == "move-next"
+              then "hyprctl dispatch movetoworkspace e+1"
+              else if name == "prev-alt"
+              then "hyprctl dispatch workspace e-1"
+              else if name == "next-alt"
+              then "hyprctl dispatch workspace e+1"
+              else if name == "previous"
+              then "hyprctl dispatch workspace previous"
+              else "true")
+          else if catName == "screenshots"
+          then
+            categoryEntries category (name:
+              if isNiri
+              then
+                if name == "selection"
+                then "niri msg action screenshot"
+                else if name == "fullscreen"
+                then "niri msg action screenshot-screen"
+                else if name == "window"
+                then "niri msg action screenshot-window"
+                else "true"
+              else if name == "selection"
+              then "${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" - | ${pkgs.wl-clipboard}/bin/wl-copy"
+              else if name == "fullscreen"
+              then "${pkgs.grim}/bin/grim - | ${pkgs.wl-clipboard}/bin/wl-copy"
+              else if name == "save-selection"
+              then "${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png"
+              else if name == "save-fullscreen"
+              then "${pkgs.grim}/bin/grim ${config.home.homeDirectory}/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png"
+              else "true")
+          else if catName == "system"
+          then
+            categoryEntries category (name:
+              if isNiri
+              then
+                if name == "lock"
+                then "loginctl lock-session"
+                else if name == "quit" || name == "quit-alt"
+                then "niri msg action quit"
+                else if name == "power-monitors"
+                then "niri msg action power-off-monitors"
+                else if name == "idle-inhibitor"
+                then "stasis-toggle"
+                else if name == "debug-tint"
+                then "niri msg action toggle-debug-tint"
+                else if name == "emergency"
+                then "${terminalCmd} -e ${pkgs.bash}/bin/bash --norc -c 'touch /tmp/.nixos-emergency-mode && exec bash --norc'"
+                else if name == "overview"
+                then "bash -c 'niri msg action toggle-overview 2>/dev/null & ironbar bar main toggle-visible 2>/dev/null & wait'"
+                else "true"
+              else if name == "lock"
+              then "loginctl lock-session"
+              else if name == "quit" || name == "quit-alt"
+              then "hyprctl dispatch exit"
+              else if name == "debug-tint"
+              then "${pkgs.libnotify}/bin/notify-send 'Test' 'Notification system'"
+              else if name == "emergency"
+              then "pkill -SIGUSR1 wired"
+              else "true")
+          else if catName == "utilities"
+          then
+            categoryEntries category (name:
+              if name == "clipboard"
+              then "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules clipboard"
+              else if name == "emoji"
+              then "${inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default}/bin/walker --modules emoji"
+              else if name == "color-picker"
+              then "${pkgs.hyprpicker}/bin/hyprpicker -a"
+              else if name == "resize-mode"
+              then "hyprctl dispatch submap resize"
+              else "true")
+          else buildCategorySubmenu category;
+      })
+      applicableCategories;
   in {
     font = "${config.stylix.fonts.sansSerif.name} 14";
     background = "#${config.lib.stylix.colors.base00}";
