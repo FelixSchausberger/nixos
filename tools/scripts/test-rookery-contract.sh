@@ -81,8 +81,9 @@ rookery go alpha >/dev/null
 # gc keeps unpushed work.
 rookery gc 2>&1 | grep -Fq "keeping 'alpha'" || fail "gc did not keep alpha"
 
-# Clean marks: /done marks the calling workspace, and the daily unit sweeps the
-# marks after gc. The sweep removes finished work and keeps unpushed work.
+# Clean marks: /workspace-done marks the calling workspace, and the daily
+# unit sweeps the marks after gc. The sweep removes finished work and keeps
+# unpushed work.
 jj workspace add "$ROOKERY_BASE/nixos-ws-clean" --name clean -r main@origin -m "clean: started" >/dev/null 2>&1
 (
 	cd "$ROOKERY_BASE/nixos-ws-clean"

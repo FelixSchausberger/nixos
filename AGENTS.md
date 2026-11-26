@@ -147,9 +147,11 @@ The global rules cover `jjwork` and workspace isolation. Repository specifics:
   classifies every workspace; `rookery gc` reclaims the empty/merged ones idle
   past the age gate, skipping any with a live process or a recent opencode
   session, and runs on `rookery <task>` and daily from a systemd user timer.
-  `/done` in OpenCode marks the current workspace with `rookery clean
-  --current`; the daily `ocws-gc` unit sweeps the marks with `rookery clean
-  --apply` after `rookery gc`, under the same safety checks.
+  `/workspace-done` in OpenCode marks the current ungrouped workspace with
+  `rookery clean --current`; `/task-done <id>` is the lead's close-out for a
+  task and runs only after the person approves. The daily `ocws-gc` unit sweeps
+  the marks with `rookery clean --apply` after `rookery gc`, under the same
+  safety checks.
 - `jjpush` only pushes changes descended from `main`. If it refuses, run
   `jjwork` first.
 - One long-lived branch: `main`. Every other branch is ephemeral and

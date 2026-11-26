@@ -199,8 +199,8 @@ in {
     # checkout and no-ops on a host that lacks it. `rookery gc` fetches, keeps
     # unpushed/in-flight/conflicted workspaces, any workspace with a live
     # process and any parked one, and reclaims empty/merged ones past the age
-    # gate. The explicit cleanup marks from /done are swept afterwards, with the
-    # same safety checks.
+    # gate. The explicit cleanup marks from /workspace-done are swept
+    # afterwards, with the same safety checks.
     systemd.user.services.ocws-gc = {
       Unit.Description = "Reclaim finished jj workspaces, sweep cleanup marks, and refresh the Rookery status badge";
       Service = {
