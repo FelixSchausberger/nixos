@@ -156,7 +156,7 @@
       # Create a simple package
       simplePackage = self.buildPackage {
         name = "example-tool";
-        src = ./src;
+        src = ./.;
         buildInputs = with pkgs; [bash];
       };
 

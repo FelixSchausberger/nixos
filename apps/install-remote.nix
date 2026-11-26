@@ -155,7 +155,8 @@ in {
         fi
         echo "SSH connection successful"
 
-        # Copy local repo to temporary location (includes .git for clean flake)
+        # Copy the local repo to a temporary location; the target evaluates it
+        # as a plain path flake, so the .git pointer is excluded below.
         echo "Copying repository to target..."
         ssh "''${ssh_opts[@]}" "root@$TARGET_IP" "rm -rf /tmp/nixos-config && mkdir -p /tmp/nixos-config"
         rsync -az --delete -e "ssh ''${ssh_opts[*]}" \

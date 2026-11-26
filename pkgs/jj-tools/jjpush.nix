@@ -102,20 +102,29 @@ writeShellApplication {
     "$blocklist" --message "$message_file"
     "$blocklist"
 
-    # Search ancestors for an existing feature bookmark. The main bookmark
-    # always sits on the parent commit after a rebase, so it is excluded, and
-    # the testing-* branch never leaves the host: comin reads it from the
-    # colocated checkout (modules/system/comin.nix), a forge copy has no
-    # consumer, and jjtest parks the bookmark exactly on the commit under
-    # review - a head reused from there shadows the change (observed on #653
-    # and #661, both PRs carried testing-m920q as their head).
+    # Prefer the feature bookmark on the change being pushed. Reusing the
+    # nearest bookmarked ancestor silently re-pushed an unrelated PR when two
+    # concerns were stacked; only an empty working copy may borrow its parent's
+    # bookmark, because it is squashed into that commit below. The main
+    # bookmark is excluded (it sits on the parent after a rebase), and
+    # testing-* never leaves the host: comin reads it from the colocated
+    # checkout (modules/system/comin.nix), a forge copy has no consumer, and
+    # jjtest parks the bookmark exactly on the commit under review - a head
+    # reused from there shadows the change (observed on #653 and #661, both
+    # PRs carried testing-m920q as their head).
     #
     # The name template ends with an explicit newline: a bookmark whose local
     # and remote targets differ renders one entry per target, and without the
     # separator `head -1` takes their concatenation. That showed up as a
     # doubled bookmark name which matched nothing, so a re-push after a
     # rewrite (the normal amend-and-push cycle) failed in the push step.
-    bookmark="$(jj bookmark list -r 'ancestors(@, 5) & bookmarks() & ~bookmarks("main") & ~bookmarks("testing-*")' -T 'name ++ "\n"' 2>/dev/null | head -1 | tr -d '[:space:]')"
+    bookmark="$(jj bookmark list -r '@ & bookmarks() & ~bookmarks("main") & ~bookmarks("testing-*")' -T 'name ++ "\n"' 2>/dev/null | head -1 | tr -d '[:space:]')"
+    if [ -z "$bookmark" ] && [ "$(jj log --no-graph -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')" = "true" ]; then
+      bookmark="$(jj bookmark list -r '@- & bookmarks() & ~bookmarks("main") & ~bookmarks("testing-*")' -T 'name ++ "\n"' 2>/dev/null | head -1 | tr -d '[:space:]')"
+      if [ -n "$bookmark" ]; then
+        jj squash 2>/dev/null || true
+      fi
+    fi
 
     if [ -z "$bookmark" ]; then
       # No feature bookmark — auto-create one from the commit description's
@@ -136,11 +145,6 @@ writeShellApplication {
       fi
       jj bookmark set "$bookmark"
       echo "Auto-created bookmark: $bookmark"
-    else
-      # Auto-squash empty working copy into the bookmarked parent.
-      if [ "$(jj log --no-graph -r '@' -T 'if(empty, "true", "false")' 2>/dev/null | tr -d '[:space:]')" = "true" ]; then
-        jj squash 2>/dev/null || true
-      fi
     fi
 
     # Run pre-push quality checks (best-effort; a broken formatter must not block push).
