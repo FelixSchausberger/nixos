@@ -12,10 +12,10 @@ if [[ -z "$commit_msg_file" ]] || [[ ! -f "$commit_msg_file" ]]; then
   exit 1
 fi
 
-commit_msg=$(cat "$commit_msg_file")
+first_line=$(head -n 1 "$commit_msg_file")
 
 # Skip merge commits and revert commits
-if echo "$commit_msg" | head -1 | grep -qE '^(Merge|Revert)'; then
+if echo "$first_line" | grep -qE '^(Merge|Revert)'; then
   exit 0
 fi
 
@@ -25,8 +25,6 @@ fi
 pattern="^(feat|fix|docs|style|refactor|perf|test|chore)(\(.+\))?: .{1,72}"
 
 # Validate first line
-first_line=$(echo "$commit_msg" | head -1)
-
 if ! echo "$first_line" | grep -qE "$pattern"; then
   echo ""
   echo "ERROR: Commit message doesn't follow conventional commits format"

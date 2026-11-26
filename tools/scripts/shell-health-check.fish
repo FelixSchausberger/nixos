@@ -140,11 +140,12 @@ function validate_zellij_config
         if test -d "$layout_dir"
             set -l layout_failed 0
             for layout in "$layout_dir"/*.kdl
-                if test -f "$layout"
-                    if not kdlfmt format - < "$layout" >/dev/null 2>&1
-                        log_warning "Zellij layout '$layout' failed to parse"
-                        set layout_failed 1
-                    end
+                if not test -f "$layout"
+                    continue
+                end
+                if not kdlfmt format - < "$layout" >/dev/null 2>&1
+                    log_warning "Zellij layout '$layout' failed to parse"
+                    set layout_failed 1
                 end
             end
             if test $layout_failed -eq 0
@@ -239,20 +240,19 @@ function main
     echo "📊 Health Check Summary"
     echo "======================"
 
-    if test "$health_check_passed" = "true"
-        if test "$issues_found" -eq 0
-            log_success "All checks passed! Shell configuration is healthy."
-            exit 0
-        else
-            echo "✅ Critical checks passed, but $issues_found warnings found."
-            echo "   Review warnings above for potential improvements."
-            exit 0
-        end
-    else
+    if test "$health_check_passed" != "true"
         log_error "Health check failed! Critical issues found."
         echo "   Fix the errors above before deploying configuration."
         exit 1
     end
+
+    if test "$issues_found" -eq 0
+        log_success "All checks passed! Shell configuration is healthy."
+    else
+        echo "✅ Critical checks passed, but $issues_found warnings found."
+        echo "   Review warnings above for potential improvements."
+    end
+    exit 0
 end
 
 # Function that can be called by Fish testing framework

@@ -64,10 +64,8 @@ while IFS= read -r line; do
 	old="${BASH_REMATCH[2]}"
 	new="${BASH_REMATCH[3]}"
 
-	if is_downgrade "$old" "$new"; then
-		if ! in_allowed "$pkg"; then
-			downgrades+=("$pkg: $old → $new")
-		fi
+	if is_downgrade "$old" "$new" && ! in_allowed "$pkg"; then
+		downgrades+=("$pkg: $old → $new")
 	fi
 done < <(printf '%s\n' "${diff_lines[@]:-}")
 
