@@ -17,6 +17,9 @@ in {
     gnupg.sshKeyPaths = [];
 
     secrets = {
+      # Read by the dashboard's Home Assistant widget (homepage.nix); the
+      # user is admin because /api/template requires it.
+      "homeassistant/token" = {};
       "claude/default" = {};
       "github/token" = {
         owner = defaults.system.user;
