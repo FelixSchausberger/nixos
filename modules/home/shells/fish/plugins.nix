@@ -2,11 +2,6 @@
   programs.fish = {
     enable = true;
     plugins = [
-      # {
-      #   # Make your prompt asynchronous to improve the reactivity
-      #   name = "async-prompt";
-      #   src = pkgs.fishPlugins.async-prompt.src;
-      # }
       {
         # Auto-complete matching pairs in the Fish command line
         name = "autopair";

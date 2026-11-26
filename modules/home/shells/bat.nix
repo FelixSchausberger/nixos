@@ -17,6 +17,5 @@
 
   home.shellAliases = {
     cat = "bat";
-    # bg = "batgrep";
   };
 }

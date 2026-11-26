@@ -11,16 +11,7 @@
       };
       favorites = [
         (cosmicLib.cosmic.mkRON "enum" "Home")
-        # (cosmicLib.cosmic.mkRON "enum" "Documents")
         (cosmicLib.cosmic.mkRON "enum" "Downloads")
-        # (cosmicLib.cosmic.mkRON "enum" "Music")
-        # (cosmicLib.cosmic.mkRON "enum" "Pictures")
-        # (cosmicLib.cosmic.mkRON "enum" "Videos")
-        # {
-        #   __type = "tuple_enum";
-        #   variant = "Path";
-        #   values = "/per/etc/nixos";
-        # }
       ];
 
       show_details = true;

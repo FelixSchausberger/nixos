@@ -3,11 +3,6 @@
     {
       anchor = cosmicLib.cosmic.mkRON "enum" "Bottom";
       anchor_gap = true;
-      # autohide = cosmicLib.cosmic.mkRON "optional" {
-      #   handle_size = 4;
-      #   transition_time = 200;
-      #   wait_time = 1000;
-      # };
       background = cosmicLib.cosmic.mkRON "enum" "Dark";
       expand_to_edges = true;
       margin = 0;
@@ -19,8 +14,6 @@
       ];
       plugins_wings = cosmicLib.cosmic.mkRON "optional" (cosmicLib.cosmic.mkRON "tuple" [
         [
-          # "com.system76.CosmicPanelWorkspacesButton"
-          # "com.system76.CosmicPanelAppButton"
           "com.system76.CosmicAppletWorkspaces"
         ]
         [

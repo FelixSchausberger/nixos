@@ -14,6 +14,10 @@
   ...
 }: let
   cfg = config.wm.awww;
+
+  # Two writers would fight: the condition-aware selector owns the
+  # wallpaper whenever it is enabled.
+  rotationEnabled = !(config.wallpapers.dynamic.enable or false);
 in {
   options.wm.awww = {
     enable = lib.mkEnableOption "awww coordinated wallpaper daemon";
@@ -120,13 +124,14 @@ in {
                           # Set backdrop wallpaper (backdrop namespace).
                           ${pkgs.awww}/bin/awww img --namespace backdrop ${blurredPath} --transition-type none || true
           '';
-        in "${initScript}";
+        in
+          initScript;
       };
     };
 
     # Rotate both wallpapers together (30 min schedule) unless the
     # condition-aware selector owns the wallpaper; two writers would fight.
-    systemd.user.timers.awww-wallpaper-rotate = lib.mkIf (!(config.wallpapers.dynamic.enable or false)) {
+    systemd.user.timers.awww-wallpaper-rotate = lib.mkIf rotationEnabled {
       Unit = {
         Description = "Timer for rotating synchronized wallpapers";
       };
@@ -140,7 +145,7 @@ in {
       Install.WantedBy = ["timers.target"];
     };
 
-    systemd.user.services.awww-wallpaper-rotate = lib.mkIf (!(config.wallpapers.dynamic.enable or false)) {
+    systemd.user.services.awww-wallpaper-rotate = lib.mkIf rotationEnabled {
       Unit = {
         Description = "Rotate synchronized wallpapers";
       };
@@ -183,7 +188,8 @@ in {
             ${pkgs.awww}/bin/awww img "$regular" --transition-type fade --transition-duration 2 || exit 0
             ${pkgs.awww}/bin/awww img --namespace backdrop "$blurred" --transition-type fade --transition-duration 2 || true
           '';
-        in "${rotateScript}";
+        in
+          rotateScript;
       };
     };
   };

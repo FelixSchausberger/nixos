@@ -16,7 +16,6 @@
           notifications = {
             # Uses mako/wired for notifications
             # Manual configuration required based on notification daemon
-            # wired.enable = true;
           };
         };
 
