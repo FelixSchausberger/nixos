@@ -36,14 +36,17 @@
       --dir-cache-time 60s
   '';
 
+  # Clears a stale fuse mount left by a crashed unit so a new mount can bind;
+  # both the prepare step and the stop path need it.
+  staleMountCleanup = "/run/wrappers/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true";
+
   mountPrep = pkgs.writeShellScript "vault-mount-prep" ''
     mkdir -p ${cfg.mountPath}
     chown ${user}:users ${cfg.mountPath}
-    # Clear a stale fuse mount from a crashed unit so the new one binds.
-    /run/wrappers/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
+    ${staleMountCleanup}
   '';
   unmountStale = pkgs.writeShellScript "vault-unmount" ''
-    /run/wrappers/bin/fusermount3 -uz ${cfg.mountPath} 2>/dev/null || true
+    ${staleMountCleanup}
   '';
 in {
   options.modules.system.homelab.vaultMount = {
@@ -122,8 +125,8 @@ in {
         Type = "exec";
         EnvironmentFile = config.sops.templates."vault-mount/env".path;
         ExecStartPre = mountPrep;
-        ExecStart = "${vaultMountScript}";
-        ExecStopPost = "${unmountStale}";
+        ExecStart = vaultMountScript;
+        ExecStopPost = unmountStale;
         Restart = "on-failure";
         RestartSec = "10s";
         Nice = 5;

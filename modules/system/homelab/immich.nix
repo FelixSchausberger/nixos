@@ -9,21 +9,17 @@
 
   # Returns tmpfiles rules for a subdirectory, using a symlink if fastPath is set,
   # otherwise a plain directory. Immich follows symlinks transparently.
-  subdir = name: fastPath: let
-    target =
-      if fastPath != null
-      then fastPath
-      else "${cfg.dataPath}/${name}";
-  in
-    lib.optionals (fastPath != null) [
+  subdir = name: fastPath:
+    if fastPath != null
+    then [
       "d ${fastPath} 0700 immich immich -"
       "f ${fastPath}/.immich 0600 immich immich - immich"
       # Remove existing directory if present before creating symlink (L+ replaces)
       "L+ ${cfg.dataPath}/${name} - - - - ${fastPath}"
     ]
-    ++ lib.optionals (fastPath == null) [
-      "d ${target} 0700 immich immich -"
-      "f ${target}/.immich 0600 immich immich - immich"
+    else [
+      "d ${cfg.dataPath}/${name} 0700 immich immich -"
+      "f ${cfg.dataPath}/${name}/.immich 0600 immich immich - immich"
     ];
 in {
   options.modules.system.homelab.immich = {
@@ -70,10 +66,8 @@ in {
   config = lib.mkIf cfg.enable {
     services.immich = {
       enable = true;
-      inherit (cfg) host;
-      inherit (cfg) port;
+      inherit (cfg) host port openFirewall;
       mediaLocation = cfg.dataPath;
-      inherit (cfg) openFirewall;
       environment.IMMICH_METRICS = "true";
     };
 

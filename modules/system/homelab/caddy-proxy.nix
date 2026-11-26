@@ -67,7 +67,7 @@
 
   # Static route for that image. The longer /bg match wins over the Immich
   # catch-all below, so the route order in extraConfig does not matter.
-  mkWallpaperRoute = ''
+  wallpaperRoute = ''
     handle_path /bg* {
       root * ${homepageWallpaper}
       file_server
@@ -79,7 +79,7 @@
   # mutually exclusive, so current.jpg is served from the live directory
   # instead of the store copy. no-store makes the browser refetch on reload
   # rather than reuse the previous wallpaper.
-  mkDynamicWallpaperRoute = ''
+  dynamicWallpaperRoute = ''
     handle /bg/current.jpg {
       root * ${hl.homepage.backgroundWallpaperDir}
       rewrite * /current.jpg
@@ -207,8 +207,8 @@ in {
           + lib.optionalString cfg.adguard (mkRoute "adguard" hl.adguardhome.port)
           + lib.optionalString cfg.nextcloud (mkRoute "nextcloud" hl.nextcloud.port)
           + lib.optionalString cfg.calibreWeb (mkScriptNameRoute "books" hl.calibreWeb.port)
-          + lib.optionalString (hl.homepage.enable && hl.homepage.backgroundWallpaperDir != null) mkDynamicWallpaperRoute
-          + lib.optionalString hl.homepage.enable mkWallpaperRoute
+          + lib.optionalString (hl.homepage.enable && hl.homepage.backgroundWallpaperDir != null) dynamicWallpaperRoute
+          + lib.optionalString hl.homepage.enable wallpaperRoute
           # .well-known redirects win over the Immich catch-all below: Caddy
           # routes to the handle whose path matcher is the longest match.
           + lib.optionalString cfg.nextcloud (mkWellKnownRedirects "/nextcloud")

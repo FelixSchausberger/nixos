@@ -28,6 +28,7 @@
   # Must match the primary user's UID in system/core/users.nix.
   uid = 1000;
   runtimeDir = "/run/user/${toString uid}";
+  userManagerUnit = "user@${toString uid}.service";
 
   # Port of the persistent shared opencode server (the ai-assistants.opencode
   # managed service; see modules/home/tui/ai-assistants/opencode/). The web
@@ -82,11 +83,11 @@ in {
       after = [
         "network.target"
         "tailscaled.service"
-        "user@${toString uid}.service"
+        userManagerUnit
       ];
       wants = [
         "tailscaled.service"
-        "user@${toString uid}.service"
+        userManagerUnit
       ];
       wantedBy = ["multi-user.target"];
       serviceConfig = {

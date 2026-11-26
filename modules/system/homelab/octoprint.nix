@@ -30,6 +30,8 @@
   cfg = config.modules.system.homelab.octoprint;
   hl = config.modules.system.homelab;
 
+  stateDir = config.services.octoprint.stateDir;
+
   tailscaleServe = import ../../../lib/tailscale-serve.nix {inherit pkgs;};
 
   # Ports already claimed by other Tailscale Serve frontends on this host.
@@ -128,12 +130,12 @@ in {
       # and log an ERROR on every start. OctoPrint and its plugins are managed
       # by the flake; the append preserves any UI-disabled plugins.
       octoprint.preStart = lib.mkAfter ''
-        if [ -f ${config.services.octoprint.stateDir}/users.yaml ]; then
+        if [ -f ${stateDir}/users.yaml ]; then
           export OCTOPRINT_API_KEY="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets."octoprint/api-key".path})"
-          ${pkgs.yq-go}/bin/yq -i '.${inputs.self.lib.user}.apikey = strenv(OCTOPRINT_API_KEY)' ${config.services.octoprint.stateDir}/users.yaml
-          ${pkgs.coreutils}/bin/chmod 600 ${config.services.octoprint.stateDir}/users.yaml
+          ${pkgs.yq-go}/bin/yq -i '.${inputs.self.lib.user}.apikey = strenv(OCTOPRINT_API_KEY)' ${stateDir}/users.yaml
+          ${pkgs.coreutils}/bin/chmod 600 ${stateDir}/users.yaml
         fi
-        ${pkgs.yq-go}/bin/yq -i '.plugins._disabled = (((.plugins._disabled // []) + ["softwareupdate", "pluginmanager"]) | unique)' ${config.services.octoprint.stateDir}/config.yaml
+        ${pkgs.yq-go}/bin/yq -i '.plugins._disabled = (((.plugins._disabled // []) + ["softwareupdate", "pluginmanager"]) | unique)' ${stateDir}/config.yaml
       '';
 
       octoprint.serviceConfig = {

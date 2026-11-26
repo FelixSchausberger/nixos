@@ -583,22 +583,20 @@ in {
         Type = "oneshot";
         RemainAfterExit = true;
       };
-      script = lib.concatStringsSep "\n" (
-        map
+      script = let
         # External storage mounts hold foreign content owned by the user
         # via ACLs; the copied file itself is owned by nextcloud so the
         # scanner can read it.
-        (
-          p: ''
-            install -m0644 ${syncExcludesFile} "${p}/.sync-exclude.lst"
-            chown nextcloud:nextcloud "${p}/.sync-exclude.lst"
-          ''
-        )
-        (
+        installExcludes = p: ''
+          install -m0644 ${syncExcludesFile} "${p}/.sync-exclude.lst"
+          chown nextcloud:nextcloud "${p}/.sync-exclude.lst"
+        '';
+
+        syncRoots =
           ["${cfg.dataPath}/data/admin/files"]
-          ++ map (m: m.path) cfg.externalStorage
-        )
-      );
+          ++ map (m: m.path) cfg.externalStorage;
+      in
+        lib.concatStringsSep "\n" (map installExcludes syncRoots);
     };
 
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [cfg.port];
