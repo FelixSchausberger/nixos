@@ -163,8 +163,6 @@ in {
     ];
   };
 
-  console.keyMap = "de";
-
   # nixos-hardware surface module and performance-profiles.nix both set
   # services.tlp.enable via lib.mkDefault (priority 1000), causing a merge conflict
   # in the power-saving specialisation. Surface manages power via power-profiles-daemon.
