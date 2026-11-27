@@ -25,6 +25,17 @@ in {
       default = false;
       description = "Open the AdGuard Home web UI port in the firewall. DNS (53 TCP/UDP) is always opened separately; the web UI is reached over the tailnet through Caddy on this host.";
     };
+    rewrites = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      example = {"*.example.com" = "100.64.0.1";};
+      description = ''
+        DNS rewrites answered for every client of this resolver. A wildcard
+        covers the subdomains but not the apex, which is what points the
+        homelab's public hostnames at the tailnet address of the Caddy node:
+        the records stay private to this resolver and never enter public DNS.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -141,7 +152,13 @@ in {
         querylog.enabled = true;
         querylog.interval = "7d";
         querylog.size_memory = 1000;
-        filtering.response_ttl_secs = 86400;
+        filtering =
+          {
+            response_ttl_secs = 86400;
+          }
+          // lib.optionalAttrs (cfg.rewrites != {}) {
+            rewrites = lib.mapAttrsToList (domain: answer: {inherit domain answer;}) cfg.rewrites;
+          };
         user_rules = [
           # Windows NCSI — prevents "No Internet" indicator on Windows clients
           "@@||msftconnecttest.com^"

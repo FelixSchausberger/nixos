@@ -987,10 +987,20 @@ in {
           # Sub-path serving mirrors the Caddy route: Grafana mounts its app at
           # /grafana and the tailnet URL is canonical for redirects and assets.
           # Without the proxy route Grafana keeps serving from the root path.
-          // lib.optionalAttrs (hl.caddyProxy.enable && hl.caddyProxy.grafana) {
-            root_url = "https://${hl.caddyProxy.tailnetDomain}/grafana";
-            serve_from_sub_path = true;
-          };
+          # Sub-path serving mirrors the path-routed Caddy layout; when a
+          # publicDomain is set each service owns a hostname and Grafana
+          # serves from the root instead.
+          // lib.optionalAttrs (hl.caddyProxy.enable && hl.caddyProxy.grafana) (
+            if hl.caddyProxy.publicDomain != null
+            then {
+              root_url = "https://grafana.${hl.caddyProxy.publicDomain}";
+              serve_from_sub_path = false;
+            }
+            else {
+              root_url = "https://${hl.caddyProxy.tailnetDomain}/grafana";
+              serve_from_sub_path = true;
+            }
+          );
         security = {
           admin_user = "admin";
           admin_password = "$__env{GF_SECURITY_ADMIN_PASSWORD}";

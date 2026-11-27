@@ -53,7 +53,13 @@ in {
         # reports that as a silent connection failure with nothing in the
         # journal. Point clients at http://<host>:4533/navidrome or
         # <tailnetDomain>/navidrome.
-        BaseURL = "/navidrome";
+        #
+        # With a publicDomain each service owns its hostname, so the empty
+        # base URL is correct there and the prefix would double it.
+        BaseURL =
+          if config.modules.system.homelab.caddyProxy.publicDomain != null
+          then ""
+          else "/navidrome";
         EnableInsightsCollector = false;
         EnableDownloads = true;
         AutoImportPlaylists = false;
