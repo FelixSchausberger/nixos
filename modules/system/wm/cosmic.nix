@@ -21,11 +21,7 @@ in {
       # Display manager configuration moved to unified display-manager.nix
     };
 
-    xdg.portal = {
-      enable = true;
-      config.common.default = "*";
-      extraPortals = [pkgs.xdg-desktop-portal-cosmic];
-    };
+    xdg.portal.config.common.default = "*";
 
     environment = {
       cosmic.excludePackages = with pkgs;
