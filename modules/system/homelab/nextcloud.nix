@@ -134,10 +134,13 @@ in {
             "192.168.178.2"
             "100.105.37.12"
           ]
-          # Allow access via the Caddy Tailscale reverse proxy when enabled.
-          ++ lib.optionals config.modules.system.homelab.caddyProxy.enable [
-            config.modules.system.homelab.caddyProxy.tailnetDomain
-          ];
+          # Allow access through whichever Caddy layout is active: the
+          # MagicDNS hostname for path routes, cloud.<publicDomain> when each
+          # service owns a hostname.
+          ++ lib.optional config.modules.system.homelab.caddyProxy.enable
+          config.modules.system.homelab.caddyProxy.tailnetDomain
+          ++ lib.optional (config.modules.system.homelab.caddyProxy.publicDomain != null)
+          "cloud.${config.modules.system.homelab.caddyProxy.publicDomain}";
 
         # Caddy terminates TLS and proxies over loopback, so nginx and PHP-FPM
         # present 127.0.0.1 as the peer for every request. Without
@@ -176,12 +179,23 @@ in {
         # Nextcloud generates correct URLs and WebDAV paths. overwriteprotocol
         # forces HTTPS since Caddy terminates TLS and Nextcloud sees plain HTTP;
         # overwrite.cli.url keeps occ-generated URLs (notifications, link
-        # shares) pointing at the public Tailscale address.
-        overwritewebroot = lib.mkIf config.modules.system.homelab.caddyProxy.enable "/nextcloud";
+        # shares) pointing at the public Tailscale address. With a
+        # publicDomain Nextcloud sits at the root of cloud.<domain>, so the
+        # webroot override is dropped and only the origin changes.
+        overwritewebroot =
+          lib.mkIf
+          (config.modules.system.homelab.caddyProxy.enable
+            && config.modules.system.homelab.caddyProxy.publicDomain == null)
+          "/nextcloud";
         overwriteprotocol = lib.mkIf config.modules.system.homelab.caddyProxy.enable "https";
         overwrite.cli.url =
-          lib.mkIf config.modules.system.homelab.caddyProxy.enable
-          "https://${config.modules.system.homelab.caddyProxy.tailnetDomain}/nextcloud/";
+          lib.mkIf
+          config.modules.system.homelab.caddyProxy.enable
+          (
+            if config.modules.system.homelab.caddyProxy.publicDomain != null
+            then "https://cloud.${config.modules.system.homelab.caddyProxy.publicDomain}/"
+            else "https://${config.modules.system.homelab.caddyProxy.tailnetDomain}/nextcloud/"
+          );
 
         # Outgoing mail goes through Gmail over SSL on 465, authenticating as
         # the account itself. Gmail refuses plain password auth unless the

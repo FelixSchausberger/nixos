@@ -794,6 +794,16 @@ in {
   # Tailscale auth key for tailscaled-autoconnect's automated re-login.
   sops.secrets."tailscale/auth-key" = {};
 
+  # Cloudflare DNS API token for the ACME DNS-01 challenge that issues the
+  # wildcard certificate for schausberger.dev. The token needs Zone:DNS:Edit
+  # on that zone only; lego receives it as an environment variable.
+  sops.secrets."acme/cloudflare-dns-token" = {};
+  sops.templates."acme-cloudflare-env" = {
+    content = "CLOUDFLARE_DNS_API_TOKEN=${config.sops.placeholder."acme/cloudflare-dns-token"}";
+    owner = "root";
+    mode = "0400";
+  };
+
   modules.system = {
     # Unattended hang recovery. The hardware watchdog resets a wedged kernel;
     # detectable lockups become panics that reboot (panic=30); and if systemd
@@ -916,7 +926,23 @@ in {
   '';
 
   modules.system.homelab = {
-    adguardhome.enable = true;
+    adguardhome = {
+      enable = true;
+      # The homelab hostnames are served privately: this resolver answers
+      # them with the node's tailnet address, so only tailnet clients can
+      # reach them and the public zone needs no A records for services. The
+      # apex and mail records stay untouched; the list is explicit so a
+      # future public hostname (the CV page) is not swallowed by a wildcard.
+      rewrites = {
+        "photos.schausberger.dev" = "100.105.37.12";
+        "music.schausberger.dev" = "100.105.37.12";
+        "grafana.schausberger.dev" = "100.105.37.12";
+        "adguard.schausberger.dev" = "100.105.37.12";
+        "cloud.schausberger.dev" = "100.105.37.12";
+        "books.schausberger.dev" = "100.105.37.12";
+        "home.schausberger.dev" = "100.105.37.12";
+      };
+    };
     # Legacy data that no live dataset owns: served read-only over SMB and
     # pulled onto the desktop, which is what makes it leave the chassis.
     archive.enable = true;
@@ -1127,6 +1153,15 @@ in {
     caddyProxy = {
       enable = true;
       tailnetDomain = tailnetFqdn;
+      # Service hostnames live under the personal domain and terminate TLS
+      # with a wildcard certificate from the ACME DNS-01 challenge at
+      # Cloudflare. The zone's nameservers must be Cloudflare's and the sops
+      # secret acme/cloudflare-dns-token must hold a DNS:Edit token for it.
+      publicDomain = "schausberger.dev";
+      acmeEmail = "felix@schausberger.dev";
+      # The token scoped to Zone:DNS:Edit for schausberger.dev; sops renders
+      # it into a 0400 file read by lego.
+      acmeEnvironmentFile = config.sops.templates."acme-cloudflare-env".path;
     };
     vaultMount.enable = true;
     syncthingVault = {

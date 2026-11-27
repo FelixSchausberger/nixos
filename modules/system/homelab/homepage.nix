@@ -19,6 +19,22 @@
   # fallback (405 from Navidrome therefore still reads as up).
   local = port: "http://127.0.0.1:${toString port}";
 
+  # Absolute URL for a service behind Caddy. Without a publicDomain the
+  # services share the MagicDNS hostname as path routes; with one, each
+  # service owns a subdomain and the path is relative to that origin.
+  svc = name: path:
+    if hl.caddyProxy.publicDomain != null
+    then "https://${name}.${hl.caddyProxy.publicDomain}${path}"
+    else "https://${hl.caddyProxy.tailnetDomain}${path}";
+
+  # Origin serving the dashboard's wallpaper files. In the public layout the
+  # dashboard and its /bg routes share home.<domain>; otherwise /bg lives on
+  # the MagicDNS Caddy vhost while the dashboard itself uses its Serve port.
+  wallpaperOrigin =
+    if hl.caddyProxy.publicDomain != null
+    then "https://home.${hl.caddyProxy.publicDomain}"
+    else "https://${hl.caddyProxy.tailnetDomain}";
+
   # Ports with no module option behind them: jellyfin.nix follows the nixpkgs
   # default and ntfy.nix hardcodes its own listener, so each number is pinned
   # once here instead of repeated per URL.
@@ -255,7 +271,7 @@
     {
       "M920q" = {
         icon = "mdi-server";
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+        href = svc "grafana" "/d/config-health";
         description = "Homelab server";
         siteMonitor = "${local hl.monitoring.nodeExporterPort}/metrics";
         widget = hostVitalsWidget config.networking.hostName;
@@ -269,7 +285,7 @@
         # proxy error on every poll while it is off, and Homepage has no way
         # to show a neutral "off" state; the Prometheus widget below formats
         # a missing series as "-", so the card goes quiet instead of red.
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+        href = svc "grafana" "/d/config-health";
         description = "Gaming PC";
         widget = hostVitalsWidget "desktop";
       };
@@ -281,7 +297,7 @@
       {
         "Immich" = {
           icon = "immich.png";
-          href = "https://${hl.caddyProxy.tailnetDomain}";
+          href = svc "photos" "";
           description = "Photo Management";
           siteMonitor = local hl.immich.port;
           # customapi rather than the immich widget: the builtin renders a
@@ -318,11 +334,10 @@
       {
         "Navidrome" = {
           icon = "navidrome.png";
-          # The path route keeps the prefix (mkKeepRoute) and Navidrome
-          # runs with BaseURL=/navidrome; stripping the prefix would make
-          # its root-absolute redirects and API calls land on the Immich
-          # catch-all instead of the music server.
-          href = "https://${hl.caddyProxy.tailnetDomain}/navidrome";
+          # In the path layout the route keeps the prefix (mkKeepRoute) and
+          # Navidrome runs with BaseURL=/navidrome; with a publicDomain it
+          # owns music.<domain> and uses the empty base URL instead.
+          href = svc "music" "";
           description = "Music Streaming";
           siteMonitor = local hl.navidrome.port;
           # Subsonic token auth: token = md5(password + salt) and Homepage
@@ -363,10 +378,11 @@
       {
         "Calibre-Web" = {
           icon = "calibre-web.png";
-          # Path route strips the prefix but forwards X-Script-Name, which
-          # Calibre-Web's ReverseProxyPrefixFix consumes to generate URLs
-          # under /books (same class as Navidrome's BaseURL).
-          href = "https://${hl.caddyProxy.tailnetDomain}/books";
+          # In the path layout the route strips the prefix but forwards
+          # X-Script-Name, which Calibre-Web's ReverseProxyPrefixFix consumes
+          # to generate URLs under /books; a publicDomain serves it at the
+          # root of books.<domain> instead.
+          href = svc "books" "";
           description = "Ebook Library";
           siteMonitor = local hl.calibreWeb.port;
         };
@@ -377,7 +393,7 @@
     {
       "Grafana" = {
         icon = "grafana.png";
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana";
+        href = svc "grafana" "";
         description = "Dashboards";
         # Root 301s to the https origin, which the plain-HTTP probe cannot
         # follow, so it reads as a synthesized 500; /api/health answers
@@ -425,7 +441,7 @@
     {
       "Logs" = {
         icon = "loki.png";
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/logs";
+        href = svc "grafana" "/d/logs";
         siteMonitor = "${local hl.logging.lokiPort}/ready";
         widget = {
           type = "prometheusmetric";
@@ -463,10 +479,12 @@
     {
       "AdGuard Home" = {
         icon = "adguard-home.png";
-        # Trailing slash: the admin UI references its CSS/JS relatively,
-        # and at /adguard (no slash) those resolve against the site root
-        # where the Immich catch-all answers HTML instead of the bundle.
-        href = "https://${hl.caddyProxy.tailnetDomain}/adguard/";
+        # In the path layout the href must carry a trailing slash: the admin
+        # UI references its CSS/JS relatively, and at /adguard (no slash)
+        # those resolve against the site root where the Immich catch-all
+        # answers HTML instead of the bundle. On its own hostname the root
+        # is already correct.
+        href = svc "adguard" "";
         description = "DNS";
         siteMonitor = local hl.adguardhome.port;
         widget = {
@@ -535,7 +553,7 @@
           icon = "shelly.png";
           # uid "power" (monitoring.nix provisions the dashboard). Wall power at
           # the plugs plus the CPU/GPU panels that attribute it.
-          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/power";
+          href = svc "grafana" "/d/power";
           # The plug cards already show the instantaneous draw per machine, so
           # the roll-up is the one number they cannot: energy over a rolling
           # day, from the json exporter's counter. `increase` handles the
@@ -624,7 +642,7 @@
     {
       "Files" = {
         icon = "nextcloud.png";
-        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/files/";
+        href = svc "cloud" "/apps/files/";
         description = "File Sync";
         # Instance-level light and widget live on the primary card only;
         # repeating them per app card would show four identical probes.
@@ -651,7 +669,7 @@
         # CSS hook for the weekend colour override in customCSS below.
         id = "calendar-card";
         icon = "mdi-calendar";
-        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/calendar/dayGridMonth/now";
+        href = svc "cloud" "/apps/calendar/dayGridMonth/now";
         description = "Scheduling";
         # Single published share (Personal); the other calendars are
         # task.org task lists with no events. The token URL is the only
@@ -672,14 +690,14 @@
     {
       "Tasks" = {
         icon = "mdi-clipboard-text";
-        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/tasks/";
+        href = svc "cloud" "/apps/tasks/";
         description = "To-dos";
       };
     }
     {
       "Contacts" = {
         icon = "mdi-account-multiple";
-        href = "https://${hl.caddyProxy.tailnetDomain}/nextcloud/apps/contacts/";
+        href = svc "cloud" "/apps/contacts/";
         description = "Address Book";
       };
     }
@@ -776,7 +794,7 @@
           icon = "nixos.png";
           # uid "config-health" (monitoring.nix provisions the dashboard). Shows
           # the vitals host health score and the current comin deployment.
-          href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/config-health";
+          href = svc "grafana" "/d/config-health";
           # Three comin gauges no other surface shows: a pending reboot after
           # a kernel or initrd change, a suspended daemon (deployments stop but
           # nothing fails), and the age of the healthcheck that the stale-alert
@@ -885,7 +903,7 @@
               icon = "fritzbox.png";
               # uid "hn51eUggz" (monitoring.nix provisions the fritz dashboard).
               # The router's own metrics belong with the router, not Monitoring.
-              href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/hn51eUggz";
+              href = svc "grafana" "/d/hn51eUggz";
             }
             // lib.optionalAttrs (hl.monitoring.enable && hl.monitoring.fritzbox.enable) {
               # The one router value without a home: AVM's update flag (1 = a
@@ -977,7 +995,7 @@
       "Garmin Stats" = {
         icon = "garmin.png";
         # uid "garmin-stats" (monitoring.nix provisions the dashboard).
-        href = "https://${hl.caddyProxy.tailnetDomain}/grafana/d/garmin-stats";
+        href = svc "grafana" "/d/garmin-stats";
         description = "Sleep, stress, heart rate, steps";
       };
     }
@@ -1369,10 +1387,10 @@ in {
     # The dashboard must be served from the origin root: its Next.js build
     # emits root-absolute /_next and /api URLs (the package carries no
     # basePath), so a path-stripping Caddy prefix loads a page whose assets
-    # and API calls land on the Immich catch-all instead. Like zellij-web
-    # and opencode-web, it therefore gets its own Tailscale Serve port, which
-    # terminates TLS with the node certificate and reaches any device on the
-    # tailnet: https://<tailnetDomain>:<httpsPort>/. The gate mirrors
+    # and API calls land on the Immich catch-all instead. With a publicDomain
+    # Caddy serves it at the root of home.<domain>; without one it keeps its
+    # own Tailscale Serve port, which terminates TLS with the node
+    # certificate: https://<tailnetDomain>:<httpsPort>/. The gate mirrors
     # allowedHosts below: caddyProxy.tailnetDomain is the only tailnet name
     # this module knows, so without it there is nothing to serve on.
     systemd.services.tailscale-serve-homepage = mkIf hl.caddyProxy.enable (tailscaleServe {
@@ -1416,6 +1434,9 @@ in {
         lib.optionals hl.caddyProxy.enable [
           hl.caddyProxy.tailnetDomain
           "${hl.caddyProxy.tailnetDomain}:${toString cfg.httpsPort}"
+        ]
+        ++ lib.optionals (hl.caddyProxy.publicDomain != null) [
+          "home.${hl.caddyProxy.publicDomain}"
         ]
         ++ [
           "localhost:${toString cfg.port}"
@@ -1497,8 +1518,8 @@ in {
         background = {
           image =
             if cfg.backgroundWallpaperDir != null
-            then "https://${hl.caddyProxy.tailnetDomain}/bg/current.jpg"
-            else "https://${hl.caddyProxy.tailnetDomain}/bg/${backgroundFile}";
+            then "${wallpaperOrigin}/bg/current.jpg"
+            else "${wallpaperOrigin}/bg/${backgroundFile}";
           opacity = 60;
         };
         target = "_blank";
