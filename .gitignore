@@ -58,8 +58,10 @@ pr-body.md
 # leftover from a manual run; CI only reads the file it writes itself.
 update-output.txt
 
-# lock.patch is deliberately tracked: daily-updates.yml writes it and later
-# jobs re-apply it, so it is not ignored here.
+# Daily dependency update artifacts, written and re-applied by
+# .github/workflows/daily-updates.yml. lock.patch is CI scratch; the tracked
+# copy was a leftover that every daily PR committed.
+lock.patch
 
 # Claude Code local settings (machine-specific configuration)
 .claude/settings.local.json
