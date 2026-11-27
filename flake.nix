@@ -249,10 +249,6 @@
     };
 
     # Desktop environments
-    nixos-cosmic = {
-      url = "github:lilyinstarlight/nixos-cosmic";
-      inputs.rust-overlay.follows = "rust-overlay";
-    };
     niri = {
       url = "github:epireyn/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";
