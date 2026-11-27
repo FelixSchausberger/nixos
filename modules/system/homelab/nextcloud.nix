@@ -2,23 +2,10 @@
   inputs,
   config,
   lib,
-  options,
   pkgs,
   ...
 }: let
   cfg = config.modules.system.homelab.nextcloud;
-
-  # True while the pinned nixpkgs still *exposes* the 26.11-removed
-  # services.nextcloud.config.admin* options. A pure existence check cannot
-  # distinguish them: mkRemovedOptionModule keeps declaring the option with
-  # visibility off, so probing hasAttr instead (which saw the hidden option
-  # too) left the definitions live on 26.11 and threw there. Visibility is the
-  # discriminator: the channel's option set hides them only once the removal
-  # landed. The pair stays nulled together on older locks (the module's
-  # assertion requires that), which disables the first-install admin creation;
-  # drop this guard once 26.11 is the oldest lock main evaluates.
-  legacyNextcloudAdminOptions =
-    options.services.nextcloud.config.adminuser.visible or true;
 
   # Obsidian's workspace.json is per-device UI state that every instance
   # rewrites constantly, so keeping it in the desktop sync set churns
@@ -123,28 +110,20 @@ in {
         patches = (old.patches or []) ++ [./nextcloud-mount-cache-ignore-conflict.patch];
       });
       datadir = cfg.dataPath;
-      config =
-        {
-          dbtype = "pgsql";
-          dbname = "nextcloud";
-          dbhost = "localhost";
-          dbuser = "nextcloud";
-          # The adminuser/adminpassFile options were removed from the NixOS
-          # module (nixos 26.11): they only seeded the first-install admin,
-          # and new instances create users after installation via
-          # `nextcloud-occ user:add` /
-          # `group:adduser admin <username>`. The running instance already
-          # has its admin account. The sops secret stays declaration-only -
-          # monitoring's passwordFile and Homepage's
-          # HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD still consume it.
-        }
-        # Nixpkgs revisions that still declare the options get them nulled
-        # explicitly - the assert requires the pair to move together, and
-        # nulling both disables the first-install admin creation.
-        // lib.optionalAttrs legacyNextcloudAdminOptions {
-          adminuser = lib.mkForce null;
-          adminpassFile = lib.mkForce null;
-        };
+      config = {
+        dbtype = "pgsql";
+        dbname = "nextcloud";
+        dbhost = "localhost";
+        dbuser = "nextcloud";
+        # The adminuser/adminpassFile options were removed from the NixOS
+        # module (nixos 26.11): they only seeded the first-install admin,
+        # and new instances create users after installation via
+        # `nextcloud-occ user:add` /
+        # `group:adduser admin <username>`. The running instance already
+        # has its admin account. The sops secret stays declaration-only -
+        # monitoring's passwordFile and Homepage's
+        # HOMEPAGE_VAR_NEXTCLOUD_ADMIN_PASSWORD still consume it.
+      };
 
       settings = {
         trusted_domains =

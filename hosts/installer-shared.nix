@@ -83,14 +83,9 @@
     networking.hostName = cfg.hostName;
 
     # Isolate from removed nixpkgs aliases that would otherwise throw during
-    # ISO evaluation somewhere in the transitive evaluation chain. Provide
-    # redirects via overlays for any packages/scripts still using old names.
+    # ISO evaluation somewhere in the transitive evaluation chain.
     nixpkgs.config.allowAliases = false;
     nixpkgs.overlays = [
-      (final: _prev: {
-        nixfmt-classic = final.nixfmt;
-        nixfmt-rfc-style = final.nixfmt;
-      })
       # ceph drags its daemon closure into the live ISO, and the installer
       # never provisions ceph, so build qemu without it.
       (_final: prev: {
