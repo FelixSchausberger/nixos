@@ -148,6 +148,7 @@ _: {
         name = "Breezy Weather";
         author = "breezy-weather";
         url = "https://github.com/breezy-weather/breezy-weather";
+        apkFilterRegEx = "^breezy-weather-arm64-v8a-.*\\.apk$";
       }
     ];
 
