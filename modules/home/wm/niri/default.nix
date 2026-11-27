@@ -82,7 +82,6 @@
   '';
 in {
   imports = [
-    inputs.cosmic-manager.homeManagerModules.default
     ./keybinds.nix
     ../shared/ironbar.nix # Floating pill bar with dynamic workspaces and popup widgets
     # Desktop shell implementations parameterized by session target.
