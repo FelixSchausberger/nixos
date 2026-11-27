@@ -6,25 +6,7 @@
 }: let
   # nixos-wizard references pkgs.nixfmt-classic in its postInstall, which was
   # removed from nixpkgs and now throws. Patch the derivation to skip that.
-  nixos-wizard-patched = let
-    raw = inputs.nixos-wizard.packages.${pkgs.stdenv.hostPlatform.system}.default;
-  in
-    raw.overrideAttrs (_old: {
-      postInstall = ''
-        wrapProgram $out/bin/nixos-wizard \
-          --prefix PATH : ${pkgs.lib.makeBinPath [
-          inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}.disko
-          pkgs.bat
-          pkgs.nixfmt-rfc-style
-          pkgs.nixfmt
-          pkgs.util-linux
-          pkgs.gawk
-          pkgs.gnugrep
-          pkgs.gnused
-          pkgs.ntfs3g
-        ]}
-      '';
-    });
+  nixos-wizard-patched = import ../../lib/nixos-wizard.nix {inherit pkgs inputs;};
 in {
   imports = [
     ../installer-shared.nix

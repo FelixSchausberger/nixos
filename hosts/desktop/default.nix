@@ -26,7 +26,6 @@ in {
       ../../modules/system/hardware/power-management.nix
       ../../modules/system/moonshine.nix
       ../../modules/system/ssh.nix
-      ../../modules/system/nixpkgs-overlays.nix
       ../../modules/system/boot-fallback.nix
       # Vaultwarden client half only: the DR pull timer (dr.pull) that
       # fetches the quarterly snapshot off the m920q Samba share.

@@ -74,7 +74,6 @@ in {
     # the homelab Loki (homelab.logging.shipEndpoint below) but runs none of
     # the other homelab services.
     ../../modules/system/homelab/logging.nix
-    ../../modules/system/nixpkgs-overlays.nix # Disable flaky python-lsp-server/scipy checks
     ../../modules/vitals.nix
   ];
   config = {

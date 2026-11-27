@@ -15,7 +15,6 @@ in {
       ../shared-gui.nix
       inputs.stylix.nixosModules.stylix
       ../../modules/system/stylix-catppuccin.nix
-      ../../modules/system/nixpkgs-overlays.nix # Build fixes for package dependencies
     ]
     ++ hostLib.wmModules hostInfo.wms;
 
