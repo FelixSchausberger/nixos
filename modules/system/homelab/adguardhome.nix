@@ -157,7 +157,15 @@ in {
             response_ttl_secs = 86400;
           }
           // lib.optionalAttrs (cfg.rewrites != {}) {
-            rewrites = lib.mapAttrsToList (domain: answer: {inherit domain answer;}) cfg.rewrites;
+            # AdGuard stores the enabled flag per entry and defaults a bare
+            # domain/answer pair to disabled, so a declared rewrite must say so
+            # explicitly or it never answers.
+            rewrites =
+              lib.mapAttrsToList (domain: answer: {
+                inherit domain answer;
+                enabled = true;
+              })
+              cfg.rewrites;
           };
         user_rules = [
           # Windows NCSI — prevents "No Internet" indicator on Windows clients

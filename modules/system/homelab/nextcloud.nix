@@ -182,11 +182,15 @@ in {
         # shares) pointing at the public Tailscale address. With a
         # publicDomain Nextcloud sits at the root of cloud.<domain>, so the
         # webroot override is dropped and only the origin changes.
-        overwritewebroot =
-          lib.mkIf
-          (config.modules.system.homelab.caddyProxy.enable
-            && config.modules.system.homelab.caddyProxy.publicDomain == null)
-          "/nextcloud";
+        # An empty value clears a webroot that an earlier generation stored in
+        # config.php: omitting the key only stops future writes and leaves the
+        # sub-path redirect pointing at a URL the root-served instance does
+        # not answer.
+        overwritewebroot = lib.mkIf config.modules.system.homelab.caddyProxy.enable (
+          if config.modules.system.homelab.caddyProxy.publicDomain != null
+          then ""
+          else "/nextcloud"
+        );
         overwriteprotocol = lib.mkIf config.modules.system.homelab.caddyProxy.enable "https";
         overwrite.cli.url =
           lib.mkIf
