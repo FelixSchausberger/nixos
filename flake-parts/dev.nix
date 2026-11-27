@@ -3,7 +3,11 @@
   inputs,
   ...
 }: {
-  perSystem = {pkgs, ...}: let
+  perSystem = {
+    pkgs,
+    system,
+    ...
+  }: let
     # A jj secondary workspace has no .git, so git-based tooling cannot find a
     # repository. This wrapper gives prek a throwaway repository whose index
     # mirrors the workspace, leaving the primary checkout's index and jj state
@@ -30,6 +34,41 @@
         fi
         exec ${pkgs.prek}/bin/prek "$@"
       '';
+    };
+
+    # No host selects COSMIC, so its system module would otherwise never be
+    # evaluated. Build the synthetic system's toplevel path and the local
+    # clipboard applet so a stale option or package breaks CI instead of the
+    # first host that enables COSMIC.
+    cosmicEval = inputs.nixpkgs.lib.nixosSystem {
+      specialArgs = {
+        inherit inputs;
+        hostConfig = {
+          hostName = "cosmic-eval";
+          user = inputs.self.lib.user;
+          isGui = true;
+          wms = ["cosmic"];
+        };
+      };
+      modules = [
+        inputs.impermanence.nixosModules.impermanence
+        ../modules/system/wm/cosmic.nix
+        {
+          nixpkgs.hostPlatform = system;
+          networking.hostName = "cosmic-eval";
+          fileSystems."/" = {
+            device = "/dev/null";
+            fsType = "ext4";
+          };
+          boot.loader.grub.enable = false;
+          system.stateVersion = "26.11";
+          users.groups.${inputs.self.lib.user} = {};
+          users.users.${inputs.self.lib.user} = {
+            isNormalUser = true;
+            group = inputs.self.lib.user;
+          };
+        }
+      ];
     };
   in {
     checks =
@@ -180,6 +219,12 @@
 
             touch $out
           '';
+
+        cosmic-system = pkgs.runCommand "cosmic-system-eval" {} ''
+          test -n "${builtins.unsafeDiscardStringContext cosmicEval.config.system.build.toplevel.drvPath}"
+          test -x ${pkgs.callPackage ../pkgs/cosmic-ext-applet-clipboard-manager {}}/bin/cosmic-ext-applet-clipboard-manager
+          touch $out
+        '';
       };
 
     devShells.default = pkgs.mkShell {
