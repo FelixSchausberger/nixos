@@ -330,7 +330,7 @@
     "elephant": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs-elephant"
+          "nixpkgs"
         ],
         "systems": "systems_3"
       },
@@ -350,7 +350,7 @@
     },
     "fenix": {
       "inputs": {
-        "nixpkgs": "nixpkgs_6",
+        "nixpkgs": "nixpkgs_5",
         "rust-analyzer-src": "rust-analyzer-src"
       },
       "locked": {
@@ -854,7 +854,9 @@
         "home-manager": [
           "home-manager"
         ],
-        "nixpkgs": "nixpkgs_3"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1792739756,
@@ -879,16 +881,16 @@
         "systems": "systems_5"
       },
       "locked": {
-        "lastModified": 1786593252,
-        "narHash": "sha256-+1FZgqViuQYZkhjxvbAg9l8vvazyA5RACyVRL7ubWHQ=",
+        "lastModified": 1795142949,
+        "narHash": "sha256-zUXq89D5UY+3DGxFbmxKY73eQTID59gsO53Re4zmziY=",
         "owner": "versenilvis",
         "repo": "IRIS",
-        "rev": "45d182f07287e4ab1a62169c6b194b4ca276bedc",
+        "rev": "9a2f7a4a7c6005cec406db443e35d66c92bef5ae",
         "type": "github"
       },
       "original": {
         "owner": "versenilvis",
-        "ref": "v0.6.3",
+        "ref": "v0.8.1",
         "repo": "IRIS",
         "type": "github"
       }
@@ -940,7 +942,7 @@
       "inputs": {
         "flake-parts": "flake-parts_5",
         "neovim-src": "neovim-src",
-        "nixpkgs": "nixpkgs_4"
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
         "lastModified": 1793491360,
@@ -1148,7 +1150,7 @@
     "nixos-cosmic": {
       "inputs": {
         "flake-compat": "flake-compat_6",
-        "nixpkgs": "nixpkgs_5",
+        "nixpkgs": "nixpkgs_4",
         "nixpkgs-stable": "nixpkgs-stable_2",
         "rust-overlay": [
           "rust-overlay"
@@ -1275,18 +1277,6 @@
         "ref": "release-23.05",
         "repo": "nixpkgs",
         "type": "github"
-      }
-    },
-    "nixpkgs-elephant": {
-      "locked": {
-        "lastModified": 315532800,
-        "narHash": "sha256-eQUZVehWLDBbpBR2rq6DnuRee1ULT6Y675RhsYDSjYI=",
-        "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst"
       }
     },
     "nixpkgs-for-bootstrap": {
@@ -1460,22 +1450,6 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1768564909,
-        "narHash": "sha256-Kell/SpJYVkHWMvnhqJz/8DqQg2b6PguxVWOuadbHCc=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "e4bae1bd10c9c57b2cf517953ab70060a828ee6f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_4": {
-      "locked": {
         "lastModified": 1793345420,
         "narHash": "sha256-e/yiZ31gXRROBDcnOtT3YwDQ73NVG9Cepccbt86LIn8=",
         "owner": "NixOS",
@@ -1490,7 +1464,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_5": {
+    "nixpkgs_4": {
       "locked": {
         "lastModified": 1751011381,
         "narHash": "sha256-krGXKxvkBhnrSC/kGBmg5MyupUUT5R6IBCLEzx9jhMM=",
@@ -1506,7 +1480,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
+    "nixpkgs_5": {
       "locked": {
         "lastModified": 1753694789,
         "narHash": "sha256-cKgvtz6fKuK1Xr5LQW/zOUiAC0oSQoA9nOISB0pJZqM=",
@@ -1522,7 +1496,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_7": {
+    "nixpkgs_6": {
       "locked": {
         "lastModified": 1795234589,
         "narHash": "sha256-pAEASBc6wof0S58XcSEdZoQ2iFQDkCnZwH+wFLrkd1Q=",
@@ -1535,7 +1509,7 @@
         "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz"
       }
     },
-    "nixpkgs_8": {
+    "nixpkgs_7": {
       "locked": {
         "lastModified": 1795234589,
         "narHash": "sha256-pAEASBc6wof0S58XcSEdZoQ2iFQDkCnZwH+wFLrkd1Q=",
@@ -1548,7 +1522,7 @@
         "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst"
       }
     },
-    "nixpkgs_9": {
+    "nixpkgs_8": {
       "locked": {
         "lastModified": 1794386569,
         "narHash": "sha256-x9sADJvoVG0L6RejZB+/BB4YiGZFBZrfTlhF4uBq1tQ=",
@@ -1626,7 +1600,7 @@
     },
     "noctalia": {
       "inputs": {
-        "nixpkgs": "nixpkgs_8"
+        "nixpkgs": "nixpkgs_7"
       },
       "locked": {
         "lastModified": 1795531454,
@@ -1786,8 +1760,7 @@
         "nixos-hardware": "nixos-hardware",
         "nixos-wizard": "nixos-wizard",
         "nixos-wsl": "nixos-wsl",
-        "nixpkgs": "nixpkgs_7",
-        "nixpkgs-elephant": "nixpkgs-elephant",
+        "nixpkgs": "nixpkgs_6",
         "nixpkgs-opencode2": "nixpkgs-opencode2",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
@@ -2504,7 +2477,7 @@
         "home-manager": [
           "home-manager"
         ],
-        "nixpkgs": "nixpkgs_9"
+        "nixpkgs": "nixpkgs_8"
       },
       "locked": {
         "lastModified": 1795509874,

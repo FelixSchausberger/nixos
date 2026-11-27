@@ -75,6 +75,7 @@
     impermanence = {
       url = "github:nix-community/impermanence";
       inputs.home-manager.follows = "home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     # Pull-based GitOps deployment: hosts poll the public GitHub main branch
     # and deploy nixosConfigurations.<hostname> automatically
@@ -285,10 +286,6 @@
     walker = {
       url = "github:abenz1267/walker";
       inputs.nixpkgs.follows = "nixpkgs";
-      # elephant (walker dependency) hardcodes buildGo125Module, which the
-      # nixos-unstable channel removed after Go 1.25 EOL, and elephant's
-      # package set does not see host overlays. Pin its nixpkgs to the
-      # previous channel snapshot so it keeps the Go 1.25 builder.
       inputs.elephant.follows = "elephant";
     };
     # Declared at the root rather than as walker's nested input: nix-on-droid's
@@ -297,13 +294,7 @@
     # the lock (walker/elephant fails with "cannot find flake 'flake:elephant'").
     elephant = {
       url = "github:abenz1267/elephant";
-      inputs.nixpkgs.follows = "nixpkgs-elephant";
-    };
-    # Channel snapshot with the Go 1.25 builder still present; elephant still
-    # hardcodes buildGo125Module and its package set does not see host
-    # overlays. Bump deliberately when upstream switches to a current builder.
-    nixpkgs-elephant = {
-      url = "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1072397.eaad089433ca/nixexprs.tar.zst";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     wired = {
       url = "github:Toqozz/wired-notify";
@@ -343,11 +334,10 @@
     };
 
     # Shell autocomplete assistant (fish-like completions for bash)
-    # Pinned to a release tag: upstream main has a stale vendorHash (go-modules
-    # FOD hash mismatch) that breaks m920q builds and the cachix push job. A
-    # ref-pinned input is not moved by the daily dependency update.
+    # Pinned to a release tag: the daily dependency update cannot move a tag,
+    # so bumps are deliberate.
     iris = {
-      url = "github:versenilvis/IRIS/v0.6.3";
+      url = "github:versenilvis/IRIS/v0.8.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
