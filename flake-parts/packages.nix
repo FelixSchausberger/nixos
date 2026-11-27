@@ -80,6 +80,10 @@
         # hosts/m920q, this export keeps the derivation under flake eval)
         intel-lms = pkgs.callPackage ../pkgs/intel-lms {};
 
+        # COSMIC clipboard applet; nixpkgs has no package and nixos-cosmic's
+        # copy tracks a 2025 source, so build the active upstream here.
+        cosmic-ext-applet-clipboard-manager = pkgs.callPackage ../pkgs/cosmic-ext-applet-clipboard-manager {};
+
         # Terminal CalDAV task manager (TUI) for the homelab PIM stack
         cfait = pkgs.callPackage ../pkgs/cfait {};
 

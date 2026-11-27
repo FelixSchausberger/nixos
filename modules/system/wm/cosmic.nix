@@ -1,14 +1,16 @@
 # System-side COSMIC session module wired into shared UWSM session management.
 # Activates only when hostConfig selects COSMIC on GUI-capable hosts.
 {
-  inputs,
   pkgs,
   lib,
   hostConfig,
   ...
-}: {
+}: let
+  # nixpkgs has no package for this applet and nixos-cosmic's copy tracks a
+  # 2025 source, so build the active upstream locally.
+  clipboardApplet = pkgs.callPackage ../../../pkgs/cosmic-ext-applet-clipboard-manager {};
+in {
   imports = [
-    inputs.nixos-cosmic.nixosModules.default
     ../session/default.nix
     ../session/cosmic.nix
   ];
@@ -55,12 +57,10 @@
       };
 
       systemPackages = with pkgs; [
+        clipboardApplet
         cosmic-ext-applet-caffeine # Prevents your screen from going to sleep
-        cosmic-ext-applet-clipboard-manager # Clipboard manager for COSMIC.
-        cosmic-ext-applet-emoji-selector # Emoji Selector for COSMIC DE.
         cosmic-ext-applet-external-monitor-brightness # Change brightness of external monitors via DDC/CI protocol.
 
-        xdg-desktop-portal-cosmic # XDG Desktop Portal for the COSMIC Desktop Environment
         xdg-desktop-portal-wlr
       ];
     };
